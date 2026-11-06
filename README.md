@@ -1,26 +1,32 @@
-# 世界模拟器
+# React + TypeScript + Vite
 
-一个以人物为核心、以世界规则为约束、支持事件驱动与有限自主运行的本地优先型网页模拟器。
+This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
 
-## 当前阶段
+Currently, two official plugins are available:
 
-Phase 0：冻结术语、规格与验收样例；尚未开始网页功能开发。
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
 
-## 核心约束
+## React Compiler
 
-- V 永远表示“锚定（Anchoring）”，不表示旧 BMOS 的 Validation。
-- 事件、行动、后果与长期沉积必须可审计、可回放、可分叉。
-- 普通行动可自动执行；重大行动和长期沉积必须由作者确认。
-- AI 仅生成草案与渲染，不拥有状态提交或审批权限。
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-## 目录
+## Expanding the Oxlint configuration
 
-```text
-docs/product/       # PRD 与验收标准
-docs/architecture/  # 数据模型、API 与模块架构
-docs/decisions/     # 关键产品与技术决策
-fixtures/           # 固定种子世界与回归样例
-tests/              # 自动化测试
+If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+
+```json
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["react", "typescript", "oxc"],
+  "options": {
+    "typeAware": true
+  },
+  "rules": {
+    "react/rules-of-hooks": "error",
+    "react/only-export-components": ["warn", { "allowConstantExport": true }]
+  }
+}
 ```
 
-详细规格见 `docs/product/world-simulator-v1-spec.md`。
+See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
