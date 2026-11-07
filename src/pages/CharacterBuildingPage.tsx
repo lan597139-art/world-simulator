@@ -827,12 +827,12 @@ useEffect(() => {
           <div className="module-index-light">{currentModule.number}</div>
         </div>
 
-                <section className="module-workspace-light">
+                       <section className="module-workspace-light">
           {/* 模块 01 */}
           {currentModule.id === 'basic' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-              <div style={{ background: '#fff', padding: '24px', borderRadius: '8px', border: '1px solid #e5e9ef' }}>
-                <h3 style={{ margin: '0 0 20px 0', fontSize: '15px', color: '#344256' }}>👤 身份识别与社会坐标</h3>
+              <div className="glass-card" style={{ padding: '24px' }}>
+                <h3 style={{ margin: '0 0 20px 0', fontSize: '15px', color: 'var(--text-main)' }}>👤 身份识别与社会坐标</h3>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
                   <TextField label="人物名称" value={charData.name} onChange={v => updateChar('name', v)} placeholder="例如：张三" />
                   <TextField label="人物编号" value={charData.code} onChange={v => updateChar('code', v)} placeholder="A-001" />
@@ -841,18 +841,18 @@ useEffect(() => {
                   <TextField label="年龄" value={charData.age} onChange={v => updateChar('age', v)} />
                   <TextField label="性别" value={charData.gender} onChange={v => updateChar('gender', v)} />
                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-  <label style={{ fontSize: '12px', color: '#48566a', fontWeight: 600 }}>所属世界</label>
-  <select 
-    value={selectedWorldId} 
-    onChange={e => setSelectedWorldId(e.target.value)}
-    style={{ width: '100%', padding: '10px 12px', border: '1px solid #dce2eb', borderRadius: '6px', fontSize: '13px', outline: 'none', background: '#fff' }}
-  >
-    <option value="">无（独立存在，不绑定世界）</option>
-    {allWorlds.map(w => (
-      <option key={w.id} value={w.id}>{w.name}</option>
-    ))}
-  </select>
-</div>
+                    <label style={{ fontSize: '12px', color: 'var(--text-main)', fontWeight: 600 }}>所属世界</label>
+                    <select 
+                      value={selectedWorldId} 
+                      onChange={e => setSelectedWorldId(e.target.value)}
+                      style={{ width: '100%', padding: '10px 12px', fontSize: '13px', outline: 'none' }}
+                    >
+                      <option value="">无（独立存在，不绑定世界）</option>
+                      {allWorlds.map(w => (
+                        <option key={w.id} value={w.id}>{w.name}</option>
+                      ))}
+                    </select>
+                  </div>
                   <TextField label="国家/地区" value={charData.nation} onChange={v => updateChar('nation', v)} />
                   <TextField label="所属组织" value={charData.org} onChange={v => updateChar('org', v)} />
                   <TextField label="社会身份" value={charData.socialClass} onChange={v => updateChar('socialClass', v)} placeholder="贵族/平民/奴隶..." />
@@ -860,8 +860,9 @@ useEffect(() => {
                   <TextField label="人物定位" value={charData.role} onChange={v => updateChar('role', v)} placeholder="主角/反派/关键NPC..." />
                 </div>
               </div>
-              <div style={{ background: '#fff', padding: '24px', borderRadius: '8px', border: '1px solid #e5e9ef' }}>
-                <h3 style={{ margin: '0 0 20px 0', fontSize: '15px', color: '#344256' }}>🎓 外在描述与教育经验</h3>
+              
+              <div className="glass-card" style={{ padding: '24px' }}>
+                <h3 style={{ margin: '0 0 20px 0', fontSize: '15px', color: 'var(--text-main)' }}>🎓 外在描述与教育经验</h3>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                   <TextArea label="外在描述 (外貌、体征、穿着)" value={charData.appearance} onChange={v => updateChar('appearance', v)} placeholder="身高体型、疤痕、义体痕迹、日常穿着风格..." rows={4} />
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -870,8 +871,9 @@ useEffect(() => {
                   </div>
                 </div>
               </div>
-              <div style={{ background: '#fff', padding: '24px', borderRadius: '8px', border: '1px solid #e5e9ef' }}>
-                <h3 style={{ margin: '0 0 20px 0', fontSize: '15px', color: '#344256' }}>📝 人物简介与备注</h3>
+              
+              <div className="glass-card" style={{ padding: '24px' }}>
+                <h3 style={{ margin: '0 0 20px 0', fontSize: '15px', color: 'var(--text-main)' }}>📝 人物简介与备注</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                   <TextArea label="人物简介 (一段话概括，非生命经历)" value={charData.intro} onChange={v => updateChar('intro', v)} rows={2} />
                   <TextArea label="背景备注 (其他补充设定)" value={charData.background} onChange={v => updateChar('background', v)} rows={3} />
@@ -883,34 +885,35 @@ useEffect(() => {
           {/* 模块 02 */}
           {currentModule.id === 'engines' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-              <div style={{ background: '#fff', padding: '24px', borderRadius: '8px', border: '1px solid #e5e9ef' }}>
-                <h3 style={{ margin: '0 0 8px 0', fontSize: '15px', color: '#344256' }}>五引擎动力画像 (手动评估)</h3>
-                <p style={{ margin: '0 0 24px 0', fontSize: '12px', color: '#9aa6b4' }}>以下数值仅代表界面示意，请根据设定手动拖动赋值。</p>
+              <div className="glass-card" style={{ padding: '24px' }}>
+                <h3 style={{ margin: '0 0 8px 0', fontSize: '15px', color: 'var(--text-main)' }}>五引擎动力画像 (手动评估)</h3>
+                <p style={{ margin: '0 0 24px 0', fontSize: '12px', color: 'var(--text-muted)' }}>以下数值仅代表界面示意，请根据设定手动拖动赋值。</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   {Object.keys(OVTDE_META).map(key => (
                     <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
                       <div style={{ width: '180px' }}>
-                        <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#344256' }}>{key} · {OVTDE_META[key as keyof typeof OVTDE_META].label}</div>
-                        <div style={{ fontSize: '11px', color: '#8b5cf6' }}>{OVTDE_META[key as keyof typeof OVTDE_META].desc}</div>
+                        <div style={{ fontSize: '14px', fontWeight: 'bold', color: 'var(--text-main)' }}>{key} · {OVTDE_META[key as keyof typeof OVTDE_META].label}</div>
+                        <div style={{ fontSize: '11px', color: 'var(--primary-color)' }}>{OVTDE_META[key as keyof typeof OVTDE_META].desc}</div>
                       </div>
-                      <input type="range" min="0" max="100" value={ovtdeData[key].val} onChange={e => updateOvtde(key, 'val', parseInt(e.target.value))} style={{ flex: 1, accentColor: '#3b82f6' }} />
-                      <span style={{ width: '30px', textAlign: 'right', fontSize: '14px', fontWeight: 'bold', color: '#48566a' }}>{ovtdeData[key].val}</span>
+                      <input type="range" min="0" max="100" value={ovtdeData[key].val} onChange={e => updateOvtde(key, 'val', parseInt(e.target.value))} style={{ flex: 1, accentColor: 'var(--primary-color)' }} />
+                      <span style={{ width: '30px', textAlign: 'right', fontSize: '14px', fontWeight: 'bold', color: 'var(--text-main)' }}>{ovtdeData[key].val}</span>
                     </div>
                   ))}
                 </div>
               </div>
+              
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {Object.keys(OVTDE_META).map(key => {
                   const isOpen = activeEngine === key
                   const data = ovtdeData[key]
                   return (
-                    <div key={key} style={{ background: '#fff', border: '1px solid #e5e9ef', borderRadius: '8px', overflow: 'hidden' }}>
-                      <button type="button" onClick={() => setActiveEngine(isOpen ? null : key)} style={{ width: '100%', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: isOpen ? '#f8f5ff' : '#fff', border: 'none', cursor: 'pointer' }}>
-                        <span style={{ fontWeight: 'bold', color: '#344256', fontSize: '15px' }}>{key} · {OVTDE_META[key as keyof typeof OVTDE_META].label}</span>
-                        <span style={{ color: '#8b5cf6', fontSize: '13px' }}>{isOpen ? '收起 ▲' : '展开 ▼'}</span>
+                    <div key={key} className="glass-card" style={{ overflow: 'hidden' }}>
+                      <button type="button" onClick={() => setActiveEngine(isOpen ? null : key)} style={{ width: '100%', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: isOpen ? 'rgba(99, 102, 241, 0.1)' : 'transparent', border: 'none', cursor: 'pointer' }}>
+                        <span style={{ fontWeight: 'bold', color: 'var(--text-main)', fontSize: '15px' }}>{key} · {OVTDE_META[key as keyof typeof OVTDE_META].label}</span>
+                        <span style={{ color: 'var(--primary-color)', fontSize: '13px' }}>{isOpen ? '收起 ▲' : '展开 ▼'}</span>
                       </button>
                       {isOpen && (
-                        <div style={{ padding: '24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', borderTop: '1px solid #e5e9ef' }}>
+                        <div style={{ padding: '24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', borderTop: '1px solid var(--card-border)' }}>
                           <TextField label="核心定义" value={data.definition} onChange={v => updateOvtde(key, 'definition', v)} />
                           <TextField label="内在渴求 (要什么)" value={data.desire} onChange={v => updateOvtde(key, 'desire', v)} />
                           <TextField label="核心威胁 (怕什么)" value={data.threat} onChange={v => updateOvtde(key, 'threat', v)} />
@@ -927,8 +930,9 @@ useEffect(() => {
                   )
                 })}
               </div>
-              <div style={{ background: '#fff', padding: '24px', borderRadius: '8px', border: '1px solid #e5e9ef', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <h3 style={{ margin: 0, fontSize: '15px', color: '#344256' }}>引擎主导关系</h3>
+              
+              <div className="glass-card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <h3 style={{ margin: 0, fontSize: '15px', color: 'var(--text-main)' }}>引擎主导关系</h3>
                 <TagGroup label="运行模式 (可多选)" options={['单引擎主导', '双引擎交替主导 (振荡)', '多引擎平衡']} selected={dominance.mode} onChange={v => setDominance({...dominance, mode: v})} />
                 <TagGroup label="涉及的主导引擎" options={['O', 'V', 'D', 'E', 'T']} selected={dominance.engines} onChange={v => setDominance({...dominance, engines: v})} />
                 <TextArea label="具体运行描述" value={dominance.description} onChange={v => setDominance({...dominance, description: v})} placeholder="例如：平时由 O 秩序主导，遇到极端危险时转为 V 锚定主导..." rows={3} />
@@ -939,9 +943,9 @@ useEffect(() => {
           {/* 模块 03 */}
           {currentModule.id === 'mechanism' && (
              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-             <div style={{ background: '#fff', padding: '24px', borderRadius: '8px', border: '1px solid #e5e9ef', marginBottom: '8px' }}>
-               <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', color: '#344256' }}>🧬 L0-L7 人格运行与防御档案</h3>
-               <p style={{ margin: 0, fontSize: '13px', color: '#788697', lineHeight: 1.6 }}>下面展示了 ESA 理论中各层的运行机制。请在“人物实际表现”中填写该角色对应层级的真实状态。</p>
+             <div className="glass-card" style={{ padding: '24px', marginBottom: '8px' }}>
+               <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', color: 'var(--text-main)' }}>🧬 L0-L7 人格运行与防御档案</h3>
+               <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.6 }}>下面展示了 ESA 理论中各层的运行机制。请在“人物实际表现”中填写该角色对应层级的真实状态。</p>
              </div>
 
              {L_LAYERS_META.map(layer => {
@@ -949,24 +953,24 @@ useEffect(() => {
                const data = mechanismData[layer.id]
 
                return (
-                 <div key={layer.id} style={{ background: '#fff', border: '1px solid #e5e9ef', borderRadius: '8px', overflow: 'hidden' }}>
-                   <button type="button" onClick={() => setActiveLayer(isOpen ? null : layer.id)} style={{ width: '100%', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: isOpen ? '#f8f5ff' : '#fff', border: 'none', cursor: 'pointer' }}>
+                 <div key={layer.id} className="glass-card" style={{ overflow: 'hidden' }}>
+                   <button type="button" onClick={() => setActiveLayer(isOpen ? null : layer.id)} style={{ width: '100%', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: isOpen ? 'rgba(99, 102, 241, 0.1)' : 'transparent', border: 'none', cursor: 'pointer' }}>
                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                       <span style={{ fontWeight: 'bold', color: '#8b5cf6', fontSize: '16px', minWidth: '40px' }}>{layer.id}</span>
-                       <span style={{ fontWeight: 'bold', color: '#344256', fontSize: '15px' }}>{layer.name}</span>
-                       <span style={{ fontSize: '12px', color: '#9aa6b4' }}>- {layer.role}</span>
+                       <span style={{ fontWeight: 'bold', color: 'var(--primary-color)', fontSize: '16px', minWidth: '40px' }}>{layer.id}</span>
+                       <span style={{ fontWeight: 'bold', color: 'var(--text-main)', fontSize: '15px' }}>{layer.name}</span>
+                       <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>- {layer.role}</span>
                      </div>
-                     <span style={{ color: '#8b5cf6', fontSize: '13px' }}>{isOpen ? '收起 ▲' : '展开 ▼'}</span>
+                     <span style={{ color: 'var(--primary-color)', fontSize: '13px' }}>{isOpen ? '收起 ▲' : '展开 ▼'}</span>
                    </button>
 
                    {isOpen && (
-                     <div style={{ padding: '24px', borderTop: '1px solid #e5e9ef', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                       <div style={{ background: '#f5f6f8', padding: '16px 20px', borderRadius: '8px', border: '1px dashed #dce2eb' }}>
+                     <div style={{ padding: '24px', borderTop: '1px solid var(--card-border)', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                       <div style={{ background: 'rgba(0,0,0,0.02)', padding: '16px 20px', borderRadius: '8px', border: '1px dashed var(--card-border)' }}>
                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '12px' }}>
-                           <div><strong style={{ fontSize: '12px', color: '#8b5cf6' }}>职责：</strong><span style={{ fontSize: '13px', color: '#48566a' }}>{layer.duty}</span></div>
-                           <div><strong style={{ fontSize: '12px', color: '#8b5cf6' }}>内部构成：</strong><span style={{ fontSize: '13px', color: '#48566a' }}>{layer.structures}</span></div>
+                           <div><strong style={{ fontSize: '12px', color: 'var(--primary-color)' }}>职责：</strong><span style={{ fontSize: '13px', color: 'var(--text-main)' }}>{layer.duty}</span></div>
+                           <div><strong style={{ fontSize: '12px', color: 'var(--primary-color)' }}>内部构成：</strong><span style={{ fontSize: '13px', color: 'var(--text-main)' }}>{layer.structures}</span></div>
                          </div>
-                         <div><strong style={{ fontSize: '12px', color: '#ef4444' }}>核心铁律：</strong><span style={{ fontSize: '13px', color: '#48566a' }}>{layer.rules}</span></div>
+                         <div><strong style={{ fontSize: '12px', color: 'var(--danger-color)' }}>核心铁律：</strong><span style={{ fontSize: '13px', color: 'var(--text-main)' }}>{layer.rules}</span></div>
                        </div>
 
                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
@@ -981,7 +985,7 @@ useEffect(() => {
                          ))}
                        </div>
 
-                       <div style={{ borderTop: '1px dashed #dce2eb', margin: '8px 0' }}></div>
+                       <div style={{ borderTop: '1px dashed var(--card-border)', margin: '8px 0' }}></div>
 
                        <TextArea label="人物实际表现" value={data.actualPerformance} onChange={v => updateMechanism(layer.id, 'actualPerformance', v)} placeholder="例如：遭遇霸凌时，L2.5防御层直接启动‘投射’，把愤怒转嫁给旁人..." rows={2} />
                        <TextArea label="自定义补充" value={data.custom} onChange={v => updateMechanism(layer.id, 'custom', v)} rows={2} />
@@ -996,9 +1000,9 @@ useEffect(() => {
           {/* 模块 04 */}
           {currentModule.id === 'sandbox' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ background: '#fff', padding: '24px', borderRadius: '8px', border: '1px solid #e5e9ef', marginBottom: '8px' }}>
-                <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', color: '#344256' }}>🌍 现实承载条件 (六大生存容纳沙盒)</h3>
-                <p style={{ margin: 0, fontSize: '13px', color: '#788697', lineHeight: 1.6 }}>本模块用于记录人物的生存资源、能力积累、关系网络、社会位置、意义支撑和运行机制。请根据 ESA 理论边界进行设定。</p>
+              <div className="glass-card" style={{ padding: '24px', marginBottom: '8px' }}>
+                <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', color: 'var(--text-main)' }}>🌍 现实承载条件 (六大生存容纳沙盒)</h3>
+                <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.6 }}>本模块用于记录人物的生存资源、能力积累、关系网络、社会位置、意义支撑和运行机制。请根据 ESA 理论边界进行设定。</p>
               </div>
 
               {SANDBOX_META.map(box => {
@@ -1007,32 +1011,32 @@ useEffect(() => {
                 const status = getSandboxStatus(box.id)
 
                 return (
-                  <div key={box.id} style={{ background: '#fff', border: '1px solid #e5e9ef', borderRadius: '8px', overflow: 'hidden' }}>
-                    <button type="button" onClick={() => setActiveSandbox(isOpen ? null : box.id)} style={{ width: '100%', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: isOpen ? '#f8f5ff' : '#fff', border: 'none', cursor: 'pointer' }}>
+                  <div key={box.id} className="glass-card" style={{ overflow: 'hidden' }}>
+                    <button type="button" onClick={() => setActiveSandbox(isOpen ? null : box.id)} style={{ width: '100%', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: isOpen ? 'rgba(99, 102, 241, 0.1)' : 'transparent', border: 'none', cursor: 'pointer' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <span style={{ fontWeight: 'bold', color: '#8b5cf6', fontSize: '16px', minWidth: '40px' }}>{box.id}</span>
+                        <span style={{ fontWeight: 'bold', color: 'var(--primary-color)', fontSize: '16px', minWidth: '40px' }}>{box.id}</span>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ fontWeight: 'bold', color: '#344256', fontSize: '15px' }}>{box.name}</span>
-                            <span style={{ fontSize: '12px', color: '#9aa6b4' }}>- {box.sub}</span>
+                            <span style={{ fontWeight: 'bold', color: 'var(--text-main)', fontSize: '15px' }}>{box.name}</span>
+                            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>- {box.sub}</span>
                           </div>
-                          <span style={{ fontSize: '12px', color: '#8b5cf6', marginTop: '4px' }}>核心问题：{box.coreQuestion}</span>
+                          <span style={{ fontSize: '12px', color: 'var(--primary-color)', marginTop: '4px' }}>核心问题：{box.coreQuestion}</span>
                         </div>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                        <span style={{ fontSize: '11px', color: status === '未填写' ? '#9aa6b4' : '#8b5cf6', background: status === '未填写' ? '#f5f6f8' : '#f3e8ff', padding: '2px 8px', borderRadius: '10px' }}>{status}</span>
-                        <span style={{ color: '#8b5cf6', fontSize: '13px' }}>{isOpen ? '收起 ▲' : '展开 ▼'}</span>
+                        <span style={{ fontSize: '11px', color: status === '未填写' ? 'var(--text-muted)' : 'var(--primary-color)', background: status === '未填写' ? 'rgba(0,0,0,0.05)' : 'rgba(99, 102, 241, 0.15)', padding: '2px 8px', borderRadius: '10px' }}>{status}</span>
+                        <span style={{ color: 'var(--primary-color)', fontSize: '13px' }}>{isOpen ? '收起 ▲' : '展开 ▼'}</span>
                       </div>
                     </button>
 
                     {isOpen && (
-                      <div style={{ padding: '24px', borderTop: '1px solid #e5e9ef', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                      <div style={{ padding: '24px', borderTop: '1px solid var(--card-border)', display: 'flex', flexDirection: 'column', gap: '24px' }}>
                         
-                        <div style={{ background: '#f5f6f8', padding: '16px 20px', borderRadius: '8px', border: '1px dashed #dce2eb' }}>
-                          <div style={{ marginBottom: '12px' }}><strong style={{ fontSize: '12px', color: '#8b5cf6' }}>理论定义：</strong><span style={{ fontSize: '13px', color: '#48566a' }}>{box.theory}</span></div>
+                        <div style={{ background: 'rgba(0,0,0,0.02)', padding: '16px 20px', borderRadius: '8px', border: '1px dashed var(--card-border)' }}>
+                          <div style={{ marginBottom: '12px' }}><strong style={{ fontSize: '12px', color: 'var(--primary-color)' }}>理论定义：</strong><span style={{ fontSize: '13px', color: 'var(--text-main)' }}>{box.theory}</span></div>
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                            <div><strong style={{ fontSize: '12px', color: '#10b981' }}>基准稳态运行：</strong><span style={{ fontSize: '13px', color: '#48566a' }}>{box.stable}</span></div>
-                            <div><strong style={{ fontSize: '12px', color: '#ef4444' }}>脆弱过载红线：</strong><span style={{ fontSize: '13px', color: '#48566a' }}>{box.overload}</span></div>
+                            <div><strong style={{ fontSize: '12px', color: '#10b981' }}>基准稳态运行：</strong><span style={{ fontSize: '13px', color: 'var(--text-main)' }}>{box.stable}</span></div>
+                            <div><strong style={{ fontSize: '12px', color: 'var(--danger-color)' }}>脆弱过载红线：</strong><span style={{ fontSize: '13px', color: 'var(--text-main)' }}>{box.overload}</span></div>
                           </div>
                         </div>
 
@@ -1046,26 +1050,26 @@ useEffect(() => {
                         </div>
 
                         {box.id === 'RN' && (
-                          <div style={{ border: '1px solid #e5e9ef', borderRadius: '8px', padding: '16px', background: '#fafafa' }}>
+                          <div style={{ border: '1px solid var(--card-border)', borderRadius: '8px', padding: '16px', background: 'rgba(0,0,0,0.02)' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                              <h4 style={{ margin: 0, fontSize: '14px', color: '#344256' }}>动态关系对象列表</h4>
-                              <button type="button" onClick={() => addRelation('RN')} style={{ padding: '6px 12px', background: '#8b5cf6', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>+ 添加关系</button>
+                              <h4 style={{ margin: 0, fontSize: '14px', color: 'var(--text-main)' }}>动态关系对象列表</h4>
+                              <button type="button" onClick={() => addRelation('RN')} style={{ padding: '6px 12px', background: 'var(--primary-color)', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>+ 添加关系</button>
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                               {data.relations.map((rel: any) => (
-                                <div key={rel.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 2fr auto', gap: '12px', alignItems: 'center', background: '#fff', padding: '12px', borderRadius: '6px', border: '1px solid #e5e9ef' }}>
-                                  <input type="text" placeholder="对象名称" value={rel.name} onChange={e => updateRelation('RN', rel.id, 'name', e.target.value)} style={{ padding: '8px', border: '1px solid #dce2eb', borderRadius: '4px', fontSize: '12px' }} />
-                                  <input type="text" placeholder="关系类型 (伴侣/密友/合伙人)" value={rel.type} onChange={e => updateRelation('RN', rel.id, 'type', e.target.value)} style={{ padding: '8px', border: '1px solid #dce2eb', borderRadius: '4px', fontSize: '12px' }} />
-                                  <input type="text" placeholder="具体描述/羁绊" value={rel.desc} onChange={e => updateRelation('RN', rel.id, 'desc', e.target.value)} style={{ padding: '8px', border: '1px solid #dce2eb', borderRadius: '4px', fontSize: '12px' }} />
-                                  <button type="button" onClick={() => removeRelation('RN', rel.id)} style={{ padding: '6px 10px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>删除</button>
+                                <div key={rel.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 2fr auto', gap: '12px', alignItems: 'center', background: 'transparent', padding: '12px', borderRadius: '6px', border: '1px solid var(--card-border)' }}>
+                                  <input type="text" placeholder="对象名称" value={rel.name} onChange={e => updateRelation('RN', rel.id, 'name', e.target.value)} style={{ padding: '8px', fontSize: '12px' }} />
+                                  <input type="text" placeholder="关系类型" value={rel.type} onChange={e => updateRelation('RN', rel.id, 'type', e.target.value)} style={{ padding: '8px', fontSize: '12px' }} />
+                                  <input type="text" placeholder="描述/羁绊" value={rel.desc} onChange={e => updateRelation('RN', rel.id, 'desc', e.target.value)} style={{ padding: '8px', fontSize: '12px' }} />
+                                  <button type="button" onClick={() => removeRelation('RN', rel.id)} style={{ padding: '6px 10px', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger-color)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>删除</button>
                                 </div>
                               ))}
-                              {data.relations.length === 0 && <span style={{ fontSize: '12px', color: '#9aa6b4', textAlign: 'center' }}>暂无关系对象，点击上方添加</span>}
+                              {data.relations.length === 0 && <span style={{ fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center' }}>暂无关系对象，点击上方添加</span>}
                             </div>
                           </div>
                         )}
 
-                        <div style={{ borderTop: '1px dashed #dce2eb', margin: '8px 0' }}></div>
+                        <div style={{ borderTop: '1px dashed var(--card-border)', margin: '8px 0' }}></div>
 
                         <TextArea label="基准稳态下的人物实际表现" value={data.actualPerformance} onChange={v => updateSandboxText(box.id, 'actualPerformance', v)} placeholder="描述当该沙盒处于正常稳定状态时，角色呈现出的现实表现..." rows={2} />
                         <TextArea label="过载时的人物实际表现" value={data.overloadPerformance} onChange={v => updateSandboxText(box.id, 'overloadPerformance', v)} placeholder="描述当该沙盒出现脆弱过载时，角色的变化和失控表现..." rows={2} />
@@ -1079,11 +1083,11 @@ useEffect(() => {
             </div>
           )}
 
-                    {/* 模块 05 */}
+          {/* 模块 05 */}
           {currentModule.id === 'individual' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-              <div style={{ background: '#fff', padding: '24px', borderRadius: '8px', border: '1px solid #e5e9ef' }}>
-                <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', color: '#8b5cf6' }}>A. 时间分配与生活节奏</h3>
+              <div className="glass-card" style={{ padding: '24px' }}>
+                <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', color: 'var(--primary-color)' }}>A. 时间分配与生活节奏</h3>
                 <TagGroup label="时间分配类型 (多选)" options={TIME_PRESETS} selected={individualData.timePresets} onChange={v => updateInd('timePresets', v)} />
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: '20px' }}>
                   <TextField label="日常作息" value={individualData.dailyRoutine} onChange={v => updateInd('dailyRoutine', v)} />
@@ -1092,29 +1096,21 @@ useEffect(() => {
                   <TextField label="时间自主权" value={individualData.timeAutonomy} onChange={v => updateInd('timeAutonomy', v)} />
                   <div style={{ gridColumn: '1 / -1' }}><TextArea label="生活节奏描述" value={individualData.paceDesc} onChange={v => updateInd('paceDesc', v)} rows={2} /></div>
                   <div style={{ gridColumn: '1 / -1' }}><TextField label="主要时间压力来源" value={individualData.timePressure} onChange={v => updateInd('timePressure', v)} /></div>
-                  
-                  {/* ✅ 补充：自定义时间标签 */}
                   <div style={{ gridColumn: '1 / -1' }}>
-                    <TextArea
-                      label="自定义时间标签与补充说明"
-                      value={individualData.timeCustom}
-                      onChange={v => updateInd('timeCustom', v)}
-                      rows={2}
-                    />
+                    <TextArea label="自定义时间标签与补充说明" value={individualData.timeCustom} onChange={v => updateInd('timeCustom', v)} rows={2} />
                   </div>
                 </div>
               </div>
 
-              <div style={{ background: '#fff', padding: '24px', borderRadius: '8px', border: '1px solid #e5e9ef' }}>
-                <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', color: '#8b5cf6' }}>B. 人物思想钢印</h3>
+              <div className="glass-card" style={{ padding: '24px' }}>
+                <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', color: 'var(--primary-color)' }}>B. 人物思想钢印</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <div style={{ border: '1px solid #e5e9ef', borderRadius: '6px' }}>
-                    <button type="button" onClick={() => setOpenB(openB === 'B1' ? null : 'B1')} style={{ width: '100%', padding: '12px 16px', background: openB === 'B1' ? '#f8f5ff' : '#fafafa', border: 'none', textAlign: 'left', cursor: 'pointer', fontWeight: 600 }}>B1. 婚恋与亲密范式 {openB === 'B1' ? '▲' : '▼'}</button>
+                  <div className="glass-card" style={{ overflow: 'hidden' }}>
+                    <button type="button" onClick={() => setOpenB(openB === 'B1' ? null : 'B1')} style={{ width: '100%', padding: '12px 16px', background: openB === 'B1' ? 'rgba(99, 102, 241, 0.1)' : 'transparent', border: 'none', textAlign: 'left', cursor: 'pointer', fontWeight: 600, color: 'var(--text-main)' }}>B1. 婚恋与亲密范式 {openB === 'B1' ? '▲' : '▼'}</button>
                     {openB === 'B1' && (
                       <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                         <TagGroup label="婚恋范式 (多选)" options={MARRIAGE_PRESETS} selected={individualData.marriagePresets} onChange={v => updateInd('marriagePresets', v)} />
                         <TextArea label="对婚姻的理解" value={individualData.marriageUnderstand} onChange={v => updateInd('marriageUnderstand', v)} rows={2} />
-                        {/* ✅ 补充：对爱情的独立理解 */}
                         <TextArea label="对爱情的独立理解" value={individualData.loveUnderstand} onChange={v => updateInd('loveUnderstand', v)} rows={2} />
                         <TextArea label="对性与亲密关系的态度" value={individualData.sexAttitude} onChange={v => updateInd('sexAttitude', v)} rows={2} />
                         <TextArea label="择偶标准与关系边界" value={individualData.mateStandard} onChange={v => updateInd('mateStandard', v)} rows={2} />
@@ -1124,19 +1120,16 @@ useEffect(() => {
                     )}
                   </div>
 
-                  <div style={{ border: '1px solid #e5e9ef', borderRadius: '6px' }}>
-                    <button type="button" onClick={() => setOpenB(openB === 'B2' ? null : 'B2')} style={{ width: '100%', padding: '12px 16px', background: openB === 'B2' ? '#f8f5ff' : '#fafafa', border: 'none', textAlign: 'left', cursor: 'pointer', fontWeight: 600 }}>B2. 异种与跨物种逻辑 {openB === 'B2' ? '▲' : '▼'}</button>
+                  <div className="glass-card" style={{ overflow: 'hidden' }}>
+                    <button type="button" onClick={() => setOpenB(openB === 'B2' ? null : 'B2')} style={{ width: '100%', padding: '12px 16px', background: openB === 'B2' ? 'rgba(99, 102, 241, 0.1)' : 'transparent', border: 'none', textAlign: 'left', cursor: 'pointer', fontWeight: 600, color: 'var(--text-main)' }}>B2. 异种与跨物种逻辑 {openB === 'B2' ? '▲' : '▼'}</button>
                     {openB === 'B2' && (
                       <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                         <TextField label="物种/种族类型 (人类可跳过)" value={individualData.speciesType} onChange={v => updateInd('speciesType', v)} />
                         <TagGroup label="预设类型 (多选)" options={SPECIES_PRESETS} selected={individualData.speciesPresets} onChange={v => updateInd('speciesPresets', v)} />
-                        {/* ✅ 替换并拆分：个体与群体关系 / 意识独立性 */}
                         <TextArea label="个体与群体关系" value={individualData.groupRelation} onChange={v => updateInd('groupRelation', v)} rows={2} />
                         <TextField label="个体意识独立性" value={individualData.isIndependent} onChange={v => updateInd('isIndependent', v)} />
-                        {/* ✅ 替换并拆分：生命与死亡观 / 繁衍机制 */}
                         <TextArea label="生命与死亡观" value={individualData.lifeDeathView} onChange={v => updateInd('lifeDeathView', v)} rows={2} />
                         <TextArea label="繁衍机制" value={individualData.breedingMechanism} onChange={v => updateInd('breedingMechanism', v)} rows={2} />
-                        
                         <TextField label="亲密关系机制" value={individualData.intimacyMechanism} onChange={v => updateInd('intimacyMechanism', v)} />
                         <TextField label="对其他物种态度" value={individualData.attitudeToOthers} onChange={v => updateInd('attitudeToOthers', v)} />
                         <TextField label="自定义补充" value={individualData.speciesCustom} onChange={v => updateInd('speciesCustom', v)} />
@@ -1144,8 +1137,8 @@ useEffect(() => {
                     )}
                   </div>
 
-                  <div style={{ border: '1px solid #e5e9ef', borderRadius: '6px' }}>
-                    <button type="button" onClick={() => setOpenB(openB === 'B3' ? null : 'B3')} style={{ width: '100%', padding: '12px 16px', background: openB === 'B3' ? '#f8f5ff' : '#fafafa', border: 'none', textAlign: 'left', cursor: 'pointer', fontWeight: 600 }}>B3. 极端宗教与亚文化信仰 {openB === 'B3' ? '▲' : '▼'}</button>
+                  <div className="glass-card" style={{ overflow: 'hidden' }}>
+                    <button type="button" onClick={() => setOpenB(openB === 'B3' ? null : 'B3')} style={{ width: '100%', padding: '12px 16px', background: openB === 'B3' ? 'rgba(99, 102, 241, 0.1)' : 'transparent', border: 'none', textAlign: 'left', cursor: 'pointer', fontWeight: 600, color: 'var(--text-main)' }}>B3. 极端宗教与亚文化信仰 {openB === 'B3' ? '▲' : '▼'}</button>
                     {openB === 'B3' && (
                       <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                         <TagGroup label="信仰类型 (多选)" options={RELIGION_PRESETS} selected={individualData.religionPresets} onChange={v => updateInd('religionPresets', v)} />
@@ -1153,29 +1146,26 @@ useEffect(() => {
                         <TextArea label="核心教义" value={individualData.coreDogma} onChange={v => updateInd('coreDogma', v)} rows={2} />
                         <TextField label="绝对禁忌" value={individualData.absoluteTaboo} onChange={v => updateInd('absoluteTaboo', v)} />
                         <TextArea label="救赎观 / 对异教徒态度" value={individualData.salvationView} onChange={v => updateInd('salvationView', v)} rows={2} />
-                        
-                        {/* ✅ 替换：拆分传教与强制倾向 */}
                         <TextField label="传教倾向" value={individualData.hasMissionary} onChange={v => updateInd('hasMissionary', v)} />
                         <TextField label="是否强制他人信仰" value={individualData.forceBelieve} onChange={v => updateInd('forceBelieve', v)} />
-                        
                         <TextField label="自定义补充" value={individualData.religionCustom} onChange={v => updateInd('religionCustom', v)} />
                       </div>
                     )}
                   </div>
 
-                  <div style={{ border: '1px solid #e5e9ef', borderRadius: '6px' }}>
-                    <button type="button" onClick={() => setOpenB(openB === 'B4' ? null : 'B4')} style={{ width: '100%', padding: '12px 16px', background: openB === 'B4' ? '#f8f5ff' : '#fafafa', border: 'none', textAlign: 'left', cursor: 'pointer', fontWeight: 600 }}>B4. 历史与虚构名人思想烙印 {openB === 'B4' ? '▲' : '▼'}</button>
+                  <div className="glass-card" style={{ overflow: 'hidden' }}>
+                    <button type="button" onClick={() => setOpenB(openB === 'B4' ? null : 'B4')} style={{ width: '100%', padding: '12px 16px', background: openB === 'B4' ? 'rgba(99, 102, 241, 0.1)' : 'transparent', border: 'none', textAlign: 'left', cursor: 'pointer', fontWeight: 600, color: 'var(--text-main)' }}>B4. 历史与虚构名人思想烙印 {openB === 'B4' ? '▲' : '▼'}</button>
                     {openB === 'B4' && (
                       <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ fontSize: '12px', color: '#666' }}>可同时受多人思想影响，添加独立卡片记录。</span>
-                          <button type="button" onClick={addImprint} style={{ padding: '6px 12px', background: '#8b5cf6', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>+ 添加思想卡片</button>
+                          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>可同时受多人思想影响，添加独立卡片记录。</span>
+                          <button type="button" onClick={addImprint} style={{ padding: '6px 12px', background: 'var(--primary-color)', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>+ 添加思想卡片</button>
                         </div>
                         {individualData.imprints.map((imp) => (
-                          <div key={imp.id} style={{ padding: '16px', background: '#fafafa', borderRadius: '6px', border: '1px dashed #dce2eb', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                          <div key={imp.id} style={{ padding: '16px', background: 'rgba(0,0,0,0.02)', borderRadius: '6px', border: '1px dashed var(--card-border)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                              <span style={{ fontWeight: 'bold', fontSize: '13px', color: '#8b5cf6' }}>思想烙印 #{imp.id.slice(-4)}</span>
-                              <button type="button" onClick={() => removeImprint(imp.id)} style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px' }}>删除</button>
+                              <span style={{ fontWeight: 'bold', fontSize: '13px', color: 'var(--primary-color)' }}>思想烙印 #{imp.id.slice(-4)}</span>
+                              <button type="button" onClick={() => removeImprint(imp.id)} style={{ color: 'var(--danger-color)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px' }}>删除</button>
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                               <TextField label="思想人物/原型" value={imp.figure} onChange={v => updateImprint(imp.id, 'figure', v)} placeholder="孔子/尼采/大贤者梅林..." />
@@ -1190,13 +1180,13 @@ useEffect(() => {
                             </div>
                           </div>
                         ))}
-                        {individualData.imprints.length === 0 && <span style={{ fontSize: '12px', color: '#9aa6b4', textAlign: 'center' }}>暂无思想烙印</span>}
+                        {individualData.imprints.length === 0 && <span style={{ fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center' }}>暂无思想烙印</span>}
                       </div>
                     )}
                   </div>
 
-                  <div style={{ border: '1px solid #e5e9ef', borderRadius: '6px' }}>
-                    <button type="button" onClick={() => setOpenB(openB === 'B5' ? null : 'B5')} style={{ width: '100%', padding: '12px 16px', background: openB === 'B5' ? '#f8f5ff' : '#fafafa', border: 'none', textAlign: 'left', cursor: 'pointer', fontWeight: 600 }}>B5. 个人美学与艺术偏好 {openB === 'B5' ? '▲' : '▼'}</button>
+                  <div className="glass-card" style={{ overflow: 'hidden' }}>
+                    <button type="button" onClick={() => setOpenB(openB === 'B5' ? null : 'B5')} style={{ width: '100%', padding: '12px 16px', background: openB === 'B5' ? 'rgba(99, 102, 241, 0.1)' : 'transparent', border: 'none', textAlign: 'left', cursor: 'pointer', fontWeight: 600, color: 'var(--text-main)' }}>B5. 个人美学与艺术偏好 {openB === 'B5' ? '▲' : '▼'}</button>
                     {openB === 'B5' && (
                       <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                         <TagGroup label="美学风格 (多选)" options={AESTHETICS_PRESETS} selected={individualData.aestheticPresets} onChange={v => updateInd('aestheticPresets', v)} />
@@ -1215,15 +1205,15 @@ useEffect(() => {
                 </div>
               </div>
 
-              <div style={{ background: '#fff', padding: '24px', borderRadius: '8px', border: '1px solid #e5e9ef' }}>
-                <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', color: '#8b5cf6' }}>C. 人物结果评价标准</h3>
-                <p style={{ fontSize: '12px', color: '#788697', marginBottom: '24px' }}>记录人物判断事情好坏时依据的标准，独立于 OVTDE 动力引擎。</p>
+              <div className="glass-card" style={{ padding: '24px' }}>
+                <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', color: 'var(--primary-color)' }}>C. 人物结果评价标准</h3>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '24px' }}>记录人物判断事情好坏时依据的标准，独立于 OVTDE 动力引擎。</p>
                 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                   <TagGroup label="基础偏好维度 (多选)" options={PREFERENCE_PRESETS} selected={individualData.prefPresets} onChange={v => updateInd('prefPresets', v)} />
                   <TagGroup label="八种认知功能 (多选)" options={COGNITIVE_PRESETS} selected={individualData.cogPresets} onChange={v => updateInd('cogPresets', v)} />
                   
-                  <div style={{ borderTop: '1px dashed #dce2eb', margin: '8px 0' }}></div>
+                  <div style={{ borderTop: '1px dashed var(--card-border)', margin: '8px 0' }}></div>
                   
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                     <TextField label="最重视的结果标准" value={individualData.mostImportantStandard} onChange={v => updateInd('mostImportantStandard', v)} />
@@ -1242,39 +1232,39 @@ useEffect(() => {
 {currentModule.id === 'history' && (
   <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
-    <div style={{ background: '#fff', padding: '24px', borderRadius: '8px', border: '1px solid #e5e9ef' }}>
-      <h3 style={{ margin: '0 0 8px', fontSize: '16px', color: '#8b5cf6' }}>
+    <div className="glass-card" style={{ padding: '24px' }}>
+      <h3 style={{ margin: '0 0 8px', fontSize: '16px', color: 'var(--primary-color)' }}>
         生命经历与历史沉积
       </h3>
-      <p style={{ margin: 0, fontSize: '13px', color: '#788697', lineHeight: 1.7 }}>
+      <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.7 }}>
         本模块记录人物经历过的事件、人物对事件的理解与反应，以及这些经历长期形成的心理和行为沉积。
         事件本身不直接决定行为；人物的认知、归因与判断共同构成事件对其后续运行的影响。
       </p>
     </div>
 
     {/* A. 生命时间线 */}
-    <div style={{ background: '#fff', padding: '24px', borderRadius: '8px', border: '1px solid #e5e9ef' }}>
+    <div className="glass-card" style={{ padding: '24px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <div>
-          <h3 style={{ margin: 0, fontSize: '16px', color: '#344256' }}>A. 生命时间线</h3>
-          <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#9aa6b4' }}>
+          <h3 style={{ margin: 0, fontSize: '16px', color: 'var(--text-main)' }}>A. 生命时间线</h3>
+          <p style={{ margin: '6px 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>
             按人物实际经历记录重要事件，可添加多条事件。
           </p>
         </div>
         <button type="button" onClick={addHistoryEvent}
-          style={{ padding: '8px 14px', background: '#8b5cf6', color: '#fff', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
+          style={{ padding: '8px 14px', background: 'var(--primary-color)', color: '#fff', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
           + 添加事件
         </button>
       </div>
 
       {historyData.events.map((event, index) => (
-        <div key={event.id} style={{ border: '1px solid #e5e9ef', borderRadius: '8px', marginBottom: '16px', overflow: 'hidden' }}>
-          <div style={{ padding: '12px 16px', background: '#f8f5ff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <strong style={{ color: '#6d4bb3', fontSize: '13px' }}>
+        <div key={event.id} style={{ border: '1px solid var(--card-border)', borderRadius: '8px', marginBottom: '16px', overflow: 'hidden' }}>
+          <div style={{ padding: '12px 16px', background: 'rgba(99, 102, 241, 0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <strong style={{ color: 'var(--primary-color)', fontSize: '13px' }}>
               事件 {index + 1}{event.name ? ` · ${event.name}` : ''}
             </strong>
             <button type="button" onClick={() => removeHistoryEvent(event.id)}
-              style={{ border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer' }}>
+              style={{ border: 'none', background: 'none', color: 'var(--danger-color)', cursor: 'pointer' }}>
               删除事件
             </button>
           </div>
@@ -1320,12 +1310,12 @@ useEffect(() => {
             <TextArea label="事件自定义补充" value={event.custom}
               onChange={v => updateHistoryEvent(event.id, 'custom', v)} rows={2} />
 
-            <div style={{ borderTop: '1px dashed #dce2eb', paddingTop: '20px' }}>
-              <h4 style={{ margin: '0 0 16px', color: '#8b5cf6', fontSize: '14px' }}>B. 事件认知与行为反应</h4>
+            <div style={{ borderTop: '1px dashed var(--card-border)', paddingTop: '20px' }}>
+              <h4 style={{ margin: '0 0 16px', color: 'var(--primary-color)', fontSize: '14px' }}>B. 事件认知与行为反应</h4>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div>
-                  <strong style={{ fontSize: '13px', color: '#344256' }}>B1. 事件认知</strong>
+                  <strong style={{ fontSize: '13px', color: 'var(--text-main)' }}>B1. 事件认知</strong>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '12px' }}>
                     <TextArea label="人物如何理解这件事" value={event.cognition} onChange={v => updateHistoryEvent(event.id, 'cognition', v)} />
                     <TextArea label="人物赋予事件的意义" value={event.meaning} onChange={v => updateHistoryEvent(event.id, 'meaning', v)} />
@@ -1338,7 +1328,7 @@ useEffect(() => {
                 </div>
 
                 <div>
-                  <strong style={{ fontSize: '13px', color: '#344256' }}>B2. 归因对象</strong>
+                  <strong style={{ fontSize: '13px', color: 'var(--text-main)' }}>B2. 归因对象</strong>
                   <div style={{ marginTop: '12px' }}>
                     <TagGroup
                       label="人物认为事件主要由什么造成（可多选）"
@@ -1353,7 +1343,7 @@ useEffect(() => {
                 </div>
 
                 <div>
-                  <strong style={{ fontSize: '13px', color: '#344256' }}>B3. 情绪与心理反应</strong>
+                  <strong style={{ fontSize: '13px', color: 'var(--text-main)' }}>B3. 情绪与心理反应</strong>
                   <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <TagGroup
                       label="主要情绪（可多选）"
@@ -1371,7 +1361,7 @@ useEffect(() => {
                 </div>
 
                 <div>
-                  <strong style={{ fontSize: '13px', color: '#344256' }}>B4. 行为反应</strong>
+                  <strong style={{ fontSize: '13px', color: 'var(--text-main)' }}>B4. 行为反应</strong>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '12px' }}>
                     <TextArea label="第一反应" value={event.firstReaction} onChange={v => updateHistoryEvent(event.id, 'firstReaction', v)} />
                     <TextArea label="实际采取的行动" value={event.actualAction} onChange={v => updateHistoryEvent(event.id, 'actualAction', v)} />
@@ -1386,7 +1376,7 @@ useEffect(() => {
                 </div>
 
                 <div>
-                  <strong style={{ fontSize: '13px', color: '#344256' }}>B5. 事件结果与后续影响</strong>
+                  <strong style={{ fontSize: '13px', color: 'var(--text-main)' }}>B5. 事件结果与后续影响</strong>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '12px' }}>
                     <TextArea label="直接结果" value={event.directResult} onChange={v => updateHistoryEvent(event.id, 'directResult', v)} />
                     <TextArea label="对现实生活的影响" value={event.lifeImpact} onChange={v => updateHistoryEvent(event.id, 'lifeImpact', v)} />
@@ -1406,19 +1396,19 @@ useEffect(() => {
       ))}
 
       {historyData.events.length === 0 && (
-        <p style={{ color: '#9aa6b4', fontSize: '13px', textAlign: 'center', padding: '24px' }}>
+        <p style={{ color: 'var(--text-muted)', fontSize: '13px', textAlign: 'center', padding: '24px' }}>
           暂无生命事件记录，点击“添加事件”开始建立人物时间线。
         </p>
       )}
     </div>
 
     {/* C. 历史沉积与人格轨迹 */}
-    <div style={{ background: '#fff', padding: '24px', borderRadius: '8px', border: '1px solid #e5e9ef' }}>
-      <h3 style={{ margin: '0 0 20px', fontSize: '16px', color: '#8b5cf6' }}>C. 历史沉积与人格轨迹</h3>
+    <div className="glass-card" style={{ padding: '24px' }}>
+      <h3 style={{ margin: '0 0 20px', fontSize: '16px', color: 'var(--primary-color)' }}>C. 历史沉积与人格轨迹</h3>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
         <div>
-          <h4 style={{ fontSize: '14px', color: '#344256' }}>C1. 反复出现的经历模式</h4>
+          <h4 style={{ fontSize: '14px', color: 'var(--text-main)' }}>C1. 反复出现的经历模式</h4>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <TextArea label="反复出现的事件类型" value={historyData.deposits.repeatedPatterns} onChange={v => updateDeposit('repeatedPatterns', v)} />
             <TextArea label="反复出现的关系模式" value={historyData.deposits.relationshipPatterns} onChange={v => updateDeposit('relationshipPatterns', v)} />
@@ -1429,8 +1419,8 @@ useEffect(() => {
           </div>
         </div>
 
-        <div style={{ borderTop: '1px dashed #dce2eb', paddingTop: '20px' }}>
-          <h4 style={{ fontSize: '14px', color: '#344256' }}>C2. 历史形成的心理与行为沉积</h4>
+        <div style={{ borderTop: '1px dashed var(--card-border)', paddingTop: '20px' }}>
+          <h4 style={{ fontSize: '14px', color: 'var(--text-main)' }}>C2. 历史形成的心理与行为沉积</h4>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <TextArea label="核心信念" value={historyData.deposits.coreBeliefs} onChange={v => updateDeposit('coreBeliefs', v)} />
             <TextArea label="长期执念" value={historyData.deposits.longTermObsession} onChange={v => updateDeposit('longTermObsession', v)} />
@@ -1444,21 +1434,21 @@ useEffect(() => {
           </div>
         </div>
 
-        <div style={{ borderTop: '1px dashed #dce2eb', paddingTop: '20px' }}>
+        <div style={{ borderTop: '1px dashed var(--card-border)', paddingTop: '20px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h4 style={{ fontSize: '14px', color: '#344256' }}>C3. 人格轨迹漂移</h4>
+            <h4 style={{ fontSize: '14px', color: 'var(--text-main)' }}>C3. 人格轨迹漂移</h4>
             <button type="button" onClick={addTrajectory}
-              style={{ padding: '6px 12px', background: '#8b5cf6', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+              style={{ padding: '6px 12px', background: 'var(--primary-color)', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
               + 添加变化记录
             </button>
           </div>
 
           {historyData.deposits.trajectory.map((item, index) => (
-            <div key={item.id} style={{ border: '1px solid #e5e9ef', borderRadius: '6px', padding: '16px', marginTop: '12px' }}>
+            <div key={item.id} style={{ border: '1px solid var(--card-border)', borderRadius: '6px', padding: '16px', marginTop: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                <strong style={{ color: '#8b5cf6', fontSize: '13px' }}>轨迹记录 {index + 1}</strong>
+                <strong style={{ color: 'var(--primary-color)', fontSize: '13px' }}>轨迹记录 {index + 1}</strong>
                 <button type="button" onClick={() => removeTrajectory(item.id)}
-                  style={{ border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer' }}>删除</button>
+                  style={{ border: 'none', background: 'none', color: 'var(--danger-color)', cursor: 'pointer' }}>删除</button>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <TextField label="发生时间/人生阶段" value={item.period} onChange={v => updateTrajectory(item.id, 'period', v)} />
@@ -1474,21 +1464,21 @@ useEffect(() => {
           ))}
         </div>
 
-        <div style={{ borderTop: '1px dashed #dce2eb', paddingTop: '20px' }}>
+        <div style={{ borderTop: '1px dashed var(--card-border)', paddingTop: '20px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h4 style={{ fontSize: '14px', color: '#344256' }}>C4. 当前仍然存在的历史影响</h4>
+            <h4 style={{ fontSize: '14px', color: 'var(--text-main)' }}>C4. 当前仍然存在的历史影响</h4>
             <button type="button" onClick={addCurrentInfluence}
-              style={{ padding: '6px 12px', background: '#8b5cf6', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+              style={{ padding: '6px 12px', background: 'var(--primary-color)', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
               + 添加历史影响
             </button>
           </div>
 
           {historyData.deposits.currentInfluences.map((item, index) => (
-            <div key={item.id} style={{ border: '1px solid #e5e9ef', borderRadius: '6px', padding: '16px', marginTop: '12px' }}>
+            <div key={item.id} style={{ border: '1px solid var(--card-border)', borderRadius: '6px', padding: '16px', marginTop: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                <strong style={{ color: '#8b5cf6', fontSize: '13px' }}>历史影响 {index + 1}</strong>
+                <strong style={{ color: 'var(--primary-color)', fontSize: '13px' }}>历史影响 {index + 1}</strong>
                 <button type="button" onClick={() => removeCurrentInfluence(item.id)}
-                  style={{ border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer' }}>删除</button>
+                  style={{ border: 'none', background: 'none', color: 'var(--danger-color)', cursor: 'pointer' }}>删除</button>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <TextField label="影响领域" value={item.domain} onChange={v => updateCurrentInfluence(item.id, 'domain', v)} />
@@ -1510,21 +1500,21 @@ useEffect(() => {
 {currentModule.id === 'initial' && (
   <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
-    <div style={{ background: '#fff', padding: '24px', borderRadius: '8px', border: '1px solid #e5e9ef' }}>
-      <h3 style={{ margin: '0 0 8px', fontSize: '16px', color: '#8b5cf6' }}>人物初始状态</h3>
-      <p style={{ margin: 0, fontSize: '13px', color: '#788697', lineHeight: 1.7 }}>
+    <div className="glass-card" style={{ padding: '24px' }}>
+      <h3 style={{ margin: '0 0 8px', fontSize: '16px', color: 'var(--primary-color)' }}>人物初始状态</h3>
+      <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.7 }}>
         本模块记录人物进入世界模拟时的当前状态。它是一个状态快照，不是人物的永久人格定义。
         所有信息均为人物当前状态的独立记录，不自动从前六个模块推算。
       </p>
     </div>
 
     {/* A. 内部状态 */}
-    <div style={{ background: '#fff', padding: '24px', borderRadius: '8px', border: '1px solid #e5e9ef' }}>
-      <h3 style={{ margin: '0 0 20px', fontSize: '16px', color: '#344256' }}>A. 内部状态</h3>
+    <div className="glass-card" style={{ padding: '24px' }}>
+      <h3 style={{ margin: '0 0 20px', fontSize: '16px', color: 'var(--text-main)' }}>A. 内部状态</h3>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
         <div>
-          <h4 style={{ fontSize: '14px', color: '#8b5cf6' }}>1. 当前能量</h4>
+          <h4 style={{ fontSize: '14px', color: 'var(--primary-color)' }}>1. 当前能量</h4>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <TextField label="当前能量状态" value={initialData.energyState} onChange={v => updateInitial('energyState', v)} placeholder="例如：充足、一般、偏低、枯竭..." />
             <TextField label="状态表现描述" value={initialData.energyDescription} onChange={v => updateInitial('energyDescription', v)} />
@@ -1534,7 +1524,7 @@ useEffect(() => {
         </div>
 
         <div>
-          <h4 style={{ fontSize: '14px', color: '#8b5cf6' }}>2. 当前压力</h4>
+          <h4 style={{ fontSize: '14px', color: 'var(--primary-color)' }}>2. 当前压力</h4>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <TextField label="当前压力状态" value={initialData.pressureState} onChange={v => updateInitial('pressureState', v)} />
             <TextField label="压力持续时间" value={initialData.pressureDuration} onChange={v => updateInitial('pressureDuration', v)} />
@@ -1544,7 +1534,7 @@ useEffect(() => {
         </div>
 
         <div>
-          <h4 style={{ fontSize: '14px', color: '#8b5cf6' }}>3. 当前负荷</h4>
+          <h4 style={{ fontSize: '14px', color: 'var(--primary-color)' }}>3. 当前负荷</h4>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <TextField label="当前负荷状态" value={initialData.loadState} onChange={v => updateInitial('loadState', v)} />
             <TextField label="是否超负荷" value={initialData.isOverloaded} onChange={v => updateInitial('isOverloaded', v)} placeholder="未超负荷 / 接近上限 / 已超负荷" />
@@ -1557,7 +1547,7 @@ useEffect(() => {
         </div>
 
         <div>
-          <h4 style={{ fontSize: '14px', color: '#8b5cf6' }}>4. 当前情绪</h4>
+          <h4 style={{ fontSize: '14px', color: 'var(--primary-color)' }}>4. 当前情绪</h4>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <TagGroup
               label="主要情绪（可多选）"
@@ -1577,12 +1567,12 @@ useEffect(() => {
     </div>
 
     {/* B. 行动状态 */}
-    <div style={{ background: '#fff', padding: '24px', borderRadius: '8px', border: '1px solid #e5e9ef' }}>
-      <h3 style={{ margin: '0 0 20px', fontSize: '16px', color: '#344256' }}>B. 行动状态</h3>
+    <div className="glass-card" style={{ padding: '24px' }}>
+      <h3 style={{ margin: '0 0 20px', fontSize: '16px', color: 'var(--text-main)' }}>B. 行动状态</h3>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
         <div>
-          <h4 style={{ fontSize: '14px', color: '#8b5cf6' }}>1. 当前主要困境</h4>
+          <h4 style={{ fontSize: '14px', color: 'var(--primary-color)' }}>1. 当前主要困境</h4>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <TextArea label="当前主要困境" value={initialData.mainDilemma} onChange={v => updateInitial('mainDilemma', v)} />
             <TextField label="困境所属领域" value={initialData.dilemmaDomain} onChange={v => updateInitial('dilemmaDomain', v)} />
@@ -1593,21 +1583,21 @@ useEffect(() => {
           </div>
         </div>
 
-        <div style={{ borderTop: '1px dashed #dce2eb', paddingTop: '20px' }}>
+        <div style={{ borderTop: '1px dashed var(--card-border)', paddingTop: '20px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h4 style={{ fontSize: '14px', color: '#8b5cf6' }}>2. 当前主要目标</h4>
+            <h4 style={{ fontSize: '14px', color: 'var(--primary-color)' }}>2. 当前主要目标</h4>
             <button type="button" onClick={addInitialGoal}
-              style={{ padding: '6px 12px', background: '#8b5cf6', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+              style={{ padding: '6px 12px', background: 'var(--primary-color)', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
               + 添加目标
             </button>
           </div>
 
           {initialGoals.map((goal, index) => (
-            <div key={goal.id} style={{ border: '1px solid #e5e9ef', borderRadius: '6px', padding: '16px', marginTop: '12px' }}>
+            <div key={goal.id} style={{ border: '1px solid var(--card-border)', borderRadius: '6px', padding: '16px', marginTop: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                <strong style={{ fontSize: '13px', color: '#8b5cf6' }}>目标 {index + 1}</strong>
+                <strong style={{ fontSize: '13px', color: 'var(--primary-color)' }}>目标 {index + 1}</strong>
                 <button type="button" onClick={() => removeInitialGoal(goal.id)}
-                  style={{ border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer' }}>删除</button>
+                  style={{ border: 'none', background: 'none', color: 'var(--danger-color)', cursor: 'pointer' }}>删除</button>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <TextField label="目标内容" value={goal.name} onChange={v => updateInitialGoal(goal.id, 'name', v)} />
@@ -1622,11 +1612,11 @@ useEffect(() => {
               </div>
             </div>
           ))}
-          {initialGoals.length === 0 && <p style={{ color: '#9aa6b4', fontSize: '12px' }}>暂无目标记录，点击上方添加。</p>}
+          {initialGoals.length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '12px' }}>暂无目标记录，点击上方添加。</p>}
         </div>
 
-        <div style={{ borderTop: '1px dashed #dce2eb', paddingTop: '20px' }}>
-          <h4 style={{ fontSize: '14px', color: '#8b5cf6' }}>3. 当前主导引擎</h4>
+        <div style={{ borderTop: '1px dashed var(--card-border)', paddingTop: '20px' }}>
+          <h4 style={{ fontSize: '14px', color: 'var(--primary-color)' }}>3. 当前主导引擎</h4>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <RadioGroup label="当前主导引擎" options={['O', 'V', 'T', 'D', 'E']} value={initialData.primaryEngine} onChange={v => updateInitial('primaryEngine', v)} />
             <RadioGroup label="次要引擎" options={['无明确次要引擎', 'O', 'V', 'T', 'D', 'E']} value={initialData.secondaryEngine} onChange={v => updateInitial('secondaryEngine', v)} />
@@ -1640,24 +1630,24 @@ useEffect(() => {
     </div>
 
     {/* C. 外部状态 */}
-    <div style={{ background: '#fff', padding: '24px', borderRadius: '8px', border: '1px solid #e5e9ef' }}>
-      <h3 style={{ margin: '0 0 20px', fontSize: '16px', color: '#344256' }}>C. 外部状态</h3>
+    <div className="glass-card" style={{ padding: '24px' }}>
+      <h3 style={{ margin: '0 0 20px', fontSize: '16px', color: 'var(--text-main)' }}>C. 外部状态</h3>
 
-      <div style={{ borderBottom: '1px dashed #dce2eb', paddingBottom: '20px' }}>
+      <div style={{ borderBottom: '1px dashed var(--card-border)', paddingBottom: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h4 style={{ fontSize: '14px', color: '#8b5cf6' }}>1. 当前关系状态</h4>
+          <h4 style={{ fontSize: '14px', color: 'var(--primary-color)' }}>1. 当前关系状态</h4>
           <button type="button" onClick={addInitialRelation}
-            style={{ padding: '6px 12px', background: '#8b5cf6', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+            style={{ padding: '6px 12px', background: 'var(--primary-color)', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
             + 添加关系
           </button>
         </div>
 
         {initialRelations.map((rel, index) => (
-          <div key={rel.id} style={{ border: '1px solid #e5e9ef', borderRadius: '6px', padding: '16px', marginTop: '12px' }}>
+          <div key={rel.id} style={{ border: '1px solid var(--card-border)', borderRadius: '6px', padding: '16px', marginTop: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-              <strong style={{ fontSize: '13px', color: '#8b5cf6' }}>关系对象 {index + 1}</strong>
+              <strong style={{ fontSize: '13px', color: 'var(--primary-color)' }}>关系对象 {index + 1}</strong>
               <button type="button" onClick={() => removeInitialRelation(rel.id)}
-                style={{ border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer' }}>删除</button>
+                style={{ border: 'none', background: 'none', color: 'var(--danger-color)', cursor: 'pointer' }}>删除</button>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <TextField label="关系对象" value={rel.person} onChange={v => updateInitialRelation(rel.id, 'person', v)} />
@@ -1671,24 +1661,24 @@ useEffect(() => {
             </div>
           </div>
         ))}
-        {initialRelations.length === 0 && <p style={{ color: '#9aa6b4', fontSize: '12px' }}>暂无关系记录。</p>}
+        {initialRelations.length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '12px' }}>暂无关系记录。</p>}
       </div>
 
       <div style={{ paddingTop: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h4 style={{ fontSize: '14px', color: '#8b5cf6' }}>2. 当前资源状态</h4>
+          <h4 style={{ fontSize: '14px', color: 'var(--primary-color)' }}>2. 当前资源状态</h4>
           <button type="button" onClick={addInitialResource}
-            style={{ padding: '6px 12px', background: '#8b5cf6', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+            style={{ padding: '6px 12px', background: 'var(--primary-color)', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
             + 添加资源
           </button>
         </div>
 
         {initialResources.map((resource, index) => (
-          <div key={resource.id} style={{ border: '1px solid #e5e9ef', borderRadius: '6px', padding: '16px', marginTop: '12px' }}>
+          <div key={resource.id} style={{ border: '1px solid var(--card-border)', borderRadius: '6px', padding: '16px', marginTop: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-              <strong style={{ fontSize: '13px', color: '#8b5cf6' }}>资源 {index + 1}</strong>
+              <strong style={{ fontSize: '13px', color: 'var(--primary-color)' }}>资源 {index + 1}</strong>
               <button type="button" onClick={() => removeInitialResource(resource.id)}
-                style={{ border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer' }}>删除</button>
+                style={{ border: 'none', background: 'none', color: 'var(--danger-color)', cursor: 'pointer' }}>删除</button>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <TextField label="资源名称" value={resource.name} onChange={v => updateInitialResource(resource.id, 'name', v)} />
@@ -1706,13 +1696,13 @@ useEffect(() => {
             </div>
           </div>
         ))}
-        {initialResources.length === 0 && <p style={{ color: '#9aa6b4', fontSize: '12px' }}>暂无资源记录。</p>}
+        {initialResources.length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '12px' }}>暂无资源记录。</p>}
       </div>
     </div>
 
               {/* D. 初始状态快照元信息 */}
-              <div style={{ background: '#fff', padding: '24px', borderRadius: '8px', border: '1px solid #e5e9ef' }}>
-                <h3 style={{ margin: '0 0 20px', fontSize: '16px', color: '#344256' }}>D. 初始状态快照信息</h3>
+              <div className="glass-card" style={{ padding: '24px' }}>
+                <h3 style={{ margin: '0 0 20px', fontSize: '16px', color: 'var(--text-main)' }}>D. 初始状态快照信息</h3>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                   <TextField label="状态记录名称" value={initialData.snapshotName} onChange={v => updateInitial('snapshotName', v)} placeholder="例如：故事开始时 / 第一章初始状态" />
                   <TextField label="状态记录时间" value={initialData.snapshotTime} onChange={v => updateInitial('snapshotTime', v)} placeholder="填写故事内时间或现实记录时间" />
