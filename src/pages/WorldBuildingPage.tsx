@@ -458,8 +458,8 @@ const NOVELTY_SUPPLY = [{ id: 'low', name_zh: '低', name_en: 'Low' }, { id: 'me
 function SelectField({ label, value, options, onChange, lang }: { label: string, value: string, options: any[], onChange: (val: string) => void, lang: string }) {
   return (
     <div style={{ marginBottom: '1.2rem' }}>
-      <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.4rem', color: '#333', fontSize: '0.95rem' }}>{label}</label>
-      <select value={value} onChange={(e) => onChange(e.target.value)} style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ccc', fontSize: '0.95rem', background: '#fff' }}>
+      <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.4rem', color: 'var(--text-main)', fontSize: '0.9rem' }}>{label}</label>
+      <select value={value} onChange={(e) => onChange(e.target.value)} style={{ width: '100%', padding: '0.6rem', fontSize: '0.95rem' }}>
         <option value="">{lang === 'zh' ? '-- 请选择 --' : '-- Select --'}</option>
         {options.map(opt => <option key={opt.id} value={opt.id}>{lang === 'zh' ? opt.name_zh : opt.name_en}</option>)}
       </select>
@@ -470,12 +470,21 @@ function SelectField({ label, value, options, onChange, lang }: { label: string,
 function TagGroup({ label, selected, options, onChange, lang }: { label: string, selected: string[], options: any[], onChange: (id: string) => void, lang: string }) {
   return (
     <div style={{ marginBottom: '1.2rem' }}>
-      <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.4rem', color: '#333', fontSize: '0.95rem' }}>{label}</label>
+      <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.4rem', color: 'var(--text-main)', fontSize: '0.9rem' }}>{label}</label>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
         {options.map(opt => {
           const isActive = selected.includes(opt.id);
           return (
-            <button key={opt.id} onClick={() => onChange(opt.id)} style={{ padding: '0.4rem 0.8rem', borderRadius: '20px', border: '1px solid', borderColor: isActive ? '#3366ff' : '#ccc', background: isActive ? '#eef2ff' : '#fff', color: isActive ? '#3366ff' : '#555', cursor: 'pointer', fontSize: '0.85rem' }}>
+            <button key={opt.id} onClick={() => onChange(opt.id)} style={{ 
+              padding: '0.4rem 0.8rem', 
+              borderRadius: '20px', 
+              border: `1px solid ${isActive ? 'var(--primary-color)' : 'var(--card-border)'}`, 
+              background: isActive ? 'rgba(99, 102, 241, 0.15)' : 'transparent', 
+              color: isActive ? 'var(--primary-color)' : 'var(--text-muted)', 
+              cursor: 'pointer', 
+              fontSize: '0.85rem',
+              transition: 'all 0.2s'
+            }}>
               {lang === 'zh' ? opt.name_zh : opt.name_en}
             </button>
           );
@@ -560,7 +569,7 @@ export default function WorldBuildingPage({ worldId, onBack, lang }: { worldId: 
 
   return (
     <div style={{ padding: '2rem', height: '100%', overflowY: 'auto' }}>
-      <div style={{ background: '#fff', padding: '2rem', borderRadius: '8px', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', maxWidth: '1200px', margin: '0 auto' }}>
+     <div className="glass-card" style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
         
         {/* 顶部区域 */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #3366ff', paddingBottom: '1rem', marginBottom: '2rem' }}>
@@ -590,7 +599,7 @@ export default function WorldBuildingPage({ worldId, onBack, lang }: { worldId: 
           {/* ========================================== */}
 
                     {/* 时代结构与思想潮流 */}
-          <div style={{ background: '#f9f9f9', padding: '1.5rem', borderRadius: '8px', gridColumn: '1 / -1' }}>
+         <div className="glass-card" style={{ padding: '1.5rem', gridColumn: '1 / -1' }}>
             <h3 style={{ marginTop: 0, color: '#3366ff', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>{lang === 'zh' ? '宏观：时代结构与思想潮流' : 'Macro: Zeitgeist & Macro Climate'}</h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
               
@@ -649,7 +658,7 @@ export default function WorldBuildingPage({ worldId, onBack, lang }: { worldId: 
           </div>
 
           {/* 自然生态 */}
-          <div style={{ background: '#f9f9f9', padding: '1.5rem', borderRadius: '8px', gridColumn: '1 / -1' }}>
+          <div className="glass-card" style={{ padding: '1.5rem', gridColumn: '1 / -1' }}>
             <h3 style={{ marginTop: 0, color: '#3366ff', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>{lang === 'zh' ? '宏观：自然生态、地理与底层环境' : 'Macro: Ecology & Environment'}</h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
               <div>
@@ -679,7 +688,7 @@ export default function WorldBuildingPage({ worldId, onBack, lang }: { worldId: 
           {/* ========================================== */}
 
           {/* 政体与阶级 */}
-          <div style={{ background: '#f9f9f9', padding: '1.5rem', borderRadius: '8px' }}>
+          <div className="glass-card" style={{ padding: '1.5rem', gridColumn: '1 / -1' }}>
             <h3 style={{ marginTop: 0, color: '#3366ff', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>{lang === 'zh' ? '中观：政体与阶级结构' : 'Meso: Regime & Class'}</h3>
             <SelectField lang={lang} label={lang === 'zh' ? '政体形式 (单选)' : 'Regime Type'} value={(config.selections['regime']?.[0] as string) || ''} options={REGIME_TYPES} onChange={v => handleSingle('regime', v)} />
             <TagGroup lang={lang} label={lang === 'zh' ? '阶级结构 (可多选共存)' : 'Class Structure (Multiple)'} selected={(config.selections['classes'] as string[]) || []} options={CLASS_STRUCTURES} onChange={v => handleMulti('classes', v)} />
@@ -692,7 +701,7 @@ export default function WorldBuildingPage({ worldId, onBack, lang }: { worldId: 
             <SelectField lang={lang} label={lang === 'zh' ? '清算风险' : 'Purge Risk'} value={(config.selections['purge_risk']?.[0] as string) || ''} options={PURGE_RISK} onChange={v => handleSingle('purge_risk', v)} />
           </div>
                      {/* 中观：地缘政治与权力游戏 */}
-          <div style={{ background: '#f9f9f9', padding: '1.5rem', borderRadius: '8px', gridColumn: '1 / -1' }}>
+         <div className="glass-card" style={{ padding: '1.5rem', gridColumn: '1 / -1' }}>
             <h3 style={{ marginTop: 0, color: '#3366ff', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>{lang === 'zh' ? '中观：地缘政治与权力游戏' : 'Meso: Geopolitics & Power Games'}</h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
               <div>
@@ -708,7 +717,7 @@ export default function WorldBuildingPage({ worldId, onBack, lang }: { worldId: 
           </div>
 
           {/* 宏观：神秘法则与历史渊源 */}
-          <div style={{ background: '#f9f9f9', padding: '1.5rem', borderRadius: '8px', gridColumn: '1 / -1' }}>
+          <div className="glass-card" style={{ padding: '1.5rem', gridColumn: '1 / -1' }}>
             <h3 style={{ marginTop: 0, color: '#3366ff', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>{lang === 'zh' ? '宏观：神秘法则与历史渊源' : 'Macro: Supernatural Laws & History'}</h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
               <div>
@@ -723,7 +732,7 @@ export default function WorldBuildingPage({ worldId, onBack, lang }: { worldId: 
             </div>
           </div>
           {/* 法律与执法 */}
-          <div style={{ background: '#f9f9f9', padding: '1.5rem', borderRadius: '8px' }}>
+          <div className="glass-card" style={{ padding: '1.5rem', gridColumn: '1 / -1' }}>
             <h3 style={{ marginTop: 0, color: '#3366ff', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>{lang === 'zh' ? '中观：法律与执法' : 'Meso: Law & Enforcement'}</h3>
             <TagGroup lang={lang} label={lang === 'zh' ? '法律体系类型 (允许混合共存)' : 'Legal Systems (Multiple)'} selected={(config.selections['legal_systems'] as string[]) || []} options={LEGAL_SYSTEMS} onChange={v => handleMulti('legal_systems', v)} />
             
@@ -735,7 +744,7 @@ export default function WorldBuildingPage({ worldId, onBack, lang }: { worldId: 
           </div>
 
           {/* 经济与金融 */}
-          <div style={{ background: '#f9f9f9', padding: '1.5rem', borderRadius: '8px', gridColumn: '1 / -1' }}>
+          <div className="glass-card" style={{ padding: '1.5rem', gridColumn: '1 / -1' }}>
             <h3 style={{ marginTop: 0, color: '#3366ff', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>{lang === 'zh' ? '中观：经济与金融网络' : 'Meso: Economy & Finance'}</h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
               <div>
@@ -754,7 +763,7 @@ export default function WorldBuildingPage({ worldId, onBack, lang }: { worldId: 
           </div>
 
           {/* 信息网络 */}
-          <div style={{ background: '#f9f9f9', padding: '1.5rem', borderRadius: '8px', gridColumn: '1 / -1' }}>
+          <div className="glass-card" style={{ padding: '1.5rem', gridColumn: '1 / -1' }}>
             <h3 style={{ marginTop: 0, color: '#3366ff', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>{lang === 'zh' ? '中观：信息网络与传播' : 'Meso: Info & Network'}</h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
               <div>
@@ -772,7 +781,7 @@ export default function WorldBuildingPage({ worldId, onBack, lang }: { worldId: 
           </div>
 
           {/* 教育与阶层流动 */}
-          <div style={{ background: '#f9f9f9', padding: '1.5rem', borderRadius: '8px', gridColumn: '1 / -1' }}>
+         <div className="glass-card" style={{ padding: '1.5rem', gridColumn: '1 / -1' }}>
             <h3 style={{ marginTop: 0, color: '#3366ff', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>{lang === 'zh' ? '中观：教育与阶层流动' : 'Meso: Education & Mobility'}</h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
               <div>
@@ -790,7 +799,7 @@ export default function WorldBuildingPage({ worldId, onBack, lang }: { worldId: 
           </div>
 
           {/* 技术与工业体系 */}
-          <div style={{ background: '#f9f9f9', padding: '1.5rem', borderRadius: '8px', gridColumn: '1 / -1' }}>
+          <div className="glass-card" style={{ padding: '1.5rem', gridColumn: '1 / -1' }}>
             <h3 style={{ marginTop: 0, color: '#3366ff', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>{lang === 'zh' ? '中观：技术与工业体系' : 'Meso: Tech & Industry System'}</h3>
             
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
@@ -816,7 +825,7 @@ export default function WorldBuildingPage({ worldId, onBack, lang }: { worldId: 
           </div>
 
           {/* 医疗、武力与治安 */}
-          <div style={{ background: '#f9f9f9', padding: '1.5rem', borderRadius: '8px', gridColumn: '1 / -1' }}>
+          <div className="glass-card" style={{ padding: '1.5rem', gridColumn: '1 / -1' }}>
             <h3 style={{ marginTop: 0, color: '#3366ff', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>{lang === 'zh' ? '中观：医疗、武力与治安' : 'Meso: Medical, Force & Security'}</h3>
             
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
@@ -847,13 +856,13 @@ export default function WorldBuildingPage({ worldId, onBack, lang }: { worldId: 
           {/* ========================================== */}
 
           {/* 地区治理与行政 */}
-          <div style={{ background: '#f9f9f9', padding: '1.5rem', borderRadius: '8px' }}>
+          <div className="glass-card" style={{ padding: '1.5rem', gridColumn: '1 / -1' }}>
             <h3 style={{ marginTop: 0, color: '#3366ff', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>{lang === 'zh' ? '微观：地区治理与行政' : 'Micro: Regional Governance'}</h3>
             <TagGroup lang={lang} label={lang === 'zh' ? '地区治法 / 地方行政制度 (多选)' : 'Governance Types'} selected={(config.selections['governance_types'] as string[]) || []} options={GOVERNANCE_TYPES} onChange={v => handleMulti('governance_types', v)} />
           </div>
 
           {/* 聚落层级与城乡关系 */}
-          <div style={{ background: '#f9f9f9', padding: '1.5rem', borderRadius: '8px' }}>
+          <div className="glass-card" style={{ padding: '1.5rem', gridColumn: '1 / -1' }}>
             <h3 style={{ marginTop: 0, color: '#3366ff', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>{lang === 'zh' ? '微观：聚落层级与城乡关系' : 'Micro: Settlements & Urban-Rural'}</h3>
             <TagGroup lang={lang} label={lang === 'zh' ? '聚落层级与治法 (多选)' : 'Settlement Governance'} selected={(config.selections['settlement_governance'] as string[]) || []} options={SETTLEMENT_GOVERNANCE} onChange={v => handleMulti('settlement_governance', v)} />
             <hr style={{ border: 'none', borderTop: '1px dashed #ccc', margin: '1rem 0' }} />
@@ -861,7 +870,7 @@ export default function WorldBuildingPage({ worldId, onBack, lang }: { worldId: 
           </div>
 
           {/* 组织、档案与潜规则 */}
-          <div style={{ background: '#f9f9f9', padding: '1.5rem', borderRadius: '8px' }}>
+         <div className="glass-card" style={{ padding: '1.5rem', gridColumn: '1 / -1' }}>
             <h3 style={{ marginTop: 0, color: '#3366ff', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>{lang === 'zh' ? '微观：组织、档案与潜规则' : 'Micro: Org, Archives & Unwritten Rules'}</h3>
             <TagGroup lang={lang} label={lang === 'zh' ? '组织运行形式 (多选共存)' : 'Org Types'} selected={(config.selections['orgs'] as string[]) || []} options={ORG_TYPES} onChange={v => handleMulti('orgs', v)} />
             
@@ -873,7 +882,7 @@ export default function WorldBuildingPage({ worldId, onBack, lang }: { worldId: 
           </div>
 
           {/* 劳动分配与剥削 */}
-          <div style={{ background: '#f9f9f9', padding: '1.5rem', borderRadius: '8px' }}>
+         <div className="glass-card" style={{ padding: '1.5rem', gridColumn: '1 / -1' }}>
             <h3 style={{ marginTop: 0, color: '#3366ff', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>{lang === 'zh' ? '微观：劳动分配与剥削' : 'Micro: Labor & Exploitation'}</h3>
             <TagGroup lang={lang} label={lang === 'zh' ? '劳动制度 (多选共存)' : 'Labor Types'} selected={(config.selections['labor'] as string[]) || []} options={LABOR_TYPES} onChange={v => handleMulti('labor', v)} />
             
@@ -885,7 +894,7 @@ export default function WorldBuildingPage({ worldId, onBack, lang }: { worldId: 
           </div>
 
           {/* 修复通道与平反 */}
-          <div style={{ background: '#f9f9f9', padding: '1.5rem', borderRadius: '8px' }}>
+         <div className="glass-card" style={{ padding: '1.5rem', gridColumn: '1 / -1' }}>
             <h3 style={{ marginTop: 0, color: '#3366ff', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>{lang === 'zh' ? '微观：修复通道与平反' : 'Micro: Repair & Rehabilitation'}</h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
               <div>
@@ -901,7 +910,7 @@ export default function WorldBuildingPage({ worldId, onBack, lang }: { worldId: 
           </div>
 
           {/* 宗族与家庭制度 */}
-          <div style={{ background: '#f9f9f9', padding: '1.5rem', borderRadius: '8px' }}>
+          <div className="glass-card" style={{ padding: '1.5rem', gridColumn: '1 / -1' }}>
             <h3 style={{ marginTop: 0, color: '#3366ff', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>{lang === 'zh' ? '微观：宗族与家庭制度' : 'Micro: Family & Marriage'}</h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
               <div>
@@ -926,7 +935,7 @@ export default function WorldBuildingPage({ worldId, onBack, lang }: { worldId: 
     <TagGroup lang={lang} label="流行成瘾物与地下娱乐 (多选)" selected={(config.selections['addictions'] as string[]) || []} options={ADDICTION_TYPES} onChange={v => handleMulti('addictions', v)} />
   </div>
 </div>
-          <div style={{ background: '#f9f9f9', padding: '1.5rem', borderRadius: '8px' }}>
+          <div className="glass-card" style={{ padding: '1.5rem', gridColumn: '1 / -1' }}>
             <h3 style={{ marginTop: 0, color: '#3366ff', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>{lang === 'zh' ? '微观：文化习俗与节假系统' : 'Micro: Culture, Customs & Holidays'}</h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
               <div>
@@ -943,7 +952,7 @@ export default function WorldBuildingPage({ worldId, onBack, lang }: { worldId: 
           </div>
 
           {/* 文艺与思想创新 */}
-          <div style={{ background: '#f9f9f9', padding: '1.5rem', borderRadius: '8px' }}>
+          <div className="glass-card" style={{ padding: '1.5rem', gridColumn: '1 / -1' }}>
             <h3 style={{ marginTop: 0, color: '#3366ff', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>{lang === 'zh' ? '微观：文艺与思想创新' : 'Micro: Arts & Innovation'}</h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
               <div>
@@ -962,7 +971,7 @@ export default function WorldBuildingPage({ worldId, onBack, lang }: { worldId: 
           </div>
 
           {/* 微观生活与职业全息 */}
-          <div style={{ background: '#f9f9f9', padding: '1.5rem', borderRadius: '8px', gridColumn: '1 / -1' }}>
+          <div className="glass-card" style={{ padding: '1.5rem', gridColumn: '1 / -1' }}>
             <h3 style={{ marginTop: 0, color: '#3366ff', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>{lang === 'zh' ? '微观：微观生活与职业全息字典' : 'Micro: Micro-Life & Careers'}</h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1.5rem' }}>
               <div>

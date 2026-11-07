@@ -4,8 +4,8 @@ import { db } from '../db/database'
 function TextField({ label, value, onChange, placeholder }: { label: string, value: string, onChange: (v: string) => void, placeholder?: string }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-      <label style={{ fontSize: '12px', color: '#48566a', fontWeight: 600 }}>{label}</label>
-      <input type="text" value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} style={{ width: '100%', padding: '10px 12px', border: '1px solid #dce2eb', borderRadius: '6px', fontSize: '13px', outline: 'none', transition: 'border 0.2s', background: '#fff' }} />
+      <label style={{ fontSize: '12px', color: 'var(--text-main)', fontWeight: 600 }}>{label}</label>
+      <input type="text" value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} style={{ width: '100%', padding: '10px 12px', fontSize: '13px' }} />
     </div>
   )
 }
@@ -13,8 +13,8 @@ function TextField({ label, value, onChange, placeholder }: { label: string, val
 function TextArea({ label, value, onChange, placeholder, rows = 3 }: { label: string, value: string, onChange: (v: string) => void, placeholder?: string, rows?: number }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-      <label style={{ fontSize: '12px', color: '#48566a', fontWeight: 600 }}>{label}</label>
-      <textarea value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} rows={rows} style={{ width: '100%', padding: '10px 12px', border: '1px solid #dce2eb', borderRadius: '6px', fontSize: '13px', resize: 'vertical', outline: 'none', background: '#fff' }} />
+      <label style={{ fontSize: '12px', color: 'var(--text-main)', fontWeight: 600 }}>{label}</label>
+      <textarea value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} rows={rows} style={{ width: '100%', padding: '10px 12px', fontSize: '13px', resize: 'vertical' }} />
     </div>
   )
 }
@@ -26,10 +26,9 @@ function TagGroup({ label, options, selected, onChange }: { label: string, optio
   }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-      <label style={{ fontSize: '12px', color: '#48566a', fontWeight: 600 }}>{label}</label>
+      <label style={{ fontSize: '12px', color: 'var(--text-main)', fontWeight: 600 }}>{label}</label>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
         {options.map(opt => {
-          // 兼容字符串数组和对象数组
           const id = typeof opt === 'string' ? opt : opt.id
           const name = typeof opt === 'string' ? opt : opt.name
           const desc = typeof opt === 'string' ? '' : opt.desc
@@ -41,7 +40,16 @@ function TagGroup({ label, options, selected, onChange }: { label: string, optio
               type="button" 
               onClick={() => toggle(id)} 
               title={desc}
-              style={{ padding: '6px 14px', borderRadius: '20px', border: '1px solid', fontSize: '12px', cursor: 'pointer', transition: 'all 0.2s', background: isActive ? '#f3e8ff' : '#fff', borderColor: isActive ? '#a78bfa' : '#dce2eb', color: isActive ? '#7c3aed' : '#5a6675' }}
+              style={{ 
+                padding: '6px 14px', 
+                borderRadius: '20px', 
+                border: `1px solid ${isActive ? 'var(--primary-color)' : 'var(--card-border)'}`, 
+                fontSize: '12px', 
+                cursor: 'pointer', 
+                transition: 'all 0.2s', 
+                background: isActive ? 'rgba(99, 102, 241, 0.15)' : 'transparent', 
+                color: isActive ? 'var(--primary-color)' : 'var(--text-muted)' 
+              }}
             >
               {name}
             </button>
@@ -55,11 +63,11 @@ function TagGroup({ label, options, selected, onChange }: { label: string, optio
 function RadioGroup({ label, options, value, onChange }: { label: string, options: string[], value: string, onChange: (v: string) => void }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-      <label style={{ fontSize: '12px', color: '#48566a', fontWeight: 600 }}>{label}</label>
+      <label style={{ fontSize: '12px', color: 'var(--text-main)', fontWeight: 600 }}>{label}</label>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
         {options.map(opt => (
-          <label key={opt} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer', color: '#48566a' }}>
-            <input type="radio" checked={value === opt} onChange={() => onChange(opt)} style={{ accentColor: '#8b5cf6' }} />
+          <label key={opt} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer', color: 'var(--text-main)' }}>
+            <input type="radio" checked={value === opt} onChange={() => onChange(opt)} style={{ accentColor: 'var(--primary-color)' }} />
             {opt}
           </label>
         ))}
