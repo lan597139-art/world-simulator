@@ -1,84 +1,65 @@
-
+/* 基础重置 */
 :root {
-  font-family:
-    Inter,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    "PingFang SC",
-    "Microsoft YaHei",
-    sans-serif;
-
-  color: #263244;
-  background: #f5f6f8;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-
-  color-scheme: light;
-
-  --color-primary: #405b86;
-  --color-primary-hover: #32496e;
-
-  --color-sidebar: #171d29;
-  --color-background: #f5f6f8;
-  --color-surface: #ffffff;
-
-  --color-text: #263244;
-  --color-text-secondary: #8792a3;
-  --color-border: #e9ebf0;
-
-  --radius-card: 9px;
-  --radius-button: 7px;
+  /* 浅色模式（日间）变量 */
+  --bg-color: #F3F4F6; /* 整体浅灰背景 */
+  --sidebar-bg: #1E1E2E; /* 侧边栏深色 */
+  --card-bg: rgba(255, 255, 255, 0.65); /* 卡片半透明，为玻璃态准备 */
+  --card-border: rgba(255, 255, 255, 0.8);
+  --text-main: #111827;
+  --text-muted: #6B7280;
+  --primary-color: #2b2866; /* 统一的主色调（蓝紫色） */
+  --primary-hover: #5c38ca;
+  --danger-color: #934343; /* 删除按钮红色 */
 }
 
-* {
-  box-sizing: border-box;
-}
-
-html {
-  min-width: 900px;
-  min-height: 100%;
+/* 深色模式（夜间）- 自动跟随系统 */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-color: #0F172A; /* 深邃的深蓝黑背景 */
+    --sidebar-bg: #020617; /* 更深的侧边栏 */
+    --card-bg: rgba(7, 10, 14, 0.6); /* 深色半透明卡片 */
+    --card-border: rgba(255, 255, 255, 0.08);
+    --text-main: #F9FAFB;
+    --text-muted: #9CA3AF;
+    --primary-color: #6366F1;
+    --primary-hover: #818CF8;
+    --danger-color: #F87171;
+  }
 }
 
 body {
-  min-width: 900px;
-  min-height: 100vh;
   margin: 0;
-  background: var(--color-background);
+  padding: 0;
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease; /* 切换模式时平滑过渡 */
 }
 
-#root {
-  width: 100%;
-  min-height: 100vh;
+/* =========================================
+   苹果风玻璃质感卡片类 (Glassmorphism)
+   你在所有页面里直接用这个 className="glass-card"
+   ========================================= */
+.glass-card {
+  background: var(--card-bg);
+  backdrop-filter: blur(16px); /* 毛玻璃模糊效果 */
+  -webkit-backdrop-filter: blur(16px); /* 兼容 Safari */
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05); /* 淡淡的悬浮阴影 */
+  transition: all 0.3s ease;
 }
 
-button,
-input,
-textarea,
-select {
-  font: inherit;
-}
-
-button {
+/* 统一的主按钮样式 */
+.btn-primary {
+  background-color: var(--primary-color);
+  color: white;
+  border-radius: 8px;
+  border: none;
+  padding: 8px 16px;
   cursor: pointer;
+  transition: background 0.2s;
 }
-
-h1,
-h2,
-h3,
-h4,
-p {
-  margin-top: 0;
-}
-
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-::selection {
-  background: rgba(64, 91, 134, 0.18);
+.btn-primary:hover {
+  background-color: var(--primary-hover);
 }
