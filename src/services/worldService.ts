@@ -1,12 +1,18 @@
-import { db } from '../db/database'
 import type { World, WorldType } from '../types/world'
 
+const API_BASE_URL = "http://127.0.0.1:8000/api";
+
 export async function getAllWorlds(): Promise<World[]> {
-  return db.worlds.orderBy('updatedAt').reverse().toArray()
+  const res = await fetch(`${API_BASE_URL}/worlds`);
+  if (!res.ok) throw new Error("获取世界失败");
+  return await res.json();
 }
 
 export async function getWorldById(id: string): Promise<World | undefined> {
-  return db.worlds.get(id)
+  const res = await fetch(`${API_BASE_URL}/worlds/${id}`);
+  if (res.status === 404) return undefined;
+  if (!res.ok) throw new Error("获取世界失败");
+  return await res.json();
 }
 
 export async function createWorld(data: {
@@ -15,29 +21,30 @@ export async function createWorld(data: {
   type: WorldType
   background: string
 }): Promise<World> {
-  const now = new Date().toISOString()
-
-  const world: World = {
-    id: crypto.randomUUID(),
-    ...data,
-    createdAt: now,
-    updatedAt: now,
-  }
-
-  await db.worlds.add(world)
-  return world
+  const res = await fetch(`${API_BASE_URL}/worlds`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) throw new Error("创建世界失败");
+  return await res.json();
 }
 
 export async function updateWorld(
   id: string,
   data: Partial<Pick<World, 'name' | 'description' | 'type' | 'background'>>
 ): Promise<void> {
-  await db.worlds.update(id, {
-    ...data,
-    updatedAt: new Date().toISOString(),
-  })
+  const res = await fetch(`${API_BASE_URL}/worlds/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) throw new Error("更新世界失败");
 }
 
 export async function deleteWorld(id: string): Promise<void> {
-  await db.worlds.delete(id)
+  const res = await fetch(`${API_BASE_URL}/worlds/${id}`, {
+    method: 'DELETE'
+  });
+  if (!res.ok) throw new Error("删除世界失败");
 }

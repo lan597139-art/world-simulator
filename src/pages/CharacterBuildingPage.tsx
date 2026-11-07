@@ -1,5 +1,4 @@
 import { useState ,useEffect } from 'react'
-import { db } from '../db/database'
 // ================= 基础表单组件 =================
 function TextField({ label, value, onChange, placeholder }: { label: string, value: string, onChange: (v: string) => void, placeholder?: string }) {
   return (
@@ -295,12 +294,59 @@ const [allWorlds, setAllWorlds] = useState<any[]>([]) // 记录所有世界的�
 
 // 在 useEffect 里加载所有世界：
 useEffect(() => {
-  if ((db as any).worlds) {
-    (db as any).worlds.toArray().then((data: any[]) => {
-      setAllWorlds(data)
-    })
-  }
+  // 从后端获取世界列表
+  fetch("http://127.0.0.1:8000/api/worlds")
+    .then(res => res.json())
+    .then(data => setAllWorlds(data))
+    .catch(err => console.error("获取世界列表失败", err))
 }, [])
+  // ✅ 新增：如果有 characterId，则从后端拉取详情并回填
+  useEffect(() => {
+    if (!characterId) return;
+
+    fetch(`http://127.0.0.1:8000/api/characters/${characterId}`)
+      .then(res => {
+        if (!res.ok) throw new Error("获取人物详情失败");
+        return res.json();
+      })
+      .then(data => {
+        // 1. 基础档案
+        if (data.basic_profile) setCharData(data.basic_profile);
+        
+        // 2. 绑定世界
+        if (data.world_id) setSelectedWorldId(data.world_id);
+
+        // 3. 五引擎与主导关系
+        if (data.engines) {
+          if (data.engines.ovtde) setOvtdeData(data.engines.ovtde);
+          if (data.engines.dominance) setDominance(data.engines.dominance);
+        }
+
+        // 4. 机制层
+        if (data.defense_mechanisms) setMechanismData(data.defense_mechanisms);
+
+        // 5. 沙盒层
+        if (data.reality_conditions) setSandboxData(data.reality_conditions);
+
+        // 6. 思想钢印
+        if (data.thought_imprints) setIndividualData(data.thought_imprints);
+
+        // 7. 生命经历
+        if (data.life_history) setHistoryData(data.life_history);
+
+        // 8. 初始状态
+        if (data.initial_state) {
+          if (data.initial_state.initialData) setInitialData(data.initial_state.initialData);
+          if (data.initial_state.initialGoals) setInitialGoals(data.initial_state.initialGoals);
+          if (data.initial_state.initialRelations) setInitialRelations(data.initial_state.initialRelations);
+          if (data.initial_state.initialResources) setInitialResources(data.initial_state.initialResources);
+        }
+      })
+      .catch(err => {
+        console.error("加载人物详情失败", err);
+        alert("加载人物详情失败，请检查后端是否正常");
+      });
+  }, [characterId]);
   const [activeModule, setActiveModule] = useState('basic')
   
   // ✅ 01 基础档案（必须放在函数体内的最上面）
@@ -768,40 +814,72 @@ useEffect(() => {
 
   const currentModule = CHARACTER_MODULES.find(item => item.id === activeModule)!
   // ✅ 提取保存逻辑到单独的函数
-  const handleSave = async () => {
-  try {
-    if ((db as any).characters) {
-      await (db as any).characters.put({
-        ...charData, 
-        id: characterId || Date.now().toString(), 
-        worldId: selectedWorldId, // ✅ 这里用下拉框选中的值，而不是 props 里的值
-        name: charData.name || '未命名人物', 
-        updatedAt: new Date().toISOString()
-      });
-      alert('人物数据已保存');
-      if (onBack) onBack(); 
-    } else {
-      alert('数据库未连接');
+    const handleSave = async () => {
+    if (!charData.name.trim()) {
+      alert('❌ 请填写人物名称！')
+      return
     }
-  } catch (error) {
-    console.error('保存报错:', error);
-    alert('❌ 保存失败');
-  }
-};
-  return (
-    <div className="character-editor">
-      <header className="character-header-light">
-        <div className="character-header-left">
-          {onBack && <button className="character-back-light" onClick={onBack} type="button">← 返回</button>}
+    if (!selectedWorldId) {
+      alert('❌ 请选择人物所属的世界！')
+      return
+    }
+
+    // 打包你的 7 个模块数据，对齐后端
+    const characterData = {
+      world_id: selectedWorldId, 
+      name: charData.name,
+      basic_profile: charData,
+      engines: { ovtde: ovtdeData, dominance: dominance },
+      defense_mechanisms: mechanismData,
+      reality_conditions: sandboxData,
+      thought_imprints: individualData,
+      life_history: historyData,
+      initial_state: { initialData, initialGoals, initialRelations, initialResources }
+    }
+
+       try {
+      // ✅ 判断是新建还是更新
+      const isEditMode = !!characterId;
+      const url = isEditMode 
+        ? `http://127.0.0.1:8000/api/characters/${characterId}`
+        : "http://127.0.0.1:8000/api/characters";
+      const method = isEditMode ? "PUT" : "POST";
+
+      const res = await fetch(url, {
+        method: method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(characterData)
+      });
+
+      if (res.ok) {
+        alert(isEditMode ? '🎉 人物资料已成功更新！' : '🎉 人物已成功存入世界数据库！');
+        if (onBack) onBack(); 
+      } else {
+        alert(`❌ 保存失败，状态码：${res.status}`);
+      }
+    } catch (error) {
+      console.error('保存报错:', error);
+      alert('❌ 网络请求失败，请检查后端是否开启');
+    }
+  };
+ return (
+    <div className="character-editor" style={{ backgroundColor: 'transparent', minHeight: '100%', paddingBottom: '2rem' }}>
+           <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem 2rem', backgroundColor: 'transparent', borderBottom: '1px solid var(--card-border)', marginBottom: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1.5rem' }}>
+          {onBack && (
+            <button onClick={onBack} type="button" style={{ padding: '6px 12px', background: 'rgba(128,128,128,0.1)', border: '1px solid var(--card-border)', color: 'var(--text-main)', borderRadius: '6px', cursor: 'pointer' }}>
+              ← 返回
+            </button>
+          )}
           <div>
-            <h1>人物种子编辑器</h1>
-            <div className="character-id-light">CHARACTER ID: {characterId || 'NEW CHARACTER'}</div>
+            <h1 style={{ margin: '0 0 4px 0', color: 'var(--text-main)', fontSize: '22px', fontWeight: 600 }}>人物种子编辑器</h1>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>CHARACTER ID: {characterId || 'NEW CHARACTER'}</div>
           </div>
         </div>
-                 <div className="character-header-right">
+        <div>
           <button 
-            onClick={handleSave} // ✅ 直接调用函数
-            style={{ padding: '8px 20px', background: '#8b5cf6', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
+            onClick={handleSave}
+            style={{ padding: '8px 20px', background: 'var(--primary-color)', color: 'var(--primary-text)', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
           >
             保存人物
           </button>
@@ -809,22 +887,46 @@ useEffect(() => {
       </header>
 
       <main className="character-main-full">
-        <div className="character-stepper">
-          {CHARACTER_MODULES.map(module => (
-            <button key={module.id} type="button" className={`stepper-item ${activeModule === module.id ? 'active' : ''}`} onClick={() => setActiveModule(module.id)}>
-              <span className="stepper-number">{module.number}</span>
-              <span className="stepper-title">{module.title}</span>
-            </button>
-          ))}
+             <div className="character-stepper" style={{ display: 'flex', gap: '10px', overflowX: 'auto', padding: '0 2rem 1rem 2rem' }}>
+          {CHARACTER_MODULES.map(module => {
+            const isActive = activeModule === module.id
+            return (
+              <button 
+                key={module.id} 
+                type="button" 
+                onClick={() => setActiveModule(module.id)}
+                style={{
+                  flex: 1, padding: '12px', borderRadius: '8px', cursor: 'pointer', textAlign: 'left',
+                  background: isActive ? 'rgba(128, 128, 128, 0.15)' : 'transparent',
+                  border: isActive ? '1px solid rgba(128, 128, 128, 0.3)' : '1px solid var(--card-border)',
+                  transition: 'all 0.2s'
+                }}
+              >
+                <span style={{ display: 'block', color: isActive ? 'var(--text-main)' : 'var(--text-muted)', fontSize: '12px', marginBottom: '4px', fontWeight: 600 }}>
+                  {module.number}
+                </span>
+                <span style={{ display: 'block', color: isActive ? 'var(--text-main)' : 'var(--text-muted)', fontSize: '14px', fontWeight: isActive ? 600 : 400 }}>
+                  {module.title}
+                </span>
+              </button>
+            )
+          })}
         </div>
-
-        <div className="module-heading-light">
+                <div style={{ padding: '1.5rem 2rem 0 2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <div className="module-eyebrow-light">MODULE {currentModule.number} / 07</div>
-            <h2>{currentModule.title} <span>{currentModule.subtitle}</span></h2>
-            <p className="module-description-light">{currentModule.description}</p>
+            <div style={{ color: 'var(--text-muted)', fontSize: '12px', fontWeight: 600, marginBottom: '8px' }}>
+              MODULE {currentModule.number} / 07
+            </div>
+            <h2 style={{ color: 'var(--text-main)', margin: 0, fontSize: '24px' }}>
+              {currentModule.title} <span style={{ color: 'var(--text-muted)', fontSize: '16px', fontWeight: 400 }}>{currentModule.subtitle}</span>
+            </h2>
+            <p style={{ color: 'var(--text-muted)', marginTop: '8px', fontSize: '14px' }}>
+              {currentModule.description}
+            </p>
           </div>
-          <div className="module-index-light">{currentModule.number}</div>
+          <div style={{ fontSize: '80px', fontWeight: 'bold', color: 'var(--text-main)', opacity: 0.05 }}>
+            {currentModule.number}
+          </div>
         </div>
 
                        <section className="module-workspace-light">

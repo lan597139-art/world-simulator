@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { initializeWorldBuildingConfig, getWorldBuildingConfig } from '../services/worldBuildingService'
 import { getWorldById } from '../services/worldService'
 import { db } from '../db/database'
+import { createWorld, updateWorld, deleteWorld } from '../services/worldService'
 
 // =========================================================
 // 1. 数据字典 (已按宏观-中观-微观重新梳理，去除了所有序号)
@@ -531,42 +532,56 @@ export default function WorldBuildingPage({ worldId, onBack, lang }: { worldId: 
     setConfig({ ...config, selections: { ...config.selections, [field]: updated } })
   }
 
-  const handleSave = async () => {
+    const handleSave = async () => {
     if (!worldName.trim()) return alert(lang === 'zh' ? '❌ 请填写世界名称！' : '❌ Please enter world name!')
-    if (!inputId.trim()) return alert(lang === 'zh' ? '❌ 请填写世界 ID！' : '❌ Please enter world ID!')
 
     try {
-      const existingWorld = await db.worlds.get(inputId)
-      const now = new Date().toISOString()
+      const configData = {
+        selections: config.selections,
+        parameters: config.parameters || {}
+      }
+      const backgroundStr = JSON.stringify(configData)
 
-      if (!existingWorld) {
-        await db.worlds.add({ id: inputId, name: worldName, description: 'Custom World', type: 'fiction', background: '', createdAt: now, updatedAt: now })
+      // 👇 修改：用 worldId 来判断是新建还是更新，而不是 inputId
+      if (!worldId) {
+        // 如果是新建，调用后端生成 UUID
+        await createWorld({
+          name: worldName,
+          description: 'Custom World',
+          type: 'fiction',
+          background: backgroundStr
+        })
       } else {
-        await db.worlds.update(inputId, { name: worldName, updatedAt: now })
+        // 如果是编辑现有世界，用 worldId 去更新
+        await updateWorld(worldId, {
+          name: worldName,
+          background: backgroundStr
+        })
       }
 
-      const existingCfg = await db.worldBuildingConfigs.where('worldId').equals(inputId).first()
-      if (existingCfg) {
-        await db.worldBuildingConfigs.update(existingCfg.id, { selections: config.selections, updatedAt: now })
+      alert(lang === 'zh' ? '世界保存成功！' : 'World saved successfully!')
+      
+      if (typeof onBack === 'function') {
+        onBack()
       } else {
-        await db.worldBuildingConfigs.add({ id: crypto.randomUUID(), worldId: inputId, selections: config.selections, parameters: config.parameters || {}, updatedAt: now })
+        window.location.reload()
       }
 
-      alert(lang === 'zh' ? '✅ 世界已成功保存！马上跳回列表。' : '✅ World saved successfully!')
-      if (onBack) onBack()
-    } catch (err: any) {
-      alert('❌ Error: ' + err.message)
+    } catch (error) {
+      console.error("保存失败:", error)
+      alert("保存失败，请查看控制台")
     }
   }
 
-  const handleDelete = async () => {
-    if (!worldId && !inputId) return alert(lang === 'zh' ? '当前是新建状态，无需删除。' : 'Unsaved world, nothing to delete.')
+    const handleDelete = async () => {
+    if (!worldId) return alert(lang === 'zh' ? '当前是新建状态，无需删除。' : 'Unsaved world, nothing to delete.')
     try {
-      await db.worlds.delete(inputId)
-      await db.worldBuildingConfigs.where('worldId').equals(inputId).delete()
+      // 👇 修改：调用后端的删除接口
+      await deleteWorld(worldId)
       alert(lang === 'zh' ? '🗑️ 世界已彻底删除！' : '🗑️ World deleted!')
       if (onBack) onBack()
     } catch (err) {
+      console.error(err)
       alert('❌ Delete failed')
     }
   }

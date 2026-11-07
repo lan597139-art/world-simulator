@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import CharacterBuildingPage from './CharacterBuildingPage'; 
-import { db } from '../db/database'; 
+// Dexie 本地库暂时不再使用，保留 database.ts 文件本身
 
 export default function CharacterListPage({ 
   worldId, 
@@ -15,19 +15,18 @@ export default function CharacterListPage({
   const [view, setView] = useState<'list' | 'edit'>('list');
   const [editingCharId, setEditingCharId] = useState<string | null>(null);
 
-  const loadCharacters = async () => {
+    const loadCharacters = async () => {
     try {
-      if ((db as any).characters) {
-        let data;
-        if (worldId) {
-          data = await (db as any).characters.where('worldId').equals(worldId).toArray();
-        } else {
-          data = await (db as any).characters.toArray();
-        }
-        setCharacters(data);
-      }
+      const res = await fetch("http://127.0.0.1:8000/api/characters");
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const filtered = worldId
+        ? data.filter((c: any) => c.world_id === worldId)
+        : data;
+      setCharacters(filtered);
     } catch (error) {
       console.error("加载人物失败", error);
+      setCharacters([]);
     }
   };
 
@@ -35,14 +34,20 @@ export default function CharacterListPage({
     loadCharacters();
   }, [worldId]);
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm('确定要删除这个人物档案吗？')) {
-      try {
-        await (db as any).characters.delete(id);
-        loadCharacters(); 
-      } catch (error) {
-        console.error("删除失败", error);
+     const handleDelete = async (id: string) => {
+    if (!window.confirm('确定要删除这个人物档案吗？')) return;
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/api/characters/${id}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        loadCharacters(); // 删除成功后刷新列表
+      } else {
+        alert('删除失败，请检查后端');
       }
+    } catch (error) {
+      console.error("删除失败", error);
+      alert('网络请求失败');
     }
   };
 
@@ -57,7 +62,7 @@ export default function CharacterListPage({
   }
 
   return (
-    <div style={{ padding: '32px', maxWidth: '1200px', margin: '0 auto' }}>
+       <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
         <div>
           <button 
@@ -103,7 +108,7 @@ export default function CharacterListPage({
             <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)' }}>ID: {char.id}</p>
             
             {/* ✅ 修复：“已绑定世界”标签的白块问题 */}
-            {char.worldId && !worldId && (
+            {char.world_id && !worldId && (
               <span style={{ 
                 fontSize: '12px', 
                 background: 'rgba(128, 128, 128, 0.15)', // 半透明灰

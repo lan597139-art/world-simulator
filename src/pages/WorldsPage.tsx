@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
-import { getAllWorlds } from '../services/worldService'
-import { db } from '../db/database'
+import { getAllWorlds, deleteWorld } from '../services/worldService'
 import type { World } from '../types/world'
 
 export default function WorldsPage({ 
@@ -16,17 +15,13 @@ export default function WorldsPage({
 }) {
   const [worlds, setWorlds] = useState<World[]>([])
   const [loading, setLoading] = useState(true)
-  const [totalCharacters, setTotalCharacters] = useState<number>(0)
+  // 暂时把人物统计写死为 0，因为人物模块还没迁移到后端
+  const totalCharacters = 0; 
 
   const loadWorlds = async () => {
     try {
       const data = await getAllWorlds()
       setWorlds(data)
-      
-      if ((db as any).characters) {
-        const count = await (db as any).characters.count()
-        setTotalCharacters(count)
-      }
     } catch (error) {
       console.error("加载失败:", error)
     } finally {
@@ -43,9 +38,8 @@ export default function WorldsPage({
     if (!window.confirm(msg)) return;
     
     try {
-      await db.worlds.delete(id)
-      await db.worldBuildingConfigs.where('worldId').equals(id).delete()
-      loadWorlds()
+      await deleteWorld(id) // ✅ 改用后端的删除接口
+      loadWorlds() // 重新加载列表
     } catch (err) {
       console.error(err)
       alert('❌ Delete failed')
@@ -55,7 +49,7 @@ export default function WorldsPage({
   if (loading) return <div style={{ padding: '2rem', color: 'var(--text-main)' }}>Loading...</div>
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
+       <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
         <div>
           <h1 style={{ margin: 0, color: 'var(--text-main)', fontSize: '24px', fontWeight: 500 }}>{dict?.worlds || '世界管理'}</h1>
@@ -69,11 +63,10 @@ export default function WorldsPage({
           style={{ 
             padding: '10px 20px', 
             background: 'var(--primary-color)', 
-            color: 'var(--bg-color)', /* ✅ 修复了原本看不见的问题 */
+            color: 'var(--bg-color)',
             border: 'none', 
             borderRadius: '8px', 
             cursor: 'pointer', 
-            /* ✅ 去掉了 fontWeight */
             boxShadow: '0 4px 14px rgba(0, 0, 0, 0.1)',
             transition: 'all 0.2s'
           }}
@@ -108,7 +101,6 @@ export default function WorldsPage({
                     border: '1px solid var(--card-border)', 
                     borderRadius: '8px', 
                     cursor: 'pointer', 
-                    /* ✅ 删除了 fontWeight: 500 */
                     transition: 'all 0.2s'
                   }}
                 >
@@ -124,7 +116,6 @@ export default function WorldsPage({
                     border: '1px solid var(--card-border)', 
                     borderRadius: '8px', 
                     cursor: 'pointer', 
-                    /* ✅ 删除了 fontWeight: 500 */
                     transition: 'all 0.2s'
                   }}
                 >
