@@ -498,9 +498,13 @@ function TagGroup({ label, selected, options, onChange, lang }: { label: string,
 // 3. 页面主体 (宏观 -> 中观 -> 微观 排布)
 // =========================================================
 export default function WorldBuildingPage({ worldId, onBack, lang }: { worldId: string, onBack?: () => void, lang: string }) {
+  const [activeSubTab, setActiveSubTab] = useState<string>('era')
   const [config, setConfig] = useState<any>(null)
   const [worldName, setWorldName] = useState('')
   const [inputId, setInputId] = useState(worldId || crypto.randomUUID().slice(0, 8))
+  
+  // ✅ 新增：控制当前显示宏观、中观还是微观
+  const [activeLevel, setActiveLevel] = useState<'macro' | 'meso' | 'micro'>('macro')
 
   useEffect(() => {
     async function init() {
@@ -567,433 +571,368 @@ export default function WorldBuildingPage({ worldId, onBack, lang }: { worldId: 
     }
   }
 
-  return (
+    return (
     <div style={{ padding: '2rem', height: '100%', overflowY: 'auto' }}>
-     <div className="glass-card" style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         
-        {/* 顶部区域 */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #3366ff', paddingBottom: '1rem', marginBottom: '2rem' }}>
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <input value={worldName} onChange={e => setWorldName(e.target.value)} placeholder={lang === 'zh' ? '请输入世界名称' : 'Enter World Name'} style={{ fontSize: '1.5rem', fontWeight: 'bold', padding: '0.5rem', border: '1px solid #ccc', borderRadius: '6px', width: '80%' }} />
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#666' }}>
-              <span>{lang === 'zh' ? '世界 ID:' : 'World ID:'}</span>
-              <input value={inputId} onChange={e => setInputId(e.target.value)} disabled={!!worldId} style={{ padding: '0.4rem 0.8rem', border: '1px solid #ccc', borderRadius: '4px', width: '300px', background: worldId ? '#f0f0f0' : '#fff' }} />
+        {/* 1. 顶部头部区域 */}
+        <header className="glass-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem 2rem' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1.5rem', flex: 1 }}>
+            {onBack && (
+              <button onClick={onBack} type="button" style={{ padding: '8px 16px', background: 'rgba(128,128,128,0.1)', border: '1px solid var(--card-border)', borderRadius: '8px', cursor: 'pointer', color: 'var(--text-main)', transition: 'all 0.2s', display: 'flex', alignItems: 'center', height: 'fit-content', marginTop: '4px' }}>
+                ← 返回
+              </button>
+            )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <input value={worldName} onChange={e => setWorldName(e.target.value)} placeholder={lang === 'zh' ? '请输入世界名称' : 'Enter World Name'} style={{ fontSize: '24px', fontWeight: 600, background: 'transparent', border: 'none', outline: 'none', color: 'var(--text-main)', padding: 0, width: '100%', maxWidth: '400px' }} />
+              <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                {lang === 'zh' ? '世界 ID:' : 'World ID:'} <span style={{ background: 'rgba(128,128,128,0.1)', padding: '2px 8px', borderRadius: '4px' }}>{inputId}</span>
+              </div>
             </div>
           </div>
-          
           <div style={{ display: 'flex', gap: '1rem' }}>
-            <button onClick={handleDelete} style={{ padding: '0.75rem 1.5rem', background: '#dc3545', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '1rem', cursor: 'pointer', fontWeight: 'bold' }}>
+            <button onClick={handleDelete} style={{ padding: '8px 20px', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger-color)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s' }}>
               {lang === 'zh' ? '删除世界' : 'Delete'}
             </button>
-            <button onClick={handleSave} style={{ padding: '0.75rem 2rem', background: '#28a745', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '1rem', cursor: 'pointer', fontWeight: 'bold' }}>
+            <button onClick={handleSave} style={{ padding: '8px 24px', background: 'var(--primary-color)', color: 'var(--bg-color)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 500, transition: 'all 0.2s' }}>
               {lang === 'zh' ? '保存设定' : 'Save'}
             </button>
           </div>
+        </header>
+
+        {/* 2. 母导航 (宏观-中观-微观) */}
+        <div style={{ display: 'flex', gap: '1rem' }}>
+          {[
+            { id: 'macro', num: '01', title: '宏观：世界基底' },
+            { id: 'meso', num: '02', title: '中观：社会运转' },
+            { id: 'micro', num: '03', title: '微观：生活与治理' }
+          ].map(level => (
+            <button key={level.id} type="button" onClick={() => { setActiveLevel(level.id as any); if (level.id === 'macro') setActiveSubTab('era'); if (level.id === 'meso') setActiveSubTab('regime'); if (level.id === 'micro') setActiveSubTab('governance'); }} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '16px', background: activeLevel === level.id ? 'rgba(99, 102, 241, 0.1)' : 'var(--card-bg)', border: activeLevel === level.id ? '1px solid var(--primary-color)' : '1px solid var(--card-border)', borderRadius: '16px', cursor: 'pointer', transition: 'all 0.2s' }}>
+              <span style={{ fontSize: '14px', fontWeight: 600, color: activeLevel === level.id ? 'var(--primary-color)' : 'var(--text-muted)', marginBottom: '4px' }}>{level.num}</span>
+              <span style={{ fontSize: '16px', fontWeight: 600, color: activeLevel === level.id ? 'var(--primary-color)' : 'var(--text-main)' }}>{level.title}</span>
+            </button>
+          ))}
         </div>
 
-        {/* 表单区域：宏观 -> 中观 -> 微观 */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '1.5rem' }}>
+        {/* 3. 子导航 (具体模块) */}
+        <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid var(--card-border)', paddingBottom: '1rem', overflowX: 'auto' }}>
+          {activeLevel === 'macro' && [{ id: 'era', label: '时代与思想' }, { id: 'nature', label: '自然与生态' }, { id: 'supernatural', label: '法则与历史' }].map(tab => (
+            <button key={tab.id} onClick={() => setActiveSubTab(tab.id)} style={{ padding: '8px 16px', background: activeSubTab === tab.id ? 'rgba(128,128,128,0.15)' : 'transparent', borderRadius: '8px', border: 'none', color: activeSubTab === tab.id ? 'var(--text-main)' : 'var(--text-muted)', fontWeight: activeSubTab === tab.id ? 600 : 400, cursor: 'pointer', transition: 'all 0.2s' }}>{tab.label}</button>
+          ))}
+          {activeLevel === 'meso' && [{ id: 'regime', label: '政体与阶级' }, { id: 'law', label: '地缘与法律' }, { id: 'economy', label: '经济与信息' }, { id: 'education', label: '教育与流动' }, { id: 'tech', label: '科技与工业' }, { id: 'medical', label: '医疗与治安' }].map(tab => (
+            <button key={tab.id} onClick={() => setActiveSubTab(tab.id)} style={{ padding: '8px 16px', background: activeSubTab === tab.id ? 'rgba(128,128,128,0.15)' : 'transparent', borderRadius: '8px', border: 'none', color: activeSubTab === tab.id ? 'var(--text-main)' : 'var(--text-muted)', fontWeight: activeSubTab === tab.id ? 600 : 400, cursor: 'pointer', transition: 'all 0.2s' }}>{tab.label}</button>
+          ))}
+          {activeLevel === 'micro' && [{ id: 'governance', label: '治理与聚落' }, { id: 'org', label: '组织与劳动' }, { id: 'family', label: '修复与家庭' }, { id: 'culture', label: '文化与生活' }].map(tab => (
+            <button key={tab.id} onClick={() => setActiveSubTab(tab.id)} style={{ padding: '8px 16px', background: activeSubTab === tab.id ? 'rgba(128,128,128,0.15)' : 'transparent', borderRadius: '8px', border: 'none', color: activeSubTab === tab.id ? 'var(--text-main)' : 'var(--text-muted)', fontWeight: activeSubTab === tab.id ? 600 : 400, cursor: 'pointer', transition: 'all 0.2s' }}>{tab.label}</button>
+          ))}
+        </div>
+
+        {/* 4. 内容区域 (全垂直单列排版) */}
+        <div style={{ minHeight: '400px' }}>
           
-          {/* ========================================== */}
-          {/* 第一部分：宏观世界 (时代、生态与大环境) */}
-          {/* ========================================== */}
-
-                    {/* 时代结构与思想潮流 */}
-         <div className="glass-card" style={{ padding: '1.5rem', gridColumn: '1 / -1' }}>
-            <h3 style={{ marginTop: 0, color: '#3366ff', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>{lang === 'zh' ? '宏观：时代结构与思想潮流' : 'Macro: Zeitgeist & Macro Climate'}</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-              
-              {/* 左列：时代区间 + 意识形态 */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div>
-                  <h4 style={{ fontSize: '0.95rem', color: '#555', marginBottom: '0.8rem' }}>⏳ {lang === 'zh' ? '时代区间与未来预期' : 'Era & Future'}</h4>
-                  <SelectField lang={lang} label={lang === 'zh' ? '时代发展阶段' : 'Era Stage'} value={(config.selections['era']?.[0] as string) || ''} options={ERA_STAGES} onChange={v => handleSingle('era', v)} />
-                  <SelectField lang={lang} label={lang === 'zh' ? '增长顺风' : 'Growth Tailwind'} value={(config.selections['growth_tailwind']?.[0] as string) || ''} options={GROWTH_TAILWIND} onChange={v => handleSingle('growth_tailwind', v)} />
-                  <SelectField lang={lang} label={lang === 'zh' ? '未来可信度' : 'Future Believability'} value={(config.selections['future_believability']?.[0] as string) || ''} options={FUTURE_BELIEVABILITY} onChange={v => handleSingle('future_believability', v)} />
-                  <SelectField lang={lang} label={lang === 'zh' ? '精英俘获' : 'Elite Capture'} value={(config.selections['elite_capture']?.[0] as string) || ''} options={ELITE_CAPTURE} onChange={v => handleSingle('elite_capture', v)} />
-                  <SelectField lang={lang} label={lang === 'zh' ? '未来预期' : 'Future Expectation'} value={(config.selections['future_expectation']?.[0] as string) || ''} options={FUTURE_EXPECTATION} onChange={v => handleSingle('future_expectation', v)} />
-                </div>
-                
-                <hr style={{ border: 'none', borderTop: '1px dashed #ccc' }} />
-                
-                <div>
-                  <h4 style={{ fontSize: '0.95rem', color: '#555', marginBottom: '0.8rem' }}>🏛️ {lang === 'zh' ? '意识形态与道德气候' : 'Ideology & Morality'}</h4>
-                  <TagGroup lang={lang} label={lang === 'zh' ? '主流意识形态 (多选)' : 'Main Ideologies'} selected={(config.selections['ideologies'] as string[]) || []} options={IDEOLOGIES} onChange={v => handleMulti('ideologies', v)} />
-                  
-                  {/* 新增：哲学流派 */}
-                  <TagGroup lang={lang} label={lang === 'zh' ? '时代哲学流派' : 'Philosophy Schools'} selected={(config.selections['philosophy'] as string[]) || []} options={PHILOSOPHY_SCHOOLS} onChange={v => handleMulti('philosophy', v)} />
-                  
-                  <SelectField lang={lang} label={lang === 'zh' ? '思想控制程度' : 'Thought Control'} value={(config.selections['thought_control']?.[0] as string) || ''} options={THOUGHT_CONTROL} onChange={v => handleSingle('thought_control', v)} />
-                  <SelectField lang={lang} label={lang === 'zh' ? '正统强度' : 'Orthodoxy Strength'} value={(config.selections['orthodoxy_strength']?.[0] as string) || ''} options={ORTHODOXY_STRENGTH} onChange={v => handleSingle('orthodoxy_strength', v)} />
-                  <SelectField lang={lang} label={lang === 'zh' ? '替罪羊机制' : 'Scapegoat Mechanism'} value={(config.selections['scapegoat_a3']?.[0] as string) || ''} options={SCAPEGOAT_NEED_A3} onChange={v => handleSingle('scapegoat_a3', v)} />
-                  <SelectField lang={lang} label={lang === 'zh' ? '公共表达空间' : 'Speech Domain'} value={(config.selections['speech_domain']?.[0] as string) || ''} options={SPEECH_DOMAIN} onChange={v => handleSingle('speech_domain', v)} />
-                </div>
-              </div>
-
-              {/* 右列：地缘与美学 + 群体情绪与危机 */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div>
-                  <h4 style={{ fontSize: '0.95rem', color: '#555', marginBottom: '0.8rem' }}>🌍 {lang === 'zh' ? '地缘性格与美学流派' : 'Geo-Culture & Aesthetics'}</h4>
-                  
-                  {/* 新增：地缘性格与美学 */}
-                  <TagGroup lang={lang} label={lang === 'zh' ? '地缘国家与文明性格' : 'Geo-Cultures'} selected={(config.selections['geo_culture'] as string[]) || []} options={GEO_CULTURES} onChange={v => handleMulti('geo_culture', v)} />
-                  <TagGroup lang={lang} label={lang === 'zh' ? '美学与艺术流派' : 'Aesthetics'} selected={(config.selections['aesthetics_style'] as string[]) || []} options={AESTHETICS_STYLES} onChange={v => handleMulti('aesthetics_style', v)} />
-                  
-                  <SelectField lang={lang} label={lang === 'zh' ? '群体情绪底色' : 'Mass Affect Mode'} value={(config.selections['mass_affect']?.[0] as string) || ''} options={MASS_AFFECT_MODE} onChange={v => handleSingle('mass_affect', v)} />
-                  <SelectField lang={lang} label={lang === 'zh' ? '情绪传染强度' : 'Contagion Strength'} value={(config.selections['contagion_strength']?.[0] as string) || ''} options={CONTAGION_STRENGTH} onChange={v => handleSingle('contagion_strength', v)} />
-                </div>
-                
-                <hr style={{ border: 'none', borderTop: '1px dashed #ccc' }} />
-                
-                <div>
-                  <h4 style={{ fontSize: '0.95rem', color: '#555', marginBottom: '0.8rem' }}>💥 {lang === 'zh' ? '宏观事件与危机' : 'Macro Crises'}</h4>
-                  <TagGroup lang={lang} label={lang === 'zh' ? '宏观事件类型' : 'Event Types'} selected={(config.selections['crisis'] as string[]) || []} options={MACRO_CRISES} onChange={v => handleMulti('crisis', v)} />
-                  <SelectField lang={lang} label={lang === 'zh' ? '危机烈度' : 'Crisis Intensity'} value={(config.selections['crisis_intensity']?.[0] as string) || ''} options={CRISIS_INTENSITY} onChange={v => handleSingle('crisis_intensity', v)} />
-                  <SelectField lang={lang} label={lang === 'zh' ? '规则翻转率' : 'Norm Flip Rate'} value={(config.selections['norm_flip_rate']?.[0] as string) || ''} options={NORM_FLIP_RATE} onChange={v => handleSingle('norm_flip_rate', v)} />
-                  <SelectField lang={lang} label={lang === 'zh' ? '资源征用风险' : 'Requisition Risk'} value={(config.selections['requisition_risk']?.[0] as string) || ''} options={REQUISITION_RISK} onChange={v => handleSingle('requisition_risk', v)} />
-                </div>
-              </div>
-              
-            </div>
-          </div>
-
-          {/* 自然生态 */}
-          <div className="glass-card" style={{ padding: '1.5rem', gridColumn: '1 / -1' }}>
-            <h3 style={{ marginTop: 0, color: '#3366ff', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>{lang === 'zh' ? '宏观：自然生态、地理与底层环境' : 'Macro: Ecology & Environment'}</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+          {/* ================= 宏观层级 ================= */}
+          {activeLevel === 'macro' && activeSubTab === 'era' && (
+            <div className="glass-card" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
               <div>
-                <h4 style={{ fontSize: '0.95rem', color: '#555', marginBottom: '0.8rem' }}>🗺️ {lang === 'zh' ? '地形与气候' : 'Geography & Climate'}</h4>
-                <TagGroup lang={lang} label={lang === 'zh' ? '地形与地貌 (多选)' : 'Terrain'} selected={(config.selections['terrain'] as string[]) || []} options={TERRAIN_TYPES} onChange={v => handleMulti('terrain', v)} />
-                <TagGroup lang={lang} label={lang === 'zh' ? '常规与极端气候 (多选)' : 'Climate'} selected={(config.selections['climate'] as string[]) || []} options={CLIMATE_TYPES} onChange={v => handleMulti('climate', v)} />
-                <TagGroup lang={lang} label={lang === 'zh' ? '异常气候 (科幻/奇幻)' : 'Anomaly Climate'} selected={(config.selections['anomaly_climate'] as string[]) || []} options={ANOMALY_CLIMATE} onChange={v => handleMulti('anomaly_climate', v)} />
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px dashed #eee' }}>
-                  <SelectField lang={lang} label={lang === 'zh' ? '昼夜循环' : 'Time Cycle'} value={(config.selections['time_cycle']?.[0] as string) || ''} options={TIME_CYCLES} onChange={v => handleSingle('time_cycle', v)} />
-                  <SelectField lang={lang} label={lang === 'zh' ? '季节划分' : 'Seasons'} value={(config.selections['seasons']?.[0] as string) || ''} options={SEASONS} onChange={v => handleSingle('seasons', v)} />
-                  <SelectField lang={lang} label={lang === 'zh' ? '夜间限制' : 'Night Rules'} value={(config.selections['night_rules']?.[0] as string) || ''} options={NIGHT_RULES} onChange={v => handleSingle('night_rules', v)} />
+                <h4 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--primary-color)', marginBottom: '1rem', borderBottom: '1px solid var(--card-border)', paddingBottom: '8px' }}>⏳ 时代区间与未来预期</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+                  <SelectField lang={lang} label="时代发展阶段" value={(config.selections['era']?.[0] as string) || ''} options={ERA_STAGES} onChange={v => handleSingle('era', v)} />
+                  <SelectField lang={lang} label="增长顺风" value={(config.selections['growth_tailwind']?.[0] as string) || ''} options={GROWTH_TAILWIND} onChange={v => handleSingle('growth_tailwind', v)} />
+                  <SelectField lang={lang} label="未来可信度" value={(config.selections['future_believability']?.[0] as string) || ''} options={FUTURE_BELIEVABILITY} onChange={v => handleSingle('future_believability', v)} />
+                  <SelectField lang={lang} label="精英俘获" value={(config.selections['elite_capture']?.[0] as string) || ''} options={ELITE_CAPTURE} onChange={v => handleSingle('elite_capture', v)} />
+                  <SelectField lang={lang} label="未来预期" value={(config.selections['future_expectation']?.[0] as string) || ''} options={FUTURE_EXPECTATION} onChange={v => handleSingle('future_expectation', v)} />
                 </div>
               </div>
               <div>
-                <h4 style={{ fontSize: '0.95rem', color: '#555', marginBottom: '0.8rem' }}>🌿 {lang === 'zh' ? '生态、资源与灾害' : 'Ecology, Resources & Disasters'}</h4>
-                <TagGroup lang={lang} label={lang === 'zh' ? '植物生态 (多选)' : 'Flora'} selected={(config.selections['flora'] as string[]) || []} options={FLORA_TYPES} onChange={v => handleMulti('flora', v)} />
-                <TagGroup lang={lang} label={lang === 'zh' ? '动物生态 (多选)' : 'Fauna'} selected={(config.selections['fauna'] as string[]) || []} options={FAUNA_TYPES} onChange={v => handleMulti('fauna', v)} />
-                <TagGroup lang={lang} label={lang === 'zh' ? '核心自然资源 (多选)' : 'Resources'} selected={(config.selections['resources'] as string[]) || []} options={RESOURCE_TYPES} onChange={v => handleMulti('resources', v)} />
-                <TagGroup lang={lang} label={lang === 'zh' ? '常见自然灾害 (多选)' : 'Disasters'} selected={(config.selections['disasters'] as string[]) || []} options={DISASTER_TYPES} onChange={v => handleMulti('disasters', v)} />
-              </div>
-            </div>
-          </div>
-
-
-          {/* ========================================== */}
-          {/* 第二部分：中观社会 (政治、法律、经济、科技) */}
-          {/* ========================================== */}
-
-          {/* 政体与阶级 */}
-          <div className="glass-card" style={{ padding: '1.5rem', gridColumn: '1 / -1' }}>
-            <h3 style={{ marginTop: 0, color: '#3366ff', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>{lang === 'zh' ? '中观：政体与阶级结构' : 'Meso: Regime & Class'}</h3>
-            <SelectField lang={lang} label={lang === 'zh' ? '政体形式 (单选)' : 'Regime Type'} value={(config.selections['regime']?.[0] as string) || ''} options={REGIME_TYPES} onChange={v => handleSingle('regime', v)} />
-            <TagGroup lang={lang} label={lang === 'zh' ? '阶级结构 (可多选共存)' : 'Class Structure (Multiple)'} selected={(config.selections['classes'] as string[]) || []} options={CLASS_STRUCTURES} onChange={v => handleMulti('classes', v)} />
-            
-            <hr style={{ border: 'none', borderTop: '1px dashed #ccc', margin: '1rem 0' }} />
-            <h4 style={{ fontSize: '0.95rem', color: '#555', marginBottom: '0.8rem' }}>⚙️ {lang === 'zh' ? '权力与阶级参数' : 'Parameters'}</h4>
-            <SelectField lang={lang} label={lang === 'zh' ? '权力集中度' : 'Power Concentration'} value={(config.selections['power_concentration']?.[0] as string) || ''} options={POWER_CONCENTRATION} onChange={v => handleSingle('power_concentration', v)} />
-            <SelectField lang={lang} label={lang === 'zh' ? '阶级固化度' : 'Class Rigidity'} value={(config.selections['class_rigidity']?.[0] as string) || ''} options={CLASS_RIGIDITY} onChange={v => handleSingle('class_rigidity', v)} />
-            <SelectField lang={lang} label={lang === 'zh' ? '特权免罚差' : 'Impunity Gap'} value={(config.selections['impunity_gap']?.[0] as string) || ''} options={IMPUNITY_GAP} onChange={v => handleSingle('impunity_gap', v)} />
-            <SelectField lang={lang} label={lang === 'zh' ? '清算风险' : 'Purge Risk'} value={(config.selections['purge_risk']?.[0] as string) || ''} options={PURGE_RISK} onChange={v => handleSingle('purge_risk', v)} />
-          </div>
-                     {/* 中观：地缘政治与权力游戏 */}
-         <div className="glass-card" style={{ padding: '1.5rem', gridColumn: '1 / -1' }}>
-            <h3 style={{ marginTop: 0, color: '#3366ff', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>{lang === 'zh' ? '中观：地缘政治与权力游戏' : 'Meso: Geopolitics & Power Games'}</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-              <div>
-                <h4 style={{ fontSize: '0.95rem', color: '#555', marginBottom: '0.8rem' }}>🌍 {lang === 'zh' ? '国际阵营与权力交接' : 'Politics & Succession'}</h4>
-                <SelectField lang={lang} label={lang === 'zh' ? '国际阵营格局' : 'Global Politics'} value={(config.selections['global_politics']?.[0] as string) || ''} options={GLOBAL_POLITICS} onChange={v => handleSingle('global_politics', v)} />
-                <SelectField lang={lang} label={lang === 'zh' ? '权力继承与交接法则' : 'Succession Laws'} value={(config.selections['succession_law']?.[0] as string) || ''} options={SUCCESSION_LAWS} onChange={v => handleSingle('succession_law', v)} />
-              </div>
-              <div>
-                <h4 style={{ fontSize: '0.95rem', color: '#555', marginBottom: '0.8rem' }}>🪜 {lang === 'zh' ? '阶层跨越通道' : 'Class Mobility Channels'}</h4>
-                <TagGroup lang={lang} label={lang === 'zh' ? '底层翻身的主要途径 (多选)' : 'Mobility Channels'} selected={(config.selections['class_mobility'] as string[]) || []} options={CLASS_MOBILITY} onChange={v => handleMulti('class_mobility', v)} />
-              </div>
-            </div>
-          </div>
-
-          {/* 宏观：神秘法则与历史渊源 */}
-          <div className="glass-card" style={{ padding: '1.5rem', gridColumn: '1 / -1' }}>
-            <h3 style={{ marginTop: 0, color: '#3366ff', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>{lang === 'zh' ? '宏观：神秘法则与历史渊源' : 'Macro: Supernatural Laws & History'}</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-              <div>
-                <h4 style={{ fontSize: '0.95rem', color: '#555', marginBottom: '0.8rem' }}>✨ {lang === 'zh' ? '超凡法则与核心资源' : 'Supernatural & Resources'}</h4>
-                <SelectField lang={lang} label={lang === 'zh' ? '魔法/超凡力量的运行规则' : 'Supernatural Rules'} value={(config.selections['supernatural_rules']?.[0] as string) || ''} options={SUPERNATURAL_RULES} onChange={v => handleSingle('supernatural_rules', v)} />
-                <TagGroup lang={lang} label={lang === 'zh' ? '引发战争与冲突的战略资源' : 'Strategic Resources'} selected={(config.selections['strategic_resources'] as string[]) || []} options={STRATEGIC_RESOURCES} onChange={v => handleMulti('strategic_resources', v)} />
-              </div>
-              <div>
-                <h4 style={{ fontSize: '0.95rem', color: '#555', marginBottom: '0.8rem' }}>📜 {lang === 'zh' ? '历史创伤与未解之谜' : 'Historical Events'}</h4>
-                <TagGroup lang={lang} label={lang === 'zh' ? '影响至今的历史大事件 (多选)' : 'Historical Events'} selected={(config.selections['historical_events'] as string[]) || []} options={HISTORICAL_EVENTS} onChange={v => handleMulti('historical_events', v)} />
-              </div>
-            </div>
-          </div>
-          {/* 法律与执法 */}
-          <div className="glass-card" style={{ padding: '1.5rem', gridColumn: '1 / -1' }}>
-            <h3 style={{ marginTop: 0, color: '#3366ff', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>{lang === 'zh' ? '中观：法律与执法' : 'Meso: Law & Enforcement'}</h3>
-            <TagGroup lang={lang} label={lang === 'zh' ? '法律体系类型 (允许混合共存)' : 'Legal Systems (Multiple)'} selected={(config.selections['legal_systems'] as string[]) || []} options={LEGAL_SYSTEMS} onChange={v => handleMulti('legal_systems', v)} />
-            
-            <hr style={{ border: 'none', borderTop: '1px dashed #ccc', margin: '1rem 0' }} />
-            <h4 style={{ fontSize: '0.95rem', color: '#555', marginBottom: '0.8rem' }}>⚖️ {lang === 'zh' ? '执法实际状况' : 'Enforcement Reality'}</h4>
-            <SelectField lang={lang} label={lang === 'zh' ? '选择性执法' : 'Selective Enforcement'} value={(config.selections['selective_enforcement']?.[0] as string) || ''} options={SELECTIVE_ENFORCEMENT} onChange={v => handleSingle('selective_enforcement', v)} />
-            <SelectField lang={lang} label={lang === 'zh' ? '规则稳定度' : 'Rule Stability'} value={(config.selections['rule_stability']?.[0] as string) || ''} options={RULE_STABILITY} onChange={v => handleSingle('rule_stability', v)} />
-            <SelectField lang={lang} label={lang === 'zh' ? '程序正义' : 'Due Process'} value={(config.selections['due_process']?.[0] as string) || ''} options={DUE_PROCESS} onChange={v => handleSingle('due_process', v)} />
-          </div>
-
-          {/* 经济与金融 */}
-          <div className="glass-card" style={{ padding: '1.5rem', gridColumn: '1 / -1' }}>
-            <h3 style={{ marginTop: 0, color: '#3366ff', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>{lang === 'zh' ? '中观：经济与金融网络' : 'Meso: Economy & Finance'}</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-              <div>
-                <h4 style={{ fontSize: '0.95rem', color: '#555', marginBottom: '0.8rem' }}>💰 {lang === 'zh' ? '贸易与金融' : 'Trade & Finance'}</h4>
-                <TagGroup lang={lang} label={lang === 'zh' ? '经济运行方式 (多选)' : 'Economy Types'} selected={(config.selections['economy'] as string[]) || []} options={ECONOMY_TYPES} onChange={v => handleMulti('economy', v)} />
-                <TagGroup lang={lang} label={lang === 'zh' ? '货币与交易体系 (多选)' : 'Currencies'} selected={(config.selections['currency'] as string[]) || []} options={CURRENCY_TYPES} onChange={v => handleMulti('currency', v)} />
-                <SelectField lang={lang} label={lang === 'zh' ? '经济环境' : 'Economy Environment'} value={(config.selections['economy_env']?.[0] as string) || ''} options={ECONOMY_ENV} onChange={v => handleSingle('economy_env', v)} />
-              </div>
-              <div>
-                <h4 style={{ fontSize: '0.95rem', color: '#555', marginBottom: '0.8rem' }}>📈 {lang === 'zh' ? '市场波动指标' : 'Market Indicators'}</h4>
-                <SelectField lang={lang} label={lang === 'zh' ? '物价波动' : 'Inflation Risk'} value={(config.selections['inflation_risk']?.[0] as string) || ''} options={INFLATION_RISK} onChange={v => handleSingle('inflation_risk', v)} />
-                <SelectField lang={lang} label={lang === 'zh' ? '贫富差距' : 'Inequality'} value={(config.selections['inequality']?.[0] as string) || ''} options={INEQUALITY} onChange={v => handleSingle('inequality', v)} />
-                <SelectField lang={lang} label={lang === 'zh' ? '信用稳定' : 'Credit Stability'} value={(config.selections['credit_stability']?.[0] as string) || ''} options={CREDIT_STABILITY} onChange={v => handleSingle('credit_stability', v)} />
-              </div>
-            </div>
-          </div>
-
-          {/* 信息网络 */}
-          <div className="glass-card" style={{ padding: '1.5rem', gridColumn: '1 / -1' }}>
-            <h3 style={{ marginTop: 0, color: '#3366ff', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>{lang === 'zh' ? '中观：信息网络与传播' : 'Meso: Info & Network'}</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-              <div>
-                <TagGroup lang={lang} label={lang === 'zh' ? '信息传播技术 (多选)' : 'Info Techs'} selected={(config.selections['info_tech'] as string[]) || []} options={INFO_TECHS} onChange={v => handleMulti('info_tech', v)} />
-                <SelectField lang={lang} label={lang === 'zh' ? '信息环境' : 'Info Environment'} value={(config.selections['info_env']?.[0] as string) || ''} options={INFO_ENV} onChange={v => handleSingle('info_env', v)} />
-                <SelectField lang={lang} label={lang === 'zh' ? '信息真实性' : 'Info Truthfulness'} value={(config.selections['info_truth']?.[0] as string) || ''} options={INFO_TRUTH} onChange={v => handleSingle('info_truth', v)} />
-              </div>
-              <div>
-                <SelectField lang={lang} label={lang === 'zh' ? '真实信息可见度' : 'Transparency'} value={(config.selections['transparency']?.[0] as string) || ''} options={TRANSPARENCY} onChange={v => handleSingle('transparency', v)} />
-                <SelectField lang={lang} label={lang === 'zh' ? '谣言强度' : 'Rumor Intensity'} value={(config.selections['rumor']?.[0] as string) || ''} options={RUMOR_INTENSITY} onChange={v => handleSingle('rumor', v)} />
-                <SelectField lang={lang} label={lang === 'zh' ? '阶级信息差' : 'Insider Gap'} value={(config.selections['insider_gap']?.[0] as string) || ''} options={INSIDER_GAP} onChange={v => handleSingle('insider_gap', v)} />
-                <SelectField lang={lang} label={lang === 'zh' ? '审查封锁' : 'Censorship'} value={(config.selections['censorship']?.[0] as string) || ''} options={CENSORSHIP_LEVEL} onChange={v => handleSingle('censorship', v)} />
-              </div>
-            </div>
-          </div>
-
-          {/* 教育与阶层流动 */}
-         <div className="glass-card" style={{ padding: '1.5rem', gridColumn: '1 / -1' }}>
-            <h3 style={{ marginTop: 0, color: '#3366ff', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>{lang === 'zh' ? '中观：教育与阶层流动' : 'Meso: Education & Mobility'}</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-              <div>
-                <TagGroup lang={lang} label={lang === 'zh' ? '教育体系 (多选)' : 'Education Systems'} selected={(config.selections['education'] as string[]) || []} options={EDU_SYSTEMS} onChange={v => handleMulti('education', v)} />
-                <SelectField lang={lang} label={lang === 'zh' ? '教育普及程度' : 'Education Popularity'} value={(config.selections['edu_popularity']?.[0] as string) || ''} options={EDU_POPULARITY} onChange={v => handleSingle('edu_popularity', v)} />
-                <SelectField lang={lang} label={lang === 'zh' ? '阶层流动环境' : 'Mobility Environment'} value={(config.selections['mobility_env']?.[0] as string) || ''} options={MOBILITY_ENV} onChange={v => handleSingle('mobility_env', v)} />
-              </div>
-              <div>
-                <SelectField lang={lang} label={lang === 'zh' ? '教育可达' : 'Education Access'} value={(config.selections['edu_access']?.[0] as string) || ''} options={EDU_ACCESS} onChange={v => handleSingle('edu_access', v)} />
-                <SelectField lang={lang} label={lang === 'zh' ? '学习成本' : 'Training Cost'} value={(config.selections['training_cost']?.[0] as string) || ''} options={TRAINING_COST} onChange={v => handleSingle('training_cost', v)} />
-                <SelectField lang={lang} label={lang === 'zh' ? '证书门槛' : 'Credential Barrier'} value={(config.selections['credential_barrier']?.[0] as string) || ''} options={CREDENTIAL_BARRIER} onChange={v => handleSingle('credential_barrier', v)} />
-                <SelectField lang={lang} label={lang === 'zh' ? '上升通道宽度' : 'Upward Path'} value={(config.selections['upward_path']?.[0] as string) || ''} options={UPWARD_PATH} onChange={v => handleSingle('upward_path', v)} />
-              </div>
-            </div>
-          </div>
-
-          {/* 技术与工业体系 */}
-          <div className="glass-card" style={{ padding: '1.5rem', gridColumn: '1 / -1' }}>
-            <h3 style={{ marginTop: 0, color: '#3366ff', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>{lang === 'zh' ? '中观：技术与工业体系' : 'Meso: Tech & Industry System'}</h3>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <SelectField lang={lang} label={lang === 'zh' ? '技术高度' : 'Tech Level'} value={(config.selections['tech']?.[0] as string) || ''} options={TECH_STAGES} onChange={v => handleSingle('tech', v)} />
-              <SelectField lang={lang} label={lang === 'zh' ? '技术普及度' : 'Tech Diffusion'} value={(config.selections['tech_diffusion']?.[0] as string) || ''} options={TECH_DIFFUSION} onChange={v => handleSingle('tech_diffusion', v)} />
-              <SelectField lang={lang} label={lang === 'zh' ? '工业宏观状态' : 'Industry Macro Status'} value={(config.selections['industry']?.[0] as string) || ''} options={INDUSTRY_STATUS} onChange={v => handleSingle('industry', v)} />
-              <SelectField lang={lang} label={lang === 'zh' ? '基建稳定度' : 'Infrastructure Stability'} value={(config.selections['infrastructure']?.[0] as string) || ''} options={INFRASTRUCTURE_STABILITY} onChange={v => handleSingle('infrastructure', v)} />
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem', marginTop: '1rem' }}>
-              {INDUSTRY_GROUPS.map(group => (
-                <div key={group.id}>
-                  <TagGroup 
-                    lang={lang} 
-                    label={lang === 'zh' ? group.title_zh : group.title_en} 
-                    selected={(config.selections[group.id] as string[]) || []} 
-                    options={group.options} 
-                    onChange={v => handleMulti(group.id, v)} 
-                  />
+                <h4 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--primary-color)', marginBottom: '1rem', borderBottom: '1px solid var(--card-border)', paddingBottom: '8px' }}>🏛️ 意识形态与道德气候</h4>
+                <TagGroup lang={lang} label="主流意识形态 (多选)" selected={(config.selections['ideologies'] as string[]) || []} options={IDEOLOGIES} onChange={v => handleMulti('ideologies', v)} />
+                <TagGroup lang={lang} label="时代哲学流派" selected={(config.selections['philosophy'] as string[]) || []} options={PHILOSOPHY_SCHOOLS} onChange={v => handleMulti('philosophy', v)} />
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+                  <SelectField lang={lang} label="思想控制程度" value={(config.selections['thought_control']?.[0] as string) || ''} options={THOUGHT_CONTROL} onChange={v => handleSingle('thought_control', v)} />
+                  <SelectField lang={lang} label="正统强度" value={(config.selections['orthodoxy_strength']?.[0] as string) || ''} options={ORTHODOXY_STRENGTH} onChange={v => handleSingle('orthodoxy_strength', v)} />
+                  <SelectField lang={lang} label="替罪羊机制" value={(config.selections['scapegoat_a3']?.[0] as string) || ''} options={SCAPEGOAT_NEED_A3} onChange={v => handleSingle('scapegoat_a3', v)} />
+                  <SelectField lang={lang} label="公共表达空间" value={(config.selections['speech_domain']?.[0] as string) || ''} options={SPEECH_DOMAIN} onChange={v => handleSingle('speech_domain', v)} />
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* 医疗、武力与治安 */}
-          <div className="glass-card" style={{ padding: '1.5rem', gridColumn: '1 / -1' }}>
-            <h3 style={{ marginTop: 0, color: '#3366ff', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>{lang === 'zh' ? '中观：医疗、武力与治安' : 'Meso: Medical, Force & Security'}</h3>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-              <div>
-                <h4 style={{ fontSize: '0.95rem', color: '#555', marginBottom: '0.8rem' }}>🏥 {lang === 'zh' ? '医疗体系' : 'Medical System'}</h4>
-                <TagGroup lang={lang} label={lang === 'zh' ? '医疗体系 (多选共存)' : 'Medical Systems'} selected={(config.selections['medical'] as string[]) || []} options={MEDICAL_SYSTEMS} onChange={v => handleMulti('medical', v)} />
-                <SelectField lang={lang} label={lang === 'zh' ? '医疗资源状态' : 'Medical Resources'} value={(config.selections['medical_resources']?.[0] as string) || ''} options={MEDICAL_RESOURCES} onChange={v => handleSingle('medical_resources', v)} />
-                <SelectField lang={lang} label={lang === 'zh' ? '医疗可达性' : 'Medical Access'} value={(config.selections['medical_access']?.[0] as string) || ''} options={MEDICAL_ACCESS} onChange={v => handleSingle('medical_access', v)} />
-                <SelectField lang={lang} label={lang === 'zh' ? '康复速度' : 'Recovery Speed'} value={(config.selections['recovery_speed']?.[0] as string) || ''} options={RECOVERY_SPEED} onChange={v => handleSingle('recovery_speed', v)} />
-                <SelectField lang={lang} label={lang === 'zh' ? '心理康复' : 'Psychological Rehab'} value={(config.selections['rehab']?.[0] as string) || ''} options={REHAB} onChange={v => handleSingle('rehab', v)} />
-              </div>
-
-              <div>
-                <h4 style={{ fontSize: '0.95rem', color: '#555', marginBottom: '0.8rem' }}>⚔️ {lang === 'zh' ? '武力与治安' : 'Force & Security'}</h4>
-                <SelectField lang={lang} label={lang === 'zh' ? '社会暴力环境' : 'Violence Env'} value={(config.selections['violence']?.[0] as string) || ''} options={VIOLENCE_ENV} onChange={v => handleSingle('violence', v)} />
-                <TagGroup lang={lang} label={lang === 'zh' ? '武力组织形式 (多选)' : 'Force Orgs'} selected={(config.selections['force_orgs'] as string[]) || []} options={FORCE_ORGS} onChange={v => handleMulti('force_orgs', v)} />
-                <SelectField lang={lang} label={lang === 'zh' ? '武器普及度' : 'Weapon Availability'} value={(config.selections['weapon_availability']?.[0] as string) || ''} options={WEAPON_AVAILABILITY} onChange={v => handleSingle('weapon_availability', v)} />
-                <SelectField lang={lang} label={lang === 'zh' ? '治安能力' : 'Policing Capacity'} value={(config.selections['policing_capacity']?.[0] as string) || ''} options={POLICING_CAPACITY} onChange={v => handleSingle('policing_capacity', v)} />
-                <SelectField lang={lang} label={lang === 'zh' ? '战争烈度' : 'War Intensity'} value={(config.selections['war_intensity']?.[0] as string) || ''} options={WAR_INTENSITY} onChange={v => handleSingle('war_intensity', v)} />
-                <SelectField lang={lang} label={lang === 'zh' ? '暴力常态化' : 'Violent Norms'} value={(config.selections['violent_norms']?.[0] as string) || ''} options={VIOLENT_NORMS} onChange={v => handleSingle('violent_norms', v)} />
-              </div>
-            </div>
-          </div>
-
-
-          {/* ========================================== */}
-          {/* 第三部分：微观生活 (个体、家庭、聚落与日常) */}
-          {/* ========================================== */}
-
-          {/* 地区治理与行政 */}
-          <div className="glass-card" style={{ padding: '1.5rem', gridColumn: '1 / -1' }}>
-            <h3 style={{ marginTop: 0, color: '#3366ff', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>{lang === 'zh' ? '微观：地区治理与行政' : 'Micro: Regional Governance'}</h3>
-            <TagGroup lang={lang} label={lang === 'zh' ? '地区治法 / 地方行政制度 (多选)' : 'Governance Types'} selected={(config.selections['governance_types'] as string[]) || []} options={GOVERNANCE_TYPES} onChange={v => handleMulti('governance_types', v)} />
-          </div>
-
-          {/* 聚落层级与城乡关系 */}
-          <div className="glass-card" style={{ padding: '1.5rem', gridColumn: '1 / -1' }}>
-            <h3 style={{ marginTop: 0, color: '#3366ff', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>{lang === 'zh' ? '微观：聚落层级与城乡关系' : 'Micro: Settlements & Urban-Rural'}</h3>
-            <TagGroup lang={lang} label={lang === 'zh' ? '聚落层级与治法 (多选)' : 'Settlement Governance'} selected={(config.selections['settlement_governance'] as string[]) || []} options={SETTLEMENT_GOVERNANCE} onChange={v => handleMulti('settlement_governance', v)} />
-            <hr style={{ border: 'none', borderTop: '1px dashed #ccc', margin: '1rem 0' }} />
-            <TagGroup lang={lang} label={lang === 'zh' ? '城乡互动关系 (多选)' : 'Urban-Rural Relations'} selected={(config.selections['urban_rural_relations'] as string[]) || []} options={URBAN_RURAL_RELATIONS} onChange={v => handleMulti('urban_rural_relations', v)} />
-          </div>
-
-          {/* 组织、档案与潜规则 */}
-         <div className="glass-card" style={{ padding: '1.5rem', gridColumn: '1 / -1' }}>
-            <h3 style={{ marginTop: 0, color: '#3366ff', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>{lang === 'zh' ? '微观：组织、档案与潜规则' : 'Micro: Org, Archives & Unwritten Rules'}</h3>
-            <TagGroup lang={lang} label={lang === 'zh' ? '组织运行形式 (多选共存)' : 'Org Types'} selected={(config.selections['orgs'] as string[]) || []} options={ORG_TYPES} onChange={v => handleMulti('orgs', v)} />
-            
-            <hr style={{ border: 'none', borderTop: '1px dashed #ccc', margin: '1rem 0' }} />
-            <h4 style={{ fontSize: '0.95rem', color: '#555', marginBottom: '0.8rem' }}>⚙️ {lang === 'zh' ? '组织内部运行状况' : 'Org Reality'}</h4>
-            <SelectField lang={lang} label={lang === 'zh' ? '潜规则强度' : 'Informal Rules'} value={(config.selections['informal_rules']?.[0] as string) || ''} options={INFORMAL_RULES} onChange={v => handleSingle('informal_rules', v)} />
-            <SelectField lang={lang} label={lang === 'zh' ? '档案绑定程度' : 'Record Binding'} value={(config.selections['record_binding']?.[0] as string) || ''} options={RECORD_BINDING} onChange={v => handleSingle('record_binding', v)} />
-            <SelectField lang={lang} label={lang === 'zh' ? '替罪羊频率' : 'Scapegoat Frequency'} value={(config.selections['scapegoat_frequency']?.[0] as string) || ''} options={SCAPEGOAT_FREQUENCY} onChange={v => handleSingle('scapegoat_frequency', v)} />
-          </div>
-
-          {/* 劳动分配与剥削 */}
-         <div className="glass-card" style={{ padding: '1.5rem', gridColumn: '1 / -1' }}>
-            <h3 style={{ marginTop: 0, color: '#3366ff', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>{lang === 'zh' ? '微观：劳动分配与剥削' : 'Micro: Labor & Exploitation'}</h3>
-            <TagGroup lang={lang} label={lang === 'zh' ? '劳动制度 (多选共存)' : 'Labor Types'} selected={(config.selections['labor'] as string[]) || []} options={LABOR_TYPES} onChange={v => handleMulti('labor', v)} />
-            
-            <hr style={{ border: 'none', borderTop: '1px dashed #ccc', margin: '1rem 0' }} />
-            <h4 style={{ fontSize: '0.95rem', color: '#555', marginBottom: '0.8rem' }}>⚙️ {lang === 'zh' ? '劳动与阶层关系' : 'Labor Reality'}</h4>
-            <SelectField lang={lang} label={lang === 'zh' ? '剥削强度' : 'Exploitation Level'} value={(config.selections['exploitation_level']?.[0] as string) || ''} options={EXPLOITATION_LEVEL} onChange={v => handleSingle('exploitation_level', v)} />
-            <SelectField lang={lang} label={lang === 'zh' ? '上升承诺差距' : 'Mobility Promise Gap'} value={(config.selections['mobility_promise_gap']?.[0] as string) || ''} options={MOBILITY_PROMISE_GAP} onChange={v => handleSingle('mobility_promise_gap', v)} />
-            <SelectField lang={lang} label={lang === 'zh' ? '生计剥夺风险' : 'Deplatform Risk'} value={(config.selections['deplatform_risk']?.[0] as string) || ''} options={DEPLATFORM_RISK} onChange={v => handleSingle('deplatform_risk', v)} />
-          </div>
-
-          {/* 修复通道与平反 */}
-         <div className="glass-card" style={{ padding: '1.5rem', gridColumn: '1 / -1' }}>
-            <h3 style={{ marginTop: 0, color: '#3366ff', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>{lang === 'zh' ? '微观：修复通道与平反' : 'Micro: Repair & Rehabilitation'}</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-              <div>
-                <TagGroup lang={lang} label={lang === 'zh' ? '社会修复机制 (可多选共存)' : 'Repair Mechanisms'} selected={(config.selections['repair_mechanisms'] as string[]) || []} options={REPAIR_MECHANISMS} onChange={v => handleMulti('repair_mechanisms', v)} />
               </div>
               <div>
-                <h4 style={{ fontSize: '0.95rem', color: '#555', marginBottom: '0.8rem' }}>⚙️ {lang === 'zh' ? '社会宽容度参数' : 'Social Tolerance'}</h4>
-                <SelectField lang={lang} label={lang === 'zh' ? '第二次机会' : 'Second Chance'} value={(config.selections['second_chance']?.[0] as string) || ''} options={SECOND_CHANCE} onChange={v => handleSingle('second_chance', v)} />
-                <SelectField lang={lang} label={lang === 'zh' ? '档案过期机制' : 'Record Expiry'} value={(config.selections['record_expiry']?.[0] as string) || ''} options={RECORD_EXPIRY} onChange={v => handleSingle('record_expiry', v)} />
-                <SelectField lang={lang} label={lang === 'zh' ? '污名残留' : 'Stigma Residue'} value={(config.selections['stigma_residue']?.[0] as string) || ''} options={STIGMA_RESIDUE} onChange={v => handleSingle('stigma_residue', v)} />
-              </div>
-            </div>
-          </div>
-
-          {/* 宗族与家庭制度 */}
-          <div className="glass-card" style={{ padding: '1.5rem', gridColumn: '1 / -1' }}>
-            <h3 style={{ marginTop: 0, color: '#3366ff', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>{lang === 'zh' ? '微观：宗族与家庭制度' : 'Micro: Family & Marriage'}</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-              <div>
-                <TagGroup lang={lang} label={lang === 'zh' ? '家庭与权力结构 (多选)' : 'Family Structures'} selected={(config.selections['family'] as string[]) || []} options={FAMILY_STRUCTURES} onChange={v => handleMulti('family', v)} />
-                <TagGroup lang={lang} label={lang === 'zh' ? '婚姻制度 (多选)' : 'Marriage Types'} selected={(config.selections['marriage'] as string[]) || []} options={MARRIAGE_TYPES} onChange={v => handleMulti('marriage', v)} />
+                <h4 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--primary-color)', marginBottom: '1rem', borderBottom: '1px solid var(--card-border)', paddingBottom: '8px' }}>🌍 地缘性格与美学流派</h4>
+                <TagGroup lang={lang} label="地缘国家与文明性格" selected={(config.selections['geo_culture'] as string[]) || []} options={GEO_CULTURES} onChange={v => handleMulti('geo_culture', v)} />
+                <TagGroup lang={lang} label="美学与艺术流派" selected={(config.selections['aesthetics_style'] as string[]) || []} options={AESTHETICS_STYLES} onChange={v => handleMulti('aesthetics_style', v)} />
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+                  <SelectField lang={lang} label="群体情绪底色" value={(config.selections['mass_affect']?.[0] as string) || ''} options={MASS_AFFECT_MODE} onChange={v => handleSingle('mass_affect', v)} />
+                  <SelectField lang={lang} label="情绪传染强度" value={(config.selections['contagion_strength']?.[0] as string) || ''} options={CONTAGION_STRENGTH} onChange={v => handleSingle('contagion_strength', v)} />
+                </div>
               </div>
               <div>
-                <h4 style={{ fontSize: '0.95rem', color: '#555', marginBottom: '0.8rem' }}>⚙️ {lang === 'zh' ? '宗族与婚姻参数' : 'Kinship & Marriage'}</h4>
-                <SelectField lang={lang} label={lang === 'zh' ? '宗族控制' : 'Kinship Control'} value={(config.selections['kinship_control']?.[0] as string) || ''} options={KINSHIP_CONTROL} onChange={v => handleSingle('kinship_control', v)} />
-                <SelectField lang={lang} label={lang === 'zh' ? '婚姻成本' : 'Marriage Cost'} value={(config.selections['marriage_cost']?.[0] as string) || ''} options={MARRIAGE_COST} onChange={v => handleSingle('marriage_cost', v)} />
-                <SelectField lang={lang} label={lang === 'zh' ? '退出代价' : 'Divorce Penalty'} value={(config.selections['divorce_penalty']?.[0] as string) || ''} options={DIVORCE_PENALTY} onChange={v => handleSingle('divorce_penalty', v)} />
-              </div>
-            </div>
-          </div>
-
-          {/* 文化习俗与节假系统 */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px dashed #ddd' }}>
-  <div>
-    <TagGroup lang={lang} label="社会人际关系风格 (多选)" selected={(config.selections['social_styles'] as string[]) || []} options={SOCIAL_STYLES} onChange={v => handleMulti('social_styles', v)} />
-  </div>
-  <div>
-    <TagGroup lang={lang} label="流行成瘾物与地下娱乐 (多选)" selected={(config.selections['addictions'] as string[]) || []} options={ADDICTION_TYPES} onChange={v => handleMulti('addictions', v)} />
-  </div>
-</div>
-          <div className="glass-card" style={{ padding: '1.5rem', gridColumn: '1 / -1' }}>
-            <h3 style={{ marginTop: 0, color: '#3366ff', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>{lang === 'zh' ? '微观：文化习俗与节假系统' : 'Micro: Culture, Customs & Holidays'}</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-              <div>
-                <h4 style={{ fontSize: '0.95rem', color: '#555', marginBottom: '0.8rem' }}>🎉 {lang === 'zh' ? '节假日与礼仪' : 'Holidays & Rituals'}</h4>
-                <TagGroup lang={lang} label={lang === 'zh' ? '节假日体系 (多选)' : 'Holiday Systems'} selected={(config.selections['festivals'] as string[]) || []} options={FESTIVALS} onChange={v => handleMulti('festivals', v)} />
-                <TagGroup lang={lang} label={lang === 'zh' ? '人生礼仪与生命周期' : 'Life Rituals'} selected={(config.selections['life_rituals'] as string[]) || []} options={LIFE_RITUALS} onChange={v => handleMulti('life_rituals', v)} />
-              </div>
-              <div>
-                <h4 style={{ fontSize: '0.95rem', color: '#555', marginBottom: '0.8rem' }}>🌍 {lang === 'zh' ? '民俗与审美' : 'Customs & Aesthetics'}</h4>
-                <TagGroup lang={lang} label={lang === 'zh' ? '日常民俗与禁忌 (多选)' : 'Folk Customs'} selected={(config.selections['folk_customs'] as string[]) || []} options={FOLK_CUSTOMS} onChange={v => handleMulti('folk_customs', v)} />
-                <TagGroup lang={lang} label={lang === 'zh' ? '主流审美观' : 'Aesthetics'} selected={(config.selections['aesthetics'] as string[]) || []} options={AESTHETICS} onChange={v => handleMulti('aesthetics', v)} />
-              </div>
-            </div>
-          </div>
-
-          {/* 文艺与思想创新 */}
-          <div className="glass-card" style={{ padding: '1.5rem', gridColumn: '1 / -1' }}>
-            <h3 style={{ marginTop: 0, color: '#3366ff', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>{lang === 'zh' ? '微观：文艺与思想创新' : 'Micro: Arts & Innovation'}</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-              <div>
-                <TagGroup lang={lang} label={lang === 'zh' ? '艺术与娱乐供给 (多选)' : 'Art & Entertainment Supply'} selected={(config.selections['art_supply'] as string[]) || []} options={ART_SUPPLY} onChange={v => handleMulti('art_supply', v)} />
-              </div>
-              <div>
-                <SelectField lang={lang} label={lang === 'zh' ? '文化与创新环境' : 'Culture & Innovation Environment'} value={(config.selections['culture_env']?.[0] as string) || ''} options={CULTURE_ENV} onChange={v => handleSingle('culture_env', v)} />
-                <SelectField lang={lang} label={lang === 'zh' ? '创新资源状态' : 'Innovation Resource State'} value={(config.selections['innovation_state']?.[0] as string) || ''} options={INNOVATION_STATE} onChange={v => handleSingle('innovation_state', v)} />
-                <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px dashed #eee' }}>
-                  <SelectField lang={lang} label={lang === 'zh' ? '创新速度' : 'Innovation Rate'} value={(config.selections['innovation_rate']?.[0] as string) || ''} options={INNOVATION_RATE} onChange={v => handleSingle('innovation_rate', v)} />
-                  <SelectField lang={lang} label={lang === 'zh' ? '思想自由度' : 'Idea Freedom'} value={(config.selections['idea_freedom']?.[0] as string) || ''} options={IDEA_FREEDOM} onChange={v => handleSingle('idea_freedom', v)} />
-                  <SelectField lang={lang} label={lang === 'zh' ? '新奇供给度' : 'Novelty Supply'} value={(config.selections['novelty_supply']?.[0] as string) || ''} options={NOVELTY_SUPPLY} onChange={v => handleSingle('novelty_supply', v)} />
+                <h4 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--primary-color)', marginBottom: '1rem', borderBottom: '1px solid var(--card-border)', paddingBottom: '8px' }}>💥 宏观事件与危机</h4>
+                <TagGroup lang={lang} label="宏观事件类型" selected={(config.selections['crisis'] as string[]) || []} options={MACRO_CRISES} onChange={v => handleMulti('crisis', v)} />
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+                  <SelectField lang={lang} label="危机烈度" value={(config.selections['crisis_intensity']?.[0] as string) || ''} options={CRISIS_INTENSITY} onChange={v => handleSingle('crisis_intensity', v)} />
+                  <SelectField lang={lang} label="规则翻转率" value={(config.selections['norm_flip_rate']?.[0] as string) || ''} options={NORM_FLIP_RATE} onChange={v => handleSingle('norm_flip_rate', v)} />
+                  <SelectField lang={lang} label="资源征用风险" value={(config.selections['requisition_risk']?.[0] as string) || ''} options={REQUISITION_RISK} onChange={v => handleSingle('requisition_risk', v)} />
                 </div>
               </div>
             </div>
-          </div>
+          )}
 
-          {/* 微观生活与职业全息 */}
-          <div className="glass-card" style={{ padding: '1.5rem', gridColumn: '1 / -1' }}>
-            <h3 style={{ marginTop: 0, color: '#3366ff', borderBottom: '1px solid #ddd', paddingBottom: '0.5rem' }}>{lang === 'zh' ? '微观：微观生活与职业全息字典' : 'Micro: Micro-Life & Careers'}</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1.5rem' }}>
+          {activeLevel === 'macro' && activeSubTab === 'nature' && (
+             <div className="glass-card" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+               <div>
+                  <h4 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--primary-color)', marginBottom: '1rem', borderBottom: '1px solid var(--card-border)', paddingBottom: '8px' }}>🗺️ 地形与气候</h4>
+                  <TagGroup lang={lang} label="地形与地貌 (多选)" selected={(config.selections['terrain'] as string[]) || []} options={TERRAIN_TYPES} onChange={v => handleMulti('terrain', v)} />
+                  <TagGroup lang={lang} label="常规与极端气候 (多选)" selected={(config.selections['climate'] as string[]) || []} options={CLIMATE_TYPES} onChange={v => handleMulti('climate', v)} />
+                  <TagGroup lang={lang} label="异常气候 (科幻/奇幻)" selected={(config.selections['anomaly_climate'] as string[]) || []} options={ANOMALY_CLIMATE} onChange={v => handleMulti('anomaly_climate', v)} />
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+                    <SelectField lang={lang} label="昼夜循环" value={(config.selections['time_cycle']?.[0] as string) || ''} options={TIME_CYCLES} onChange={v => handleSingle('time_cycle', v)} />
+                    <SelectField lang={lang} label="季节划分" value={(config.selections['seasons']?.[0] as string) || ''} options={SEASONS} onChange={v => handleSingle('seasons', v)} />
+                    <SelectField lang={lang} label="夜间限制" value={(config.selections['night_rules']?.[0] as string) || ''} options={NIGHT_RULES} onChange={v => handleSingle('night_rules', v)} />
+                  </div>
+               </div>
+               <div>
+                  <h4 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--primary-color)', marginBottom: '1rem', borderBottom: '1px solid var(--card-border)', paddingBottom: '8px' }}>🌿 生态、资源与灾害</h4>
+                  <TagGroup lang={lang} label="植物生态 (多选)" selected={(config.selections['flora'] as string[]) || []} options={FLORA_TYPES} onChange={v => handleMulti('flora', v)} />
+                  <TagGroup lang={lang} label="动物生态 (多选)" selected={(config.selections['fauna'] as string[]) || []} options={FAUNA_TYPES} onChange={v => handleMulti('fauna', v)} />
+                  <TagGroup lang={lang} label="核心自然资源 (多选)" selected={(config.selections['resources'] as string[]) || []} options={RESOURCE_TYPES} onChange={v => handleMulti('resources', v)} />
+                  <TagGroup lang={lang} label="常见自然灾害 (多选)" selected={(config.selections['disasters'] as string[]) || []} options={DISASTER_TYPES} onChange={v => handleMulti('disasters', v)} />
+               </div>
+             </div>
+          )}
+
+          {activeLevel === 'macro' && activeSubTab === 'supernatural' && (
+            <div className="glass-card" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
               <div>
-                <h4 style={{ fontSize: '0.95rem', color: '#555', marginBottom: '0.8rem' }}>💼 {lang === 'zh' ? '职业与疾病' : 'Jobs & Diseases'}</h4>
-                <TagGroup lang={lang} label={lang === 'zh' ? '职业岗位与行业' : 'Job Types'} selected={(config.selections['job_types'] as string[]) || []} options={JOB_TYPES} onChange={v => handleMulti('job_types', v)} />
-                <TagGroup lang={lang} label={lang === 'zh' ? '主要疾病类型' : 'Disease Types'} selected={(config.selections['disease_types'] as string[]) || []} options={DISEASE_TYPES} onChange={v => handleMulti('disease_types', v)} />
+                <h4 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--primary-color)', marginBottom: '1rem', borderBottom: '1px solid var(--card-border)', paddingBottom: '8px' }}>✨ 超凡法则与核心资源</h4>
+                <SelectField lang={lang} label="魔法/超凡力量的运行规则" value={(config.selections['supernatural_rules']?.[0] as string) || ''} options={SUPERNATURAL_RULES} onChange={v => handleSingle('supernatural_rules', v)} />
+                <TagGroup lang={lang} label="引发战争与冲突的战略资源" selected={(config.selections['strategic_resources'] as string[]) || []} options={STRATEGIC_RESOURCES} onChange={v => handleMulti('strategic_resources', v)} />
               </div>
               <div>
-                <h4 style={{ fontSize: '0.95rem', color: '#555', marginBottom: '0.8rem' }}>🍽️ {lang === 'zh' ? '饮食与作息' : 'Diet & Lifestyle'}</h4>
-                <TagGroup lang={lang} label={lang === 'zh' ? '饮食习惯' : 'Dietary Habits'} selected={(config.selections['dietary_habits'] as string[]) || []} options={DIETARY_HABITS} onChange={v => handleMulti('dietary_habits', v)} />
-                <TagGroup lang={lang} label={lang === 'zh' ? '生活习惯与作息' : 'Lifestyle Habits'} selected={(config.selections['lifestyle_habits'] as string[]) || []} options={LIFESTYLE_HABITS} onChange={v => handleMulti('lifestyle_habits', v)} />
-              </div>
-              <div>
-                <h4 style={{ fontSize: '0.95rem', color: '#555', marginBottom: '0.8rem' }}>🏠 {lang === 'zh' ? '衣食住行' : 'Clothing, Shelter, Transport'}</h4>
-                <TagGroup lang={lang} label={lang === 'zh' ? '居住与家具' : 'Housing & Furniture'} selected={(config.selections['housing_styles'] as string[]) || []} options={HOUSING_STYLES} onChange={v => handleMulti('housing_styles', v)} />
-                <TagGroup lang={lang} label={lang === 'zh' ? '服装风格' : 'Clothing Styles'} selected={(config.selections['clothing_styles'] as string[]) || []} options={CLOTHING_STYLES} onChange={v => handleMulti('clothing_styles', v)} />
-                <TagGroup lang={lang} label={lang === 'zh' ? '出行习惯' : 'Transport Habits'} selected={(config.selections['transport_types'] as string[]) || []} options={TRANSPORT_TYPES} onChange={v => handleMulti('transport_types', v)} />
-                <TagGroup lang={lang} label={lang === 'zh' ? '娱乐与运动' : 'Entertainment'} selected={(config.selections['entertainment_types'] as string[]) || []} options={ENTERTAINMENT_TYPES} onChange={v => handleMulti('entertainment_types', v)} />
-                <TagGroup lang={lang} label={lang === 'zh' ? '消费习惯' : 'Consumption'} selected={(config.selections['consumption_habits'] as string[]) || []} options={CONSUMPTION_HABITS} onChange={v => handleMulti('consumption_habits', v)} />
+                <h4 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--primary-color)', marginBottom: '1rem', borderBottom: '1px solid var(--card-border)', paddingBottom: '8px' }}>📜 历史创伤与未解之谜</h4>
+                <TagGroup lang={lang} label="影响至今的历史大事件 (多选)" selected={(config.selections['historical_events'] as string[]) || []} options={HISTORICAL_EVENTS} onChange={v => handleMulti('historical_events', v)} />
               </div>
             </div>
-          </div>
+          )}
+
+          {/* ================= 中观层级 ================= */}
+          {activeLevel === 'meso' && activeSubTab === 'regime' && (
+            <div className="glass-card" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+              <div>
+                 <h4 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--primary-color)', marginBottom: '1rem', borderBottom: '1px solid var(--card-border)', paddingBottom: '8px' }}>政体与权力参数</h4>
+                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+                   <SelectField lang={lang} label="政体形式 (单选)" value={(config.selections['regime']?.[0] as string) || ''} options={REGIME_TYPES} onChange={v => handleSingle('regime', v)} />
+                   <SelectField lang={lang} label="权力集中度" value={(config.selections['power_concentration']?.[0] as string) || ''} options={POWER_CONCENTRATION} onChange={v => handleSingle('power_concentration', v)} />
+                   <SelectField lang={lang} label="阶级固化度" value={(config.selections['class_rigidity']?.[0] as string) || ''} options={CLASS_RIGIDITY} onChange={v => handleSingle('class_rigidity', v)} />
+                   <SelectField lang={lang} label="特权免罚差" value={(config.selections['impunity_gap']?.[0] as string) || ''} options={IMPUNITY_GAP} onChange={v => handleSingle('impunity_gap', v)} />
+                   <SelectField lang={lang} label="清算风险" value={(config.selections['purge_risk']?.[0] as string) || ''} options={PURGE_RISK} onChange={v => handleSingle('purge_risk', v)} />
+                 </div>
+              </div>
+              <div>
+                 <h4 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--primary-color)', marginBottom: '1rem', borderBottom: '1px solid var(--card-border)', paddingBottom: '8px' }}>阶级结构 (可多选共存)</h4>
+                 <TagGroup lang={lang} label="阶级结构" selected={(config.selections['classes'] as string[]) || []} options={CLASS_STRUCTURES} onChange={v => handleMulti('classes', v)} />
+              </div>
+            </div>
+          )}
+
+          {activeLevel === 'meso' && activeSubTab === 'law' && (
+            <div className="glass-card" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+               <div>
+                 <h4 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--primary-color)', marginBottom: '1rem', borderBottom: '1px solid var(--card-border)', paddingBottom: '8px' }}>地缘政治与权力游戏</h4>
+                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+                   <SelectField lang={lang} label="国际阵营格局" value={(config.selections['global_politics']?.[0] as string) || ''} options={GLOBAL_POLITICS} onChange={v => handleSingle('global_politics', v)} />
+                   <SelectField lang={lang} label="权力继承与交接法则" value={(config.selections['succession_law']?.[0] as string) || ''} options={SUCCESSION_LAWS} onChange={v => handleSingle('succession_law', v)} />
+                 </div>
+                 <TagGroup lang={lang} label="阶层跨越通道 (多选)" selected={(config.selections['class_mobility'] as string[]) || []} options={CLASS_MOBILITY} onChange={v => handleMulti('class_mobility', v)} />
+               </div>
+               <div>
+                 <h4 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--primary-color)', marginBottom: '1rem', borderBottom: '1px solid var(--card-border)', paddingBottom: '8px' }}>法律与执法</h4>
+                 <TagGroup lang={lang} label="法律体系类型 (允许混合共存)" selected={(config.selections['legal_systems'] as string[]) || []} options={LEGAL_SYSTEMS} onChange={v => handleMulti('legal_systems', v)} />
+                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+                   <SelectField lang={lang} label="选择性执法" value={(config.selections['selective_enforcement']?.[0] as string) || ''} options={SELECTIVE_ENFORCEMENT} onChange={v => handleSingle('selective_enforcement', v)} />
+                   <SelectField lang={lang} label="规则稳定度" value={(config.selections['rule_stability']?.[0] as string) || ''} options={RULE_STABILITY} onChange={v => handleSingle('rule_stability', v)} />
+                   <SelectField lang={lang} label="程序正义" value={(config.selections['due_process']?.[0] as string) || ''} options={DUE_PROCESS} onChange={v => handleSingle('due_process', v)} />
+                 </div>
+               </div>
+            </div>
+          )}
+
+          {activeLevel === 'meso' && activeSubTab === 'economy' && (
+             <div className="glass-card" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+               <div>
+                  <h4 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--primary-color)', marginBottom: '1rem', borderBottom: '1px solid var(--card-border)', paddingBottom: '8px' }}>经济与金融网络</h4>
+                  <TagGroup lang={lang} label="经济运行方式 (多选)" selected={(config.selections['economy'] as string[]) || []} options={ECONOMY_TYPES} onChange={v => handleMulti('economy', v)} />
+                  <TagGroup lang={lang} label="货币与交易体系 (多选)" selected={(config.selections['currency'] as string[]) || []} options={CURRENCY_TYPES} onChange={v => handleMulti('currency', v)} />
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+                    <SelectField lang={lang} label="经济环境" value={(config.selections['economy_env']?.[0] as string) || ''} options={ECONOMY_ENV} onChange={v => handleSingle('economy_env', v)} />
+                    <SelectField lang={lang} label="物价波动" value={(config.selections['inflation_risk']?.[0] as string) || ''} options={INFLATION_RISK} onChange={v => handleSingle('inflation_risk', v)} />
+                    <SelectField lang={lang} label="贫富差距" value={(config.selections['inequality']?.[0] as string) || ''} options={INEQUALITY} onChange={v => handleSingle('inequality', v)} />
+                    <SelectField lang={lang} label="信用稳定" value={(config.selections['credit_stability']?.[0] as string) || ''} options={CREDIT_STABILITY} onChange={v => handleSingle('credit_stability', v)} />
+                  </div>
+               </div>
+               <div>
+                  <h4 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--primary-color)', marginBottom: '1rem', borderBottom: '1px solid var(--card-border)', paddingBottom: '8px' }}>信息网络与传播</h4>
+                  <TagGroup lang={lang} label="信息传播技术 (多选)" selected={(config.selections['info_tech'] as string[]) || []} options={INFO_TECHS} onChange={v => handleMulti('info_tech', v)} />
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+                    <SelectField lang={lang} label="信息环境" value={(config.selections['info_env']?.[0] as string) || ''} options={INFO_ENV} onChange={v => handleSingle('info_env', v)} />
+                    <SelectField lang={lang} label="信息真实性" value={(config.selections['info_truth']?.[0] as string) || ''} options={INFO_TRUTH} onChange={v => handleSingle('info_truth', v)} />
+                    <SelectField lang={lang} label="真实信息可见度" value={(config.selections['transparency']?.[0] as string) || ''} options={TRANSPARENCY} onChange={v => handleSingle('transparency', v)} />
+                    <SelectField lang={lang} label="谣言强度" value={(config.selections['rumor']?.[0] as string) || ''} options={RUMOR_INTENSITY} onChange={v => handleSingle('rumor', v)} />
+                    <SelectField lang={lang} label="阶级信息差" value={(config.selections['insider_gap']?.[0] as string) || ''} options={INSIDER_GAP} onChange={v => handleSingle('insider_gap', v)} />
+                    <SelectField lang={lang} label="审查封锁" value={(config.selections['censorship']?.[0] as string) || ''} options={CENSORSHIP_LEVEL} onChange={v => handleSingle('censorship', v)} />
+                  </div>
+               </div>
+             </div>
+          )}
+
+          {activeLevel === 'meso' && activeSubTab === 'education' && (
+             <div className="glass-card" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+               <div>
+                 <h4 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--primary-color)', marginBottom: '1rem', borderBottom: '1px solid var(--card-border)', paddingBottom: '8px' }}>教育与阶层流动</h4>
+                 <TagGroup lang={lang} label="教育体系 (多选)" selected={(config.selections['education'] as string[]) || []} options={EDU_SYSTEMS} onChange={v => handleMulti('education', v)} />
+                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+                    <SelectField lang={lang} label="教育普及程度" value={(config.selections['edu_popularity']?.[0] as string) || ''} options={EDU_POPULARITY} onChange={v => handleSingle('edu_popularity', v)} />
+                    <SelectField lang={lang} label="阶层流动环境" value={(config.selections['mobility_env']?.[0] as string) || ''} options={MOBILITY_ENV} onChange={v => handleSingle('mobility_env', v)} />
+                    <SelectField lang={lang} label="教育可达" value={(config.selections['edu_access']?.[0] as string) || ''} options={EDU_ACCESS} onChange={v => handleSingle('edu_access', v)} />
+                    <SelectField lang={lang} label="学习成本" value={(config.selections['training_cost']?.[0] as string) || ''} options={TRAINING_COST} onChange={v => handleSingle('training_cost', v)} />
+                    <SelectField lang={lang} label="证书门槛" value={(config.selections['credential_barrier']?.[0] as string) || ''} options={CREDENTIAL_BARRIER} onChange={v => handleSingle('credential_barrier', v)} />
+                    <SelectField lang={lang} label="上升通道宽度" value={(config.selections['upward_path']?.[0] as string) || ''} options={UPWARD_PATH} onChange={v => handleSingle('upward_path', v)} />
+                 </div>
+               </div>
+             </div>
+          )}
+
+          {activeLevel === 'meso' && activeSubTab === 'tech' && (
+             <div className="glass-card" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+               <div>
+                 <h4 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--primary-color)', marginBottom: '1rem', borderBottom: '1px solid var(--card-border)', paddingBottom: '8px' }}>技术与工业体系</h4>
+                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+                    <SelectField lang={lang} label="技术高度" value={(config.selections['tech']?.[0] as string) || ''} options={TECH_STAGES} onChange={v => handleSingle('tech', v)} />
+                    <SelectField lang={lang} label="技术普及度" value={(config.selections['tech_diffusion']?.[0] as string) || ''} options={TECH_DIFFUSION} onChange={v => handleSingle('tech_diffusion', v)} />
+                    <SelectField lang={lang} label="工业宏观状态" value={(config.selections['industry']?.[0] as string) || ''} options={INDUSTRY_STATUS} onChange={v => handleSingle('industry', v)} />
+                    <SelectField lang={lang} label="基建稳定度" value={(config.selections['infrastructure']?.[0] as string) || ''} options={INFRASTRUCTURE_STABILITY} onChange={v => handleSingle('infrastructure', v)} />
+                 </div>
+                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
+                    {INDUSTRY_GROUPS.map(group => (
+                      <div key={group.id}>
+                        <TagGroup lang={lang} label={group.title_zh} selected={(config.selections[group.id] as string[]) || []} options={group.options} onChange={v => handleMulti(group.id, v)} />
+                      </div>
+                    ))}
+                  </div>
+               </div>
+             </div>
+          )}
+
+          {activeLevel === 'meso' && activeSubTab === 'medical' && (
+             <div className="glass-card" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+               <div>
+                  <h4 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--primary-color)', marginBottom: '1rem', borderBottom: '1px solid var(--card-border)', paddingBottom: '8px' }}>医疗体系</h4>
+                  <TagGroup lang={lang} label="医疗体系 (多选共存)" selected={(config.selections['medical'] as string[]) || []} options={MEDICAL_SYSTEMS} onChange={v => handleMulti('medical', v)} />
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+                    <SelectField lang={lang} label="医疗资源状态" value={(config.selections['medical_resources']?.[0] as string) || ''} options={MEDICAL_RESOURCES} onChange={v => handleSingle('medical_resources', v)} />
+                    <SelectField lang={lang} label="医疗可达性" value={(config.selections['medical_access']?.[0] as string) || ''} options={MEDICAL_ACCESS} onChange={v => handleSingle('medical_access', v)} />
+                    <SelectField lang={lang} label="康复速度" value={(config.selections['recovery_speed']?.[0] as string) || ''} options={RECOVERY_SPEED} onChange={v => handleSingle('recovery_speed', v)} />
+                    <SelectField lang={lang} label="心理康复" value={(config.selections['rehab']?.[0] as string) || ''} options={REHAB} onChange={v => handleSingle('rehab', v)} />
+                  </div>
+               </div>
+               <div>
+                  <h4 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--primary-color)', marginBottom: '1rem', borderBottom: '1px solid var(--card-border)', paddingBottom: '8px' }}>武力与治安</h4>
+                  <TagGroup lang={lang} label="武力组织形式 (多选)" selected={(config.selections['force_orgs'] as string[]) || []} options={FORCE_ORGS} onChange={v => handleMulti('force_orgs', v)} />
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+                    <SelectField lang={lang} label="社会暴力环境" value={(config.selections['violence']?.[0] as string) || ''} options={VIOLENCE_ENV} onChange={v => handleSingle('violence', v)} />
+                    <SelectField lang={lang} label="武器普及度" value={(config.selections['weapon_availability']?.[0] as string) || ''} options={WEAPON_AVAILABILITY} onChange={v => handleSingle('weapon_availability', v)} />
+                    <SelectField lang={lang} label="治安能力" value={(config.selections['policing_capacity']?.[0] as string) || ''} options={POLICING_CAPACITY} onChange={v => handleSingle('policing_capacity', v)} />
+                    <SelectField lang={lang} label="战争烈度" value={(config.selections['war_intensity']?.[0] as string) || ''} options={WAR_INTENSITY} onChange={v => handleSingle('war_intensity', v)} />
+                    <SelectField lang={lang} label="暴力常态化" value={(config.selections['violent_norms']?.[0] as string) || ''} options={VIOLENT_NORMS} onChange={v => handleSingle('violent_norms', v)} />
+                  </div>
+               </div>
+             </div>
+          )}
+
+          {/* ================= 微观层级 ================= */}
+          {activeLevel === 'micro' && activeSubTab === 'governance' && (
+             <div className="glass-card" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+               <div>
+                 <h4 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--primary-color)', marginBottom: '1rem', borderBottom: '1px solid var(--card-border)', paddingBottom: '8px' }}>地区治理与聚落</h4>
+                 <TagGroup lang={lang} label="地区治法 / 地方行政制度 (多选)" selected={(config.selections['governance_types'] as string[]) || []} options={GOVERNANCE_TYPES} onChange={v => handleMulti('governance_types', v)} />
+                 <TagGroup lang={lang} label="聚落层级与治法 (多选)" selected={(config.selections['settlement_governance'] as string[]) || []} options={SETTLEMENT_GOVERNANCE} onChange={v => handleMulti('settlement_governance', v)} />
+                 <TagGroup lang={lang} label="城乡互动关系 (多选)" selected={(config.selections['urban_rural_relations'] as string[]) || []} options={URBAN_RURAL_RELATIONS} onChange={v => handleMulti('urban_rural_relations', v)} />
+               </div>
+             </div>
+          )}
+
+          {activeLevel === 'micro' && activeSubTab === 'org' && (
+             <div className="glass-card" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+               <div>
+                 <h4 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--primary-color)', marginBottom: '1rem', borderBottom: '1px solid var(--card-border)', paddingBottom: '8px' }}>组织与劳动</h4>
+                 <TagGroup lang={lang} label="组织运行形式 (多选共存)" selected={(config.selections['orgs'] as string[]) || []} options={ORG_TYPES} onChange={v => handleMulti('orgs', v)} />
+                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+                   <SelectField lang={lang} label="潜规则强度" value={(config.selections['informal_rules']?.[0] as string) || ''} options={INFORMAL_RULES} onChange={v => handleSingle('informal_rules', v)} />
+                   <SelectField lang={lang} label="档案绑定程度" value={(config.selections['record_binding']?.[0] as string) || ''} options={RECORD_BINDING} onChange={v => handleSingle('record_binding', v)} />
+                   <SelectField lang={lang} label="替罪羊频率" value={(config.selections['scapegoat_frequency']?.[0] as string) || ''} options={SCAPEGOAT_FREQUENCY} onChange={v => handleSingle('scapegoat_frequency', v)} />
+                 </div>
+                 <TagGroup lang={lang} label="劳动制度 (多选共存)" selected={(config.selections['labor'] as string[]) || []} options={LABOR_TYPES} onChange={v => handleMulti('labor', v)} />
+                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+                   <SelectField lang={lang} label="剥削强度" value={(config.selections['exploitation_level']?.[0] as string) || ''} options={EXPLOITATION_LEVEL} onChange={v => handleSingle('exploitation_level', v)} />
+                   <SelectField lang={lang} label="上升承诺差距" value={(config.selections['mobility_promise_gap']?.[0] as string) || ''} options={MOBILITY_PROMISE_GAP} onChange={v => handleSingle('mobility_promise_gap', v)} />
+                   <SelectField lang={lang} label="生计剥夺风险" value={(config.selections['deplatform_risk']?.[0] as string) || ''} options={DEPLATFORM_RISK} onChange={v => handleSingle('deplatform_risk', v)} />
+                 </div>
+               </div>
+             </div>
+          )}
+
+          {activeLevel === 'micro' && activeSubTab === 'family' && (
+             <div className="glass-card" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+               <div>
+                 <h4 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--primary-color)', marginBottom: '1rem', borderBottom: '1px solid var(--card-border)', paddingBottom: '8px' }}>修复与家庭</h4>
+                 <TagGroup lang={lang} label="社会修复机制 (可多选共存)" selected={(config.selections['repair_mechanisms'] as string[]) || []} options={REPAIR_MECHANISMS} onChange={v => handleMulti('repair_mechanisms', v)} />
+                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+                    <SelectField lang={lang} label="第二次机会" value={(config.selections['second_chance']?.[0] as string) || ''} options={SECOND_CHANCE} onChange={v => handleSingle('second_chance', v)} />
+                    <SelectField lang={lang} label="档案过期机制" value={(config.selections['record_expiry']?.[0] as string) || ''} options={RECORD_EXPIRY} onChange={v => handleSingle('record_expiry', v)} />
+                    <SelectField lang={lang} label="污名残留" value={(config.selections['stigma_residue']?.[0] as string) || ''} options={STIGMA_RESIDUE} onChange={v => handleSingle('stigma_residue', v)} />
+                 </div>
+                 <TagGroup lang={lang} label="家庭与权力结构 (多选)" selected={(config.selections['family'] as string[]) || []} options={FAMILY_STRUCTURES} onChange={v => handleMulti('family', v)} />
+                 <TagGroup lang={lang} label="婚姻制度 (多选)" selected={(config.selections['marriage'] as string[]) || []} options={MARRIAGE_TYPES} onChange={v => handleMulti('marriage', v)} />
+                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+                    <SelectField lang={lang} label="宗族控制" value={(config.selections['kinship_control']?.[0] as string) || ''} options={KINSHIP_CONTROL} onChange={v => handleSingle('kinship_control', v)} />
+                    <SelectField lang={lang} label="婚姻成本" value={(config.selections['marriage_cost']?.[0] as string) || ''} options={MARRIAGE_COST} onChange={v => handleSingle('marriage_cost', v)} />
+                    <SelectField lang={lang} label="退出代价" value={(config.selections['divorce_penalty']?.[0] as string) || ''} options={DIVORCE_PENALTY} onChange={v => handleSingle('divorce_penalty', v)} />
+                 </div>
+               </div>
+             </div>
+          )}
+
+          {activeLevel === 'micro' && activeSubTab === 'culture' && (
+             <div className="glass-card" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+               <div>
+                  <h4 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--primary-color)', marginBottom: '1rem', borderBottom: '1px solid var(--card-border)', paddingBottom: '8px' }}>习俗与审美</h4>
+                  <TagGroup lang={lang} label="节假日体系 (多选)" selected={(config.selections['festivals'] as string[]) || []} options={FESTIVALS} onChange={v => handleMulti('festivals', v)} />
+                  <TagGroup lang={lang} label="人生礼仪与生命周期" selected={(config.selections['life_rituals'] as string[]) || []} options={LIFE_RITUALS} onChange={v => handleMulti('life_rituals', v)} />
+                  <TagGroup lang={lang} label="日常民俗与禁忌 (多选)" selected={(config.selections['folk_customs'] as string[]) || []} options={FOLK_CUSTOMS} onChange={v => handleMulti('folk_customs', v)} />
+                  <TagGroup lang={lang} label="主流审美观" selected={(config.selections['aesthetics'] as string[]) || []} options={AESTHETICS} onChange={v => handleMulti('aesthetics', v)} />
+                  <TagGroup lang={lang} label="艺术与娱乐供给 (多选)" selected={(config.selections['art_supply'] as string[]) || []} options={ART_SUPPLY} onChange={v => handleMulti('art_supply', v)} />
+                  <TagGroup lang={lang} label="社会人际关系风格 (多选)" selected={(config.selections['social_styles'] as string[]) || []} options={SOCIAL_STYLES} onChange={v => handleMulti('social_styles', v)} />
+                  <TagGroup lang={lang} label="流行成瘾物与地下娱乐 (多选)" selected={(config.selections['addictions'] as string[]) || []} options={ADDICTION_TYPES} onChange={v => handleMulti('addictions', v)} />
+               </div>
+               <div>
+                  <h4 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--primary-color)', marginBottom: '1rem', borderBottom: '1px solid var(--card-border)', paddingBottom: '8px' }}>创新与生活</h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+                    <SelectField lang={lang} label="文化与创新环境" value={(config.selections['culture_env']?.[0] as string) || ''} options={CULTURE_ENV} onChange={v => handleSingle('culture_env', v)} />
+                    <SelectField lang={lang} label="创新资源状态" value={(config.selections['innovation_state']?.[0] as string) || ''} options={INNOVATION_STATE} onChange={v => handleSingle('innovation_state', v)} />
+                    <SelectField lang={lang} label="创新速度" value={(config.selections['innovation_rate']?.[0] as string) || ''} options={INNOVATION_RATE} onChange={v => handleSingle('innovation_rate', v)} />
+                    <SelectField lang={lang} label="思想自由度" value={(config.selections['idea_freedom']?.[0] as string) || ''} options={IDEA_FREEDOM} onChange={v => handleSingle('idea_freedom', v)} />
+                    <SelectField lang={lang} label="新奇供给度" value={(config.selections['novelty_supply']?.[0] as string) || ''} options={NOVELTY_SUPPLY} onChange={v => handleSingle('novelty_supply', v)} />
+                  </div>
+                  <h4 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--primary-color)', marginBottom: '1rem', borderBottom: '1px solid var(--card-border)', paddingBottom: '8px' }}>职业、健康与衣食住行</h4>
+                  <TagGroup lang={lang} label="职业岗位与行业" selected={(config.selections['job_types'] as string[]) || []} options={JOB_TYPES} onChange={v => handleMulti('job_types', v)} />
+                  <TagGroup lang={lang} label="主要疾病类型" selected={(config.selections['disease_types'] as string[]) || []} options={DISEASE_TYPES} onChange={v => handleMulti('disease_types', v)} />
+                  <TagGroup lang={lang} label="饮食习惯" selected={(config.selections['dietary_habits'] as string[]) || []} options={DIETARY_HABITS} onChange={v => handleMulti('dietary_habits', v)} />
+                  <TagGroup lang={lang} label="生活习惯与作息" selected={(config.selections['lifestyle_habits'] as string[]) || []} options={LIFESTYLE_HABITS} onChange={v => handleMulti('lifestyle_habits', v)} />
+                  <TagGroup lang={lang} label="居住与家具" selected={(config.selections['housing_styles'] as string[]) || []} options={HOUSING_STYLES} onChange={v => handleMulti('housing_styles', v)} />
+                  <TagGroup lang={lang} label="服装风格" selected={(config.selections['clothing_styles'] as string[]) || []} options={CLOTHING_STYLES} onChange={v => handleMulti('clothing_styles', v)} />
+                  <TagGroup lang={lang} label="出行习惯" selected={(config.selections['transport_types'] as string[]) || []} options={TRANSPORT_TYPES} onChange={v => handleMulti('transport_types', v)} />
+                  <TagGroup lang={lang} label="娱乐与运动" selected={(config.selections['entertainment_types'] as string[]) || []} options={ENTERTAINMENT_TYPES} onChange={v => handleMulti('entertainment_types', v)} />
+                  <TagGroup lang={lang} label="消费习惯" selected={(config.selections['consumption_habits'] as string[]) || []} options={CONSUMPTION_HABITS} onChange={v => handleMulti('consumption_habits', v)} />
+               </div>
+             </div>
+          )}
 
         </div>
       </div>

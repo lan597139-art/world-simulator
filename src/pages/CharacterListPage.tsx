@@ -82,12 +82,14 @@ export default function CharacterListPage({
             当前共有 {characters.length} 个人物档案
           </p>
         </div>
+        
+        {/* ✅ 修复：去掉了写死的 #fff，换成了全局按钮文字变量，去掉了蓝紫色的发光 */}
         <button 
           onClick={() => { setEditingCharId(null); setView('edit'); }}
           style={{ 
-            padding: '10px 20px', background: 'var(--primary-color)', color: '#fff', 
+            padding: '10px 20px', background: 'var(--primary-color)', color: 'var(--primary-text)', 
             border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600,
-            boxShadow: '0 4px 14px rgba(79, 70, 229, 0.3)' // 添加一点发光效果
+            boxShadow: '0 4px 14px rgba(0, 0, 0, 0.1)' 
           }}
         >
           + 创建新人物
@@ -96,37 +98,44 @@ export default function CharacterListPage({
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
         {characters.map(char => (
-          // 核心改动：给卡片加上 className="glass-card"，并去掉原本写死的白底和边框
           <div key={char.id} className="glass-card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--text-main)' }}>{char.name || '未命名人物'}</h3>
             <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)' }}>ID: {char.id}</p>
             
+            {/* ✅ 修复：“已绑定世界”标签的白块问题 */}
             {char.worldId && !worldId && (
               <span style={{ 
-                fontSize: '12px', background: 'var(--primary-color)', color: '#fff', 
-                padding: '4px 10px', borderRadius: '20px', width: 'fit-content', opacity: 0.9 
+                fontSize: '12px', 
+                background: 'rgba(128, 128, 128, 0.15)', // 半透明灰
+                color: 'var(--text-main)', 
+                border: '1px solid var(--card-border)',
+                padding: '4px 10px', borderRadius: '20px', width: 'fit-content', 
               }}>
                 已绑定世界
               </span>
             )}
             
             <div style={{ display: 'flex', gap: '10px', marginTop: 'auto', paddingTop: '16px' }}>
+              {/* ✅ 修复：把原来扎眼的亮蓝色改成了高级的半透明灰底黑字 */}
               <button 
                 onClick={() => { setEditingCharId(char.id); setView('edit'); }}
                 style={{ 
                   flex: 1, padding: '8px', 
-                  background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', 
-                  border: '1px solid rgba(59, 130, 246, 0.2)', borderRadius: '6px', cursor: 'pointer' 
+                  background: 'rgba(128, 128, 128, 0.1)', color: 'var(--text-main)', 
+                  border: '1px solid var(--card-border)', borderRadius: '8px', cursor: 'pointer',
+                  transition: 'all 0.2s'
                 }}
               >
                 编辑
               </button>
+              
               <button 
                 onClick={() => handleDelete(char.id)}
                 style={{ 
                   padding: '8px 16px', 
-                  background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger-color)', 
-                  border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '6px', cursor: 'pointer' 
+                  background: 'rgba(255, 69, 58, 0.1)', color: 'var(--danger-color)', 
+                  border: '1px solid rgba(255, 69, 58, 0.2)', borderRadius: '8px', cursor: 'pointer',
+                  transition: 'all 0.2s'
                 }}
               >
                 删除

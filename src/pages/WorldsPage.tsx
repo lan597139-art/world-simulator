@@ -58,29 +58,31 @@ export default function WorldsPage({
     <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
         <div>
-          <h1 style={{ margin: 0, color: 'var(--text-main)' }}>{dict?.worlds || '世界管理'}</h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '0.5rem' }}>
+          <h1 style={{ margin: 0, color: 'var(--text-main)', fontSize: '24px', fontWeight: 500 }}>{dict?.worlds || '世界管理'}</h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '0.5rem' }}>
             {lang === 'zh' ? `当前共收录人物数量：${totalCharacters}` : `Total Characters: ${totalCharacters}`}
           </p>
         </div>
+        
         <button 
           onClick={() => onOpenWorldBuilding('')} 
           style={{ 
-            padding: '0.75rem 1.5rem', 
+            padding: '10px 20px', 
             background: 'var(--primary-color)', 
-            color: '#fff', 
+            color: 'var(--bg-color)', /* ✅ 修复了原本看不见的问题 */
             border: 'none', 
             borderRadius: '8px', 
             cursor: 'pointer', 
-            fontWeight: 'bold',
-            boxShadow: '0 4px 14px rgba(79, 70, 229, 0.3)'
+            /* ✅ 去掉了 fontWeight */
+            boxShadow: '0 4px 14px rgba(0, 0, 0, 0.1)',
+            transition: 'all 0.2s'
           }}
         >
           {lang === 'zh' ? '+ 创建新世界' : '+ New World'}
         </button>
       </div>
       
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
         {worlds.length === 0 ? (
           <div 
             className="glass-card" 
@@ -90,30 +92,56 @@ export default function WorldsPage({
           </div>
         ) : (
           worlds.map(w => (
-            // 核心改动：使用 glass-card
-            <div key={w.id} className="glass-card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column' }}>
-              <h3 style={{ marginTop: 0, color: 'var(--text-main)' }}>{w.name}</h3>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '0 0 0.5rem 0' }}>ID: {w.id}</p>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', flex: 1 }}>{w.description || '-'}</p>
+            <div key={w.id} className="glass-card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
               
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--card-border)' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--text-main)', fontWeight: 500 }}>{w.name}</h3>
+              <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)' }}>ID: {w.id}</p>
+              <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)', flex: 1 }}>{w.description || '-'}</p>
+              
+              <div style={{ display: 'flex', gap: '10px', marginTop: 'auto', paddingTop: '16px' }}>
                 <button 
                   onClick={() => onOpenWorldBuilding(w.id)} 
-                  style={{ flex: 1, padding: '0.6rem', background: 'var(--primary-color)', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 500 }}
+                  style={{ 
+                    flex: 1, padding: '8px', 
+                    background: 'rgba(128, 128, 128, 0.1)', 
+                    color: 'var(--text-main)', 
+                    border: '1px solid var(--card-border)', 
+                    borderRadius: '8px', 
+                    cursor: 'pointer', 
+                    /* ✅ 删除了 fontWeight: 500 */
+                    transition: 'all 0.2s'
+                  }}
                 >
-                  {lang === 'zh' ? '进入建设配置' : 'Configure'}
+                  {lang === 'zh' ? '进入建设' : 'Configure'}
                 </button>
                 
                 <button 
                   onClick={() => onOpenCharacterList(w.id, w.name)} 
-                  style={{ flex: 1, padding: '0.6rem', background: 'rgba(139, 92, 246, 0.15)', color: '#8b5cf6', border: '1px solid rgba(139, 92, 246, 0.3)', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
+                  style={{ 
+                    flex: 1, padding: '8px', 
+                    background: 'rgba(128, 128, 128, 0.1)', 
+                    color: 'var(--text-main)', 
+                    border: '1px solid var(--card-border)', 
+                    borderRadius: '8px', 
+                    cursor: 'pointer', 
+                    /* ✅ 删除了 fontWeight: 500 */
+                    transition: 'all 0.2s'
+                  }}
                 >
                   {lang === 'zh' ? '人物管理' : 'Characters'}
                 </button>
 
                 <button 
                   onClick={() => handleDelete(w.id)} 
-                  style={{ padding: '0.6rem 1rem', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger-color)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '6px', cursor: 'pointer' }}
+                  style={{ 
+                    padding: '8px 16px', 
+                    background: 'rgba(239, 68, 68, 0.1)', 
+                    color: 'var(--danger-color)', 
+                    border: '1px solid rgba(239, 68, 68, 0.2)', 
+                    borderRadius: '8px', 
+                    cursor: 'pointer', 
+                    transition: 'all 0.2s'
+                  }}
                 >
                   {lang === 'zh' ? '删除' : 'Delete'}
                 </button>

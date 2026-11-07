@@ -1,89 +1,115 @@
-/* 基础重置 */
 :root {
-  /* 浅色模式（日间）变量 */
-  --bg-color: #F3F4F6; /* 整体浅灰背景 */
-  --sidebar-bg: #1E1E2E; /* 侧边栏深色 */
-  --card-bg: rgba(255, 255, 255, 0.65); /* 卡片半透明，为玻璃态准备 */
-  --card-border: rgba(255, 255, 255, 0.8);
-  --text-main: #111827;
-  --text-muted: #6B7280;
-  --primary-color: #2b2866; /* 统一的主色调（蓝紫色） */
-  --primary-hover: #5c38ca;
-  --danger-color: #934343; /* 删除按钮红色 */
+  /* 浅色模式 - 极简灰白 */
+  --bg-color: #F2F2F7; 
+  --sidebar-bg: #303038; /* 你的深灰侧边栏 */
+  --sidebar-text: #cfcfd9; 
+  --sidebar-text-muted: #8E8E93;
+  
+  --card-bg: rgba(255, 255, 255, 0.6);
+  --card-border: rgba(0, 0, 0, 0.05);
+  --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.04);
+  
+  --text-main: #000000;
+  --text-muted: #8E8E93; 
+  
+  /* 统一的主色（低饱和深色） */
+  --primary-color: #3A3A3C; 
+  --primary-hover: #1C1C1E;
+  --primary-text: #FFFFFF; /* ✅ 新增：浅色模式下主按钮用白字 */
+  --danger-color: #FF3B30;
 }
 
-/* 深色模式（夜间）- 自动跟随系统 */
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg-color: #0F172A; /* 深邃的深蓝黑背景 */
-    --sidebar-bg: #020617; /* 更深的侧边栏 */
-    --card-bg: rgba(7, 10, 14, 0.6); /* 深色半透明卡片 */
-    --card-border: rgba(255, 255, 255, 0.08);
-    --text-main: #F9FAFB;
-    --text-muted: #9CA3AF;
-    --primary-color: #6366F1;
-    --primary-hover: #818CF8;
-    --danger-color: #F87171;
+    /* 深色模式 - 纯黑深灰 */
+    --bg-color: #121212; 
+    --sidebar-bg: #000000; 
+    --sidebar-text: #d8d8db; 
+    --sidebar-text-muted: #A1A1AA;
+    
+    --card-bg: rgba(255, 255, 255, 0.06); 
+    --card-border: rgba(255, 255, 255, 0.12);
+    --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    
+    --text-main: #cbcbcb;
+    --text-muted: #A1A1AA;
+    
+    --primary-color: #dcdcdc; 
+    --primary-hover: #E5E5EA;
+    --primary-text: #343434; /* ✅ 核心：深色模式下主按钮用黑字！ */
+    --danger-color: #c7534d;
   }
 }
 
-body {
+body, html, #root {
   margin: 0;
   padding: 0;
-  background-color: var(--bg-color);
+  height: 100%;
+  background-color: var(--bg-color) !important;
   color: var(--text-main);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  transition: background-color 0.3s ease, color 0.3s ease; /* 切换模式时平滑过渡 */
-}
-
-/* =========================================
-   苹果风玻璃质感卡片类 (Glassmorphism)
-   你在所有页面里直接用这个 className="glass-card"
-   ========================================= */
-.glass-card {
-  background: var(--card-bg);
-  backdrop-filter: blur(16px); /* 毛玻璃模糊效果 */
-  -webkit-backdrop-filter: blur(16px); /* 兼容 Safari */
-  border: 1px solid var(--card-border);
-  border-radius: 16px;
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05); /* 淡淡的悬浮阴影 */
   transition: all 0.3s ease;
 }
 
-/* 统一的主按钮样式 */
-.btn-primary {
-  background-color: var(--primary-color);
-  color: white;
-  border-radius: 8px;
-  border: none;
-  padding: 8px 16px;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-.btn-primary:hover {
-  background-color: var(--primary-hover);
-}
 /* =========================================
-   全局表单组件（输入框、下拉框）自适应
+   全局防白底白字强制注入
    ========================================= */
+button[style*="var(--primary-color)"] {
+  color: var(--primary-text) !important;
+}
+
+/* 苹果风毛玻璃 */
+.glass-card {
+  background: var(--card-bg) !important;
+  backdrop-filter: blur(40px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(40px) saturate(180%) !important;
+  border: 1px solid var(--card-border) !important;
+  border-radius: 24px !important;
+  box-shadow: var(--card-shadow) !important;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 表单适配 */
 input, textarea, select {
-  background-color: var(--card-bg) !important;
+  background-color: rgba(128, 128, 128, 0.1) !important;
   color: var(--text-main) !important;
   border: 1px solid var(--card-border) !important;
-  border-radius: 8px;
-  transition: all 0.3s ease;
+  border-radius: 12px !important;
 }
-
 input:focus, textarea:focus, select:focus {
+  border-color: var(--text-main) !important; 
   outline: none;
-  border-color: var(--primary-color) !important;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2) !important;
+}
+@media (prefers-color-scheme: dark) {
+  option { background-color: #1E1E1E !important; color: #FFFFFF !important; }
 }
 
-/* 修复深色模式下的下拉菜单选项背景 */
-@media (prefers-color-scheme: dark) {
-  option {
-    background-color: #1E293B;
-    color: #F9FAFB;
-  }
+/* =========================================
+   高级玻璃小部件 (保留你的设定)
+   ========================================= */
+
+/* 导航项选中的玻璃胶囊 */
+.glass-nav-active {
+  background: var(--card-bg) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid var(--card-border) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important; 
+}
+
+/* 图标玻璃底座 */
+.glass-icon-wrapper {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: var(--card-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--card-border);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.1), 0 2px 8px rgba(0, 0, 0, 0.05);
 }
