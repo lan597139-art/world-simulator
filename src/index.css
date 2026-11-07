@@ -63,3 +63,27 @@ body {
 .btn-primary:hover {
   background-color: var(--primary-hover);
 }
+/* =========================================
+   全局表单组件（输入框、下拉框）自适应
+   ========================================= */
+input, textarea, select {
+  background-color: var(--card-bg) !important;
+  color: var(--text-main) !important;
+  border: 1px solid var(--card-border) !important;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2) !important;
+}
+
+/* 修复深色模式下的下拉菜单选项背景 */
+@media (prefers-color-scheme: dark) {
+  option {
+    background-color: #1E293B;
+    color: #F9FAFB;
+  }
+}
