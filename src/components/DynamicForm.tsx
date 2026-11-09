@@ -1,16 +1,16 @@
 // src/components/DynamicForm.tsx
 
 // 为了保证不报错，这里把 OptionItem 改成 any，或者确保你的外部类型定义完全一致
-export function SelectField({ label, value, options, onChange, lang }: { 
+export function SelectField({ label, value, options, onChange }: { 
   label: string, value: string, options: any[], onChange: (val: string) => void, lang?: string 
 }) {
   return (
     <div style={{ marginBottom: '1.2rem' }}>
-      <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.4rem', color: '#333', fontSize: '0.95rem' }}>{label}</label>
+      <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.4rem', color: 'var(--text-main)', fontSize: '0.95rem' }}>{label}</label>
       <select 
         value={value} 
         onChange={(e) => onChange(e.target.value)}
-        style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ccc', fontSize: '0.95rem' }}
+        style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid var(--card-border)', fontSize: '0.95rem' }}
       >
         <option value="">-- 请选择 --</option>
         {options.map(opt => (
@@ -21,12 +21,12 @@ export function SelectField({ label, value, options, onChange, lang }: {
   );
 }
 
-export function TagGroup({ label, selected, options, onChange, lang }: { 
+export function TagGroup({ label, selected, options, onChange }: { 
   label: string, selected: string[], options: any[], onChange: (id: string) => void, lang?: string 
 }) {
   return (
     <div style={{ marginBottom: '1.2rem' }}>
-      <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.4rem', color: '#333', fontSize: '0.95rem' }}>{label}</label>
+      <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.4rem', color: 'var(--text-main)', fontSize: '0.95rem' }}>{label}</label>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
         {options.map(opt => {
           const isActive = selected.includes(opt.id);
@@ -55,13 +55,13 @@ export function TagGroup({ label, selected, options, onChange, lang }: {
 export function TextField({ label, value, placeholder, onChange }: { label: string, value: string, placeholder?: string, onChange: (val: string) => void }) {
   return (
     <div style={{ marginBottom: '1.2rem' }}>
-      <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.4rem', color: '#333', fontSize: '0.95rem' }}>{label}</label>
+      <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.4rem', color: 'var(--text-main)', fontSize: '0.95rem' }}>{label}</label>
       <input 
         type="text" 
         value={value} 
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ccc', fontSize: '0.95rem', background: '#fff' }}
+        style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid var(--card-border)', fontSize: '0.95rem', background: 'rgba(128,128,128,0.12)' }}
       />
     </div>
   );

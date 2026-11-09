@@ -22,3 +22,21 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Python
+backend/__pycache__/
+**/__pycache__/
+*.py[cod]
+venv/
+backend/venv/
+
+# Local secrets and runtime data (never commit)
+backend/.env
+backend/.env.*
+!backend/.env.example
+backend/*.db
+backend/*.db-*
+backend/uploads/
+
+# OS
+.DS_Store

@@ -1,6 +1,7 @@
 :root {
+  color-scheme: light dark;
   /* 浅色模式 - 极简灰白 */
-  --bg-color: #F2F2F7; 
+  --bg-color: #c3c8d0; 
   --sidebar-bg: #303038; /* 你的深灰侧边栏 */
   --sidebar-text: #cfcfd9; 
   --sidebar-text-muted: #8E8E93;

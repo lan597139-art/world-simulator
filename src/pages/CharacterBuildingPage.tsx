@@ -1,4 +1,5 @@
-import { useState ,useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { getCharacterRuntime, updateCharacterRuntime, type CharacterLayer, type GrowthEntry } from '../api/characterRuntime'
 // ================= 基础表单组件 =================
 function TextField({ label, value, onChange, placeholder }: { label: string, value: string, onChange: (v: string) => void, placeholder?: string }) {
   return (
@@ -18,9 +19,11 @@ function TextArea({ label, value, onChange, placeholder, rows = 3 }: { label: st
   )
 }
 
-function TagGroup({ label, options, selected, onChange }: { label: string, options: any[], selected: string[], onChange: (v: string[]) => void }) {
+function TagGroup({ label, options, selected, onChange }: { label: string, options: any[], selected?: string[], onChange: (v: string[]) => void }) {
+  const safeSelected = Array.isArray(selected) ? selected : []; // ✅ 核心修复：如果是 undefined，自动变成空数组
+  
   const toggle = (val: string) => {
-    const arr = selected.includes(val) ? selected.filter(i => i !== val) : [...selected, val]
+    const arr = safeSelected.includes(val) ? safeSelected.filter(i => i !== val) : [...safeSelected, val]
     onChange(arr)
   }
   return (
@@ -32,7 +35,7 @@ function TagGroup({ label, options, selected, onChange }: { label: string, optio
           const name = typeof opt === 'string' ? opt : opt.name
           const desc = typeof opt === 'string' ? '' : opt.desc
           
-          const isActive = selected.includes(id)
+          const isActive = safeSelected.includes(id)
           return (
             <button 
               key={id} 
@@ -46,7 +49,7 @@ function TagGroup({ label, options, selected, onChange }: { label: string, optio
                 fontSize: '12px', 
                 cursor: 'pointer', 
                 transition: 'all 0.2s', 
-                background: isActive ? 'rgba(99, 102, 241, 0.15)' : 'transparent', 
+                background: isActive ? 'rgba(128, 128, 128, 0.16)' : 'transparent', 
                 color: isActive ? 'var(--primary-color)' : 'var(--text-muted)' 
               }}
             >
@@ -66,7 +69,7 @@ function RadioGroup({ label, options, value, onChange }: { label: string, option
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
         {options.map(opt => (
           <label key={opt} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer', color: 'var(--text-main)' }}>
-            <input type="radio" checked={value === opt} onChange={() => onChange(opt)} style={{ accentColor: 'var(--primary-color)' }} />
+           <input type="radio" checked={(value || '') === opt} onChange={() => onChange(opt)} style={{ accentColor: 'var(--primary-color)' }} />
             {opt}
           </label>
         ))}
@@ -84,7 +87,18 @@ const CHARACTER_MODULES = [
   { id: 'individual', number: '05', title: '个体特征与思想钢印', subtitle: 'Individual Identity', description: '人物独特的生活方式、思想结构、审美与结果评价标准。' },
   { id: 'history', number: '06', title: '生命经历与历史沉积', subtitle: 'Life Experience', description: '成长经历、重要关系、历史事件与长期形成的经验脚本。' },
   { id: 'initial', number: '07', title: '人物初始状态', subtitle: 'Initial State', description: '人物进入世界模拟时的初始运行状态。' },
+  { id: 'growth', number: '08', title: '运行态与成长', subtitle: 'Runtime & Growth', description: '种子保持底色，当前运行态随经历、认知与选择持续变化。' },
 ]
+
+const cloneLayer = <T,>(value: T): T => JSON.parse(JSON.stringify(value))
+
+const ENGINE_LABELS: Record<string, string> = {
+  V: '锚定 / 安全',
+  O: '秩序 / 可控',
+  D: '动能 / 突破',
+  E: '扩张 / 资源',
+  T: '超越 / 意义',
+}
 
 const OVTDE_META = {
   V: { label: '锚定 (Validation)', desc: '安全、归属、持续承载' },
@@ -281,11 +295,15 @@ const COGNITIVE_PRESETS = [
 export default function CharacterBuildingPage({ 
   characterId, 
   worldId, 
-  onBack 
+  onBack,
+  initialModule = 'basic',
+  onNavigate,
 }: { 
   characterId: string, 
   worldId?: string, 
-  onBack?: () => void 
+  onBack?: () => void,
+  initialModule?: string,
+  onNavigate?: (page: string) => void,
 }) {
 
 // 在组件内部：
@@ -331,8 +349,31 @@ useEffect(() => {
         // 6. 思想钢印
         if (data.thought_imprints) setIndividualData(data.thought_imprints);
 
-        // 7. 生命经历
-        if (data.life_history) setHistoryData(data.life_history);
+                // 7. 生命经历（安全校验，防止格式不全导致白屏）
+        if (data.life_history) {
+          const raw = data.life_history;
+          const safeEvents = Array.isArray(raw.events) ? raw.events : (Array.isArray(raw) ? raw : []);
+          setHistoryData({
+            events: safeEvents,
+            deposits: {
+              repeatedPatterns: raw.deposits?.repeatedPatterns || '',
+              relationshipPatterns: raw.deposits?.relationshipPatterns || '',
+              recurringDifficulties: raw.deposits?.recurringDifficulties || '',
+              opportunitiesAndRewards: raw.deposits?.opportunitiesAndRewards || '',
+              chronicStress: raw.deposits?.chronicStress || '',
+              historicalUnderstanding: raw.deposits?.historicalUnderstanding || '',
+              coreBeliefs: raw.deposits?.coreBeliefs || '',
+              longTermObsession: raw.deposits?.longTermObsession || '',
+              psychologicalBoundaries: raw.deposits?.psychologicalBoundaries || '',
+              defenseTendencies: raw.deposits?.defenseTendencies || '',
+              behavioralHabits: raw.deposits?.behavioralHabits || '',
+              relationshipModels: raw.deposits?.relationshipModels || '',
+              riskJudgment: raw.deposits?.riskJudgment || '',
+              trajectory: Array.isArray(raw.deposits?.trajectory) ? raw.deposits.trajectory : [],
+              currentInfluences: Array.isArray(raw.deposits?.currentInfluences) ? raw.deposits.currentInfluences : []
+            }
+          });
+        }
 
         // 8. 初始状态
         if (data.initial_state) {
@@ -341,14 +382,109 @@ useEffect(() => {
           if (data.initial_state.initialRelations) setInitialRelations(data.initial_state.initialRelations);
           if (data.initial_state.initialResources) setInitialResources(data.initial_state.initialResources);
         }
+
+        // 9. 稳定种子快照 + 当前运行态
+        seedLayerRef.current = {
+          engines: data.engines || {},
+          defense_mechanisms: data.defense_mechanisms || {},
+          reality_conditions: data.reality_conditions || {},
+          thought_imprints: data.thought_imprints || {},
+        }
+        getCharacterRuntime(characterId)
+          .then((view) => {
+            runtimeLayerRef.current = {
+              engines: view.runtime.engines || {},
+              defense_mechanisms: view.runtime.defense_mechanisms || {},
+              reality_conditions: view.runtime.reality_conditions || {},
+              thought_imprints: view.runtime.thought_imprints || {},
+            }
+            setRuntimeInfo({
+              main_color: view.runtime.main_color || 'O',
+              version: view.runtime.version || 0,
+              updated_at: view.runtime.updated_at || null,
+              growth_log: view.runtime.growth_log || [],
+            })
+          })
+          .catch((err) => console.error('加载人物运行态失败', err))
       })
       .catch(err => {
         console.error("加载人物详情失败", err);
         alert("加载人物详情失败，请检查后端是否正常");
       });
   }, [characterId]);
-  const [activeModule, setActiveModule] = useState('basic')
+  const [activeModule, setActiveModule] = useState(initialModule)
+  const [stateLayer, setStateLayer] = useState<'seed' | 'runtime'>('seed')
+  const [runtimeInfo, setRuntimeInfo] = useState<{
+    main_color: string
+    version: number
+    updated_at: string | null
+    growth_log: GrowthEntry[]
+  }>({ main_color: 'O', version: 0, updated_at: null, growth_log: [] })
+  const [growthReason, setGrowthReason] = useState('')
+  const [growthEvents, setGrowthEvents] = useState<string[]>([])
+  const seedLayerRef = useRef<CharacterLayer | null>(null)
+  const runtimeLayerRef = useRef<CharacterLayer | null>(null)
+    // ✅ 新增：用于记录当前展开了哪些事件卡片
+  const [expandedEvents, setExpandedEvents] = useState<string[]>([]);
   
+  const toggleEvent = (id: string) => {
+    setExpandedEvents(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  };
+    // ✅ 新增：用于拉取 05 的全局事件，并在弹窗中展示
+  const [globalEvents, setGlobalEvents] = useState<any[]>([]);
+  const [isEventImportModalOpen, setIsEventImportModalOpen] = useState(false);
+
+  // 拉取当前世界的全局事件
+  const loadGlobalEvents = async () => {
+    const wId = selectedWorldId || worldId;
+    if (!wId) return alert("请先绑定世界");
+    
+    alert("准备拉取世界ID为: " + wId + " 的事件");
+    
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/api/events?world_id=${wId}`);
+      if (!res.ok) throw new Error(`网络请求失败，状态码: ${res.status}`);
+      const data = await res.json();
+      
+      alert("拉取到 " + data.length + " 个事件");
+      
+      setGlobalEvents(data);
+      setIsEventImportModalOpen(true); 
+    } catch (err: any) {
+      console.error("报错了:", err);
+      alert("拉取失败：" + err.message);
+    }
+  };
+  // 选中全局事件后，一键导入到人物履历中
+  const handleImportGlobalEvent = (gEvent: any) => {
+    alert("正在导入事件：" + gEvent.name);
+    // 检查是否已经导入过（防止重复）
+    const isExist = historyData.events.some(e => e.source_event_id === gEvent.id);
+    if (isExist) return alert("该事件已存在于人物履历中");
+
+        // 创建一条新的个人履历，基础信息从全局事件拿
+    const newEvent = {
+      ...createEvent(), // 用你原本的 createEvent() 初始化所有空白字段
+      id: crypto.randomUUID(),
+      name: gEvent.name,
+      startTime: gEvent.story_time || '',
+      facts: gEvent.description || '', // 客观事实
+      domain: gEvent.domain || [],
+      polarity: gEvent.polarity,
+      intensity: gEvent.intensity,
+      location: gEvent.location_id || '',
+      source_event_id: gEvent.id // ✅ 核心：记录它关联了哪个全局事件！
+    };
+
+    setHistoryData(prev => ({
+      ...prev,
+      events: [...prev.events, newEvent]
+    }));
+    
+    // 自动展开这个新导入的卡片
+    setExpandedEvents(prev => [...prev, newEvent.id]);
+    setIsEventImportModalOpen(false);
+  };
   // ✅ 01 基础档案（必须放在函数体内的最上面）
   const [charData, setCharData] = useState({
     name: '', code: '', avatar: '', species: '', age: '', gender: '',
@@ -361,6 +497,7 @@ useEffect(() => {
   const [ovtdeData, setOvtdeData] = useState<Record<string, typeof INITIAL_ENGINE_STATE>>({
     O: { ...INITIAL_ENGINE_STATE, val: 60 }, V: { ...INITIAL_ENGINE_STATE, val: 75 }, D: { ...INITIAL_ENGINE_STATE, val: 85 }, E: { ...INITIAL_ENGINE_STATE, val: 45 }, T: { ...INITIAL_ENGINE_STATE, val: 90 }
   })
+  const defaultOvtdeRef = useRef(ovtdeData)
   const [activeEngine, setActiveEngine] = useState<string | null>('O')
   const updateOvtde = (key: string, field: string, val: any) => setOvtdeData(prev => ({ ...prev, [key]: { ...prev[key], [field]: val } }))
   const [dominance, setDominance] = useState({ mode: [] as string[], engines: [] as string[], description: '' })
@@ -369,6 +506,7 @@ useEffect(() => {
   const [mechanismData, setMechanismData] = useState<Record<string, any>>(
     L_LAYERS_META.reduce((acc, layer) => ({ ...acc, [layer.id]: { actualPerformance: '', custom: '', specificData: {} } }), {})
   )
+  const defaultMechanismRef = useRef(mechanismData)
   const [activeLayer, setActiveLayer] = useState<string | null>('L0')
   const updateMechanism = (layerId: string, field: string, val: any, isSpecific = false) => {
     setMechanismData(prev => {
@@ -382,6 +520,7 @@ useEffect(() => {
   const [sandboxData, setSandboxData] = useState<Record<string, any>>(
     SANDBOX_META.reduce((acc, box) => ({ ...acc, [box.id]: { fields: {}, actualPerformance: '', overloadPerformance: '', custom: '', relations: [] } }), {})
   )
+  const defaultSandboxRef = useRef(sandboxData)
   const [activeSandbox, setActiveSandbox] = useState<string | null>('PN')
   
   const updateSandboxField = (boxId: string, fieldKey: string, val: string) => {
@@ -418,6 +557,7 @@ useEffect(() => {
     aestheticPresets: [] as string[], dressStyle: '', archPref: '', colorPref: '', artMusicPref: '', aestheticTaboo: '', languageTone: '', aestheticCustom: '',
     prefPresets: [] as string[], cogPresets: [] as string[], mostImportantStandard: '', secondaryStandard: '', unacceptableResult: '', conflictResolution: '', typicalCase: '', cognitiveCustom: ''
   })
+  const defaultIndividualRef = useRef(individualData)
   const updateInd = (field: string, val: any) => setIndividualData(prev => ({ ...prev, [field]: val }))
   
   const addImprint = () => {
@@ -434,6 +574,7 @@ useEffect(() => {
     // ================= 06 生命经历与历史沉积 =================
 
   const createEvent = () => ({
+    source_event_id: '', 
     id: crypto.randomUUID(),
     name: '',
     startTime: '',
@@ -813,37 +954,132 @@ useEffect(() => {
   }
 
   const currentModule = CHARACTER_MODULES.find(item => item.id === activeModule)!
-  // ✅ 提取保存逻辑到单独的函数
-    const handleSave = async () => {
-    if (!charData.name.trim()) {
-      alert('❌ 请填写人物名称！')
+
+  const applyLayerSnapshot = (snap: CharacterLayer) => {
+    const ovtde = (snap.engines?.ovtde || {}) as Record<string, typeof INITIAL_ENGINE_STATE>
+    setOvtdeData({ ...cloneLayer(defaultOvtdeRef.current), ...cloneLayer(ovtde) })
+    setDominance(cloneLayer((snap.engines?.dominance || { mode: [], engines: [], description: '' }) as { mode: string[]; engines: string[]; description: string }))
+    setMechanismData({ ...cloneLayer(defaultMechanismRef.current), ...cloneLayer((snap.defense_mechanisms || {}) as Record<string, any>) })
+    setSandboxData({ ...cloneLayer(defaultSandboxRef.current), ...cloneLayer((snap.reality_conditions || {}) as Record<string, any>) })
+    setIndividualData({ ...cloneLayer(defaultIndividualRef.current), ...cloneLayer((snap.thought_imprints || {}) as any) })
+  }
+
+  const switchStateLayer = (layer: 'seed' | 'runtime') => {
+    if (layer === stateLayer) return
+    const target = layer === 'seed' ? seedLayerRef.current : runtimeLayerRef.current
+    if (!target) {
+      alert(layer === 'runtime' ? '当前运行态尚未加载完成，请稍后再试。' : '种子快照尚未加载完成。')
       return
     }
-    if (!selectedWorldId) {
-      alert('❌ 请选择人物所属的世界！')
+    if (!window.confirm('切换编辑层会放弃当前尚未保存的修改，继续吗？')) return
+    applyLayerSnapshot(target)
+    setStateLayer(layer)
+    if (layer === 'runtime') setActiveModule('growth')
+  }
+
+  const handleRuntimeSave = async () => {
+    if (!characterId || characterId === 'new') {
+      alert('请先保存人物种子，再记录运行态成长。')
       return
     }
-
-    // 打包你的 7 个模块数据，对齐后端
-    const characterData = {
-      world_id: selectedWorldId, 
-      name: charData.name,
-      basic_profile: charData,
-      engines: { ovtde: ovtdeData, dominance: dominance },
-      defense_mechanisms: mechanismData,
-      reality_conditions: sandboxData,
-      thought_imprints: individualData,
-      life_history: historyData,
-      initial_state: { initialData, initialGoals, initialRelations, initialResources }
+    try {
+      const view = await updateCharacterRuntime(characterId, {
+        engines: { ovtde: ovtdeData as any, dominance: dominance as any },
+        defense_mechanisms: mechanismData,
+        reality_conditions: sandboxData,
+        thought_imprints: individualData,
+        main_color: runtimeInfo.main_color,
+        reason: growthReason.trim() || '作者校准当前运行态',
+        source_event_ids: growthEvents,
+        life_history: historyData,
+      })
+      runtimeLayerRef.current = {
+        engines: view.runtime.engines || {},
+        defense_mechanisms: view.runtime.defense_mechanisms || {},
+        reality_conditions: view.runtime.reality_conditions || {},
+        thought_imprints: view.runtime.thought_imprints || {},
+      }
+      setRuntimeInfo({
+        main_color: view.runtime.main_color || 'O',
+        version: view.runtime.version || 0,
+        updated_at: view.runtime.updated_at || null,
+        growth_log: view.runtime.growth_log || [],
+      })
+      setGrowthReason('')
+      setGrowthEvents([])
+      if (view.entry) alert('🎉 已记录一次成长校准，种子设定保持不变。')
+      else alert('当前运行态与上次一致，没有产生新的成长记录。')
+    } catch (error: any) {
+      alert(`❌ 运行态保存失败：${error.message || error}`)
     }
+  }
 
-       try {
-      // ✅ 判断是新建还是更新
-      const isEditMode = !!characterId;
-      const url = isEditMode 
-        ? `http://127.0.0.1:8000/api/characters/${characterId}`
+      const handleSave = async () => {
+    if (stateLayer === 'runtime' && characterId && characterId !== 'new') {
+      await handleRuntimeSave()
+      return
+    }
+    if (!charData.name.trim()) return alert('❌ 请填写人物名称！');
+    if (!selectedWorldId) return alert('❌ 请选择人物所属的世界！');
+
+    try {
+      // ✅ 1. 先找出那些在 03 里自建、还没同步到 05 的本地事件
+      const localEvents = historyData.events.filter((e: any) => !e.source_event_id);
+      let updatedEvents = [...historyData.events];
+
+      if (localEvents.length > 0) {
+        console.log(`发现 ${localEvents.length} 个未同步的本地事件，准备同步到 05 仓库...`);
+        
+        for (const le of localEvents) {
+          // 构造全局事件数据
+          const newGlobalEvent = {
+            world_id: selectedWorldId,
+            name: le.name,
+            description: le.facts || '暂无描述',
+            story_time: le.startTime || '',
+            domain: le.domain || [],
+            polarity: le.polarity || '稳定',
+            intensity: le.intensity || '中',
+            location_id: le.location || '',
+            participants: characterId && characterId !== 'new' ? [characterId] : [],
+            storyline: '副线', // 默认归类为副线
+            scale: '微观' // 默认归类为微观
+          };
+
+          // 发送到 05 的接口创建全局事件
+          const evRes = await fetch("http://127.0.0.1:8000/api/events", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(newGlobalEvent)
+          });
+
+          if (evRes.ok) {
+            const createdEvent = await evRes.json();
+            // 把生成好的全局事件 ID 记下来，回填给 03 的这件事
+            updatedEvents = updatedEvents.map((e: any) => 
+              e.id === le.id ? { ...e, source_event_id: createdEvent.id } : e
+            );
+          }
+        }
+      }
+
+      // ✅ 2. 同步完毕后，把带上了 source_event_id 的最新履历保存进人物档案
+      const characterData = {
+        world_id: selectedWorldId, 
+        name: charData.name,
+        basic_profile: charData,
+        engines: { ovtde: ovtdeData, dominance: dominance },
+        defense_mechanisms: mechanismData,
+        reality_conditions: sandboxData,
+        thought_imprints: individualData,
+        life_history: { ...historyData, events: updatedEvents }, // 使用同步后的数据
+        initial_state: { initialData, initialGoals, initialRelations, initialResources }
+      };
+
+      const url = characterId && characterId !== 'new' 
+        ? `http://127.0.0.1:8000/api/characters/${characterId}` 
         : "http://127.0.0.1:8000/api/characters";
-      const method = isEditMode ? "PUT" : "POST";
+      const method = characterId && characterId !== 'new' ? 'PUT' : 'POST';
 
       const res = await fetch(url, {
         method: method,
@@ -852,19 +1088,29 @@ useEffect(() => {
       });
 
       if (res.ok) {
-        alert(isEditMode ? '🎉 人物资料已成功更新！' : '🎉 人物已成功存入世界数据库！');
+        seedLayerRef.current = {
+          engines: cloneLayer(characterData.engines),
+          defense_mechanisms: cloneLayer(characterData.defense_mechanisms),
+          reality_conditions: cloneLayer(characterData.reality_conditions),
+          thought_imprints: cloneLayer(characterData.thought_imprints),
+        }
+        alert('🎉 人物种子已保存，且本地事件已成功同步到 05 仓库！');
         if (onBack) onBack(); 
       } else {
-        alert(`❌ 保存失败，状态码：${res.status}`);
+        const errText = await res.text();
+        alert(`❌ 保存失败！状态码：${res.status}，原因：${errText}`);
       }
     } catch (error) {
       console.error('保存报错:', error);
       alert('❌ 网络请求失败，请检查后端是否开启');
     }
   };
+  
+
+    
  return (
     <div className="character-editor" style={{ backgroundColor: 'transparent', minHeight: '100%', paddingBottom: '2rem' }}>
-           <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem 2rem', backgroundColor: 'transparent', borderBottom: '1px solid var(--card-border)', marginBottom: '1rem' }}>
+           <header className="character-editor-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', padding: '1.2rem 2rem', backgroundColor: 'var(--card-bg)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderBottom: '1px solid var(--card-border)', marginBottom: '1rem', borderRadius: '0 0 16px 16px', position: 'sticky', top: 0, zIndex: 40 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1.5rem' }}>
           {onBack && (
             <button onClick={onBack} type="button" style={{ padding: '6px 12px', background: 'rgba(128,128,128,0.1)', border: '1px solid var(--card-border)', color: 'var(--text-main)', borderRadius: '6px', cursor: 'pointer' }}>
@@ -872,22 +1118,48 @@ useEffect(() => {
             </button>
           )}
           <div>
-            <h1 style={{ margin: '0 0 4px 0', color: 'var(--text-main)', fontSize: '22px', fontWeight: 600 }}>人物种子编辑器</h1>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>CHARACTER ID: {characterId || 'NEW CHARACTER'}</div>
+            <h1 style={{ margin: '0 0 4px 0', color: 'var(--text-main)', fontSize: '22px', fontWeight: 600 }}>
+              {stateLayer === 'seed' ? '人物种子编辑器' : '人物当前运行态'}
+            </h1>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+              {stateLayer === 'seed' ? '稳定底色：设定人物的长期倾向与初始条件' : `第 ${runtimeInfo.version} 次成长校准 · 主色调 ${runtimeInfo.main_color}`}
+            </div>
           </div>
         </div>
-        <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <div style={{ display: 'flex', padding: '3px', borderRadius: '8px', background: 'rgba(128,128,128,0.12)', border: '1px solid var(--card-border)' }}>
+            <button
+              type="button"
+              onClick={() => switchStateLayer('seed')}
+              style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: stateLayer === 'seed' ? 'var(--card-bg)' : 'transparent', color: stateLayer === 'seed' ? 'var(--text-main)' : 'var(--text-muted)', fontWeight: stateLayer === 'seed' ? 600 : 400 }}
+            >
+              种子设定
+            </button>
+            <button
+              type="button"
+              onClick={() => switchStateLayer('runtime')}
+              style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: stateLayer === 'runtime' ? 'var(--card-bg)' : 'transparent', color: stateLayer === 'runtime' ? 'var(--text-main)' : 'var(--text-muted)', fontWeight: stateLayer === 'runtime' ? 600 : 400 }}
+            >
+              当前运行态
+            </button>
+          </div>
           <button 
             onClick={handleSave}
             style={{ padding: '8px 20px', background: 'var(--primary-color)', color: 'var(--primary-text)', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
           >
-            保存人物
+            {stateLayer === 'seed' ? '保存种子' : '保存运行态'}
           </button>
         </div>
       </header>
 
+      {stateLayer === 'runtime' && (
+        <div style={{ margin: '0 2rem 1rem', padding: '12px 16px', borderRadius: '10px', border: '1px solid var(--card-border)', background: 'rgba(128,128,128,0.1)', color: 'var(--text-main)', fontSize: '12px', lineHeight: 1.7 }}>
+          你正在编辑<strong>当前运行态</strong>：02–05 的当前值会随经历、认知与选择变化，但不会覆盖种子底色。保存运行态会同步 06 的生命经历；01 基础档案与 07 初始状态仍属于种子层，请切回“种子设定”保存。事件本身不直接决定变化，先记录人物如何理解、归因和反应，再回到这里确认成长。
+        </div>
+      )}
+
       <main className="character-main-full">
-             <div className="character-stepper" style={{ display: 'flex', gap: '10px', overflowX: 'auto', padding: '0 2rem 1rem 2rem' }}>
+             <div className="character-stepper" style={{ display: 'flex', gap: '10px', overflowX: 'auto', padding: '10px 2rem 1rem 2rem', position: 'sticky', top: '80px', zIndex: 30, background: 'var(--bg-color)' }}>
           {CHARACTER_MODULES.map(module => {
             const isActive = activeModule === module.id
             return (
@@ -915,7 +1187,7 @@ useEffect(() => {
                 <div style={{ padding: '1.5rem 2rem 0 2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <div style={{ color: 'var(--text-muted)', fontSize: '12px', fontWeight: 600, marginBottom: '8px' }}>
-              MODULE {currentModule.number} / 07
+              MODULE {currentModule.number} / 08
             </div>
             <h2 style={{ color: 'var(--text-main)', margin: 0, fontSize: '24px' }}>
               {currentModule.title} <span style={{ color: 'var(--text-muted)', fontSize: '16px', fontWeight: 400 }}>{currentModule.subtitle}</span>
@@ -1010,7 +1282,7 @@ useEffect(() => {
                   const data = ovtdeData[key]
                   return (
                     <div key={key} className="glass-card" style={{ overflow: 'hidden' }}>
-                      <button type="button" onClick={() => setActiveEngine(isOpen ? null : key)} style={{ width: '100%', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: isOpen ? 'rgba(99, 102, 241, 0.1)' : 'transparent', border: 'none', cursor: 'pointer' }}>
+                      <button type="button" onClick={() => setActiveEngine(isOpen ? null : key)} style={{ width: '100%', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: isOpen ? 'rgba(128, 128, 128, 0.1)' : 'transparent', border: 'none', cursor: 'pointer' }}>
                         <span style={{ fontWeight: 'bold', color: 'var(--text-main)', fontSize: '15px' }}>{key} · {OVTDE_META[key as keyof typeof OVTDE_META].label}</span>
                         <span style={{ color: 'var(--primary-color)', fontSize: '13px' }}>{isOpen ? '收起 ▲' : '展开 ▼'}</span>
                       </button>
@@ -1056,7 +1328,7 @@ useEffect(() => {
 
                return (
                  <div key={layer.id} className="glass-card" style={{ overflow: 'hidden' }}>
-                   <button type="button" onClick={() => setActiveLayer(isOpen ? null : layer.id)} style={{ width: '100%', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: isOpen ? 'rgba(99, 102, 241, 0.1)' : 'transparent', border: 'none', cursor: 'pointer' }}>
+                   <button type="button" onClick={() => setActiveLayer(isOpen ? null : layer.id)} style={{ width: '100%', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: isOpen ? 'rgba(128, 128, 128, 0.1)' : 'transparent', border: 'none', cursor: 'pointer' }}>
                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                        <span style={{ fontWeight: 'bold', color: 'var(--primary-color)', fontSize: '16px', minWidth: '40px' }}>{layer.id}</span>
                        <span style={{ fontWeight: 'bold', color: 'var(--text-main)', fontSize: '15px' }}>{layer.name}</span>
@@ -1067,7 +1339,7 @@ useEffect(() => {
 
                    {isOpen && (
                      <div style={{ padding: '24px', borderTop: '1px solid var(--card-border)', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                       <div style={{ background: 'rgba(0,0,0,0.02)', padding: '16px 20px', borderRadius: '8px', border: '1px dashed var(--card-border)' }}>
+                       <div style={{ background: 'rgba(128,128,128,0.06)', padding: '16px 20px', borderRadius: '8px', border: '1px dashed var(--card-border)' }}>
                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '12px' }}>
                            <div><strong style={{ fontSize: '12px', color: 'var(--primary-color)' }}>职责：</strong><span style={{ fontSize: '13px', color: 'var(--text-main)' }}>{layer.duty}</span></div>
                            <div><strong style={{ fontSize: '12px', color: 'var(--primary-color)' }}>内部构成：</strong><span style={{ fontSize: '13px', color: 'var(--text-main)' }}>{layer.structures}</span></div>
@@ -1114,7 +1386,7 @@ useEffect(() => {
 
                 return (
                   <div key={box.id} className="glass-card" style={{ overflow: 'hidden' }}>
-                    <button type="button" onClick={() => setActiveSandbox(isOpen ? null : box.id)} style={{ width: '100%', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: isOpen ? 'rgba(99, 102, 241, 0.1)' : 'transparent', border: 'none', cursor: 'pointer' }}>
+                    <button type="button" onClick={() => setActiveSandbox(isOpen ? null : box.id)} style={{ width: '100%', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: isOpen ? 'rgba(128, 128, 128, 0.1)' : 'transparent', border: 'none', cursor: 'pointer' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <span style={{ fontWeight: 'bold', color: 'var(--primary-color)', fontSize: '16px', minWidth: '40px' }}>{box.id}</span>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
@@ -1126,7 +1398,7 @@ useEffect(() => {
                         </div>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                        <span style={{ fontSize: '11px', color: status === '未填写' ? 'var(--text-muted)' : 'var(--primary-color)', background: status === '未填写' ? 'rgba(0,0,0,0.05)' : 'rgba(99, 102, 241, 0.15)', padding: '2px 8px', borderRadius: '10px' }}>{status}</span>
+                        <span style={{ fontSize: '11px', color: status === '未填写' ? 'var(--text-muted)' : 'var(--primary-color)', background: status === '未填写' ? 'rgba(128,128,128,0.12)' : 'rgba(128, 128, 128, 0.16)', padding: '2px 8px', borderRadius: '10px' }}>{status}</span>
                         <span style={{ color: 'var(--primary-color)', fontSize: '13px' }}>{isOpen ? '收起 ▲' : '展开 ▼'}</span>
                       </div>
                     </button>
@@ -1134,7 +1406,7 @@ useEffect(() => {
                     {isOpen && (
                       <div style={{ padding: '24px', borderTop: '1px solid var(--card-border)', display: 'flex', flexDirection: 'column', gap: '24px' }}>
                         
-                        <div style={{ background: 'rgba(0,0,0,0.02)', padding: '16px 20px', borderRadius: '8px', border: '1px dashed var(--card-border)' }}>
+                        <div style={{ background: 'rgba(128,128,128,0.06)', padding: '16px 20px', borderRadius: '8px', border: '1px dashed var(--card-border)' }}>
                           <div style={{ marginBottom: '12px' }}><strong style={{ fontSize: '12px', color: 'var(--primary-color)' }}>理论定义：</strong><span style={{ fontSize: '13px', color: 'var(--text-main)' }}>{box.theory}</span></div>
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                             <div><strong style={{ fontSize: '12px', color: '#10b981' }}>基准稳态运行：</strong><span style={{ fontSize: '13px', color: 'var(--text-main)' }}>{box.stable}</span></div>
@@ -1152,7 +1424,7 @@ useEffect(() => {
                         </div>
 
                         {box.id === 'RN' && (
-                          <div style={{ border: '1px solid var(--card-border)', borderRadius: '8px', padding: '16px', background: 'rgba(0,0,0,0.02)' }}>
+                          <div style={{ border: '1px solid var(--card-border)', borderRadius: '8px', padding: '16px', background: 'rgba(128,128,128,0.06)' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                               <h4 style={{ margin: 0, fontSize: '14px', color: 'var(--text-main)' }}>动态关系对象列表</h4>
                               <button type="button" onClick={() => addRelation('RN')} style={{ padding: '6px 12px', background: 'var(--primary-color)', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>+ 添加关系</button>
@@ -1208,7 +1480,7 @@ useEffect(() => {
                 <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', color: 'var(--primary-color)' }}>B. 人物思想钢印</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   <div className="glass-card" style={{ overflow: 'hidden' }}>
-                    <button type="button" onClick={() => setOpenB(openB === 'B1' ? null : 'B1')} style={{ width: '100%', padding: '12px 16px', background: openB === 'B1' ? 'rgba(99, 102, 241, 0.1)' : 'transparent', border: 'none', textAlign: 'left', cursor: 'pointer', fontWeight: 600, color: 'var(--text-main)' }}>B1. 婚恋与亲密范式 {openB === 'B1' ? '▲' : '▼'}</button>
+                    <button type="button" onClick={() => setOpenB(openB === 'B1' ? null : 'B1')} style={{ width: '100%', padding: '12px 16px', background: openB === 'B1' ? 'rgba(128, 128, 128, 0.1)' : 'transparent', border: 'none', textAlign: 'left', cursor: 'pointer', fontWeight: 600, color: 'var(--text-main)' }}>B1. 婚恋与亲密范式 {openB === 'B1' ? '▲' : '▼'}</button>
                     {openB === 'B1' && (
                       <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                         <TagGroup label="婚恋范式 (多选)" options={MARRIAGE_PRESETS} selected={individualData.marriagePresets} onChange={v => updateInd('marriagePresets', v)} />
@@ -1223,7 +1495,7 @@ useEffect(() => {
                   </div>
 
                   <div className="glass-card" style={{ overflow: 'hidden' }}>
-                    <button type="button" onClick={() => setOpenB(openB === 'B2' ? null : 'B2')} style={{ width: '100%', padding: '12px 16px', background: openB === 'B2' ? 'rgba(99, 102, 241, 0.1)' : 'transparent', border: 'none', textAlign: 'left', cursor: 'pointer', fontWeight: 600, color: 'var(--text-main)' }}>B2. 异种与跨物种逻辑 {openB === 'B2' ? '▲' : '▼'}</button>
+                    <button type="button" onClick={() => setOpenB(openB === 'B2' ? null : 'B2')} style={{ width: '100%', padding: '12px 16px', background: openB === 'B2' ? 'rgba(128, 128, 128, 0.1)' : 'transparent', border: 'none', textAlign: 'left', cursor: 'pointer', fontWeight: 600, color: 'var(--text-main)' }}>B2. 异种与跨物种逻辑 {openB === 'B2' ? '▲' : '▼'}</button>
                     {openB === 'B2' && (
                       <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                         <TextField label="物种/种族类型 (人类可跳过)" value={individualData.speciesType} onChange={v => updateInd('speciesType', v)} />
@@ -1240,7 +1512,7 @@ useEffect(() => {
                   </div>
 
                   <div className="glass-card" style={{ overflow: 'hidden' }}>
-                    <button type="button" onClick={() => setOpenB(openB === 'B3' ? null : 'B3')} style={{ width: '100%', padding: '12px 16px', background: openB === 'B3' ? 'rgba(99, 102, 241, 0.1)' : 'transparent', border: 'none', textAlign: 'left', cursor: 'pointer', fontWeight: 600, color: 'var(--text-main)' }}>B3. 极端宗教与亚文化信仰 {openB === 'B3' ? '▲' : '▼'}</button>
+                    <button type="button" onClick={() => setOpenB(openB === 'B3' ? null : 'B3')} style={{ width: '100%', padding: '12px 16px', background: openB === 'B3' ? 'rgba(128, 128, 128, 0.1)' : 'transparent', border: 'none', textAlign: 'left', cursor: 'pointer', fontWeight: 600, color: 'var(--text-main)' }}>B3. 极端宗教与亚文化信仰 {openB === 'B3' ? '▲' : '▼'}</button>
                     {openB === 'B3' && (
                       <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                         <TagGroup label="信仰类型 (多选)" options={RELIGION_PRESETS} selected={individualData.religionPresets} onChange={v => updateInd('religionPresets', v)} />
@@ -1256,7 +1528,7 @@ useEffect(() => {
                   </div>
 
                   <div className="glass-card" style={{ overflow: 'hidden' }}>
-                    <button type="button" onClick={() => setOpenB(openB === 'B4' ? null : 'B4')} style={{ width: '100%', padding: '12px 16px', background: openB === 'B4' ? 'rgba(99, 102, 241, 0.1)' : 'transparent', border: 'none', textAlign: 'left', cursor: 'pointer', fontWeight: 600, color: 'var(--text-main)' }}>B4. 历史与虚构名人思想烙印 {openB === 'B4' ? '▲' : '▼'}</button>
+                    <button type="button" onClick={() => setOpenB(openB === 'B4' ? null : 'B4')} style={{ width: '100%', padding: '12px 16px', background: openB === 'B4' ? 'rgba(128, 128, 128, 0.1)' : 'transparent', border: 'none', textAlign: 'left', cursor: 'pointer', fontWeight: 600, color: 'var(--text-main)' }}>B4. 历史与虚构名人思想烙印 {openB === 'B4' ? '▲' : '▼'}</button>
                     {openB === 'B4' && (
                       <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1264,7 +1536,7 @@ useEffect(() => {
                           <button type="button" onClick={addImprint} style={{ padding: '6px 12px', background: 'var(--primary-color)', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>+ 添加思想卡片</button>
                         </div>
                         {individualData.imprints.map((imp) => (
-                          <div key={imp.id} style={{ padding: '16px', background: 'rgba(0,0,0,0.02)', borderRadius: '6px', border: '1px dashed var(--card-border)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                          <div key={imp.id} style={{ padding: '16px', background: 'rgba(128,128,128,0.06)', borderRadius: '6px', border: '1px dashed var(--card-border)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                               <span style={{ fontWeight: 'bold', fontSize: '13px', color: 'var(--primary-color)' }}>思想烙印 #{imp.id.slice(-4)}</span>
                               <button type="button" onClick={() => removeImprint(imp.id)} style={{ color: 'var(--danger-color)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px' }}>删除</button>
@@ -1288,7 +1560,7 @@ useEffect(() => {
                   </div>
 
                   <div className="glass-card" style={{ overflow: 'hidden' }}>
-                    <button type="button" onClick={() => setOpenB(openB === 'B5' ? null : 'B5')} style={{ width: '100%', padding: '12px 16px', background: openB === 'B5' ? 'rgba(99, 102, 241, 0.1)' : 'transparent', border: 'none', textAlign: 'left', cursor: 'pointer', fontWeight: 600, color: 'var(--text-main)' }}>B5. 个人美学与艺术偏好 {openB === 'B5' ? '▲' : '▼'}</button>
+                    <button type="button" onClick={() => setOpenB(openB === 'B5' ? null : 'B5')} style={{ width: '100%', padding: '12px 16px', background: openB === 'B5' ? 'rgba(128, 128, 128, 0.1)' : 'transparent', border: 'none', textAlign: 'left', cursor: 'pointer', fontWeight: 600, color: 'var(--text-main)' }}>B5. 个人美学与艺术偏好 {openB === 'B5' ? '▲' : '▼'}</button>
                     {openB === 'B5' && (
                       <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                         <TagGroup label="美学风格 (多选)" options={AESTHETICS_PRESETS} selected={individualData.aestheticPresets} onChange={v => updateInd('aestheticPresets', v)} />
@@ -1330,7 +1602,7 @@ useEffect(() => {
             </div>
           )}
 
-         {/* ================= 模块 06：生命经历与历史沉积 ================= */}
+                  {/* ================= 模块 06：生命经历与历史沉积 ================= */}
 {currentModule.id === 'history' && (
   <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
@@ -1346,162 +1618,191 @@ useEffect(() => {
 
     {/* A. 生命时间线 */}
     <div className="glass-card" style={{ padding: '24px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
         <div>
           <h3 style={{ margin: 0, fontSize: '16px', color: 'var(--text-main)' }}>A. 生命时间线</h3>
           <p style={{ margin: '6px 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>
-            按人物实际经历记录重要事件，可添加多条事件。
+            按时间轴记录经历，点击卡片可展开查看详细认知与行为。
           </p>
         </div>
-        <button type="button" onClick={addHistoryEvent}
-          style={{ padding: '8px 14px', background: 'var(--primary-color)', color: '#fff', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
-          + 添加事件
-        </button>
+                <div style={{ display: 'flex', gap: '12px' }}>
+          <button type="button" onClick={loadGlobalEvents}
+            style={{ padding: '8px 14px', background: 'transparent', border: '1px solid var(--primary-color)', color: 'var(--primary-color)', borderRadius: '5px', cursor: 'pointer', fontWeight: 600 }}>
+            📥 从 05 导入事件
+          </button>
+          <button type="button" onClick={addHistoryEvent}
+            style={{ padding: '8px 14px', background: 'var(--primary-color)', color: '#fff', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 600 }}>
+            + 自定义事件
+          </button>
+        </div>
       </div>
 
-      {historyData.events.map((event, index) => (
-        <div key={event.id} style={{ border: '1px solid var(--card-border)', borderRadius: '8px', marginBottom: '16px', overflow: 'hidden' }}>
-          <div style={{ padding: '12px 16px', background: 'rgba(99, 102, 241, 0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <strong style={{ color: 'var(--primary-color)', fontSize: '13px' }}>
-              事件 {index + 1}{event.name ? ` · ${event.name}` : ''}
-            </strong>
-            <button type="button" onClick={() => removeHistoryEvent(event.id)}
-              style={{ border: 'none', background: 'none', color: 'var(--danger-color)', cursor: 'pointer' }}>
-              删除事件
-            </button>
-          </div>
+      {/* ✅ 全新的垂直时间轴布局 */}
+      <div style={{ position: 'relative', paddingLeft: '30px' }}>
+        
+        {/* 左侧垂直轴线 */}
+        <div style={{ position: 'absolute', left: '8px', top: '10px', bottom: '0', width: '2px', background: 'var(--card-border)', borderRadius: '2px' }} />
 
-          <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              <TextField label="事件名称" value={event.name} onChange={v => updateHistoryEvent(event.id, 'name', v)} />
-              <TextField label="发生时间" value={event.startTime} onChange={v => updateHistoryEvent(event.id, 'startTime', v)} placeholder="例如：公元 2020 年 / 某年秋季" />
-              <TextField label="结束时间" value={event.endTime} onChange={v => updateHistoryEvent(event.id, 'endTime', v)} />
-              <TextField label="人物当时年龄" value={event.age} onChange={v => updateHistoryEvent(event.id, 'age', v)} />
-              <TextField label="人生阶段" value={event.lifeStage} onChange={v => updateHistoryEvent(event.id, 'lifeStage', v)} placeholder="童年、青春期、成年早期..." />
-              <TextField label="发生地点" value={event.location} onChange={v => updateHistoryEvent(event.id, 'location', v)} />
-              <div style={{ gridColumn: '1 / -1' }}>
-                <TextField label="相关人物" value={event.relatedPeople} onChange={v => updateHistoryEvent(event.id, 'relatedPeople', v)} />
-              </div>
-            </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          {historyData.events.map((event, index) => {
+            const isExpanded = expandedEvents.includes(event.id);
+            
+            return (
+              <div key={event.id} style={{ position: 'relative' }}>
+                
+                {/* 时间轴圆点 */}
+                <div style={{ position: 'absolute', left: '-29px', top: '20px', width: '14px', height: '14px', borderRadius: '50%', background: 'var(--primary-color)', border: '3px solid var(--bg-color)', zIndex: 1 }} />
 
-            <TagGroup
-              label="事件领域（可多选）"
-              options={['资源冲击', '关系扰动', '地位评价', '意义扰动', '控制失效', '机会变化', '慢性压力', '存在转变']}
-              selected={event.domain}
-              onChange={v => updateHistoryEvent(event.id, 'domain', v)}
-            />
-
-            <RadioGroup
-              label="事件极性"
-              options={['威胁', '奖赏', '扩张', '稳定', '腐化']}
-              value={event.polarity}
-              onChange={v => updateHistoryEvent(event.id, 'polarity', v)}
-            />
-
-            <RadioGroup
-              label="事件强度"
-              options={['低', '中', '高']}
-              value={event.intensity}
-              onChange={v => updateHistoryEvent(event.id, 'intensity', v)}
-            />
-
-            <TextArea label="事件经过与客观事实描述" value={event.facts}
-              onChange={v => updateHistoryEvent(event.id, 'facts', v)} rows={4}
-              placeholder="只记录事件发生了什么，尽量将客观事实与人物主观解释区分开。" />
-
-            <TextArea label="事件自定义补充" value={event.custom}
-              onChange={v => updateHistoryEvent(event.id, 'custom', v)} rows={2} />
-
-            <div style={{ borderTop: '1px dashed var(--card-border)', paddingTop: '20px' }}>
-              <h4 style={{ margin: '0 0 16px', color: 'var(--primary-color)', fontSize: '14px' }}>B. 事件认知与行为反应</h4>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <div>
-                  <strong style={{ fontSize: '13px', color: 'var(--text-main)' }}>B1. 事件认知</strong>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '12px' }}>
-                    <TextArea label="人物如何理解这件事" value={event.cognition} onChange={v => updateHistoryEvent(event.id, 'cognition', v)} />
-                    <TextArea label="人物赋予事件的意义" value={event.meaning} onChange={v => updateHistoryEvent(event.id, 'meaning', v)} />
-                    <TextField label="意义性质" value={event.meaningType} onChange={v => updateHistoryEvent(event.id, 'meaningType', v)} placeholder="例如：损失、背叛、机会、转折..." />
-                    <TextField label="判断确定程度" value={event.certainty} onChange={v => updateHistoryEvent(event.id, 'certainty', v)} placeholder="确信、怀疑、矛盾、无法判断..." />
-                  </div>
-                  <div style={{ marginTop: '12px' }}>
-                    <TextArea label="认知补充" value={event.cognitionCustom} onChange={v => updateHistoryEvent(event.id, 'cognitionCustom', v)} />
-                  </div>
-                </div>
-
-                <div>
-                  <strong style={{ fontSize: '13px', color: 'var(--text-main)' }}>B2. 归因对象</strong>
-                  <div style={{ marginTop: '12px' }}>
-                    <TagGroup
-                      label="人物认为事件主要由什么造成（可多选）"
-                      options={['自身', '他人', '家庭', '组织或制度', '社会环境', '外部偶然因素', '无法确定']}
-                      selected={event.attribution}
-                      onChange={v => updateHistoryEvent(event.id, 'attribution', v)}
-                    />
-                  </div>
-                  <div style={{ marginTop: '12px' }}>
-                    <TextField label="自定义归因" value={event.attributionCustom} onChange={v => updateHistoryEvent(event.id, 'attributionCustom', v)} />
-                  </div>
-                </div>
-
-                <div>
-                  <strong style={{ fontSize: '13px', color: 'var(--text-main)' }}>B3. 情绪与心理反应</strong>
-                  <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <TagGroup
-                      label="主要情绪（可多选）"
-                      options={['恐惧', '愤怒', '悲伤', '羞耻', '内疚', '焦虑', '喜悦', '兴奋', '释然', '麻木', '厌恶', '困惑']}
-                      selected={event.emotions}
-                      onChange={v => updateHistoryEvent(event.id, 'emotions', v)}
-                    />
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                      <TextField label="情绪持续时间" value={event.emotionDuration} onChange={v => updateHistoryEvent(event.id, 'emotionDuration', v)} />
-                      <TextField label="心理冲击程度" value={event.psychologicalImpact} onChange={v => updateHistoryEvent(event.id, 'psychologicalImpact', v)} />
+                <div style={{ border: '1px solid var(--card-border)', borderRadius: '8px', overflow: 'hidden', background: 'rgba(128,128,128,0.06)' }}>
+                  
+                  {/* 卡片头部：点击折叠/展开 */}
+                  <div 
+                    onClick={() => toggleEvent(event.id)}
+                    style={{ padding: '16px 20px', background: isExpanded ? 'rgba(128, 128, 128, 0.1)' : 'transparent', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', transition: 'all 0.2s' }}
+                  >
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <strong style={{ color: 'var(--primary-color)', fontSize: '15px' }}>
+                        {event.name || `事件 ${index + 1}`}
+                      </strong>
+                      <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                        ⏳ {event.startTime || '未记录时间'} {event.lifeStage && `· ${event.lifeStage}`}
+                      </span>
                     </div>
-                    <TextArea label="长期反复出现的情绪反应" value={event.recurringEmotion} onChange={v => updateHistoryEvent(event.id, 'recurringEmotion', v)} />
-                    <TextArea label="情绪反应补充" value={event.emotionCustom} onChange={v => updateHistoryEvent(event.id, 'emotionCustom', v)} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <button type="button" onClick={(e) => { e.stopPropagation(); removeHistoryEvent(event.id); }}
+                        style={{ border: 'none', background: 'transparent', color: 'var(--danger-color)', cursor: 'pointer', fontSize: '12px' }}>
+                        删除
+                      </button>
+                      <span style={{ color: 'var(--primary-color)', fontSize: '13px', fontWeight: 600 }}>{isExpanded ? '收起 ▲' : '展开 ▼'}</span>
+                    </div>
                   </div>
-                </div>
 
-                <div>
-                  <strong style={{ fontSize: '13px', color: 'var(--text-main)' }}>B4. 行为反应</strong>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '12px' }}>
-                    <TextArea label="第一反应" value={event.firstReaction} onChange={v => updateHistoryEvent(event.id, 'firstReaction', v)} />
-                    <TextArea label="实际采取的行动" value={event.actualAction} onChange={v => updateHistoryEvent(event.id, 'actualAction', v)} />
-                    <TextArea label="防御或回避方式" value={event.defenseAvoidance} onChange={v => updateHistoryEvent(event.id, 'defenseAvoidance', v)} />
-                    <TextArea label="主动对抗方式" value={event.confrontation} onChange={v => updateHistoryEvent(event.id, 'confrontation', v)} />
-                    <TextArea label="是否寻求帮助及其方式" value={event.helpSeeking} onChange={v => updateHistoryEvent(event.id, 'helpSeeking', v)} />
-                    <TextArea label="最终应对方式" value={event.finalResponse} onChange={v => updateHistoryEvent(event.id, 'finalResponse', v)} />
-                  </div>
-                  <div style={{ marginTop: '12px' }}>
-                    <TextArea label="行为补充" value={event.behaviorCustom} onChange={v => updateHistoryEvent(event.id, 'behaviorCustom', v)} />
-                  </div>
-                </div>
+                  {/* 卡片主体：展开时显示全部表单 */}
+                  {isExpanded && (
+                    <div style={{ padding: '20px', borderTop: '1px solid var(--card-border)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                      
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                        <TextField label="事件名称" value={event.name} onChange={v => updateHistoryEvent(event.id, 'name', v)} />
+                        <TextField label="发生时间" value={event.startTime} onChange={v => updateHistoryEvent(event.id, 'startTime', v)} placeholder="例如：公元 2020 年 / 某年秋季" />
+                        <TextField label="结束时间" value={event.endTime} onChange={v => updateHistoryEvent(event.id, 'endTime', v)} />
+                        <TextField label="人物当时年龄" value={event.age} onChange={v => updateHistoryEvent(event.id, 'age', v)} />
+                        <TextField label="人生阶段" value={event.lifeStage} onChange={v => updateHistoryEvent(event.id, 'lifeStage', v)} placeholder="童年、青春期、成年早期..." />
+                        <TextField label="发生地点" value={event.location} onChange={v => updateHistoryEvent(event.id, 'location', v)} />
+                        <div style={{ gridColumn: '1 / -1' }}>
+                          <TextField label="相关人物" value={event.relatedPeople} onChange={v => updateHistoryEvent(event.id, 'relatedPeople', v)} />
+                        </div>
+                      </div>
 
-                <div>
-                  <strong style={{ fontSize: '13px', color: 'var(--text-main)' }}>B5. 事件结果与后续影响</strong>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '12px' }}>
-                    <TextArea label="直接结果" value={event.directResult} onChange={v => updateHistoryEvent(event.id, 'directResult', v)} />
-                    <TextArea label="对现实生活的影响" value={event.lifeImpact} onChange={v => updateHistoryEvent(event.id, 'lifeImpact', v)} />
-                    <TextArea label="对关系的影响" value={event.relationshipImpact} onChange={v => updateHistoryEvent(event.id, 'relationshipImpact', v)} />
-                    <TextArea label="对价值观与信念的影响" value={event.beliefImpact} onChange={v => updateHistoryEvent(event.id, 'beliefImpact', v)} />
-                    <TextField label="是否形成长期影响" value={event.longTermImpact} onChange={v => updateHistoryEvent(event.id, 'longTermImpact', v)} />
-                    <TextArea label="相关后续事件" value={event.followUpEvents} onChange={v => updateHistoryEvent(event.id, 'followUpEvents', v)} />
-                  </div>
-                  <div style={{ marginTop: '12px' }}>
-                    <TextArea label="结果补充" value={event.resultCustom} onChange={v => updateHistoryEvent(event.id, 'resultCustom', v)} />
-                  </div>
+                      {/* ✅ 防白屏：加了 Array.isArray 检查 */}
+                      <TagGroup
+                        label="事件领域（可多选）"
+                        options={['资源冲击', '关系扰动', '地位评价', '意义扰动', '控制失效', '机会变化', '慢性压力', '存在转变']}
+                        selected={Array.isArray(event.domain) ? event.domain : []}
+                        onChange={v => updateHistoryEvent(event.id, 'domain', v)}
+                      />
+
+                      <RadioGroup label="事件极性" options={['威胁', '奖赏', '扩张', '稳定', '腐化']} value={event.polarity || ''} onChange={v => updateHistoryEvent(event.id, 'polarity', v)} />
+                      <RadioGroup label="事件强度" options={['低', '中', '高']} value={event.intensity || ''} onChange={v => updateHistoryEvent(event.id, 'intensity', v)} />
+
+                      <TextArea label="事件经过与客观事实描述" value={event.facts || ''} onChange={v => updateHistoryEvent(event.id, 'facts', v)} rows={4} placeholder="只记录事件发生了什么..." />
+                      <TextArea label="事件自定义补充" value={event.custom || ''} onChange={v => updateHistoryEvent(event.id, 'custom', v)} rows={2} />
+
+                      <div style={{ borderTop: '1px dashed var(--card-border)', paddingTop: '20px' }}>
+                        <h4 style={{ margin: '0 0 16px', color: 'var(--primary-color)', fontSize: '14px' }}>B. 事件认知与行为反应</h4>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                          
+                          <div>
+                            <strong style={{ fontSize: '13px', color: 'var(--text-main)' }}>B1. 事件认知</strong>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '12px' }}>
+                              <TextArea label="人物如何理解这件事" value={event.cognition || ''} onChange={v => updateHistoryEvent(event.id, 'cognition', v)} />
+                              <TextArea label="人物赋予事件的意义" value={event.meaning || ''} onChange={v => updateHistoryEvent(event.id, 'meaning', v)} />
+                              <TextField label="意义性质" value={event.meaningType || ''} onChange={v => updateHistoryEvent(event.id, 'meaningType', v)} placeholder="例如：损失、背叛、机会、转折..." />
+                              <TextField label="判断确定程度" value={event.certainty || ''} onChange={v => updateHistoryEvent(event.id, 'certainty', v)} placeholder="确信、怀疑、矛盾、无法判断..." />
+                            </div>
+                            <div style={{ marginTop: '12px' }}>
+                              <TextArea label="认知补充" value={event.cognitionCustom || ''} onChange={v => updateHistoryEvent(event.id, 'cognitionCustom', v)} />
+                            </div>
+                          </div>
+
+                          <div>
+                            <strong style={{ fontSize: '13px', color: 'var(--text-main)' }}>B2. 归因对象</strong>
+                            <div style={{ marginTop: '12px' }}>
+                              <TagGroup label="人物认为事件主要由什么造成（可多选）" options={['自身', '他人', '家庭', '组织或制度', '社会环境', '外部偶然因素', '无法确定']} selected={Array.isArray(event.attribution) ? event.attribution : []} onChange={v => updateHistoryEvent(event.id, 'attribution', v)} />
+                            </div>
+                            <div style={{ marginTop: '12px' }}>
+                              <TextField label="自定义归因" value={event.attributionCustom || ''} onChange={v => updateHistoryEvent(event.id, 'attributionCustom', v)} />
+                            </div>
+                          </div>
+
+                          <div>
+                            <strong style={{ fontSize: '13px', color: 'var(--text-main)' }}>B3. 情绪与心理反应</strong>
+                            <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                              <TagGroup label="主要情绪（可多选）" options={['恐惧', '愤怒', '悲伤', '羞耻', '内疚', '焦虑', '喜悦', '兴奋', '释然', '麻木', '厌恶', '困惑']} selected={Array.isArray(event.emotions) ? event.emotions : []} onChange={v => updateHistoryEvent(event.id, 'emotions', v)} />
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                <TextField label="情绪持续时间" value={event.emotionDuration || ''} onChange={v => updateHistoryEvent(event.id, 'emotionDuration', v)} />
+                                <TextField label="心理冲击程度" value={event.psychologicalImpact || ''} onChange={v => updateHistoryEvent(event.id, 'psychologicalImpact', v)} />
+                              </div>
+                              <TextArea label="长期反复出现的情绪反应" value={event.recurringEmotion || ''} onChange={v => updateHistoryEvent(event.id, 'recurringEmotion', v)} />
+                              <TextArea label="情绪反应补充" value={event.emotionCustom || ''} onChange={v => updateHistoryEvent(event.id, 'emotionCustom', v)} />
+                            </div>
+                          </div>
+
+                          <div>
+                            <strong style={{ fontSize: '13px', color: 'var(--text-main)' }}>B4. 行为反应</strong>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '12px' }}>
+                              <TextArea label="第一反应" value={event.firstReaction || ''} onChange={v => updateHistoryEvent(event.id, 'firstReaction', v)} />
+                              <TextArea label="实际采取的行动" value={event.actualAction || ''} onChange={v => updateHistoryEvent(event.id, 'actualAction', v)} />
+                              <TextArea label="防御或回避方式" value={event.defenseAvoidance || ''} onChange={v => updateHistoryEvent(event.id, 'defenseAvoidance', v)} />
+                              <TextArea label="主动对抗方式" value={event.confrontation || ''} onChange={v => updateHistoryEvent(event.id, 'confrontation', v)} />
+                              <TextArea label="是否寻求帮助及其方式" value={event.helpSeeking || ''} onChange={v => updateHistoryEvent(event.id, 'helpSeeking', v)} />
+                              <TextArea label="最终应对方式" value={event.finalResponse || ''} onChange={v => updateHistoryEvent(event.id, 'finalResponse', v)} />
+                            </div>
+                            <div style={{ marginTop: '12px' }}>
+                              <TextArea label="行为补充" value={event.behaviorCustom || ''} onChange={v => updateHistoryEvent(event.id, 'behaviorCustom', v)} />
+                            </div>
+                          </div>
+
+                          <div>
+                            <strong style={{ fontSize: '13px', color: 'var(--text-main)' }}>B5. 事件结果与后续影响</strong>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '12px' }}>
+                              <TextArea label="直接结果" value={event.directResult || ''} onChange={v => updateHistoryEvent(event.id, 'directResult', v)} />
+                              <TextArea label="对现实生活的影响" value={event.lifeImpact || ''} onChange={v => updateHistoryEvent(event.id, 'lifeImpact', v)} />
+                              <TextArea label="对关系的影响" value={event.relationshipImpact || ''} onChange={v => updateHistoryEvent(event.id, 'relationshipImpact', v)} />
+                              <TextArea label="对价值观与信念的影响" value={event.beliefImpact || ''} onChange={v => updateHistoryEvent(event.id, 'beliefImpact', v)} />
+                              <TextField label="是否形成长期影响" value={event.longTermImpact || ''} onChange={v => updateHistoryEvent(event.id, 'longTermImpact', v)} />
+                              <TextArea label="相关后续事件" value={event.followUpEvents || ''} onChange={v => updateHistoryEvent(event.id, 'followUpEvents', v)} />
+                            </div>
+                            <div style={{ marginTop: '12px' }}>
+                              <TextArea label="结果补充" value={event.resultCustom || ''} onChange={v => updateHistoryEvent(event.id, 'resultCustom', v)} />
+                            </div>
+                          </div>
+
+                        </div>
+                      </div>
+             {/* ✅ 新增：完成按钮 */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px', paddingTop: '16px', borderTop: '1px dashed var(--card-border)' }}>
+              <button 
+                type="button" 
+                onClick={() => toggleEvent(event.id)} 
+                style={{ padding: '8px 24px', background: 'var(--primary-color)', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
+              >
+                ✅ 完成并收起
+              </button>
+            </div>
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
-          </div>
+            );
+          })}
+          
+          {historyData.events.length === 0 && (
+            <p style={{ color: 'var(--text-muted)', fontSize: '13px', textAlign: 'center', padding: '24px' }}>
+              暂无生命事件记录，点击“添加事件”开始建立人物时间线。
+            </p>
+          )}
         </div>
-      ))}
-
-      {historyData.events.length === 0 && (
-        <p style={{ color: 'var(--text-muted)', fontSize: '13px', textAlign: 'center', padding: '24px' }}>
-          暂无生命事件记录，点击“添加事件”开始建立人物时间线。
-        </p>
-      )}
+      </div>
     </div>
 
     {/* C. 历史沉积与人格轨迹 */}
@@ -1512,26 +1813,26 @@ useEffect(() => {
         <div>
           <h4 style={{ fontSize: '14px', color: 'var(--text-main)' }}>C1. 反复出现的经历模式</h4>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-            <TextArea label="反复出现的事件类型" value={historyData.deposits.repeatedPatterns} onChange={v => updateDeposit('repeatedPatterns', v)} />
-            <TextArea label="反复出现的关系模式" value={historyData.deposits.relationshipPatterns} onChange={v => updateDeposit('relationshipPatterns', v)} />
-            <TextArea label="反复出现的现实困境" value={historyData.deposits.recurringDifficulties} onChange={v => updateDeposit('recurringDifficulties', v)} />
-            <TextArea label="反复出现的机会与奖励" value={historyData.deposits.opportunitiesAndRewards} onChange={v => updateDeposit('opportunitiesAndRewards', v)} />
-            <TextArea label="长期压力来源" value={historyData.deposits.chronicStress} onChange={v => updateDeposit('chronicStress', v)} />
-            <TextArea label="人物对这些模式的认识" value={historyData.deposits.historicalUnderstanding} onChange={v => updateDeposit('historicalUnderstanding', v)} />
+            <TextArea label="反复出现的事件类型" value={historyData.deposits.repeatedPatterns || ''} onChange={v => updateDeposit('repeatedPatterns', v)} />
+            <TextArea label="反复出现的关系模式" value={historyData.deposits.relationshipPatterns || ''} onChange={v => updateDeposit('relationshipPatterns', v)} />
+            <TextArea label="反复出现的现实困境" value={historyData.deposits.recurringDifficulties || ''} onChange={v => updateDeposit('recurringDifficulties', v)} />
+            <TextArea label="反复出现的机会与奖励" value={historyData.deposits.opportunitiesAndRewards || ''} onChange={v => updateDeposit('opportunitiesAndRewards', v)} />
+            <TextArea label="长期压力来源" value={historyData.deposits.chronicStress || ''} onChange={v => updateDeposit('chronicStress', v)} />
+            <TextArea label="人物对这些模式的认识" value={historyData.deposits.historicalUnderstanding || ''} onChange={v => updateDeposit('historicalUnderstanding', v)} />
           </div>
         </div>
 
         <div style={{ borderTop: '1px dashed var(--card-border)', paddingTop: '20px' }}>
           <h4 style={{ fontSize: '14px', color: 'var(--text-main)' }}>C2. 历史形成的心理与行为沉积</h4>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-            <TextArea label="核心信念" value={historyData.deposits.coreBeliefs} onChange={v => updateDeposit('coreBeliefs', v)} />
-            <TextArea label="长期执念" value={historyData.deposits.longTermObsession} onChange={v => updateDeposit('longTermObsession', v)} />
-            <TextArea label="心理边界" value={historyData.deposits.psychologicalBoundaries} onChange={v => updateDeposit('psychologicalBoundaries', v)} />
-            <TextArea label="防御倾向" value={historyData.deposits.defenseTendencies} onChange={v => updateDeposit('defenseTendencies', v)} />
-            <TextArea label="行为习惯" value={historyData.deposits.behavioralHabits} onChange={v => updateDeposit('behavioralHabits', v)} />
-            <TextArea label="关系模式" value={historyData.deposits.relationshipModels} onChange={v => updateDeposit('relationshipModels', v)} />
+            <TextArea label="核心信念" value={historyData.deposits.coreBeliefs || ''} onChange={v => updateDeposit('coreBeliefs', v)} />
+            <TextArea label="长期执念" value={historyData.deposits.longTermObsession || ''} onChange={v => updateDeposit('longTermObsession', v)} />
+            <TextArea label="心理边界" value={historyData.deposits.psychologicalBoundaries || ''} onChange={v => updateDeposit('psychologicalBoundaries', v)} />
+            <TextArea label="防御倾向" value={historyData.deposits.defenseTendencies || ''} onChange={v => updateDeposit('defenseTendencies', v)} />
+            <TextArea label="行为习惯" value={historyData.deposits.behavioralHabits || ''} onChange={v => updateDeposit('behavioralHabits', v)} />
+            <TextArea label="关系模式" value={historyData.deposits.relationshipModels || ''} onChange={v => updateDeposit('relationshipModels', v)} />
             <div style={{ gridColumn: '1 / -1' }}>
-              <TextArea label="风险判断方式" value={historyData.deposits.riskJudgment} onChange={v => updateDeposit('riskJudgment', v)} />
+              <TextArea label="风险判断方式" value={historyData.deposits.riskJudgment || ''} onChange={v => updateDeposit('riskJudgment', v)} />
             </div>
           </div>
         </div>
@@ -1553,14 +1854,14 @@ useEffect(() => {
                   style={{ border: 'none', background: 'none', color: 'var(--danger-color)', cursor: 'pointer' }}>删除</button>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <TextField label="发生时间/人生阶段" value={item.period} onChange={v => updateTrajectory(item.id, 'period', v)} />
-                <TextField label="相关经历" value={item.relatedExperience} onChange={v => updateTrajectory(item.id, 'relatedExperience', v)} />
-                <TextArea label="变化前的状态" value={item.beforeState} onChange={v => updateTrajectory(item.id, 'beforeState', v)} />
-                <TextArea label="变化后的状态" value={item.afterState} onChange={v => updateTrajectory(item.id, 'afterState', v)} />
-                <TextArea label="行为模式变化" value={item.behaviorChange} onChange={v => updateTrajectory(item.id, 'behaviorChange', v)} />
-                <TextArea label="动力倾向变化" value={item.engineChange} onChange={v => updateTrajectory(item.id, 'engineChange', v)} />
-                <TextArea label="长期保持稳定的部分" value={item.stableParts} onChange={v => updateTrajectory(item.id, 'stableParts', v)} />
-                <TextArea label="人物对自身变化的理解" value={item.selfUnderstanding} onChange={v => updateTrajectory(item.id, 'selfUnderstanding', v)} />
+                <TextField label="发生时间/人生阶段" value={item.period || ''} onChange={v => updateTrajectory(item.id, 'period', v)} />
+                <TextField label="相关经历" value={item.relatedExperience || ''} onChange={v => updateTrajectory(item.id, 'relatedExperience', v)} />
+                <TextArea label="变化前的状态" value={item.beforeState || ''} onChange={v => updateTrajectory(item.id, 'beforeState', v)} />
+                <TextArea label="变化后的状态" value={item.afterState || ''} onChange={v => updateTrajectory(item.id, 'afterState', v)} />
+                <TextArea label="行为模式变化" value={item.behaviorChange || ''} onChange={v => updateTrajectory(item.id, 'behaviorChange', v)} />
+                <TextArea label="动力倾向变化" value={item.engineChange || ''} onChange={v => updateTrajectory(item.id, 'engineChange', v)} />
+                <TextArea label="长期保持稳定的部分" value={item.stableParts || ''} onChange={v => updateTrajectory(item.id, 'stableParts', v)} />
+                <TextArea label="人物对自身变化的理解" value={item.selfUnderstanding || ''} onChange={v => updateTrajectory(item.id, 'selfUnderstanding', v)} />
               </div>
             </div>
           ))}
@@ -1583,13 +1884,14 @@ useEffect(() => {
                   style={{ border: 'none', background: 'none', color: 'var(--danger-color)', cursor: 'pointer' }}>删除</button>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <TextField label="影响领域" value={item.domain} onChange={v => updateCurrentInfluence(item.id, 'domain', v)} />
-                <TextField label="来源事件" value={item.sourceEvent} onChange={v => updateCurrentInfluence(item.id, 'sourceEvent', v)} />
-                <TextArea label="当前表现" value={item.currentManifestation} onChange={v => updateCurrentInfluence(item.id, 'currentManifestation', v)} />
-                <TextField label="是否仍在持续" value={item.isOngoing} onChange={v => updateCurrentInfluence(item.id, 'isOngoing', v)} placeholder="持续 / 间歇出现 / 已结束" />
-                <TextField label="是否发生改变" value={item.hasChanged} onChange={v => updateCurrentInfluence(item.id, 'hasChanged', v)} />
-                <TextArea label="人物当前对此的看法" value={item.currentView} onChange={v => updateCurrentInfluence(item.id, 'currentView', v)} />
+                <TextField label="影响领域" value={item.domain || ''} onChange={v => updateCurrentInfluence(item.id, 'domain', v)} />
+                <TextField label="来源事件" value={item.sourceEvent || ''} onChange={v => updateCurrentInfluence(item.id, 'sourceEvent', v)} />
+                <TextArea label="当前表现" value={item.currentManifestation || ''} onChange={v => updateCurrentInfluence(item.id, 'currentManifestation', v)} />
+                <TextField label="是否仍在持续" value={item.isOngoing || ''} onChange={v => updateCurrentInfluence(item.id, 'isOngoing', v)} placeholder="持续 / 间歇出现 / 已结束" />
+                <TextField label="是否发生改变" value={item.hasChanged || ''} onChange={v => updateCurrentInfluence(item.id, 'hasChanged', v)} />
+                <TextArea label="人物当前对此的看法" value={item.currentView || ''} onChange={v => updateCurrentInfluence(item.id, 'currentView', v)} />
               </div>
+                
             </div>
           ))}
         </div>
@@ -1599,6 +1901,152 @@ useEffect(() => {
 )}
 
 {/* ================= 模块 07：人物初始状态 ================= */}
+          {currentModule.id === 'growth' && (() => {
+            const baselineEngines = (seedLayerRef.current?.engines?.ovtde || {}) as Record<string, any>
+            const currentEngines = (ovtdeData || {}) as Record<string, any>
+            const baselineValue = (key: string) => Number(baselineEngines?.[key]?.val ?? 0)
+            const currentValue = (key: string) => Number(currentEngines?.[key]?.val ?? 0)
+            const enterRuntime = (module: string) => {
+              if (stateLayer !== 'runtime') {
+                switchStateLayer('runtime')
+              }
+              setActiveModule(module)
+            }
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+                <div className="glass-card" style={{ padding: '24px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '18px', flexWrap: 'wrap' }}>
+                    <div style={{ maxWidth: '720px' }}>
+                      <h3 style={{ margin: '0 0 8px', fontSize: '16px', color: 'var(--text-main)' }}>种子是底色，运行态才是此刻的人</h3>
+                      <p style={{ margin: 0, fontSize: '13px', lineHeight: 1.8, color: 'var(--text-muted)' }}>
+                        02–05 不再是一组永不变化的静态答案。种子记录长期倾向与初始条件；运行态记录人物在经历中形成的当前版本。
+                        事件不会直接改写人物，真正进入运行态的是人物对事件的认知、归因、情绪与选择。主色调可以保持稳定，也可以缓慢漂移。
+                      </p>
+                    </div>
+                    <div style={{ padding: '8px 12px', borderRadius: '20px', border: '1px solid var(--card-border)', background: 'rgba(128,128,128,0.1)', fontSize: '12px', color: 'var(--text-main)' }}>
+                      当前层：{stateLayer === 'seed' ? '种子设定' : `运行态 v${runtimeInfo.version}`}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '18px' }}>
+                    <button type="button" onClick={() => enterRuntime('engines')} style={{ padding: '8px 12px', borderRadius: '7px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)', cursor: 'pointer' }}>调整五引擎当前值</button>
+                    <button type="button" onClick={() => enterRuntime('mechanism')} style={{ padding: '8px 12px', borderRadius: '7px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)', cursor: 'pointer' }}>调整防御机制</button>
+                    <button type="button" onClick={() => enterRuntime('sandbox')} style={{ padding: '8px 12px', borderRadius: '7px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)', cursor: 'pointer' }}>调整现实条件</button>
+                    <button type="button" onClick={() => enterRuntime('individual')} style={{ padding: '8px 12px', borderRadius: '7px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)', cursor: 'pointer' }}>调整思想钢印</button>
+                    <button type="button" onClick={() => setActiveModule('history')} style={{ padding: '8px 12px', borderRadius: '7px', border: '1px solid var(--card-border)', background: 'rgba(128,128,128,0.1)', color: 'var(--text-main)', cursor: 'pointer' }}>先回 06 记录经历 →</button>
+                  </div>
+                </div>
+
+                <div className="glass-card" style={{ padding: '24px' }}>
+                  <h3 style={{ margin: '0 0 6px', fontSize: '15px', color: 'var(--text-main)' }}>主色调</h3>
+                  <p style={{ margin: '0 0 16px', fontSize: '12px', color: 'var(--text-muted)' }}>主色调是长期底色，不是唯一引擎。允许其他引擎随情境升高，但不要轻易失去主色调。</p>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    {Object.keys(ENGINE_LABELS).map((key) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setRuntimeInfo((prev) => ({ ...prev, main_color: key }))}
+                        style={{
+                          padding: '10px 14px', borderRadius: '8px', cursor: 'pointer',
+                          border: runtimeInfo.main_color === key ? '1px solid var(--text-main)' : '1px solid var(--card-border)',
+                          background: runtimeInfo.main_color === key ? 'rgba(128,128,128,0.18)' : 'transparent',
+                          color: 'var(--text-main)', textAlign: 'left',
+                        }}
+                      >
+                        <strong style={{ display: 'block', fontSize: '13px' }}>{key} · {ENGINE_LABELS[key]}</strong>
+                        <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>种子 {baselineValue(key)} → 当前 {currentValue(key)}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="glass-card" style={{ padding: '24px' }}>
+                  <h3 style={{ margin: '0 0 8px', fontSize: '15px', color: 'var(--text-main)' }}>种子 vs 当前运行态</h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    {Object.keys(ENGINE_LABELS).map((key) => {
+                      const before = baselineValue(key)
+                      const after = currentValue(key)
+                      const delta = after - before
+                      return (
+                        <div key={key} style={{ display: 'grid', gridTemplateColumns: '130px 1fr 92px', gap: '14px', alignItems: 'center' }}>
+                          <div style={{ fontSize: '12px', color: 'var(--text-main)' }}>{key} · {ENGINE_LABELS[key]}</div>
+                          <div style={{ position: 'relative', height: '10px', borderRadius: '999px', background: 'rgba(128,128,128,0.16)', overflow: 'hidden' }}>
+                            <div style={{ position: 'absolute', inset: 0, width: `${Math.max(0, Math.min(100, before))}%`, background: 'rgba(128,128,128,0.45)' }} />
+                            <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${Math.max(0, Math.min(100, after))}%`, borderRight: '2px solid var(--text-main)' }} />
+                          </div>
+                          <div style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'right' }}>
+                            {before} → {after} {delta !== 0 ? `(${delta > 0 ? '+' : ''}${delta})` : ''}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <p style={{ margin: '14px 0 0', fontSize: '11px', color: 'var(--text-muted)' }}>浅色条 = 种子基线；深色终点 = 当前运行态。</p>
+                </div>
+
+                <div className="glass-card" style={{ padding: '24px' }}>
+                  <h3 style={{ margin: '0 0 6px', fontSize: '15px', color: 'var(--text-main)' }}>记录一次成长校准</h3>
+                  <p style={{ margin: '0 0 14px', fontSize: '12px', color: 'var(--text-muted)' }}>先把 02–05 改成“经历之后的当前值”，再填写这次变化的理由并保存。系统会写一条成长日志和状态历史，种子本身不动。</p>
+                  <TextArea label="成长理由 / 人物如何理解与归因" value={growthReason} onChange={setGrowthReason} rows={3} placeholder="例如：韩立第一次真正面对修仙界的生死规则，他把这次经历归因为“资源与信息差决定生存”，因此秩序与扩张上升，但锚定没有消失..." />
+                  <div style={{ marginTop: '14px' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '8px' }}>关联生命经历（可多选）</div>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', maxHeight: '180px', overflowY: 'auto' }}>
+                      {historyData.events.length === 0 && <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>还没有生命经历，先去 06 记录。</span>}
+                      {historyData.events.map((event: any) => {
+                        const selected = growthEvents.includes(event.id)
+                        return (
+                          <label key={event.id} style={{ display: 'flex', gap: '6px', alignItems: 'center', padding: '6px 10px', borderRadius: '16px', border: selected ? '1px solid var(--text-main)' : '1px solid var(--card-border)', fontSize: '12px', color: 'var(--text-main)', cursor: 'pointer' }}>
+                            <input type="checkbox" checked={selected} onChange={() => setGrowthEvents((prev) => selected ? prev.filter((id) => id !== event.id) : [...prev, event.id])} />
+                            {event.name || '未命名经历'}
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '10px', marginTop: '18px', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <button type="button" onClick={() => void handleRuntimeSave()} style={{ padding: '9px 18px', borderRadius: '7px', background: 'var(--primary-color)', color: 'var(--primary-text)', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
+                      保存运行态并记录成长
+                    </button>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>只有发生变化时才会新增日志。</span>
+                  </div>
+                </div>
+
+                <div className="glass-card" style={{ padding: '24px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                    <h3 style={{ margin: 0, fontSize: '15px', color: 'var(--text-main)' }}>成长日志</h3>
+                    {onNavigate && (
+                      <button type="button" onClick={() => onNavigate('events')} style={{ padding: '6px 10px', borderRadius: '6px', background: 'transparent', color: 'var(--text-main)', border: '1px solid var(--card-border)', cursor: 'pointer', fontSize: '12px' }}>
+                        大动作修改 → 去事件管理
+                      </button>
+                    )}
+                  </div>
+                  {runtimeInfo.growth_log.length === 0 ? (
+                    <p style={{ margin: '12px 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>还没有成长校准。人物会保持种子状态，直到你确认第一次变化。</p>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '14px' }}>
+                      {[...runtimeInfo.growth_log].reverse().map((entry) => (
+                        <div key={entry.id} style={{ padding: '14px 16px', borderRadius: '8px', border: '1px solid var(--card-border)', background: 'rgba(128,128,128,0.06)' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
+                            <strong style={{ fontSize: '13px', color: 'var(--text-main)' }}>{entry.reason || '成长校准'}</strong>
+                            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{new Date(entry.at).toLocaleString()} · 主色调 {entry.main_color}</span>
+                          </div>
+                          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '8px' }}>
+                            {entry.changed_modules?.map((item: string) => <span key={item} style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '10px', background: 'rgba(128,128,128,0.14)', color: 'var(--text-muted)' }}>{item}</span>)}
+                            {Object.entries(entry.engine_deltas || {}).map(([key, delta]: [string, any]) => <span key={key} style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '10px', border: '1px solid var(--card-border)', color: 'var(--text-main)' }}>{key} {Number(delta) > 0 ? '+' : ''}{delta}</span>)}
+                          </div>
+                          {entry.source_event_ids?.length > 0 && (
+                            <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--text-muted)' }}>
+                              关联经历：{entry.source_event_ids.map((id: string) => historyData.events.find((event: any) => event.id === id)?.name || id).join('、')}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
+          })()}
+
 {currentModule.id === 'initial' && (
   <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
@@ -1822,6 +2270,38 @@ useEffect(() => {
 
         </section>
       </main>
+                       {/* ✅ 全局事件导入弹窗 */}
+      {isEventImportModalOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
+          <div className="glass-card" style={{ width: '600px', maxHeight: '80vh', display: 'flex', flexDirection: 'column', background: 'var(--bg-color)', padding: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ margin: 0, color: 'var(--text-main)' }}>从全局事件库导入</h3>
+              <button onClick={() => setIsEventImportModalOpen(false)} style={{ background: 'transparent', border: 'none', fontSize: '20px', cursor: 'pointer', color: 'var(--text-muted)' }}>×</button>
+            </div>
+            
+            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {globalEvents.length === 0 ? (
+                <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '20px' }}>该世界暂无 05 事件</div>
+              ) : (
+                globalEvents.map(ge => (
+                  <div key={ge.id} style={{ padding: '16px', border: '1px solid var(--card-border)', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontWeight: 600, color: 'var(--text-main)' }}>{ge.name}</div>
+                      <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                        ⏳ {ge.story_time || '无时间'} | {ge.polarity} · {ge.intensity}
+                      </div>
+                    </div>
+                    <button onClick={() => handleImportGlobalEvent(ge)}
+                      style={{ padding: '6px 16px', background: 'var(--primary-color)', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>
+                      导入
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

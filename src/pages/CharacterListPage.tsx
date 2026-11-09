@@ -5,15 +5,27 @@ import CharacterBuildingPage from './CharacterBuildingPage';
 export default function CharacterListPage({ 
   worldId, 
   worldName = '', 
-  onBack 
+  focusCharacterId,
+  onBack,
+  onNavigate,
 }: { 
   worldId?: string, 
   worldName?: string, 
-  onBack: () => void 
+  focusCharacterId?: string | null,
+  onBack: () => void,
+  onNavigate?: (page: string) => void,
 }) {
   const [characters, setCharacters] = useState<any[]>([]);
+  const [runtimeMeta, setRuntimeMeta] = useState<Record<string, { version: number; main_color: string }>>({});
   const [view, setView] = useState<'list' | 'edit'>('list');
   const [editingCharId, setEditingCharId] = useState<string | null>(null);
+  const [editingModule, setEditingModule] = useState('basic');
+
+  const openEditor = (id: string | null, module = 'basic') => {
+    setEditingCharId(id)
+    setEditingModule(module)
+    setView('edit')
+  }
 
     const loadCharacters = async () => {
     try {
@@ -24,6 +36,20 @@ export default function CharacterListPage({
         ? data.filter((c: any) => c.world_id === worldId)
         : data;
       setCharacters(filtered);
+      Promise.all(filtered.map(async (c: any) => {
+        try {
+          const r = await fetch(`http://127.0.0.1:8000/api/characters/${c.id}/runtime`)
+          if (!r.ok) return null
+          const view = await r.json()
+          return [c.id, { version: view.runtime?.version || 0, main_color: view.runtime?.main_color || 'O' }] as const
+        } catch {
+          return null
+        }
+      })).then((rows) => {
+        const next: Record<string, { version: number; main_color: string }> = {}
+        rows.forEach((row) => { if (row) next[row[0]] = row[1] })
+        setRuntimeMeta(next)
+      })
     } catch (error) {
       console.error("加载人物失败", error);
       setCharacters([]);
@@ -33,6 +59,15 @@ export default function CharacterListPage({
   useEffect(() => {
     loadCharacters();
   }, [worldId]);
+
+  // 从关系网络点击人物进入时，直接打开该人物档案
+  useEffect(() => {
+    if (focusCharacterId) {
+      setEditingCharId(focusCharacterId);
+      setEditingModule('basic');
+      setView('edit');
+    }
+  }, [focusCharacterId]);
 
      const handleDelete = async (id: string) => {
     if (!window.confirm('确定要删除这个人物档案吗？')) return;
@@ -57,6 +92,8 @@ export default function CharacterListPage({
         characterId={editingCharId || ''} 
         worldId={worldId} 
         onBack={() => { setView('list'); loadCharacters(); }} 
+        initialModule={editingModule}
+        onNavigate={onNavigate}
       />
     );
   }
@@ -90,7 +127,7 @@ export default function CharacterListPage({
         
         {/* ✅ 修复：去掉了写死的 #fff，换成了全局按钮文字变量，去掉了蓝紫色的发光 */}
         <button 
-          onClick={() => { setEditingCharId(null); setView('edit'); }}
+          onClick={() => openEditor(null)}
           style={{ 
             padding: '10px 20px', background: 'var(--primary-color)', color: 'var(--primary-text)', 
             border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600,
@@ -103,9 +140,22 @@ export default function CharacterListPage({
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
         {characters.map(char => (
-          <div key={char.id} className="glass-card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--text-main)' }}>{char.name || '未命名人物'}</h3>
+          <div
+            key={char.id}
+            className="glass-card"
+            onClick={() => openEditor(char.id)}
+            style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', cursor: 'pointer' }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--text-main)' }}>{char.name || '未命名人物'}</h3>
+              <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>点击卡片编辑</span>
+            </div>
             <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)' }}>ID: {char.id}</p>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '10px', padding: '3px 8px', borderRadius: '12px', border: '1px solid var(--card-border)', color: 'var(--text-muted)' }}>
+                {runtimeMeta[char.id]?.version ? `运行态 v${runtimeMeta[char.id].version} · 主色调 ${runtimeMeta[char.id].main_color}` : '种子状态 · 尚未成长校准'}
+              </span>
+            </div>
             
             {/* ✅ 修复：“已绑定世界”标签的白块问题 */}
             {char.world_id && !worldId && (
@@ -123,7 +173,7 @@ export default function CharacterListPage({
             <div style={{ display: 'flex', gap: '10px', marginTop: 'auto', paddingTop: '16px' }}>
               {/* ✅ 修复：把原来扎眼的亮蓝色改成了高级的半透明灰底黑字 */}
               <button 
-                onClick={() => { setEditingCharId(char.id); setView('edit'); }}
+                onClick={(event) => { event.stopPropagation(); openEditor(char.id); }}
                 style={{ 
                   flex: 1, padding: '8px', 
                   background: 'rgba(128, 128, 128, 0.1)', color: 'var(--text-main)', 
@@ -131,11 +181,17 @@ export default function CharacterListPage({
                   transition: 'all 0.2s'
                 }}
               >
-                编辑
+                编辑档案
+              </button>
+              <button
+                onClick={(event) => { event.stopPropagation(); openEditor(char.id, 'growth'); }}
+                style={{ padding: '8px 12px', background: 'transparent', color: 'var(--text-main)', border: '1px solid var(--card-border)', borderRadius: '8px', cursor: 'pointer' }}
+              >
+                成长
               </button>
               
               <button 
-                onClick={() => handleDelete(char.id)}
+                onClick={(event) => { event.stopPropagation(); void handleDelete(char.id); }}
                 style={{ 
                   padding: '8px 16px', 
                   background: 'rgba(255, 69, 58, 0.1)', color: 'var(--danger-color)', 

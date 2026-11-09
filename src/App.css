@@ -14,8 +14,8 @@ body {
   min-height: 100vh;
   font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI",
     "PingFang SC", "Microsoft YaHei", sans-serif;
-  background: #f5f6f8;
-  color: #202631;
+  background: var(--bg-color);
+  color: var(--text-main);
 }
 
 button {
@@ -25,7 +25,7 @@ button {
 .app-shell {
   display: flex;
   min-height: 100vh;
-  background: #f5f6f8;
+  background: var(--bg-color);
 }
 
 /* Sidebar */
@@ -125,12 +125,12 @@ button {
 
 .nav-item:hover {
   background: #252e3d;
-  color: #fff;
+  color: var(--card-bg);
 }
 
 .nav-item.active {
   background: #34435c;
-  color: #fff;
+  color: var(--card-bg);
 }
 
 .nav-icon {
@@ -176,29 +176,34 @@ button {
 }
 
 .topbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
   display: flex;
   align-items: center;
   justify-content: space-between;
   height: 66px;
   padding: 0 42px;
-  border-bottom: 1px solid #e8eaf0;
-  background: #fff;
+  border-bottom: 1px solid var(--card-border);
+  background: var(--card-bg);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
 }
 
 .breadcrumb {
   display: flex;
   align-items: center;
   gap: 12px;
-  color: #87909e;
+  color: var(--text-muted);
   font-size: 12px;
 }
 
 .breadcrumb-divider {
-  color: #c3c8d0;
+  color: var(--text-muted);
 }
 
 .breadcrumb strong {
-  color: #313b4a;
+  color: var(--text-main);
   font-weight: 600;
 }
 
@@ -212,7 +217,7 @@ button {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #788292;
+  color: var(--text-muted);
   font-size: 11px;
 }
 
@@ -222,8 +227,8 @@ button {
   width: 31px;
   height: 31px;
   border-radius: 50%;
-  background: #e9edf5;
-  color: #455875;
+  background: rgba(128, 128, 128, 0.14);
+  color: var(--text-main);
   font-size: 12px;
   font-weight: 650;
 }
@@ -261,7 +266,7 @@ button {
 .page-heading h1,
 .module-placeholder h1 {
   margin: 0;
-  color: #202a38;
+  color: var(--text-main);
   font-size: 27px;
   font-weight: 650;
   letter-spacing: -0.5px;
@@ -270,7 +275,7 @@ button {
 .page-heading p,
 .module-placeholder > p {
   margin: 10px 0 0;
-  color: #8992a0;
+  color: var(--text-muted);
   font-size: 13px;
   line-height: 1.7;
 }
@@ -279,8 +284,8 @@ button {
   padding: 11px 17px;
   border: 0;
   border-radius: 7px;
-  background: #405b86;
-  color: white;
+  background: var(--primary-color);
+  color: var(--primary-text);
   font-size: 12px;
   font-weight: 550;
   cursor: pointer;
@@ -288,7 +293,7 @@ button {
 }
 
 .primary-button:hover {
-  background: #32496e;
+  background: var(--primary-hover);
 }
 
 .stats-grid {
@@ -300,16 +305,16 @@ button {
 .stat-card {
   min-height: 132px;
   padding: 19px 20px;
-  border: 1px solid #e9ebf0;
+  border: 1px solid var(--card-border);
   border-radius: 9px;
-  background: #fff;
+  background: var(--card-bg);
 }
 
 .stat-card-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  color: #7f8998;
+  color: var(--text-muted);
   font-size: 12px;
 }
 
@@ -319,14 +324,14 @@ button {
   width: 29px;
   height: 29px;
   border-radius: 7px;
-  background: #f0f3f8;
-  color: #526b91;
+  background: rgba(128, 128, 128, 0.12);
+  color: var(--text-main);
   font-size: 17px;
 }
 
 .stat-value {
   margin-top: 11px;
-  color: #263244;
+  color: var(--text-main);
   font-size: 27px;
   font-weight: 650;
   line-height: 1.2;
@@ -334,7 +339,7 @@ button {
 
 .stat-description {
   margin-top: 6px;
-  color: #a0a7b2;
+  color: var(--text-muted);
   font-size: 10px;
 }
 
@@ -347,9 +352,9 @@ button {
 .panel {
   min-height: 225px;
   padding: 22px;
-  border: 1px solid #e9ebf0;
+  border: 1px solid var(--card-border);
   border-radius: 9px;
-  background: #fff;
+  background: var(--card-bg);
 }
 
 .main-panel {
@@ -366,22 +371,22 @@ button {
 
 .panel-heading h2 {
   margin: 0;
-  color: #303a49;
+  color: var(--text-main);
   font-size: 14px;
   font-weight: 650;
 }
 
 .panel-heading p {
   margin: 7px 0 0;
-  color: #9aa2af;
+  color: var(--text-muted);
   font-size: 11px;
 }
 
 .panel-tag {
   padding: 5px 8px;
   border-radius: 4px;
-  background: #f1f3f7;
-  color: #8591a3;
+  background: rgba(128, 128, 128, 0.12);
+  color: var(--text-muted);
   font-size: 9px;
   letter-spacing: 0.8px;
 }
@@ -401,39 +406,39 @@ button {
   width: 61px;
   height: 61px;
   margin-bottom: 17px;
-  border: 1px solid #e6eaf1;
+  border: 1px solid var(--card-border);
   border-radius: 17px;
-  background: #f7f8fa;
-  color: #7185a5;
+  background: rgba(128, 128, 128, 0.08);
+  color: var(--text-main);
   font-size: 29px;
 }
 
 .empty-state h3 {
   margin: 0;
-  color: #465164;
+  color: var(--text-main);
   font-size: 14px;
 }
 
 .empty-state p {
   max-width: 300px;
   margin: 9px 0 17px;
-  color: #9aa2af;
+  color: var(--text-muted);
   font-size: 11px;
   line-height: 1.8;
 }
 
 .secondary-button {
   padding: 9px 14px;
-  border: 1px solid #dce2eb;
+  border: 1px solid var(--card-border);
   border-radius: 6px;
-  background: #fff;
-  color: #526783;
+  background: var(--card-bg);
+  color: var(--text-main);
   font-size: 11px;
   cursor: pointer;
 }
 
 .secondary-button:hover {
-  background: #f5f7fa;
+  background: rgba(128, 128, 128, 0.12);
 }
 
 .simple-empty {
@@ -449,9 +454,9 @@ button {
   align-items: center;
   gap: 13px;
   padding: 18px 20px;
-  border: 1px solid #e9ebf0;
+  border: 1px solid var(--card-border);
   border-radius: 9px;
-  background: #fff;
+  background: var(--card-bg);
 }
 
 .principle-mark {
@@ -460,20 +465,20 @@ button {
   width: 34px;
   height: 34px;
   border-radius: 9px;
-  background: #edf1f7;
-  color: #536b91;
+  background: rgba(128, 128, 128, 0.12);
+  color: var(--text-main);
   font-family: Georgia, serif;
   font-size: 19px;
 }
 
 .principle-note strong {
-  color: #4a5566;
+  color: var(--text-main);
   font-size: 11px;
 }
 
 .principle-note p {
   margin: 5px 0 0;
-  color: #969eaa;
+  color: var(--text-muted);
   font-size: 10px;
 }
 
@@ -493,9 +498,9 @@ button {
   min-height: 340px;
   margin-top: 30px;
   padding: 30px;
-  border: 1px solid #e9ebf0;
+  border: 1px solid var(--card-border);
   border-radius: 9px;
-  background: #fff;
+  background: var(--card-bg);
   text-align: center;
 }
 
@@ -506,20 +511,20 @@ button {
   height: 58px;
   margin-bottom: 16px;
   border-radius: 15px;
-  background: #f0f3f8;
-  color: #657b9d;
+  background: rgba(128, 128, 128, 0.12);
+  color: var(--text-main);
   font-size: 27px;
 }
 
 .placeholder-panel h2 {
   margin: 0;
-  color: #465164;
+  color: var(--text-main);
   font-size: 15px;
 }
 
 .placeholder-panel p {
   margin-top: 9px;
-  color: #9aa2af;
+  color: var(--text-muted);
   font-size: 11px;
 }
 
@@ -544,15 +549,15 @@ button {
 
 .character-editor {
   min-height: 100%;
-  background: #f5f6f8;
-  color: #263344;
+  background: transparent;
+  color: var(--text-main);
 }
 
 /* 顶部通栏 */
 .character-header-light {
-  background: #fff;
+  background: var(--card-bg);
   padding: 20px 42px;
-  border-bottom: 1px solid #e8eaf0;
+  border-bottom: 1px solid var(--card-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -565,9 +570,9 @@ button {
 }
 
 .character-back-light {
-  background: #fff;
-  border: 1px solid #dce2eb;
-  color: 'var(--text-main)';
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  color: var(--text-main);
   padding: 8px 14px;
   border-radius: 6px;
   cursor: pointer;
@@ -575,27 +580,27 @@ button {
 }
 
 .character-back-light:hover {
-  border-color: #8b5cf6;
-  color: #8b5cf6;
+  border-color: var(--text-main);
+  color: var(--text-main);
 }
 
 .character-header-light h1 {
   margin: 0;
   font-size: 20px;
-  color: #202a38;
+  color: var(--text-main);
 }
 
 .character-id-light {
   font-size: 11px;
-  color: #87909e;
+  color: var(--text-muted);
   margin-top: 4px;
   letter-spacing: 1px;
 }
 
 .character-status-light {
   font-size: 11px;
-  color: #a78bfa;
-  background: #f3e8ff;
+  color: var(--text-main);
+  background: rgba(128, 128, 128, 0.12);
   padding: 6px 12px;
   border-radius: 4px;
 }
@@ -620,7 +625,7 @@ button {
   height: 4px;
 }
 .character-stepper::-webkit-scrollbar-thumb {
-  background: #dce2e9;
+  background: var(--text-muted);
   border-radius: 4px;
 }
 
@@ -630,42 +635,42 @@ button {
   align-items: flex-start;
   min-width: 140px;
   padding: 12px 16px;
-  background: #fff;
-  border: 1px solid #e5e9ef;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .stepper-item:hover {
-  border-color: #b8a4eb;
+  border-color: var(--text-main);
 }
 
 .stepper-item.active {
-  background: #f3e8ff;
-  border-color: #a78bfa;
+  background: rgba(128, 128, 128, 0.12);
+  border-color: var(--text-main);
 }
 
 .stepper-number {
   font-size: 11px;
-  color: #a78bfa;
+  color: var(--text-main);
   font-weight: 700;
   margin-bottom: 6px;
 }
 
 .stepper-item.active .stepper-number {
-  color: #7c3aed;
+  color: var(--text-main);
 }
 
 .stepper-title {
   font-size: 13px;
-  color: 'var(--text-main)';
+  color: var(--text-main);
   font-weight: 600;
   white-space: nowrap;
 }
 
 .stepper-item.active .stepper-title {
-  color: #5b21b6;
+  color: var(--text-main);
 }
 
 /* 模块标题区 */
@@ -675,12 +680,12 @@ button {
   align-items: flex-start;
   margin-bottom: 24px;
   padding-bottom: 24px;
-  border-bottom: 1px solid #dfe4eb;
+  border-bottom: 1px solid var(--card-border);
 }
 
 .module-eyebrow-light {
   font-size: 11px;
-  color: #8b5cf6;
+  color: var(--text-main);
   letter-spacing: 1.5px;
   margin-bottom: 8px;
 }
@@ -688,7 +693,7 @@ button {
 .module-heading-light h2 {
   margin: 0;
   font-size: 24px;
-  color: #202a38;
+  color: var(--text-main);
   display: flex;
   align-items: baseline;
   gap: 12px;
@@ -696,20 +701,20 @@ button {
 
 .module-heading-light h2 span {
   font-size: 14px;
-  color: #9aa6b4;
+  color: var(--text-muted);
   font-weight: normal;
 }
 
 .module-description-light {
   margin-top: 10px;
-  color: #788697;
+  color: var(--text-muted);
   font-size: 13px;
 }
 
 .module-index-light {
   font-size: 60px;
   font-weight: 800;
-  color: #f0f3f8;
+  color: rgba(128, 128, 128, 0.12);
   line-height: 1;
 }
 
@@ -729,13 +734,13 @@ button {
 .workspace-heading-light h3 {
   margin: 0;
   font-size: 15px;
-  color: #344256;
+  color: var(--text-main);
 }
 
 .workspace-count-light {
   font-size: 11px;
-  color: #8b5cf6;
-  background: #f3e8ff;
+  color: var(--text-main);
+  background: rgba(128, 128, 128, 0.12);
   padding: 4px 10px;
   border-radius: 12px;
 }
@@ -751,22 +756,22 @@ button {
   align-items: center;
   gap: 16px;
   padding: 16px 20px;
-  background: #fff;
-  border: 1px solid #e5e9ef;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .module-group-card-light:hover {
-  border-color: #a78bfa;
+  border-color: var(--text-main);
   box-shadow: 0 2px 8px rgba(139, 92, 246, 0.08);
   transform: translateY(-1px);
 }
 
 .group-number-light {
   font-size: 12px;
-  color: #a78bfa;
+  color: var(--text-main);
   font-weight: 600;
 }
 
@@ -776,24 +781,24 @@ button {
 
 .group-title-light {
   font-size: 14px;
-  color: #344256;
+  color: var(--text-main);
   font-weight: 600;
 }
 
 .group-placeholder-light {
   font-size: 12px;
-  color: #9aa6b4;
+  color: var(--text-muted);
   margin-top: 4px;
 }
 
 .group-indicator-light {
-  color: #dce2eb;
+  color: var(--card-border);
   font-size: 16px;
   transition: all 0.2s;
 }
 
 .module-group-card-light:hover .group-indicator-light {
-  color: #8b5cf6;
+  color: var(--text-main);
   transform: translateX(4px);
 }
 
@@ -803,8 +808,8 @@ button {
   gap: 12px;
   margin-top: 24px;
   padding: 16px 20px;
-  background: #fff;
-  border: 1px dashed #e5e9ef;
+  background: var(--card-bg);
+  border: 1px dashed var(--card-border);
   border-radius: 8px;
 }
 
@@ -812,8 +817,8 @@ button {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: #f3e8ff;
-  color: #8b5cf6;
+  background: rgba(128, 128, 128, 0.12);
+  color: var(--text-main);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -823,12 +828,12 @@ button {
 }
 
 .workspace-notice-light strong {
-  color: #4a5566;
+  color: var(--text-main);
   font-size: 13px;
 }
 
 .workspace-notice-light p {
-  color: #8894a3;
+  color: var(--text-muted);
   font-size: 12px;
   margin: 4px 0 0;
 }
@@ -840,13 +845,13 @@ button {
   justify-content: space-between;
   margin-top: 32px;
   padding-top: 20px;
-  border-top: 1px solid #dfe4eb;
+  border-top: 1px solid var(--card-border);
 }
 
 .module-pagination-light button {
-  background: #fff;
-  border: 1px solid #dce2eb;
-  color: 'var(--text-main)';
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  color: var(--text-main);
   border-radius: 6px;
   padding: 10px 16px;
   font-size: 13px;
@@ -860,11 +865,68 @@ button {
 }
 
 .module-pagination-light button:not(:disabled):hover {
-  border-color: #8b5cf6;
-  color: #8b5cf6;
+  border-color: var(--text-main);
+  color: var(--text-main);
 }
 
 .module-pagination-light span {
-  color: #8894a3;
+  color: var(--text-muted);
   font-size: 12px;
+}
+/* =========================================
+   精准修复：去除紫色、恢复对比度、调整字体
+========================================= */
+
+/* 1. 干掉所有紫色高亮，换成极简灰 */
+.stepper-item.active {
+  background: var(--card-bg) !important;
+  border: 1px solid var(--text-main) !important; /* 选中用黑/白边框，不用彩色 */
+}
+.stepper-number, .stepper-item.active .stepper-number {
+  color: var(--text-main) !important; /* 号码变黑/白 */
+}
+.stepper-title, .stepper-item.active .stepper-title {
+  color: var(--text-main) !important;
+}
+
+/* 2. 修复图二里“快要隐形”的顶部区域 */
+/* 给头部加一个明显的毛玻璃底色和底边框 */
+.character-header-light {
+  background: var(--card-bg) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border-bottom: 1px solid var(--card-border) !important;
+  border-radius: 0 0 16px 16px !important; /* 底部加个圆角 */
+  margin-bottom: 24px;
+}
+/* 恢复顶部文字的对比度 */
+.character-header-light h1 { color: var(--text-main) !important; }
+.character-id-light { color: var(--text-muted) !important; }
+
+/* 3. 修复图一里“字体太粗太大” */
+/* 专门针对输入框，把字体调小、变细 */
+.character-header-light input {
+  font-size: 15px !important;
+  font-weight: 400 !important;
+  color: var(--text-main) !important;
+  background: rgba(128, 128, 128, 0.1) !important;
+  border: 1px solid transparent !important;
+  padding: 6px 12px !important;
+}
+.character-header-light input:focus {
+  border-color: var(--text-muted) !important;
+}
+
+/* 4. 修复图一底部“都要看不见了”的 Tab 栏 */
+/* 强制让底部导航的文字使用正常的颜色 */
+.nav-item { 
+  color: var(--text-muted) !important; 
+  font-size: 13px !important;
+  font-weight: 500 !important;
+}
+.nav-item.active { 
+  color: var(--text-main) !important; 
+  background: var(--card-bg) !important; 
+  border: 1px solid var(--card-border) !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05) !important;
 }

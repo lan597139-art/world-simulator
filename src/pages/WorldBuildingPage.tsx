@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { initializeWorldBuildingConfig, getWorldBuildingConfig } from '../services/worldBuildingService'
 import { getWorldById } from '../services/worldService'
-import { db } from '../db/database'
 import { createWorld, updateWorld, deleteWorld } from '../services/worldService'
 
 // =========================================================
@@ -480,7 +479,7 @@ function TagGroup({ label, selected, options, onChange, lang }: { label: string,
               padding: '0.4rem 0.8rem', 
               borderRadius: '20px', 
               border: `1px solid ${isActive ? 'var(--primary-color)' : 'var(--card-border)'}`, 
-              background: isActive ? 'rgba(99, 102, 241, 0.15)' : 'transparent', 
+              background: isActive ? 'rgba(128, 128, 128, 0.16)' : 'transparent', 
               color: isActive ? 'var(--primary-color)' : 'var(--text-muted)', 
               cursor: 'pointer', 
               fontSize: '0.85rem',
@@ -520,7 +519,17 @@ export default function WorldBuildingPage({ worldId, onBack, lang }: { worldId: 
         setConfig({ id: crypto.randomUUID(), worldId: 'temp-id', selections: {}, parameters: {}, updatedAt: new Date().toISOString() })
       }
     }
-    init()
+    init().catch((error) => {
+      // IndexedDB 不可用（隐私模式 / 存储被禁用）时不要让页面卡在 Loading
+      console.error('世界建设配置加载失败，使用临时配置', error)
+      setConfig({
+        id: crypto.randomUUID(),
+        worldId: worldId || 'temp-id',
+        selections: {},
+        parameters: {},
+        updatedAt: new Date().toISOString(),
+      })
+    })
   }, [worldId])
 
   if (!config) return <div style={{ padding: '2rem' }}>Loading...</div>
@@ -599,7 +608,7 @@ export default function WorldBuildingPage({ worldId, onBack, lang }: { worldId: 
               </button>
             )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <input value={worldName} onChange={e => setWorldName(e.target.value)} placeholder={lang === 'zh' ? '请输入世界名称' : 'Enter World Name'} style={{ fontSize: '24px', fontWeight: 600, background: 'transparent', border: 'none', outline: 'none', color: 'var(--text-main)', padding: 0, width: '100%', maxWidth: '400px' }} />
+             <input value={worldName} onChange={e => setWorldName(e.target.value)} placeholder={lang === 'zh' ? '请输入世界名称' : 'Enter World Name'} style={{ fontSize: '20px', fontWeight: 500, background: 'transparent', border: 'none', outline: 'none', color: 'var(--text-main)', padding: 0, width: '100%', maxWidth: '400px' }} />
               <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
                 {lang === 'zh' ? '世界 ID:' : 'World ID:'} <span style={{ background: 'rgba(128,128,128,0.1)', padding: '2px 8px', borderRadius: '4px' }}>{inputId}</span>
               </div>
@@ -616,29 +625,31 @@ export default function WorldBuildingPage({ worldId, onBack, lang }: { worldId: 
         </header>
 
         {/* 2. 母导航 (宏观-中观-微观) */}
-        <div style={{ display: 'flex', gap: '1rem' }}>
+        <div style={{ display: 'flex', gap: '1rem', position: 'sticky', top: 0, zIndex: 25, padding: '10px 0', background: 'var(--bg-color)' }}>
           {[
             { id: 'macro', num: '01', title: '宏观：世界基底' },
             { id: 'meso', num: '02', title: '中观：社会运转' },
             { id: 'micro', num: '03', title: '微观：生活与治理' }
           ].map(level => (
-            <button key={level.id} type="button" onClick={() => { setActiveLevel(level.id as any); if (level.id === 'macro') setActiveSubTab('era'); if (level.id === 'meso') setActiveSubTab('regime'); if (level.id === 'micro') setActiveSubTab('governance'); }} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '16px', background: activeLevel === level.id ? 'rgba(99, 102, 241, 0.1)' : 'var(--card-bg)', border: activeLevel === level.id ? '1px solid var(--primary-color)' : '1px solid var(--card-border)', borderRadius: '16px', cursor: 'pointer', transition: 'all 0.2s' }}>
+           <button key={level.id} type="button" onClick={() => { setActiveLevel(level.id as any); if (level.id === 'macro') setActiveSubTab('era'); if (level.id === 'meso') setActiveSubTab('regime'); if (level.id === 'micro') setActiveSubTab('governance'); }} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '16px', background: activeLevel === level.id ? 'rgba(128, 128, 128, 0.15)' : 'transparent', border: activeLevel === level.id ? '1px solid var(--text-main)' : '1px solid var(--card-border)', borderRadius: '16px', cursor: 'pointer', transition: 'all 0.2s' }}>
               <span style={{ fontSize: '14px', fontWeight: 600, color: activeLevel === level.id ? 'var(--primary-color)' : 'var(--text-muted)', marginBottom: '4px' }}>{level.num}</span>
               <span style={{ fontSize: '16px', fontWeight: 600, color: activeLevel === level.id ? 'var(--primary-color)' : 'var(--text-main)' }}>{level.title}</span>
             </button>
           ))}
         </div>
 
-        {/* 3. 子导航 (具体模块) */}
+                {/* 3. 子导航 (具体模块) */}
         <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid var(--card-border)', paddingBottom: '1rem', overflowX: 'auto' }}>
           {activeLevel === 'macro' && [{ id: 'era', label: '时代与思想' }, { id: 'nature', label: '自然与生态' }, { id: 'supernatural', label: '法则与历史' }].map(tab => (
-            <button key={tab.id} onClick={() => setActiveSubTab(tab.id)} style={{ padding: '8px 16px', background: activeSubTab === tab.id ? 'rgba(128,128,128,0.15)' : 'transparent', borderRadius: '8px', border: 'none', color: activeSubTab === tab.id ? 'var(--text-main)' : 'var(--text-muted)', fontWeight: activeSubTab === tab.id ? 600 : 400, cursor: 'pointer', transition: 'all 0.2s' }}>{tab.label}</button>
+            <button key={tab.id} onClick={() => setActiveSubTab(tab.id)} style={{ padding: '8px 16px', background: activeSubTab === tab.id ? 'var(--text-main)' : 'transparent', borderRadius: '8px', border: 'none', color: activeSubTab === tab.id ? 'var(--bg-color)' : 'var(--text-main)', fontWeight: activeSubTab === tab.id ? 600 : 500, cursor: 'pointer', transition: 'all 0.2s', opacity: activeSubTab === tab.id ? 1 : 0.6 }}>{tab.label}</button>
           ))}
+          
           {activeLevel === 'meso' && [{ id: 'regime', label: '政体与阶级' }, { id: 'law', label: '地缘与法律' }, { id: 'economy', label: '经济与信息' }, { id: 'education', label: '教育与流动' }, { id: 'tech', label: '科技与工业' }, { id: 'medical', label: '医疗与治安' }].map(tab => (
-            <button key={tab.id} onClick={() => setActiveSubTab(tab.id)} style={{ padding: '8px 16px', background: activeSubTab === tab.id ? 'rgba(128,128,128,0.15)' : 'transparent', borderRadius: '8px', border: 'none', color: activeSubTab === tab.id ? 'var(--text-main)' : 'var(--text-muted)', fontWeight: activeSubTab === tab.id ? 600 : 400, cursor: 'pointer', transition: 'all 0.2s' }}>{tab.label}</button>
+            <button key={tab.id} onClick={() => setActiveSubTab(tab.id)} style={{ padding: '8px 16px', background: activeSubTab === tab.id ? 'var(--text-main)' : 'transparent', borderRadius: '8px', border: 'none', color: activeSubTab === tab.id ? 'var(--bg-color)' : 'var(--text-main)', fontWeight: activeSubTab === tab.id ? 600 : 500, cursor: 'pointer', transition: 'all 0.2s', opacity: activeSubTab === tab.id ? 1 : 0.6 }}>{tab.label}</button>
           ))}
+          
           {activeLevel === 'micro' && [{ id: 'governance', label: '治理与聚落' }, { id: 'org', label: '组织与劳动' }, { id: 'family', label: '修复与家庭' }, { id: 'culture', label: '文化与生活' }].map(tab => (
-            <button key={tab.id} onClick={() => setActiveSubTab(tab.id)} style={{ padding: '8px 16px', background: activeSubTab === tab.id ? 'rgba(128,128,128,0.15)' : 'transparent', borderRadius: '8px', border: 'none', color: activeSubTab === tab.id ? 'var(--text-main)' : 'var(--text-muted)', fontWeight: activeSubTab === tab.id ? 600 : 400, cursor: 'pointer', transition: 'all 0.2s' }}>{tab.label}</button>
+            <button key={tab.id} onClick={() => setActiveSubTab(tab.id)} style={{ padding: '8px 16px', background: activeSubTab === tab.id ? 'var(--text-main)' : 'transparent', borderRadius: '8px', border: 'none', color: activeSubTab === tab.id ? 'var(--bg-color)' : 'var(--text-main)', fontWeight: activeSubTab === tab.id ? 600 : 500, cursor: 'pointer', transition: 'all 0.2s', opacity: activeSubTab === tab.id ? 1 : 0.6 }}>{tab.label}</button>
           ))}
         </div>
 
