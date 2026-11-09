@@ -273,7 +273,8 @@ def ai_status(probe: bool = False):
 
 @router.post("/api/writing/generate")
 def generate_story(payload: dict, db: Session = Depends(get_db)):
-    _require_ai()
+    client = _require_ai()
+    model = get_model()
     world_id = payload.get("world_id", "")
     event_ids = _as_list(payload.get("event_ids"))
     user_direction = (payload.get("user_direction") or "").strip()[:2000]
@@ -338,8 +339,8 @@ def generate_story(payload: dict, db: Session = Depends(get_db)):
 
     def stream():
         try:
-            response = get_client().chat.completions.create(
-                model=get_model(),
+            response = client.chat.completions.create(
+                model=model,
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.8,
                 stream=True,
@@ -1045,7 +1046,8 @@ ASSIST_PROMPTS = {
 
 @router.post("/api/writing/assist")
 def assist_writing(payload: dict):
-    _require_ai()
+    client = _require_ai()
+    model = get_model()
     action = str(payload.get("action") or "polish")
     prompt_text = ASSIST_PROMPTS.get(action)
     if not prompt_text:
@@ -1061,8 +1063,8 @@ def assist_writing(payload: dict):
 
     def stream():
         try:
-            response = get_client().chat.completions.create(
-                model=get_model(),
+            response = client.chat.completions.create(
+                model=model,
                 messages=[{"role": "user", "content": user_prompt}],
                 temperature=0.7,
                 stream=True,
