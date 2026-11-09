@@ -22,8 +22,22 @@ def simulate_event(payload: dict, db: Session = Depends(get_db)):
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
 
+    if event.world_id:
+        world = db.query(models.World).filter(models.World.id == event.world_id).first()
+        if not world or world.deleted_at is not None:
+            raise HTTPException(status_code=404, detail="World not found")
+        if world.archived_at is not None:
+            raise HTTPException(status_code=409, detail="该世界已归档，恢复后才能继续推演")
+
     participants_ids = event.participants or []
-    characters = db.query(models.Character).filter(models.Character.id.in_(participants_ids)).all()
+    characters = (
+        db.query(models.Character)
+        .filter(
+            models.Character.id.in_(participants_ids),
+            models.Character.archived_at.is_(None),
+        )
+        .all()
+    )
 
     loc_name = ""
     org_name = ""
@@ -68,8 +82,16 @@ def simulate_event(payload: dict, db: Session = Depends(get_db)):
     rel_changes = result.get("relationship_changes", [])
     if rel_changes:
         for rc in rel_changes:
-            s_char = db.query(models.Character).filter(models.Character.name == rc.get("source_name")).first()
-            t_char = db.query(models.Character).filter(models.Character.name == rc.get("target_name")).first()
+            s_char = db.query(models.Character).filter(
+                models.Character.name == rc.get("source_name"),
+                models.Character.world_id == event.world_id,
+                models.Character.archived_at.is_(None),
+            ).first()
+            t_char = db.query(models.Character).filter(
+                models.Character.name == rc.get("target_name"),
+                models.Character.world_id == event.world_id,
+                models.Character.archived_at.is_(None),
+            ).first()
             
             if s_char and t_char:
                 existing_rel = db.query(models.Relationship).filter(
@@ -110,7 +132,11 @@ def simulate_event(payload: dict, db: Session = Depends(get_db)):
         print(f"👉 尝试写入履历: {char_name} 的行动")
         
         # ✅ 核心修复 1：模糊匹配，防止 AI 返回“舒舒。”导致找不到人
-        char = db.query(models.Character).filter(models.Character.name.like(f"%{char_name}%")).first()
+        char = db.query(models.Character).filter(
+            models.Character.name.like(f"%{char_name}%"),
+            models.Character.world_id == event.world_id,
+            models.Character.archived_at.is_(None),
+        ).first()
         
         if char:
             print(f"✅ 找到人物 {char.name}，正在写入履历...")

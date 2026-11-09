@@ -150,7 +150,7 @@ def _title_from_text(text: str, prefix: str) -> str:
 
 @router.get("/api/writings")
 def list_stories(world_id: str = "", db: Session = Depends(get_db)):
-    query = db.query(models.Story)
+    query = db.query(models.Story).filter(models.Story.archived_at.is_(None))
     if world_id:
         query = query.filter(models.Story.world_id == world_id)
     return query.order_by(models.Story.updated_at.desc(), models.Story.created_at.desc()).all()
@@ -231,13 +231,12 @@ def update_story(story_id: str, payload: dict, db: Session = Depends(get_db)):
 
 @router.delete("/api/writings/{story_id}")
 def delete_story(story_id: str, db: Session = Depends(get_db)):
+    from trash_service import trash_entity
+
     story = _story_or_404(db, story_id)
-    db.query(models.EntityDraft).filter(models.EntityDraft.story_id == story.id).delete(
-        synchronize_session=False
-    )
-    db.delete(story)
+    entry = trash_entity(db, models.Story, "story", story, skip_guard=True)
     db.commit()
-    return {"status": "ok"}
+    return {"status": "ok", "trashed": True, "trash_id": entry.id}
 
 
 # ---------------------------------------------------------------------
@@ -780,7 +779,7 @@ def undo_draft(draft_id: str, db: Session = Depends(get_db)):
         db.flush()
         entity = db.query(model).filter(model.id == entity_id).first()
         if entity:
-            delete_entity(db, model, entity_type, entity_id)
+            delete_entity(db, model, entity_type, entity_id, use_trash=False)
             removed = True
 
     draft.payload = {k: v for k, v in payload.items() if k not in {"entity_id", "approved_at"}}

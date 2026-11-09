@@ -36,6 +36,10 @@ class WorldResponse(WorldBase):
     id: str
     createdAt: str
     updatedAt: str
+    is_official: Optional[bool] = False
+    official_key: Optional[str] = None
+    archived_at: Optional[datetime] = None
+    deleted_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True

@@ -275,11 +275,17 @@ def assert_not_referenced(db: Session, world_id: str, entity_type: str, entity_i
     fail(409, "HAS_DEPENDENTS", f"{label}仍被引用：{preview}{more}。请先解绑或删除引用")
 
 
-def delete_entity(db: Session, model, entity_type: str, entity_id: str):
-    """统一删除入口：先查引用，再删除。"""
+def delete_entity(db: Session, model, entity_type: str, entity_id: str, *, use_trash: bool = True):
+    """统一删除入口：默认移入全局回收站，可恢复。"""
     row = db.query(model).filter(model.id == entity_id).first()
     if not row:
         fail(404, "NOT_FOUND", f"{ENTITY_LABELS.get(entity_type, '对象')}不存在")
+    if use_trash:
+        from trash_service import trash_entity
+
+        entry = trash_entity(db, model, entity_type, row)
+        db.commit()
+        return {"status": "ok", "trashed": True, "trash_id": entry.id}
     assert_not_referenced(db, row.world_id, entity_type, entity_id, ENTITY_LABELS.get(entity_type, "对象"))
     db.delete(row)
     db.commit()

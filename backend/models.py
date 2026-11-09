@@ -48,6 +48,12 @@ class World(Base):
     time_status = Column(String, default="paused")   # paused/running
     settings = Column(JSON, default=dict)
 
+    # 全局归档 / 回收站 / 官方演示世界
+    archived_at = Column(DateTime)
+    deleted_at = Column(DateTime)
+    is_official = Column(Boolean, default=False, nullable=False)
+    official_key = Column(String, index=True)
+
 
 class WorldSettings(Base):
     """承接原 IndexedDB 的 worldBuildingConfigs。"""
@@ -236,6 +242,7 @@ class Character(Base):
     initial_state = Column(JSON, default=dict)
     # 种子设定保持稳定；运行态记录人物随时间发生的当前变化。
     runtime_state = Column(JSON, default=dict)
+    archived_at = Column(DateTime)
     created_at = Column(DateTime, default=_now)
 
 
@@ -581,6 +588,7 @@ class Story(Base):
     status = Column(String, default="draft")    # draft / published
     source_event_ids = Column(JSON, default=list)
     source_simulation_ids = Column(JSON, default=list)
+    archived_at = Column(DateTime)
     created_at = Column(DateTime, default=_now)
     updated_at = Column(DateTime, default=_now)
 
@@ -665,3 +673,49 @@ class CharacterEventPerception(Base):
     information_source = Column(String, default="")
     perceived_at = Column(DateTime, default=_now)
     created_at = Column(DateTime, default=_now)
+
+
+# =====================================================================
+# 全局归档 / 回收站 / 时光机 / 人物传记
+# =====================================================================
+class TrashEntry(Base):
+    """软删除快照：删除时保存整行数据，恢复时按原 ID 重建。"""
+
+    __tablename__ = "trash_entries"
+
+    id = Column(String, primary_key=True, default=_uuid, index=True)
+    world_id = Column(String, index=True)
+    entity_type = Column(String, nullable=False, index=True)
+    entity_id = Column(String, nullable=False, index=True)
+    name = Column(String, default="")
+    data = Column(JSON, default=dict)
+    extras = Column(JSON, default=dict)
+    deleted_at = Column(DateTime, default=_now, index=True)
+
+
+class CharacterBiography(Base):
+    """人物自传：由生平事件聚合生成，可保存多版。"""
+
+    __tablename__ = "character_biographies"
+
+    id = Column(String, primary_key=True, default=_uuid, index=True)
+    world_id = Column(String, nullable=False, index=True)
+    character_id = Column(String, nullable=False, index=True)
+    title = Column(String, default="")
+    content = Column(Text, default="")
+    source_event_ids = Column(JSON, default=list)
+    engine = Column(String, default="local")  # ai/local/manual
+    created_at = Column(DateTime, default=_now, index=True)
+
+
+class WorldSnapshot(Base):
+    """世界时光机：保存整个世界的数据快照。"""
+
+    __tablename__ = "world_snapshots"
+
+    id = Column(String, primary_key=True, default=_uuid, index=True)
+    world_id = Column(String, nullable=False, index=True)
+    label = Column(String, default="")
+    data = Column(Text, default="")
+    entity_count = Column(Integer, default=0)
+    created_at = Column(DateTime, default=_now, index=True)

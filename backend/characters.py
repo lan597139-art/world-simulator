@@ -11,7 +11,7 @@ router = APIRouter()
 # ✅ 改造：支持按 world_id 过滤
 @router.get("/api/characters")
 def list_characters(world_id: Optional[str] = None, db: Session = Depends(get_db)):
-    query = db.query(models.Character)
+    query = db.query(models.Character).filter(models.Character.archived_at.is_(None))
     if world_id is not None:
         # 包含绑定该世界的，以及无世界的自由捏人（world_id 为空字符串或 None）
         query = query.filter((models.Character.world_id == world_id) | (models.Character.world_id == "") | (models.Character.world_id == None))
@@ -19,7 +19,11 @@ def list_characters(world_id: Optional[str] = None, db: Session = Depends(get_db
 
 @router.get("/api/worlds/{world_id}/characters")
 def get_characters(world_id: str, db: Session = Depends(get_db)):
-    return db.query(models.Character).filter(models.Character.world_id == world_id).all()
+    return (
+        db.query(models.Character)
+        .filter(models.Character.world_id == world_id, models.Character.archived_at.is_(None))
+        .all()
+    )
 
 @router.post("/api/characters")
 def create_character(char_data: dict, db: Session = Depends(get_db)):
@@ -59,25 +63,13 @@ def delete_character(character_id: str, db: Session = Depends(get_db)):
     character = db.query(models.Character).filter(models.Character.id == character_id).first()
     if not character:
         raise HTTPException(status_code=404, detail="Character not found")
-    if character.world_id:
-        # 人物入库时自动挂到“人物与群体”目录；这个挂载节点是人物自身的一部分，
-        # 不能反过来阻止人物删除。先移除节点，再检查关系/事件等真实外部引用。
-        nodes = (
-            db.query(models.WorldNode)
-            .filter(
-                models.WorldNode.world_id == character.world_id,
-                models.WorldNode.ref_type == "character",
-                models.WorldNode.ref_id == character.id,
-            )
-            .all()
-        )
-        for node in nodes:
-            db.delete(node)
-        db.flush()
-        assert_not_referenced(db, character.world_id, "character", character.id, "人物")
-    db.delete(character)
+    # 人物移入全局回收站；目录挂载节点一并快照，恢复时自动重建。
+    from trash_service import trash_entity
+
+    entry = trash_entity(db, models.Character, "character", character, skip_guard=True)
     db.commit()
-    return {"status": "ok", "message": "Character deleted"}
+    return {"status": "ok", "trashed": True, "trash_id": entry.id}
+
 
 # =====================================================================
 # 人物运行态 / 成长校准

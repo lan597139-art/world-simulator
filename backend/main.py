@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 import models
 import schemas
 from ai_engine import reset_request_ai_config, set_request_ai_config
-from database import engine, get_db
+from database import SessionLocal, engine, get_db
 from migrations.runner import run_migrations
 
 # 领域路由
@@ -29,6 +29,11 @@ from timeline import router as timeline_router
 from characters import router as character_router
 from simulation import router as simulation_router
 from writing import router as writing_router
+from archive import router as archive_router
+from trash import router as trash_router
+from snapshots import router as snapshots_router
+from biography import router as biography_router
+from official import ensure_official_world, router as official_router
 
 # 建表（新表）+ 增量迁移（已有表加列、数据回填）
 models.Base.metadata.create_all(bind=engine)
@@ -82,67 +87,20 @@ for router in (
     relationship_types_router,
     event_causality_router,
     timeline_router,
+    archive_router,
+    trash_router,
+    snapshots_router,
+    biography_router,
+    official_router,
 ):
     app.include_router(router)
 
-
-def _cascade_delete_world(db: Session, world_id: str):
-    """世界删除时清理世界内所有实体，避免孤儿数据。顺序遵循外键依赖。"""
-    rule_ids = [
-        row[0]
-        for row in db.query(models.WorldRule.id)
-        .filter(models.WorldRule.world_id == world_id)
-        .all()
-    ]
-    if rule_ids:
-        db.query(models.RuleScope).filter(models.RuleScope.rule_id.in_(rule_ids)).delete(
-            synchronize_session=False
-        )
-
-    # 自引用外键（父节点/父地点/父部门）会在批量删除时触发 RESTRICT，先解除父子关系
-    db.query(models.WorldNode).filter(models.WorldNode.world_id == world_id).update(
-        {models.WorldNode.parent_id: None}, synchronize_session=False
-    )
-    db.query(models.Location).filter(models.Location.world_id == world_id).update(
-        {models.Location.parent_location_id: None}, synchronize_session=False
-    )
-    db.query(models.OrganizationUnit).filter(
-        models.OrganizationUnit.world_id == world_id
-    ).update({models.OrganizationUnit.parent_unit_id: None}, synchronize_session=False)
-
-    for model in (
-        models.WorldNode,
-        models.WorldSettings,
-        models.TimeSettings,
-        models.Era,
-        models.CharacterAppointment,
-        models.OrganizationPosition,
-        models.OrganizationUnit,
-        models.Organization,
-        models.Society,
-        models.GroupMembership,
-        models.SocialGroup,
-        models.CulturalProfile,
-        models.Relationship,
-        models.RelationshipType,
-        models.WorldRule,
-        models.ResourceHolding,
-        models.ResourceTransaction,
-        models.Resource,
-        models.ResourceType,
-        models.EventRelation,
-        models.CharacterEventPerception,
-        models.EventEntity,
-        models.StateHistory,
-        models.Event,
-        models.Location,
-        models.LocationType,
-        models.SimulationRun,
-        models.EntityDraft,
-        models.Story,
-        models.Character,
-    ):
-        db.query(model).filter(model.world_id == world_id).delete(synchronize_session=False)
+# 官方演示世界：首次启动自动内置；已存在则仅锁定，不覆盖用户当前数据。
+try:
+    with SessionLocal() as db:
+        ensure_official_world(db)
+except Exception as exc:  # 数据缺失不应阻止后端启动
+    print(f"官方演示世界初始化跳过: {exc}")
 
 
 @app.get("/api/health")
@@ -152,13 +110,18 @@ def health_check():
 
 @app.get("/api/worlds", response_model=List[schemas.WorldResponse])
 def get_worlds(db: Session = Depends(get_db)):
-    return db.query(models.World).order_by(models.World.updatedAt.desc()).all()
+    return (
+        db.query(models.World)
+        .filter(models.World.deleted_at.is_(None), models.World.archived_at.is_(None))
+        .order_by(models.World.updatedAt.desc())
+        .all()
+    )
 
 
 @app.get("/api/worlds/{world_id}", response_model=schemas.WorldResponse)
 def get_world(world_id: str, db: Session = Depends(get_db)):
     world = db.query(models.World).filter(models.World.id == world_id).first()
-    if not world:
+    if not world or world.deleted_at is not None:
         raise HTTPException(status_code=404, detail="World not found")
     return world
 
@@ -204,9 +167,11 @@ def update_world(world_id: str, world: schemas.WorldUpdate, db: Session = Depend
 @app.delete("/api/worlds/{world_id}")
 def delete_world(world_id: str, db: Session = Depends(get_db)):
     db_world = db.query(models.World).filter(models.World.id == world_id).first()
-    if not db_world:
+    if not db_world or db_world.deleted_at is not None:
         raise HTTPException(status_code=404, detail="World not found")
-    _cascade_delete_world(db, world_id)
-    db.delete(db_world)
-    db.commit()
-    return {"status": "ok"}
+    if db_world.is_official:
+        raise HTTPException(status_code=409, detail="官方演示世界已锁定，不能删除；可使用“重置演示世界”。")
+    from trash_service import trash_world
+
+    entry = trash_world(db, db_world)
+    return {"status": "ok", "trashed": True, "trash_id": entry.id}

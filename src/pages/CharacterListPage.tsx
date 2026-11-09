@@ -1,16 +1,17 @@
 import { useState, useEffect } from 'react';
-import CharacterBuildingPage from './CharacterBuildingPage'; 
+import CharacterBuildingPage from './CharacterBuildingPage';
+import CharacterBiographyModal from '../components/CharacterBiographyModal';
 // Dexie 本地库暂时不再使用，保留 database.ts 文件本身
 
-export default function CharacterListPage({ 
-  worldId, 
-  worldName = '', 
+export default function CharacterListPage({
+  worldId,
+  worldName = '',
   focusCharacterId,
   onBack,
   onNavigate,
-}: { 
-  worldId?: string, 
-  worldName?: string, 
+}: {
+  worldId?: string,
+  worldName?: string,
   focusCharacterId?: string | null,
   onBack: () => void,
   onNavigate?: (page: string) => void,
@@ -20,6 +21,7 @@ export default function CharacterListPage({
   const [view, setView] = useState<'list' | 'edit'>('list');
   const [editingCharId, setEditingCharId] = useState<string | null>(null);
   const [editingModule, setEditingModule] = useState('basic');
+  const [bioCharacter, setBioCharacter] = useState<{ id: string; name: string } | null>(null);
 
   const openEditor = (id: string | null, module = 'basic') => {
     setEditingCharId(id)
@@ -70,7 +72,7 @@ export default function CharacterListPage({
   }, [focusCharacterId]);
 
      const handleDelete = async (id: string) => {
-    if (!window.confirm('确定要删除这个人物档案吗？')) return;
+    if (!window.confirm('确定把人物移入回收站吗？\n\n可在「全局回收站」随时恢复。')) return;
     try {
       const res = await fetch(`http://127.0.0.1:8000/api/characters/${id}`, {
         method: 'DELETE'
@@ -86,12 +88,23 @@ export default function CharacterListPage({
     }
   };
 
+  const handleArchive = async (id: string) => {
+    if (!window.confirm('把这个人物封存到归档库？\n\n归档后不会出现在人物列表，也不会参与推演，可随时恢复。')) return
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/api/archive/character/${id}`, { method: 'POST' })
+      if (!res.ok) throw new Error(await res.text())
+      loadCharacters()
+    } catch (error: any) {
+      alert(`归档失败：${error.message || error}`)
+    }
+  }
+
   if (view === 'edit') {
     return (
-      <CharacterBuildingPage 
-        characterId={editingCharId || ''} 
-        worldId={worldId} 
-        onBack={() => { setView('list'); loadCharacters(); }} 
+      <CharacterBuildingPage
+        characterId={editingCharId || ''}
+        worldId={worldId}
+        onBack={() => { setView('list'); loadCharacters(); }}
         initialModule={editingModule}
         onNavigate={onNavigate}
       />
@@ -102,13 +115,13 @@ export default function CharacterListPage({
        <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
         <div>
-          <button 
-            onClick={onBack} 
-            style={{ 
-              marginBottom: '16px', padding: '6px 12px', 
-              border: '1px solid var(--card-border)', 
-              background: 'var(--card-bg)', color: 'var(--text-main)', 
-              borderRadius: '8px', cursor: 'pointer', backdropFilter: 'blur(8px)' 
+          <button
+            onClick={onBack}
+            style={{
+              marginBottom: '16px', padding: '6px 12px',
+              border: '1px solid var(--card-border)',
+              background: 'var(--card-bg)', color: 'var(--text-main)',
+              borderRadius: '8px', cursor: 'pointer', backdropFilter: 'blur(8px)'
             }}
           >
             ← 返回
@@ -124,14 +137,14 @@ export default function CharacterListPage({
             当前共有 {characters.length} 个人物档案
           </p>
         </div>
-        
+
         {/* ✅ 修复：去掉了写死的 #fff，换成了全局按钮文字变量，去掉了蓝紫色的发光 */}
-        <button 
+        <button
           onClick={() => openEditor(null)}
-          style={{ 
-            padding: '10px 20px', background: 'var(--primary-color)', color: 'var(--primary-text)', 
+          style={{
+            padding: '10px 20px', background: 'var(--primary-color)', color: 'var(--primary-text)',
             border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600,
-            boxShadow: '0 4px 14px rgba(0, 0, 0, 0.1)' 
+            boxShadow: '0 4px 14px rgba(0, 0, 0, 0.1)'
           }}
         >
           + 创建新人物
@@ -156,27 +169,27 @@ export default function CharacterListPage({
                 {runtimeMeta[char.id]?.version ? `运行态 v${runtimeMeta[char.id].version} · 主色调 ${runtimeMeta[char.id].main_color}` : '种子状态 · 尚未成长校准'}
               </span>
             </div>
-            
+
             {/* ✅ 修复：“已绑定世界”标签的白块问题 */}
             {char.world_id && !worldId && (
-              <span style={{ 
-                fontSize: '12px', 
+              <span style={{
+                fontSize: '12px',
                 background: 'rgba(128, 128, 128, 0.15)', // 半透明灰
-                color: 'var(--text-main)', 
+                color: 'var(--text-main)',
                 border: '1px solid var(--card-border)',
-                padding: '4px 10px', borderRadius: '20px', width: 'fit-content', 
+                padding: '4px 10px', borderRadius: '20px', width: 'fit-content',
               }}>
                 已绑定世界
               </span>
             )}
-            
-            <div style={{ display: 'flex', gap: '10px', marginTop: 'auto', paddingTop: '16px' }}>
+
+            <div style={{ display: 'flex', gap: '7px', marginTop: 'auto', paddingTop: '16px', flexWrap: 'wrap' }}>
               {/* ✅ 修复：把原来扎眼的亮蓝色改成了高级的半透明灰底黑字 */}
-              <button 
+              <button
                 onClick={(event) => { event.stopPropagation(); openEditor(char.id); }}
-                style={{ 
-                  flex: 1, padding: '8px', 
-                  background: 'rgba(128, 128, 128, 0.1)', color: 'var(--text-main)', 
+                style={{
+                  flex: 1, padding: '8px',
+                  background: 'rgba(128, 128, 128, 0.1)', color: 'var(--text-main)',
                   border: '1px solid var(--card-border)', borderRadius: '8px', cursor: 'pointer',
                   transition: 'all 0.2s'
                 }}
@@ -185,16 +198,28 @@ export default function CharacterListPage({
               </button>
               <button
                 onClick={(event) => { event.stopPropagation(); openEditor(char.id, 'growth'); }}
-                style={{ padding: '8px 12px', background: 'transparent', color: 'var(--text-main)', border: '1px solid var(--card-border)', borderRadius: '8px', cursor: 'pointer' }}
+                style={{ padding: '8px 10px', background: 'transparent', color: 'var(--text-main)', border: '1px solid var(--card-border)', borderRadius: '8px', cursor: 'pointer' }}
               >
                 成长
               </button>
-              
-              <button 
+              <button
+                onClick={(event) => { event.stopPropagation(); setBioCharacter({ id: char.id, name: char.name }) }}
+                style={{ padding: '8px 10px', background: 'rgba(128,128,128,0.08)', color: 'var(--text-main)', border: '1px solid var(--card-border)', borderRadius: '8px', cursor: 'pointer' }}
+              >
+                传记
+              </button>
+              <button
+                onClick={(event) => { event.stopPropagation(); void handleArchive(char.id) }}
+                style={{ padding: '8px 10px', background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--card-border)', borderRadius: '8px', cursor: 'pointer' }}
+              >
+                归档
+              </button>
+
+              <button
                 onClick={(event) => { event.stopPropagation(); void handleDelete(char.id); }}
-                style={{ 
-                  padding: '8px 16px', 
-                  background: 'rgba(255, 69, 58, 0.1)', color: 'var(--danger-color)', 
+                style={{
+                  padding: '8px 16px',
+                  background: 'rgba(255, 69, 58, 0.1)', color: 'var(--danger-color)',
                   border: '1px solid rgba(255, 69, 58, 0.2)', borderRadius: '8px', cursor: 'pointer',
                   transition: 'all 0.2s'
                 }}
@@ -204,16 +229,23 @@ export default function CharacterListPage({
             </div>
           </div>
         ))}
-        
+
         {characters.length === 0 && (
-          <div 
-            className="glass-card" 
+          <div
+            className="glass-card"
             style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '60px', color: 'var(--text-muted)', borderStyle: 'dashed' }}
           >
             暂无人物档案，点击右上角“创建新人物”开始。
           </div>
         )}
       </div>
+      {bioCharacter && (
+        <CharacterBiographyModal
+          characterId={bioCharacter.id}
+          fallbackName={bioCharacter.name}
+          onClose={() => setBioCharacter(null)}
+        />
+      )}
     </div>
   );
 }

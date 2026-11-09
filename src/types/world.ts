@@ -19,6 +19,14 @@ export interface World {
   createdAt: string
 
   updatedAt: string
+
+  is_official?: boolean
+
+  official_key?: string | null
+
+  archived_at?: string | null
+
+  deleted_at?: string | null
 }
 
 export const WORLD_TYPES: {

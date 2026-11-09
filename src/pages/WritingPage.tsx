@@ -619,6 +619,22 @@ export default function WritingPage({
     }
   }
 
+  const archiveStory = async () => {
+    if (!current) return
+    if (!window.confirm(`把《${current.title}》封存到归档库？\n\n归档后不会出现在章节列表，也不参与后续生成，可随时恢复。`)) return
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/api/archive/story/${current.id}`, { method: 'POST' })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.detail || `HTTP ${res.status}`)
+      const next = stories.filter((item) => item.id !== current.id)
+      setStories(next)
+      setCurrent(next[0] || null)
+      setToast('章节已封存到归档库')
+    } catch (error: any) {
+      setToast(String(error.message || error))
+    }
+  }
+
   const removeStory = async () => {
     if (!current) return
     try {
@@ -627,7 +643,7 @@ export default function WritingPage({
       setStories(next)
       setCurrent(next[0] || null)
       setDeleteOpen(false)
-      setToast('章节已删除')
+      setToast('章节已移入回收站')
     } catch (error: any) {
       setToast(String(error.message || error))
     }
@@ -804,6 +820,9 @@ export default function WritingPage({
               {analyzing ? '解析中…' : '解析本章'}
             </Btn>
             <Btn onClick={() => setModalOpen(true)} disabled={!worldId || generating}>素材 / 生成</Btn>
+            {current && (
+              <Btn onClick={() => void archiveStory()}>归档</Btn>
+            )}
             {current && (
               <Btn kind="danger" onClick={() => setDeleteOpen(true)}>删除</Btn>
             )}
@@ -1221,7 +1240,7 @@ export default function WritingPage({
           <div style={{ ...card, width: '380px', padding: '22px', background: 'var(--bg-color)' }}>
             <h3 style={{ margin: 0, fontSize: '16px', color: 'var(--text-main)' }}>删除《{current.title}》？</h3>
             <p style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.7 }}>
-              章节正文与本章草稿会一起删除，已入库的实体不受影响。
+              章节与本章草稿会一起移入全局回收站，可随时恢复；已入库的实体不受影响。
             </p>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '14px' }}>
               <Btn onClick={() => setDeleteOpen(false)}>取消</Btn>

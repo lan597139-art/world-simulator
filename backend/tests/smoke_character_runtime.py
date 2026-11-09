@@ -125,6 +125,10 @@ def main():
             call("DELETE", f"/characters/{character_id}")
         if world_id:
             call("DELETE", f"/worlds/{world_id}")
+            _, trash = call("GET", "/trash")
+            for entry in trash if isinstance(trash, list) else []:
+                if entry.get("world_id") == world_id or entry.get("entity_id") == world_id:
+                    call("DELETE", f"/trash/{entry['id']}")
         print(f"\n===== {passed} passed, {failed} failed")
         return 0 if failed == 0 else 1
 

@@ -69,6 +69,16 @@ DEEPSEEK_MODEL=deepseek-ai/DeepSeek-V4.1-Flash
 Key、Base URL、模型都会在每次调用前重新读取，修改后无需重启后端。
 使用访客 Key 时，访客配置优先于 `.env`，且不同访客的客户端不会串用。
 
+## 数据安全与人物档案
+
+- **人物传记**：人物卡片「传记」聚合生平事件、推演行动、成长记录，一键生成自传；无 AI 时回退本地整理版。
+- **全局归档**：旧世界、退场人物、旧章节封存，不参与当前推演，可随时解除。
+- **全局回收站**：人物/世界/章节/地点/事件/组织/关系删除前保存快照，可恢复或彻底丢弃。
+- **时光机**：对整个世界所有业务表打快照，一键回滚到任意快照。
+- **官方演示世界**：首次启动内置并锁定《凡人修仙传》，不可删除，可一键重置为初始数据。
+
+详细说明见 `docs/T100-归档回收站时光机与传记.md`。
+
 ## 构建与检查
 
 ```bash
@@ -77,6 +87,8 @@ npm run lint
 python backend/tests/smoke_flow.py
 python backend/tests/smoke_writing.py
 python backend/tests/smoke_character_runtime.py
+python backend/tests/smoke_ai_access.py
+python backend/tests/smoke_workspace.py
 ```
 
 ## Git / Vercel

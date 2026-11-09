@@ -219,11 +219,11 @@ call("DELETE", f"/locations/{loc_leaf['id']}", expect=409)
 call("DELETE", f"/nodes/{node_ref['id']}")
 call("DELETE", f"/locations/{loc_leaf['id']}")
 
-# 人物被关系引用时不能删
-call("DELETE", f"/characters/{boss['id']}", expect=409)
+# 人物删除进入回收站，关系链保留，可在回收站恢复
+call("DELETE", f"/characters/{boss['id']}")
 call("DELETE", f"/relationships/{rel['id']}")
 call("DELETE", f"/relationships/{rel3['id']}")
-call("DELETE", f"/characters/{boss['id']}")
+call("GET", f"/characters/{boss['id']}", expect=404)
 # 组织被部门/任职引用时不能删
 call("DELETE", f"/organizations/{org['id']}", expect=409)
 
@@ -231,6 +231,7 @@ call("DELETE", f"/organizations/{org['id']}", expect=409)
 call("DELETE", f"/worlds/{wid}")
 call("DELETE", f"/worlds/{world2['id']}")
 call("GET", f"/worlds/{wid}", expect=404)
+call("DELETE", "/trash")
 
 failed = [r for r in results if not r[0]]
 print("\n=====", len(results) - len(failed), "passed,", len(failed), "failed")

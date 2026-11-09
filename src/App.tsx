@@ -15,6 +15,9 @@ import SimulationPage from './pages/SimulationPage'
 import WritingPage from './pages/WritingPage'
 import WorldDataPage from './pages/WorldDataPage'
 import WorldStructurePage from './pages/WorldStructurePage'
+import ArchivePage from './pages/ArchivePage'
+import TrashPage from './pages/TrashPage'
+import TimeMachinePage from './pages/TimeMachinePage'
 
 type PageKey = 
   | 'overview' 
@@ -28,6 +31,9 @@ type PageKey =
   | 'world-building'
   | 'world-data' 
   | 'world-structure'
+  | 'archive'
+  | 'trash'
+  | 'time-machine'
 
 export type Language = 'zh' | 'en'
 
@@ -67,6 +73,9 @@ function pageLabel(key: PageKey, dict: Record<string, string>): string {
     'world-data': '世界设定',
     'world-management': dict.worldManagement,
     'character-management': dict.characterManagement,
+    'archive': '归档库',
+    'trash': '回收站',
+    'time-machine': '时光机',
   }
   return map[key] || dict[key] || key
 }
@@ -74,7 +83,7 @@ function pageLabel(key: PageKey, dict: Record<string, string>): string {
 const initialParams = new URLSearchParams(window.location.search)
 const initialWorldId = initialParams.get('world') || sessionStorage.getItem('ws.worldId') || ''
 const initialPage = (initialParams.get('page') as PageKey) || 'overview'
-const WORLD_FREE_PAGES: PageKey[] = ['overview', 'world-management', 'world-building']
+const WORLD_FREE_PAGES: PageKey[] = ['overview', 'world-management', 'world-building', 'archive', 'trash']
 
 export default function App() {
   const [activePage, setActivePage] = useState<PageKey>(
@@ -201,6 +210,14 @@ export default function App() {
         { key: 'simulation', label: dict.simulation, icon: '▷' },
         { key: 'writing', label: dict.writing, icon: '▤' },
       ]
+    },
+    {
+      title: '数据安全',
+      items: [
+        { key: 'time-machine', label: '时光机', icon: '⏳' },
+        { key: 'archive', label: '归档库', icon: '▣' },
+        { key: 'trash', label: '回收站', icon: '♻' },
+      ]
     }
   ] : [
     { 
@@ -213,6 +230,13 @@ export default function App() {
       title: dict.worldBuild, 
       items: [
         { key: 'world-management', label: dict.worldManagement, icon: '◎' },
+      ]
+    },
+    {
+      title: '数据安全',
+      items: [
+        { key: 'archive', label: '归档库', icon: '▣' },
+        { key: 'trash', label: '回收站', icon: '♻' },
       ]
     }
   ]
@@ -355,6 +379,12 @@ export default function App() {
             <WorldDataPage worldId={currentWorldId} />
           ) : activePage === 'world-structure' ? (
             <WorldStructurePage worldId={currentWorldId} worldName={currentWorldName} />
+          ) : activePage === 'archive' ? (
+            <ArchivePage />
+          ) : activePage === 'trash' ? (
+            <TrashPage />
+          ) : activePage === 'time-machine' ? (
+            <TimeMachinePage worldId={currentWorldId} worldName={currentWorldName} />
           ) : activePage === 'relationships' ? (
             <RelationshipsPage
               worldId={currentWorldId}
