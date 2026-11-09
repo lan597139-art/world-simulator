@@ -183,16 +183,25 @@ export default function SimulationPage({ onWriteChapter }: { onWriteChapter?: (e
           {aiStatus && (
             <div style={{ marginTop: '10px', padding: '7px 9px', borderRadius: '6px', border: '1px solid var(--card-border)', background: aiStatus.configured ? 'rgba(128,128,128,0.08)' : 'rgba(255,69,58,0.08)', fontSize: '10px', lineHeight: 1.6, color: 'var(--text-muted)' }}>
               {aiStatus.configured
-                ? `AI 已配置 ${aiStatus.key_hint || ''} · ${aiStatus.model || ''}（更换 backend/.env 后下次调用自动生效）`
-                : '未配置 DEEPSEEK_API_KEY，AI 推演不可用。'}
-              <button
-                type="button"
-                onClick={() => void probeAi()}
-                disabled={aiProbing}
-                style={{ display: 'block', marginTop: '6px', padding: '3px 8px', borderRadius: '5px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)', cursor: 'pointer', fontSize: '10px' }}
-              >
-                {aiProbing ? '测试中…' : '测试 AI 连接'}
-              </button>
+                ? `${aiStatus.using_personal_key ? '使用我的 Key' : '使用站长共享 Key'} ${aiStatus.key_hint || ''} · ${aiStatus.model || ''}`
+                : (aiStatus.message || '未配置 API Key，AI 推演不可用。')}
+              <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', marginTop: '6px' }}>
+                <button
+                  type="button"
+                  onClick={() => void probeAi()}
+                  disabled={aiProbing}
+                  style={{ padding: '3px 8px', borderRadius: '5px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)', cursor: 'pointer', fontSize: '10px' }}
+                >
+                  {aiProbing ? '测试中…' : '测试 AI 连接'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => window.dispatchEvent(new CustomEvent('open-ai-settings'))}
+                  style={{ padding: '3px 8px', borderRadius: '5px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)', cursor: 'pointer', fontSize: '10px' }}
+                >
+                  {aiStatus.using_personal_key ? '更换我的 Key' : '填写我的 Key'}
+                </button>
+              </div>
               {aiStatus.probe_error && <div style={{ marginTop: '5px', color: 'var(--danger-color)' }}>{aiStatus.probe_error}</div>}
               {aiStatus.probe_ok && <div style={{ marginTop: '5px', color: '#10b981' }}>连接正常</div>}
             </div>

@@ -1,6 +1,9 @@
+import ipaddress
 import json
 import os
+from contextvars import ContextVar
 from pathlib import Path
+from urllib.parse import urlparse
 
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -9,19 +12,73 @@ ENV_PATH = Path(__file__).with_name(".env")
 DEFAULT_BASE_URL = "https://api.deepseek.com"
 DEFAULT_MODEL = "deepseek-chat"
 MODEL = DEFAULT_MODEL  # 兼容旧引用；实际调用请用 get_model()
-_client: OpenAI | None = None
-_client_key: str | None = None
-_client_base_url: str | None = None
+
+# 访客自带 Key：由中间件按请求写入，服务端不落库、不写日志。
+_personal_ai: ContextVar[dict | None] = ContextVar("personal_ai", default=None)
+
+
+def _server_key_enabled() -> bool:
+    return (os.getenv("AI_SERVER_KEY_ENABLED", "true") or "").strip().lower() not in {
+        "0", "false", "no", "off"
+    }
+
+
+def _safe_base_url(value: str) -> str:
+    """只接受公网 HTTPS，防止访客把后端当 SSRF 跳板。"""
+    value = (value or "").strip().rstrip("/")
+    if not value:
+        return ""
+    try:
+        parsed = urlparse(value)
+    except Exception:
+        return ""
+    if parsed.scheme != "https" or not parsed.hostname:
+        return ""
+    host = parsed.hostname.lower()
+    if host in {"localhost", "127.0.0.1", "::1"} or host.endswith(".local"):
+        return ""
+    try:
+        address = ipaddress.ip_address(host)
+        if address.is_private or address.is_loopback or address.is_link_local:
+            return ""
+    except ValueError:
+        pass
+    return value
 
 
 def _read_config() -> tuple[str, str, str]:
-    """每次调用都重读 .env，换 Key、Base URL 或模型后无需重启后端。"""
+    """每次调用都重读 .env；访客 Key 优先于站长共享 Key。"""
     if ENV_PATH.exists():
         load_dotenv(dotenv_path=ENV_PATH, override=True)
-    key = (os.getenv("DEEPSEEK_API_KEY") or "").strip()
-    base_url = (os.getenv("DEEPSEEK_BASE_URL") or DEFAULT_BASE_URL).strip() or DEFAULT_BASE_URL
-    model = (os.getenv("DEEPSEEK_MODEL") or DEFAULT_MODEL).strip() or DEFAULT_MODEL
-    return key, base_url, model
+    env_key = (os.getenv("DEEPSEEK_API_KEY") or "").strip()
+    env_base = (os.getenv("DEEPSEEK_BASE_URL") or DEFAULT_BASE_URL).strip() or DEFAULT_BASE_URL
+    env_model = (os.getenv("DEEPSEEK_MODEL") or DEFAULT_MODEL).strip() or DEFAULT_MODEL
+
+    personal = _personal_ai.get()
+    if personal and personal.get("key"):
+        return (
+            personal["key"],
+            _safe_base_url(personal.get("base_url") or "") or env_base,
+            (personal.get("model") or env_model).strip() or env_model,
+        )
+    return (env_key if _server_key_enabled() else ""), env_base, env_model
+
+
+def set_request_ai_config(key: str = "", base_url: str = "", model: str = ""):
+    """中间件调用：返回 ContextVar token，请求结束后必须 reset。"""
+    key = (key or "").strip()
+    if not key or len(key) > 300:
+        return None
+    return _personal_ai.set({
+        "key": key,
+        "base_url": (base_url or "").strip()[:500],
+        "model": (model or "").strip()[:120],
+    })
+
+
+def reset_request_ai_config(token) -> None:
+    if token is not None:
+        _personal_ai.reset(token)
 
 
 def get_model() -> str:
@@ -29,48 +86,54 @@ def get_model() -> str:
 
 
 def get_client() -> OpenAI:
-    global _client, _client_key, _client_base_url
+    # 不缓存客户端：不同访客可能同时使用不同 Key，缓存会造成串用。
     key, base_url, _model = _read_config()
-    if _client is None or key != _client_key or base_url != _client_base_url:
-        _client = OpenAI(api_key=key or None, base_url=base_url)
-        _client_key = key
-        _client_base_url = base_url
-    return _client
+    if not key:
+        raise RuntimeError("未配置 AI API Key")
+    return OpenAI(api_key=key, base_url=base_url, timeout=120.0)
 
 
 def ai_config_status() -> dict:
     key, base_url, model = _read_config()
+    personal = _personal_ai.get()
     hint = ""
     if key:
         hint = f"{key[:4]}…{key[-4:]}" if len(key) > 10 else "已配置"
+    shared_enabled = _server_key_enabled()
     return {
         "configured": bool(key),
+        "using_personal_key": bool(personal and personal.get("key")),
+        "shared_key_enabled": shared_enabled,
+        "server_key_configured": bool((os.getenv("DEEPSEEK_API_KEY") or "").strip()),
         "key_hint": hint,
         "base_url": base_url,
         "model": model,
         "env_path": str(ENV_PATH),
         "hot_reload": True,
+        "message": "" if key else (
+            "本站已关闭站长共享 Key，请在「AI 接入」中填写自己的 API Key"
+            if not shared_enabled else "未配置 API Key，请检查 backend/.env"
+        ),
     }
-
 
 def ai_error_message(error) -> str:
     text = str(error)
     lowered = text.lower()
     if "402" in text or "insufficient balance" in lowered:
-        return "AI 额度不足：当前 DeepSeek 账户余额已耗尽，请充值或更换 API Key。"
+        return "AI 额度不足：当前 API 账户余额已耗尽，请充值或更换自己的 API Key。"
     if "401" in text or "authentication" in lowered or "invalid api key" in lowered:
-        return "AI 鉴权失败：DEEPSEEK_API_KEY 无效或已过期，请检查 backend/.env。"
+        return "AI 鉴权失败：API Key 无效或已过期。使用访客 Key 时请在「AI 接入」检查；站长请检查 backend/.env。"
     if "429" in text or "rate limit" in lowered:
         return "AI 请求过于频繁，请稍后再试。"
     if "timeout" in lowered:
         return "AI 响应超时，请检查网络或稍后重试。"
     if "connection" in lowered or "network" in lowered:
-        return "AI 网络连接失败，请检查 backend/.env 中的 Base URL 与网络。"
+        return "AI 网络连接失败，请检查「AI 接入」中的 Base URL 与网络。"
     return f"AI 调用失败：{text[:300]}"
 
 def run_simulation(event_data: dict, characters_data: list):
     if not ai_config_status()["configured"]:
-        return {"error": "未配置 DEEPSEEK_API_KEY，无法调用 AI：请检查 backend/.env。"}
+        return {"error": "未配置 API Key：请在「AI 接入」填写自己的 Key，或由站长配置 backend/.env。"}
     # 提取人物核心数据，减少无用的 token 消耗
     chars_info = []
     for c in characters_data:

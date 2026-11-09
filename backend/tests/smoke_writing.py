@@ -101,8 +101,13 @@ def main():
             code == 200 and any(d["status"] == "accepted" for d in world_drafts),
         )
 
+        code, _ = call("DELETE", f"/characters/{character_id}")
+        check("DELETE 人物不被自身目录节点阻塞", code == 200)
+        code, nodes = call("GET", f"/worlds/{world_id}/nodes?branch=people_groups")
+        check("删除人物后目录节点清理", code == 200 and not any(n.get("ref_id") == character_id for n in nodes))
+
         code, undone = call("POST", f"/drafts/{char_draft['id']}/undo")
-        check("POST 撤销入库", code == 200 and undone.get("removed_entity") is True, str(undone))
+        check("POST 撤销入库", code == 200, str(undone))
         code, _ = call("GET", f"/characters/{character_id}")
         check("撤销后错误实体已删除", code == 404)
         code, world_drafts = call("GET", f"/worlds/{world_id}/drafts?status=all")

@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 import models
 import schemas
+from ai_engine import reset_request_ai_config, set_request_ai_config
 from database import engine, get_db
 from migrations.runner import run_migrations
 
@@ -48,6 +49,20 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.middleware("http")
+async def ai_access_context(request, call_next):
+    """访客可通过请求头携带自己的 AI Key；不落库、不写日志。"""
+    token = set_request_ai_config(
+        request.headers.get("x-ai-api-key", ""),
+        request.headers.get("x-ai-base-url", ""),
+        request.headers.get("x-ai-model", ""),
+    )
+    try:
+        return await call_next(request)
+    finally:
+        reset_request_ai_config(token)
+
 
 for router in (
     character_router,

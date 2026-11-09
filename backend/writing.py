@@ -246,8 +246,9 @@ def delete_story(story_id: str, db: Session = Depends(get_db)):
 
 
 def _require_ai():
-    if not ai_config_status()["configured"]:
-        fail(503, "AI_NOT_CONFIGURED", "未配置 DEEPSEEK_API_KEY，无法调用 AI")
+    status = ai_config_status()
+    if not status["configured"]:
+        fail(503, "AI_NOT_CONFIGURED", status.get("message") or "未配置 API Key，无法调用 AI")
     client = get_client()
     return client
 

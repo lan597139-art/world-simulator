@@ -6,6 +6,8 @@ import CharacterListPage from './pages/CharacterListPage'
 import RelationshipsPage from './pages/RelationshipsPage'
 import UnifiedTimelinePage from './pages/UnifiedTimelinePage'
 import ErrorBoundary from './components/ErrorBoundary'
+import AiAccessModal from './components/AiAccessModal'
+import { hasPersonalAiKey } from './api/aiSettings'
 import { getAllWorlds } from './services/worldService'
 import { checkBackendHealth } from "./api/client";
 import EventsPage from './pages/EventsPage'
@@ -91,12 +93,20 @@ export default function App() {
   )
   const [allWorldsList, setAllWorldsList] = useState<any[]>([])
   const [backendStatus, setBackendStatus] = useState<"loading" | "connected" | "error">("loading")
+  const [aiAccessOpen, setAiAccessOpen] = useState(false)
+  const [hasPersonalAi, setHasPersonalAi] = useState(() => hasPersonalAiKey())
   const [navStack, setNavStack] = useState<PageKey[]>([])
   const activePageRef = useRef(activePage)
 
   useEffect(() => {
     activePageRef.current = activePage
   }, [activePage])
+
+  useEffect(() => {
+    const openSettings = () => setAiAccessOpen(true)
+    window.addEventListener('open-ai-settings', openSettings)
+    return () => window.removeEventListener('open-ai-settings', openSettings)
+  }, [])
 
   const navigate = (page: PageKey) => {
     const current = activePageRef.current
@@ -300,6 +310,15 @@ export default function App() {
             )}
           </div>
           <div className="topbar-right" style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '12px', color: 'var(--text-muted)' }}>
+            <button
+              type="button"
+              onClick={() => setAiAccessOpen(true)}
+              title="填写自己的 API Key，避免消耗站长额度"
+              style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 9px', borderRadius: '7px', border: '1px solid var(--card-border)', background: hasPersonalAi ? 'rgba(128,128,128,0.12)' : 'transparent', color: 'var(--text-main)', fontSize: '11px', cursor: 'pointer' }}
+            >
+              <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: hasPersonalAi ? '#10b981' : 'var(--text-muted)' }} />
+              AI 接入{hasPersonalAi ? ' · 已配置' : ''}
+            </button>
             <span className="workspace-status" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span className="status-dot" style={{ width: '6px', height: '6px', borderRadius: '50%', background: backendStatus === 'connected' ? '#10b981' : '#ef4444' }} />
               {backendStatus === 'connected' ? '后端已连接' : '后端未连接'}
@@ -364,6 +383,11 @@ export default function App() {
           </ErrorBoundary>
         </div>
       </main>
+      <AiAccessModal
+        open={aiAccessOpen}
+        onClose={() => setAiAccessOpen(false)}
+        onSaved={() => setHasPersonalAi(hasPersonalAiKey())}
+      />
     </div>
   )
 }

@@ -43,7 +43,20 @@ VITE_API_BASE_URL=https://你的后端域名
 
 没有设置 `VITE_API_BASE_URL` 时，线上页面会尝试访问访客自己的 `127.0.0.1:8000`，只能用于“本机后端 + 线上前端”的开发调试。
 
-## AI 配置
+## 访客自带 API Key（BYOK）
+
+公开网站不应让所有访客消耗站长额度。现在支持两种模式：
+
+- 访客点击顶栏 **AI 接入**，填写自己的 API Key / Base URL / 模型。
+- Key 只保存在访客浏览器 `localStorage`，只在 AI 请求中通过
+  `X-AI-API-Key`、`X-AI-Base-URL`、`X-AI-Model` 请求头发送，服务端不落库、不写日志。
+- 站长共享 Key 由 `AI_SERVER_KEY_ENABLED` 控制：
+  - 本地默认 `true`，方便自己开发；
+  - 公开部署建议 `false`，未填写 Key 的访客不能调用 AI。
+  - `render.yaml` 已默认设置为 `false`。
+- 后端只接受 HTTPS 公网 Base URL，并阻止 localhost/内网地址，避免 SSRF。
+
+## AI 配置（站长共享 Key）
 
 `backend/.env`：
 
@@ -54,6 +67,7 @@ DEEPSEEK_MODEL=deepseek-ai/DeepSeek-V4.1-Flash
 ```
 
 Key、Base URL、模型都会在每次调用前重新读取，修改后无需重启后端。
+使用访客 Key 时，访客配置优先于 `.env`，且不同访客的客户端不会串用。
 
 ## 构建与检查
 

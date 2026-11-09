@@ -60,6 +60,20 @@ def delete_character(character_id: str, db: Session = Depends(get_db)):
     if not character:
         raise HTTPException(status_code=404, detail="Character not found")
     if character.world_id:
+        # 人物入库时自动挂到“人物与群体”目录；这个挂载节点是人物自身的一部分，
+        # 不能反过来阻止人物删除。先移除节点，再检查关系/事件等真实外部引用。
+        nodes = (
+            db.query(models.WorldNode)
+            .filter(
+                models.WorldNode.world_id == character.world_id,
+                models.WorldNode.ref_type == "character",
+                models.WorldNode.ref_id == character.id,
+            )
+            .all()
+        )
+        for node in nodes:
+            db.delete(node)
+        db.flush()
         assert_not_referenced(db, character.world_id, "character", character.id, "人物")
     db.delete(character)
     db.commit()
