@@ -28,6 +28,9 @@ npm run dev                 # http://localhost:5173
 前端可以部署在 Vercel，但 **FastAPI 后端不能只靠 Vercel 静态站点**。线上需要：
 
 1. 一个可公网访问的 FastAPI 后端，并给 SQLite 配持久磁盘（Render / Railway / Fly.io 等）。
+   仓库已包含 `backend/Dockerfile`、`backend/requirements.txt` 和 `render.yaml`：
+   Render 新建 Blueprint 指向本仓库即可，挂载 `/data`，数据库地址为
+   `sqlite:////data/world_simulator.db`。把 `DEEPSEEK_API_KEY` 填在 Render 环境变量里。
 2. 在 Vercel 项目 Settings → Environment Variables 设置：
 
 ```env
