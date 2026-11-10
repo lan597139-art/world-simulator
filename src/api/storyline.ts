@@ -46,6 +46,7 @@ export interface StorySpace {
   node_count: number
   unit_count: number
   ending_count: number
+  chapter_count: number
   created_at?: string
 }
 
@@ -178,6 +179,24 @@ export const resolveChoice = (choiceId: string, payload: { option_id?: string; s
     method: 'POST',
     body: JSON.stringify(payload),
   })
+
+export interface StoryChapterLink {
+  id: string
+  story_id: string
+  space_id: string
+  unit_id?: string | null
+  chapter_id: string
+  title: string
+  word_count: number
+  status: string
+  order_index: number
+}
+
+export const linkChapter = (storyId: string, payload: { chapter_id: string; space_id: string; unit_id?: string }) =>
+  request<StoryChapterLink>(`/stories/${storyId}/chapter-links`, { method: 'POST', body: JSON.stringify(payload) })
+export const listSpaceChapters = (spaceId: string) => request<StoryChapterLink[]>(`/spaces/${spaceId}/chapters`)
+export const unlinkChapter = (linkId: string) =>
+  request<{ status: string }>(`/story-chapters/${linkId}`, { method: 'DELETE' })
 
 export const listEndings = (spaceId: string) => request<StoryEnding[]>(`/spaces/${spaceId}/endings`)
 export const createEnding = (spaceId: string, payload: {

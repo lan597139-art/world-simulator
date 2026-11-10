@@ -37,6 +37,7 @@ _STORY_TABLES = {
     "story_choice_options",
     "story_endings",
     "story_rejoins",
+    "story_chapter_links",
 }
 _CHAT_TABLES = {
     "ai_roles",
@@ -193,6 +194,7 @@ def _cascade_delete_world(db: Session, world_id: str):
     ).delete(synchronize_session=False)
 
     # 故事线结构不进世界快照，但清理世界时必须一并移除，避免指向已重建的实体。
+    db.query(models.StoryChapterLink).filter(models.StoryChapterLink.world_id == world_id).delete(synchronize_session=False)
     db.query(models.StoryEnding).filter(models.StoryEnding.world_id == world_id).delete(synchronize_session=False)
     db.query(models.StoryRejoin).filter(models.StoryRejoin.world_id == world_id).delete(synchronize_session=False)
     db.query(models.StoryChoiceOption).filter(models.StoryChoiceOption.world_id == world_id).delete(synchronize_session=False)

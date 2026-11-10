@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { API_ORIGIN } from '../api/config'
 import * as api from '../api/storyline'
+import { listStories as listChapters } from '../api/writing'
 import type { StoryChoice, StoryDetail, StoryEnding, StoryProject, StorySpace, StoryUnit, StoryUnitEvent } from '../api/storyline'
 
 const card: React.CSSProperties = {
@@ -49,6 +50,9 @@ export default function StorylinePage({ worldId }: { worldId?: string }) {
   const [selectedUnitId, setSelectedUnitId] = useState('')
   const [choices, setChoices] = useState<StoryChoice[]>([])
   const [endings, setEndings] = useState<StoryEnding[]>([])
+  const [chapterOptions, setChapterOptions] = useState<any[]>([])
+  const [spaceChapters, setSpaceChapters] = useState<any[]>([])
+  const [chapterPick, setChapterPick] = useState('')
   const [events, setEvents] = useState<any[]>([])
   const [log, setLog] = useState('')
 
@@ -86,6 +90,7 @@ export default function StorylinePage({ worldId }: { worldId?: string }) {
       setDetail(null)
       return
     }
+    listChapters(worldId).then((rows) => setChapterOptions(rows)).catch(() => undefined)
     api.getStory(storyId)
       .then((data) => {
         setDetail(data)
@@ -101,11 +106,12 @@ export default function StorylinePage({ worldId }: { worldId?: string }) {
       setUnits([]); setChoices([]); setEndings([])
       return
     }
-    Promise.all([api.listUnits(spaceId), api.listChoices(spaceId), api.listEndings(spaceId)])
-      .then(async ([unitRows, choiceRows, endingRows]) => {
+    Promise.all([api.listUnits(spaceId), api.listChoices(spaceId), api.listEndings(spaceId), api.listSpaceChapters(spaceId)])
+      .then(async ([unitRows, choiceRows, endingRows, chapterRows]) => {
         setUnits(unitRows)
         setChoices(choiceRows)
         setEndings(endingRows)
+        setSpaceChapters(chapterRows)
         const pairs = await Promise.all(unitRows.map((unit) => api.listUnitEvents(unit.id).then((rows) => [unit.id, rows] as const)))
         setUnitEvents(Object.fromEntries(pairs))
         setSelectedUnitId((prev) => (prev && unitRows.some((u) => u.id === prev) ? prev : unitRows[0]?.id || ''))
@@ -200,6 +206,19 @@ export default function StorylinePage({ worldId }: { worldId?: string }) {
     setNewEndingName('')
   }, '结局已保存')
 
+  const linkChapterNow = () => guard(async () => {
+    if (!detail || !space || !chapterPick) throw new Error('先选章节和空间')
+    await api.linkChapter(detail.id, { chapter_id: chapterPick, space_id: space.id })
+    setSpaceChapters(await api.listSpaceChapters(space.id))
+    await reloadStory()
+    setChapterPick('')
+  }, '章节已关联')
+
+  const unlinkChapterNow = (linkId: string) => guard(async () => {
+    await api.unlinkChapter(linkId)
+    setSpaceChapters((prev) => prev.filter((row) => row.id !== linkId))
+  }, '章节关联已解除')
+
   const compareNow = () => guard(async () => {
     const original = detail?.spaces.find((item) => item.is_original)
     if (!original || !space) throw new Error('缺少可对比的空间')
@@ -257,7 +276,7 @@ export default function StorylinePage({ worldId }: { worldId?: string }) {
               }}
             >
               <span style={{ fontWeight: 600 }}>{item.is_original ? '◉ 正史' : '⑂'} {item.name}</span>
-              <span style={hint}>{item.unit_count} 单元 · {item.ending_count} 结局{item.branch_id ? ` · ${item.node_count} 节点` : ''}</span>
+              <span style={hint}>{item.unit_count} 单元 · {item.ending_count} 结局 · {item.chapter_count} 章{item.branch_id ? ` · ${item.node_count} 节点` : ''}</span>
             </button>
           ))}
           {space && (
@@ -374,6 +393,23 @@ export default function StorylinePage({ worldId }: { worldId?: string }) {
             </div>
           ))}
           {!space && <div style={hint}>先创建/选择一个空间。</div>}
+
+          <h3 style={{ ...sectionTitle, marginTop: '6px' }}>关联章节</h3>
+          <div style={{ display: 'flex', gap: '5px' }}>
+            <select value={chapterPick} onChange={(e) => setChapterPick(e.target.value)} style={{ ...input, flex: 1 }}>
+              <option value="">选择章节</option>
+              {chapterOptions.map((chapter) => <option key={chapter.id} value={chapter.id}>{chapter.title}{chapter.word_count ? ` · ${chapter.word_count}字` : ''}</option>)}
+            </select>
+            <button style={btn} onClick={() => void linkChapterNow()}>关联</button>
+          </div>
+          {spaceChapters.map((row) => (
+            <div key={row.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid var(--card-border)', borderRadius: '7px', padding: '6px', fontSize: '11px', color: 'var(--text-main)' }}>
+              <span style={{ flex: 1 }}>{row.title}{row.unit_id ? ' · 单元内' : ''}</span>
+              <span style={hint}>{row.word_count} 字</span>
+              <button style={{ ...btn, padding: '2px 6px', borderColor: 'var(--danger-color)', color: 'var(--danger-color)' }} onClick={() => void unlinkChapterNow(row.id)}>解除</button>
+            </div>
+          ))}
+          {!spaceChapters.length && <div style={hint}>该空间还没有关联章节。</div>}
         </div>
       </div>
     </div>

@@ -72,6 +72,7 @@ def _space_row(db: Session, row: models.StorySpace) -> dict:
         "node_count": node_count,
         "unit_count": db.query(models.StoryUnit).filter(models.StoryUnit.space_id == row.id).count(),
         "ending_count": db.query(models.StoryEnding).filter(models.StoryEnding.space_id == row.id).count(),
+        "chapter_count": db.query(models.StoryChapterLink).filter(models.StoryChapterLink.space_id == row.id).count(),
         "created_at": _iso(row.created_at),
     }
 
@@ -952,3 +953,88 @@ def compare_spaces(payload: dict, db: Session = Depends(get_db)):
             "ending_counts": {item["space"]["name"]: len(item["endings"]) for item in data},
         },
     }
+
+
+# ---------------------------------------------------------------------
+# 章节关联（G6）
+# ---------------------------------------------------------------------
+def _chapter_link_row(link: models.StoryChapterLink, chapter: Optional[models.Story]) -> dict:
+    return {
+        "id": link.id,
+        "story_id": link.story_id,
+        "space_id": link.space_id,
+        "unit_id": link.unit_id,
+        "chapter_id": link.chapter_id,
+        "order_index": link.order_index or 0,
+        "title": chapter.title if chapter else "章节已删除",
+        "word_count": chapter.word_count if chapter else 0,
+        "status": chapter.status if chapter else "",
+        "created_at": _iso(link.created_at),
+    }
+
+
+@router.post("/api/stories/{story_id}/chapter-links")
+def link_chapter(story_id: str, payload: dict, db: Session = Depends(get_db)):
+    story = _project(db, story_id)
+    chapter_id = str(payload.get("chapter_id") or "").strip()
+    _require(chapter_id, "VALIDATION_ERROR", "缺少 chapter_id")
+    chapter = get_or_404(db, models.Story, chapter_id, "章节")
+    if chapter.world_id != story.world_id:
+        fail(409, "WORLD_MISMATCH", "章节不在该世界")
+    space = _space(db, str(payload.get("space_id") or ""))
+    if space.story_id != story.id:
+        fail(409, "SPACE_MISMATCH", "空间不属于该故事")
+    unit_id = str(payload.get("unit_id") or "").strip() or None
+    if unit_id:
+        unit = _unit(db, unit_id)
+        if unit.space_id != space.id:
+            fail(409, "UNIT_MISMATCH", "单元不属于该空间")
+
+    link = (
+        db.query(models.StoryChapterLink)
+        .filter(models.StoryChapterLink.chapter_id == chapter.id)
+        .first()
+    )
+    if link:
+        link.story_id = story.id
+        link.space_id = space.id
+        link.unit_id = unit_id
+        if "order_index" in payload:
+            link.order_index = int(payload.get("order_index") or 0)
+    else:
+        count = db.query(models.StoryChapterLink).filter(models.StoryChapterLink.space_id == space.id).count()
+        link = models.StoryChapterLink(
+            world_id=story.world_id,
+            story_id=story.id,
+            space_id=space.id,
+            unit_id=unit_id,
+            chapter_id=chapter.id,
+            order_index=int(payload.get("order_index") or count),
+        )
+        db.add(link)
+    db.commit()
+    db.refresh(link)
+    return _chapter_link_row(link, chapter)
+
+
+@router.get("/api/spaces/{space_id}/chapters")
+def list_space_chapters(space_id: str, db: Session = Depends(get_db)):
+    _space(db, space_id)
+    links = (
+        db.query(models.StoryChapterLink)
+        .filter(models.StoryChapterLink.space_id == space_id)
+        .order_by(models.StoryChapterLink.order_index.asc(), models.StoryChapterLink.created_at.asc())
+        .all()
+    )
+    ids = [link.chapter_id for link in links]
+    chapters = {row.id: row for row in db.query(models.Story).filter(models.Story.id.in_(ids)).all()} if ids else {}
+    return [_chapter_link_row(link, chapters.get(link.chapter_id)) for link in links]
+
+
+@router.delete("/api/story-chapters/{link_id}")
+def unlink_chapter(link_id: str, db: Session = Depends(get_db)):
+    link = get_or_404(db, models.StoryChapterLink, link_id, "章节关联")
+    _world(db, link.world_id)
+    db.delete(link)
+    db.commit()
+    return {"status": "removed"}

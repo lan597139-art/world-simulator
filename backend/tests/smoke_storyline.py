@@ -110,6 +110,25 @@ check("正史共享事件标记后可挂", shared["is_shared"] is True, shared)
 check("分支空间挂本分支事件", api("POST", f"/api/units/{branch_unit['id']}/events", {"event_id": branch_event["id"]}).status_code == 200)
 check("原始空间拒绝分支事件", api("POST", f"/api/units/{main_unit['id']}/events", {"event_id": branch_event["id"]}, expect=409).status_code == 409)
 
+# ---- 章节关联（G6） -------------------------------------------------
+chapter = api("POST", "/api/writings", {"world_id": wid, "title": "第一章", "content": "正文"}).json()
+check("创建测试章节", bool(chapter.get("id")), chapter)
+
+linked = api("POST", f"/api/stories/{sid}/chapter-links", {
+    "chapter_id": chapter["id"], "space_id": space_a["id"], "unit_id": branch_unit["id"],
+}).json()
+check("章节关联空间/单元", linked["space_id"] == space_a["id"] and linked["unit_id"] == branch_unit["id"], linked)
+check("空间章节列表", [row["title"] for row in api("GET", f"/api/spaces/{space_a['id']}/chapters").json()] == ["第一章"])
+check("空间章节计数", api("GET", f"/api/stories/{sid}").json()["spaces"][1]["chapter_count"] >= 1)
+
+moved = api("POST", f"/api/stories/{sid}/chapter-links", {"chapter_id": chapter["id"], "space_id": original["id"]}).json()
+check("一章只归一个空间", moved["space_id"] == original["id"] and len(api("GET", f"/api/spaces/{space_a['id']}/chapters").json()) == 0, moved)
+
+other_world = api("POST", "/api/worlds", {"name": f"章节外世界-{suffix}", "type": "fiction"}).json()
+other_chapter = api("POST", "/api/writings", {"world_id": other_world["id"], "title": "外部章节"}).json()
+check("跨世界章节被拒", api("POST", f"/api/stories/{sid}/chapter-links", {"chapter_id": other_chapter["id"], "space_id": original["id"]}, expect=409).status_code == 409)
+check("解除章节关联", api("DELETE", f"/api/story-chapters/{moved['id']}").status_code == 200)
+
 # ---- 结局 -----------------------------------------------------------
 ending = api("POST", f"/api/spaces/{space_a['id']}/endings", {
     "name": "离开的结局", "content": "他走向未知。", "kind": "open", "is_final": False,
@@ -155,6 +174,7 @@ check("归档故事禁止新建空间", api("POST", f"/api/stories/{sid}/spaces"
 # ---- 清理 -----------------------------------------------------------
 db = SessionLocal()
 try:
+    db.query(models.StoryChapterLink).filter(models.StoryChapterLink.world_id.in_([wid, other_world["id"]])).delete(synchronize_session=False)
     db.query(models.StoryEnding).filter(models.StoryEnding.world_id == wid).delete()
     db.query(models.StoryRejoin).filter(models.StoryRejoin.world_id == wid).delete()
     db.query(models.StoryChoiceOption).filter(models.StoryChoiceOption.world_id == wid).delete()
@@ -169,7 +189,9 @@ try:
     db.query(models.Event).filter(models.Event.world_id == wid).delete()
     db.query(models.Character).filter(models.Character.world_id == wid).delete()
     db.query(models.WorldSettings).filter(models.WorldSettings.world_id == wid).delete()
-    db.query(models.World).filter(models.World.id == wid).delete()
+    db.query(models.Story).filter(models.Story.world_id.in_([wid, other_world["id"]])).delete(synchronize_session=False)
+    db.query(models.WorldSettings).filter(models.WorldSettings.world_id == other_world["id"]).delete()
+    db.query(models.World).filter(models.World.id.in_([wid, other_world["id"]])).delete(synchronize_session=False)
     db.commit()
 finally:
     db.close()

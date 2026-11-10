@@ -1072,3 +1072,18 @@ class ChatImpact(Base):
     status = Column(String, default="pending")  # pending/applied/dismissed
     model = Column(String, default="")
     created_at = Column(DateTime, default=_now)
+
+
+class StoryChapterLink(Base):
+    """章节（stories）与故事线空间/单元的关联；一章只归一条故事线。"""
+
+    __tablename__ = "story_chapter_links"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    world_id = Column(String, nullable=False, index=True)
+    story_id = Column(String, nullable=False, index=True)
+    space_id = Column(String, nullable=False, index=True)
+    unit_id = Column(String, nullable=True)
+    chapter_id = Column(String, nullable=False, unique=True)
+    order_index = Column(Integer, default=0)
+    created_at = Column(DateTime, default=_now)
