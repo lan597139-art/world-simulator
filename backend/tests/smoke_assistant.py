@@ -144,6 +144,48 @@ check("update_entity 过滤越权 ID 与非法字段", update and update["entity
 nav = [item["page"] for item in actions if item["type"] == "navigate"]
 check("navigate 只保留合法页面", nav == ["multipath"], nav)
 
+# ---- 演示向导动作 -----------------------------------------------------
+DEMO_CONTEXT = dict(CONTEXT)
+DEMO_CONTEXT.update(
+    {
+        "page": "multipath",
+        "page_label": "多路径推演",
+        "demo": True,
+        "dom_targets": [
+            {"ai_id": "event-demo", "kind": "click", "label": "韩立反杀墨居仁", "tag": "button"},
+            {"ai_id": "branch-name", "kind": "input", "label": "分支名称（可选）", "tag": "input"},
+            {"ai_id": "create-branch", "kind": "click", "label": "新建分支", "tag": "button"},
+        ],
+    }
+)
+REPLY = {
+    "reply": "第 1 步先选事件；第 2 步填分支名；第 3 步新建分支，最后点「开始分支推演」。",
+    "actions": [
+        {"type": "click", "ai_id": "event-demo", "summary": "选中事件"},
+        {"type": "fill", "id": "branch-name", "value": "演示分支：隐忍", "summary": "填分支名"},
+        {"type": "click", "ai_id": "create-branch", "summary": "新建分支"},
+        {"type": "click", "ai_id": "not-in-page", "summary": "越权目标"},
+        {"type": "fill", "id": "create-branch", "value": "x", "summary": "填到按钮上"},
+        {"type": "click", "text": "韩立反杀墨居仁", "summary": "按文本点击"},
+        {"type": "click", "selector": "[data-ai-id=\"event-demo\"]", "summary": "按选择器点击"},
+    ],
+}
+r = chat({"messages": [{"role": "user", "content": "演示一下"}], "context": DEMO_CONTEXT})
+demo_actions = r.json().get("actions") or []
+check("演示模式最多 4 个动作", len(demo_actions) <= 4, demo_actions)
+check("演示 click 使用合法 ai_id", demo_actions[0].get("type") == "click" and demo_actions[0].get("ai_id") == "event-demo", demo_actions[0])
+fill_action = next((item for item in demo_actions if item["type"] == "fill"), None)
+check("演示 fill 写入输入框", fill_action and fill_action.get("id") == "branch-name" and fill_action.get("value") == "演示分支：隐忍", fill_action)
+check("演示动作不含越权目标", all(item.get("ai_id") != "not-in-page" for item in demo_actions), demo_actions)
+check("fill 不能落到按钮上", all(item.get("id") != "create-branch" for item in demo_actions), demo_actions)
+
+demo_prompt = CAPTURE[-1]["messages"][0]["content"]
+check("演示 prompt 含导师模式", "演示模式" in demo_prompt, demo_prompt[-500:])
+check("演示 prompt 注入可操作元素", "event-demo" in demo_prompt and "branch-name" in demo_prompt, demo_prompt[-500:])
+
+r = chat({"messages": [{"role": "user", "content": "普通问题"}], "context": CONTEXT})
+check("普通模式不注入演示指令", "演示模式" not in CAPTURE[-1]["messages"][0]["content"], CAPTURE[-1]["messages"][0]["content"][-300:])
+
 # ---- 无上下文 / 空回复兜底 -------------------------------------------
 REPLY = {}
 r = chat({"messages": [{"role": "user", "content": "你好"}], "context": {}})

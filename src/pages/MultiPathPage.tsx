@@ -56,6 +56,14 @@ const PROFILE_GROUPS: { key: string; label: string; fields: string[] }[] = [
   { key: 'Regulation_Qheat', label: '热崩与递归', fields: ['overheat_threshold', 'rumination_threshold', 'shutdown_threshold'] },
 ]
 
+const DEMO_PROMPT = `请作为新手导师，用 3 步演示如何在这个页面创建一条分支并准备推演。
+要求：
+1) 第 1 步：在左侧「主时间线事件」列表里选中一个事件（优先「韩立反杀墨居仁」，没有就选第一个可见事件），用 click 动作点它；
+2) 第 2 步：用 fill 动作把分支名称输入框填成「演示分支：隐忍」；
+3) 第 3 步：用 click 动作点击「新建分支」。
+每步先用一句话解释为什么，再给一个动作；不要点击「开始分支推演」（避免消耗 AI 额度），最后告诉我该在哪里点推演。
+只使用上下文 dom_targets 里真实存在的 ai_id，严格返回 JSON。`
+
 const inputStyle: React.CSSProperties = {
   width: '100%',
   padding: '7px 9px',
@@ -406,6 +414,16 @@ export default function MultiPathPage({ worldId }: { worldId: string }) {
         <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
           分支为沙盒，推演不污染主时间线；只有「应用分支」才会覆盖主时间线。
         </span>
+        <button
+          type="button"
+          data-ai-id="ai-demo-trigger"
+          onClick={() =>
+            window.dispatchEvent(new CustomEvent('ws:assistant-demo', { detail: { prompt: DEMO_PROMPT } }))
+          }
+          style={{ ...primaryBtn, padding: '7px 12px', fontSize: '11.5px', whiteSpace: 'nowrap' }}
+        >
+          ✨ 观看 AI 演示本页
+        </button>
       </div>
       {error && (
         <div style={{ padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--danger-color)', color: 'var(--danger-color)', fontSize: '11px' }}>{error}</div>
@@ -421,6 +439,7 @@ export default function MultiPathPage({ worldId }: { worldId: string }) {
               {events.map((event) => (
                 <button
                   key={event.id}
+                  data-ai-id={`event-${event.id}`}
                   onClick={() => setSelectedEventId(event.id)}
                   style={{
                     ...btn,
@@ -463,7 +482,7 @@ export default function MultiPathPage({ worldId }: { worldId: string }) {
                     <button style={btn} onClick={() => run(async () => { await duplicateDirection(row.id); setDirections(await listDirections(selectedEventId)) })}>复制</button>
                     <button style={btn} onClick={() => run(async () => { await toggleDirection(row.id); setDirections(await listDirections(selectedEventId)) })}>{row.enabled ? '禁用' : '启用'}</button>
                     <button style={btn} onClick={() => run(async () => { await deleteDirection(row.id); setDirections(await listDirections(selectedEventId)) })}>删除</button>
-                    <button style={primaryBtn} onClick={() => makeBranch(row)}>从此建分支</button>
+                    <button data-ai-id={`branch-from-direction-${row.id}`} style={primaryBtn} onClick={() => makeBranch(row)}>从此建分支</button>
                   </div>
                 </div>
               )
@@ -544,12 +563,13 @@ export default function MultiPathPage({ worldId }: { worldId: string }) {
               <strong style={{ fontSize: '12.5px' }}>分支沙盒</strong>
               <div style={{ display: 'flex', gap: '5px' }}>
                 <input
+                  data-ai-id="branch-name"
                   style={{ ...inputStyle, width: '110px' }}
                   placeholder="分支名称（可选）"
                   value={branchName}
                   onChange={(e) => setBranchName(e.target.value)}
                 />
-                <button style={btn} disabled={!selectedEventId || busy} onClick={() => makeBranch()}>新建分支</button>
+                <button data-ai-id="create-branch" style={btn} disabled={!selectedEventId || busy} onClick={() => makeBranch()}>新建分支</button>
               </div>
             </div>
             {branches.length === 0 && <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>还没有分支。选择方向后点「从此建分支」。</span>}
@@ -656,7 +676,7 @@ export default function MultiPathPage({ worldId }: { worldId: string }) {
                     ))}
                   </select>
                   <input style={inputStyle} value={perspective} onChange={(e) => setPerspective(e.target.value)} placeholder="推演视角" />
-                  <button style={primaryBtn} disabled={busy || simulating || detail.status !== 'active'} onClick={simulate}>
+                  <button data-ai-id="simulate-branch" style={primaryBtn} disabled={busy || simulating || detail.status !== 'active'} onClick={simulate}>
                     {simulating ? '推演中…' : '开始分支推演'}
                   </button>
                   {simResult && (

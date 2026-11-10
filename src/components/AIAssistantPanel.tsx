@@ -3,7 +3,13 @@ import type { CSSProperties, ReactNode } from 'react'
 import { API_ORIGIN } from '../api/config'
 import { loadAiSettings } from '../api/aiSettings'
 import { getAssistantState, subscribeAssistant } from '../api/assistantContext'
-import { applyDomFormPatch, collectDomFormFields } from '../api/assistantDom'
+import {
+  applyDomFormPatch,
+  collectDemoTargets,
+  collectDomFormFields,
+  executeDemoAction,
+  type DemoAction,
+} from '../api/assistantDom'
 
 type Action =
   | { type: 'fill_form'; fields: Record<string, unknown>; summary?: string }
@@ -15,12 +21,15 @@ type Action =
       summary?: string
     }
   | { type: 'navigate'; page: string; summary?: string }
+  | { type: 'click'; ai_id?: string; selector?: string; text?: string; summary?: string }
+  | { type: 'fill'; id: string; value: string; summary?: string }
 
 type ChatMessage = {
   id: string
   role: 'user' | 'assistant'
   content: string
   actions?: Action[]
+  label?: string
   contextLabel?: string
   pageKey?: string
   error?: boolean
@@ -186,6 +195,8 @@ function MarkdownText({ text }: { text: string }) {
 function actionTone(type: string) {
   if (type === 'fill_form') return '填入表单'
   if (type === 'update_entity') return '应用修改'
+  if (type === 'click') return '点击此处'
+  if (type === 'fill') return '填入此处'
   return '打开页面'
 }
 
@@ -294,7 +305,7 @@ export default function AIAssistantPanel({ onNavigate }: { onNavigate?: (page: s
   }, [entity, fieldCount])
 
   const send = useCallback(
-    async (preset?: string) => {
+    async (preset?: string, options?: { hidden?: boolean; autoRun?: boolean; demo?: boolean }) => {
       const text = (preset ?? input).trim()
       if (!text || sending) return
       const snapshot = getAssistantState()
@@ -307,7 +318,13 @@ export default function AIAssistantPanel({ onNavigate }: { onNavigate?: (page: s
             fields,
           }
         : null
-      const userMessage: ChatMessage = { id: uid(), role: 'user', content: text, pageKey: snapshot.page.page }
+      const userMessage: ChatMessage = {
+        id: uid(),
+        role: 'user',
+        content: text,
+        label: options?.hidden ? '✨ 观看 AI 演示本页' : undefined,
+        pageKey: snapshot.page.page,
+      }
       const nextMessages = [...messages, userMessage]
       setMessages(nextMessages)
       setInput('')
@@ -339,6 +356,8 @@ export default function AIAssistantPanel({ onNavigate }: { onNavigate?: (page: s
               entity_name: snapshot.entity?.name || '',
               form,
               selection: lastSelection,
+              demo: Boolean(options?.demo),
+              dom_targets: collectDemoTargets(),
             },
           }),
         })
@@ -357,6 +376,31 @@ export default function AIAssistantPanel({ onNavigate }: { onNavigate?: (page: s
           pageKey: snapshot.page.page,
         }
         setMessages((prev) => [...prev, assistantMessage])
+        if (options?.autoRun) {
+          const steps = actions.filter(
+            (action): action is DemoAction => action.type === 'click' || action.type === 'fill'
+          )
+          if (steps.length) {
+            const demoActions = steps as DemoAction[]
+            window.setTimeout(() => {
+              void (async () => {
+                for (let index = 0; index < demoActions.length; index += 1) {
+                  const action = demoActions[index]
+                  const key = `${assistantMessage.id}:${index}`
+                  setApplied((prev) => ({ ...prev, [key]: '正在执行…' }))
+                  try {
+                    const status = await executeDemoAction(action)
+                    setApplied((prev) => ({ ...prev, [key]: status }))
+                  } catch (error: any) {
+                    setApplied((prev) => ({ ...prev, [key]: String(error?.message || '执行失败') }))
+                    break
+                  }
+                  await new Promise((resolve) => window.setTimeout(resolve, 140))
+                }
+              })()
+            }, 260)
+          }
+        }
         if (!open) setUnread(true)
       } catch (error: any) {
         let text = String(error?.message || error || 'AI 请求失败，请检查后端和「AI 接入」配置。')
@@ -380,6 +424,28 @@ export default function AIAssistantPanel({ onNavigate }: { onNavigate?: (page: s
     },
     [input, lastSelection, messages, open, sending]
   )
+
+  const sendRef = useRef(send)
+  useEffect(() => {
+    sendRef.current = send
+  }, [send])
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent).detail || {}
+      const prompt = String(detail.prompt || '').trim()
+      if (!prompt) return
+      setOpen(true)
+      setUnread(false)
+      setLastSelection('')
+      // 给面板留出展开与渲染时间，再发送隐藏指令
+      window.setTimeout(() => {
+        void sendRef.current(prompt, { hidden: true, autoRun: true, demo: true })
+      }, 340)
+    }
+    window.addEventListener('ws:assistant-demo', handler)
+    return () => window.removeEventListener('ws:assistant-demo', handler)
+  }, [])
 
   const fillForm = (
     messageId: string,
@@ -635,7 +701,7 @@ export default function AIAssistantPanel({ onNavigate }: { onNavigate?: (page: s
                     overflowWrap: 'anywhere',
                   }}
                 >
-                  {message.role === 'user' ? message.content : <MarkdownText text={message.content} />}
+                  {message.role === 'user' ? message.label || message.content : <MarkdownText text={message.content} />}
                   {message.role === 'assistant' && message.contextLabel && (
                     <div style={{ marginTop: '6px', fontSize: '10px', color: 'var(--text-muted)' }}>{message.contextLabel}</div>
                   )}
@@ -655,7 +721,17 @@ export default function AIAssistantPanel({ onNavigate }: { onNavigate?: (page: s
                               onClick={() => {
                                 if (action.type === 'fill_form') fillForm(message.id, index, action)
                                 else if (action.type === 'update_entity') void applyUpdate(message.id, index, action)
-                                else {
+                                else if (action.type === 'click' || action.type === 'fill') {
+                                  void (async () => {
+                                    setApplied((prev) => ({ ...prev, [key]: '正在执行…' }))
+                                    try {
+                                      const status = await executeDemoAction(action as DemoAction)
+                                      setApplied((prev) => ({ ...prev, [key]: status }))
+                                    } catch (error: any) {
+                                      setApplied((prev) => ({ ...prev, [key]: String(error?.message || '执行失败') }))
+                                    }
+                                  })()
+                                } else {
                                   onNavigate?.(action.page)
                                   setApplied((prev) => ({ ...prev, [key]: `已打开${PAGE_LABELS[action.page] || action.page}` }))
                                 }

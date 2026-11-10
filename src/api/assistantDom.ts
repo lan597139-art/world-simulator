@@ -208,3 +208,142 @@ export function applyDomFormPatch(patch: Record<string, unknown>) {
   }
   return applied
 }
+
+// ---------------------------------------------------------------------
+// 演示向导：按 AI 指令定位、高亮、点击、填充页面元素
+// 目标只允许命中带 data-ai-id 的演示锚点，避免误点其他控件。
+// ---------------------------------------------------------------------
+
+export type DemoAction =
+  | { type: 'click'; ai_id?: string; selector?: string; text?: string; summary?: string }
+  | { type: 'fill'; id: string; value: string; summary?: string }
+
+export interface DemoTarget {
+  ai_id: string
+  tag: string
+  label: string
+  kind: 'click' | 'input'
+  value?: string
+}
+
+export interface DemoTargetRef {
+  ai_id?: string
+  selector?: string
+  text?: string
+}
+
+function delay(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms))
+}
+
+function describeTarget(element: HTMLElement) {
+  return (
+    textOf(element) ||
+    (element as HTMLInputElement).placeholder ||
+    element.getAttribute('aria-label') ||
+    element.getAttribute('data-ai-id') ||
+    element.tagName.toLowerCase()
+  ).slice(0, 40)
+}
+
+/** 收集页面上的演示锚点，供 AI 选择；不包含助手面板自身。 */
+export function collectDemoTargets(): DemoTarget[] {
+  return Array.from(document.querySelectorAll<HTMLElement>('[data-ai-id]'))
+    // 演示入口自身不进清单，避免 AI 递归触发演示
+    .filter((element) => isVisible(element) && element.getAttribute('data-ai-id') !== 'ai-demo-trigger')
+    .slice(0, 40)
+    .map((element) => {
+      const isInput = element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement
+      return {
+        ai_id: String(element.getAttribute('data-ai-id')),
+        tag: element.tagName.toLowerCase(),
+        label: describeTarget(element),
+        kind: isInput ? ('input' as const) : ('click' as const),
+        value: isInput ? String((element as HTMLInputElement).value || '').slice(0, 60) : undefined,
+      }
+    })
+}
+
+function findDemoTarget(ref: DemoTargetRef): HTMLElement | null {
+  if (ref.ai_id) {
+    const element = document.querySelector<HTMLElement>(`[data-ai-id="${CSS.escape(ref.ai_id)}"]`)
+    if (element && isVisible(element)) return element
+  }
+  if (ref.selector) {
+    try {
+      const element = document.querySelector<HTMLElement>(ref.selector)
+      if (element && isVisible(element)) return element
+    } catch {
+      // 非法选择器直接跳过，避免把异常抛给会话
+    }
+  }
+  if (ref.text) {
+    const wanted = ref.text.trim()
+    const candidates = Array.from(
+      document.querySelectorAll<HTMLElement>('button, a, [role="button"], [data-ai-id]')
+    ).filter((element) => isVisible(element))
+    const exact = candidates.find((element) => textOf(element) === wanted)
+    if (exact) return exact
+    const partial = candidates.find((element) => textOf(element).includes(wanted))
+    if (partial) return partial
+  }
+  return null
+}
+
+/** 高亮目标元素：描边 + 呼吸光圈，1.6 秒后自动消失。 */
+export function highlightDemoTarget(element: HTMLElement, ms = 1600) {
+  const rect = element.getBoundingClientRect()
+  const ring = document.createElement('div')
+  ring.setAttribute('data-ai-demo-highlight', '')
+  ring.style.cssText = [
+    'position:fixed',
+    `top:${Math.max(0, rect.top - 3)}px`,
+    `left:${Math.max(0, rect.left - 3)}px`,
+    `width:${Math.max(8, rect.width + 6)}px`,
+    `height:${Math.max(8, rect.height + 6)}px`,
+    'border-radius:8px',
+    'border:2px solid var(--primary-color, #6366f1)',
+    'background:color-mix(in srgb, var(--primary-color, #6366f1) 16%, transparent)',
+    'box-shadow:0 0 0 4px color-mix(in srgb, var(--primary-color, #6366f1) 28%, transparent)',
+    'pointer-events:none',
+    'z-index:2147483000',
+    'transition:opacity .35s ease',
+  ].join(';')
+  document.body.appendChild(ring)
+  element.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  window.setTimeout(() => {
+    ring.style.opacity = '0'
+    window.setTimeout(() => ring.remove(), 400)
+  }, ms)
+}
+
+/**
+ * 执行一条演示指令。click 会先高亮再点击；fill 用原生 setter 写入受控组件。
+ * 失败时抛出可读错误，由调用方决定是否停止后续步骤。
+ */
+export async function executeDemoAction(action: DemoAction): Promise<string> {
+  if (action.type === 'fill') {
+    const element = findDemoTarget({ ai_id: action.id })
+    if (!element) throw new Error(`没找到要填入的输入框：${action.id}`)
+    if (
+      !(element instanceof HTMLInputElement) &&
+      !(element instanceof HTMLTextAreaElement) &&
+      !(element instanceof HTMLSelectElement)
+    ) {
+      throw new Error(`目标不是输入框：${action.id}`)
+    }
+    highlightDemoTarget(element, 900)
+    element.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    await delay(280)
+    setNativeValue(element, action.value)
+    return `已填入「${action.value}」`
+  }
+
+  const element = findDemoTarget(action)
+  if (!element) throw new Error('没找到要点击的按钮（页面可能已切换）')
+  highlightDemoTarget(element, 1100)
+  element.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  await delay(420)
+  element.click()
+  return `已点击「${describeTarget(element)}」`
+}

@@ -186,6 +186,29 @@ def _clean_form(form) -> list:
     return fields
 
 
+def _clean_targets(context: dict) -> list:
+    raw = context.get("dom_targets")
+    if not isinstance(raw, list):
+        return []
+    targets = []
+    for item in raw[:40]:
+        if not isinstance(item, dict):
+            continue
+        ai_id = str(item.get("ai_id") or "").strip()[:60]
+        if not ai_id:
+            continue
+        kind = "input" if str(item.get("kind")) == "input" else "click"
+        targets.append(
+            {
+                "ai_id": ai_id,
+                "kind": kind,
+                "label": _clip(item.get("label"), 60),
+                "tag": str(item.get("tag") or "")[:16],
+            }
+        )
+    return targets
+
+
 def _context_label(context: dict, world: Optional[dict], entity: Optional[dict]) -> str:
     parts = []
     if world:
@@ -197,7 +220,15 @@ def _context_label(context: dict, world: Optional[dict], entity: Optional[dict])
     return " · ".join(parts) if parts else "当前页面"
 
 
-def _prompt(context: dict, world: Optional[dict], entity: Optional[dict], fields: list, selection: str) -> str:
+def _prompt(
+    context: dict,
+    world: Optional[dict],
+    entity: Optional[dict],
+    fields: list,
+    selection: str,
+    targets: Optional[list] = None,
+    demo: bool = False,
+) -> str:
     prompt = "你是「世界模拟器」内置的全局操作助手。\n"
     prompt += "规则：\n"
     prompt += "1. 只能使用下方【上下文】里的信息，不得编造人物、事件、ID 或字段值；信息不足时明确说缺什么。\n"
@@ -214,28 +245,51 @@ def _prompt(context: dict, world: Optional[dict], entity: Optional[dict], fields
         prompt += "当前可见表单字段：" + json.dumps(fields, ensure_ascii=False) + "\n"
     if selection:
         prompt += "用户选中文本：" + selection + "\n"
+    if targets:
+        prompt += "可操作元素（dom_targets）：" + json.dumps(targets, ensure_ascii=False) + "\n"
     if not world and not entity and not fields:
         prompt += "（当前没有可用的世界或对象上下文）\n"
 
+    prompt += "\n【可用动作】\n"
+    prompt += '- {"type":"fill_form","fields":{"表单字段label":"值"},"summary":"说明"}：只能填上面存在的字段。\n'
     prompt += (
-        "\n【可用动作】\n"
-        '- {"type":"fill_form","fields":{"表单字段label":"值"},"summary":"说明"}：只能填上面存在的字段。\n'
         '- {"type":"update_entity","entity_type":"对象类型","entity_id":"对象ID","fields":{"字段":"值"},"summary":"说明"}：'
         f"entity_type ∈ {sorted(ENTITY_TYPES)}；entity_id 必须等于当前对象 ID；"
-        f"fields 允许的键：" + json.dumps({k: sorted(v) for k, v in EDITABLE_FIELDS.items()}, ensure_ascii=False) + "。\n"
+        f"fields 允许的键：{json.dumps({k: sorted(v) for k, v in EDITABLE_FIELDS.items()}, ensure_ascii=False)}。\n"
+    )
+    prompt += (
         '- {"type":"navigate","page":"页面key","summary":"说明"}：'
         f"page ∈ {sorted(PAGES)}。\n"
-        "没有合适动作就返回空数组。\n\n"
+    )
+    prompt += '- {"type":"click","ai_id":"dom_targets 里的 ai_id","summary":"说明"}：点击页面按钮；也可以用 text 精确匹配 dom_targets 的 label。\n'
+    prompt += '- {"type":"fill","id":"dom_targets 里 kind=input 的 ai_id","value":"要填入的内容","summary":"说明"}。\n'
+    prompt += "没有合适动作就返回空数组。\n\n"
+    if demo:
+        prompt += (
+            "【演示模式（用户点了「观看 AI 演示本页」）】\n"
+            "你是新手导师：用 3 步演示在当前页面创建一条分支并准备推演。\n"
+            "必须一次性返回完整的 3 个动作，顺序固定，不要只返回第一步、不要分多轮：\n"
+            "1) click：选中事件列表里的一个事件按钮；\n"
+            "2) fill：id 用 dom_targets 中 label 含「分支名称」的 input，value 为「演示分支：隐忍」；\n"
+            "3) click：ai_id 用 dom_targets 中 label 为「新建分支」的按钮。\n"
+            "reply 里用「第 1/2/3 步」简述这三步，并告诉用户最后在哪里点推演；"
+            "不要点击「开始推演」，只能使用 dom_targets 中存在的 ai_id。\n\n"
+        )
+    prompt += (
         "【输出】严格 JSON（不要 Markdown）：\n"
         '{"reply":"给用户的回答","actions":[]}\n'
     )
     return prompt
 
 
-def _sanitize_actions(raw, context: dict, entity: Optional[dict], fields: list) -> list:
+def _sanitize_actions(
+    raw, context: dict, entity: Optional[dict], fields: list, targets: Optional[list] = None
+) -> list:
     if not isinstance(raw, list):
         return []
     labels = {item["label"] for item in fields}
+    targets = targets or []
+    target_by_id = {item["ai_id"]: item for item in targets}
     context_entity_id = str(context.get("entity_id") or "")
     actions = []
     for item in raw[:MAX_ACTIONS * 2]:
@@ -286,6 +340,33 @@ def _sanitize_actions(raw, context: dict, entity: Optional[dict], fields: list) 
                         "summary": summary,
                     }
                 )
+        elif kind == "click":
+            ai_id = str(item.get("ai_id") or "").strip()
+            text = str(item.get("text") or "").strip()
+            selector = str(item.get("selector") or "").strip()
+            if ai_id and ai_id in target_by_id:
+                actions.append({"type": "click", "ai_id": ai_id, "summary": summary})
+            elif text and any(text == target["label"] or text in target["label"] for target in targets):
+                actions.append({"type": "click", "text": text[:40], "summary": summary})
+            elif selector:
+                matched = next(
+                    (
+                        target
+                        for target in targets
+                        if selector == f'[data-ai-id="{target["ai_id"]}"]'
+                    ),
+                    None,
+                )
+                if matched:
+                    actions.append({"type": "click", "ai_id": matched["ai_id"], "summary": summary})
+        elif kind == "fill":
+            target_id = str(item.get("id") or "").strip()
+            value = item.get("value")
+            target = target_by_id.get(target_id)
+            if target and target["kind"] == "input" and not isinstance(value, (dict, list)):
+                actions.append(
+                    {"type": "fill", "id": target_id, "value": _clip(value, 200), "summary": summary}
+                )
         elif kind == "navigate":
             page = str(item.get("page") or "")
             if page in PAGES:
@@ -333,11 +414,13 @@ def assistant_chat(payload: dict, db: Session = Depends(get_db)):
     entity = _entity_summary(db, str(context.get("entity_type") or ""), str(context.get("entity_id") or ""))
     fields = _clean_form(context.get("form"))
     selection = _clip(context.get("selection"), 500)
+    targets = _clean_targets(context)
+    demo = bool(context.get("demo"))
 
     if not ai_config_status()["configured"]:
         raise HTTPException(status_code=503, detail=ai_config_status()["message"])
 
-    system = _prompt(context, world, entity, fields, selection)
+    system = _prompt(context, world, entity, fields, selection, targets, demo)
     try:
         response = get_client().chat.completions.create(
             model=get_model(),
@@ -355,7 +438,7 @@ def assistant_chat(payload: dict, db: Session = Depends(get_db)):
     reply = str(data.get("reply") or "").strip()
     if not reply:
         reply = "我看到了当前页面，但没有拿到足够信息来回答。可以补充具体对象或问题吗？"
-    actions = _sanitize_actions(data.get("actions"), context, entity, fields)
+    actions = _sanitize_actions(data.get("actions"), context, entity, fields, targets)
 
     return {
         "reply": reply[:4000],
