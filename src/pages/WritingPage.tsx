@@ -7,12 +7,15 @@ import Placeholder from '@tiptap/extension-placeholder'
 import type { Editor } from '@tiptap/core'
 import * as writingApi from '../api/writing'
 import type { DraftItem, StoryItem } from '../api/writing'
+import { API_ORIGIN } from '../api/config'
+import { listBranches } from '../api/multipath'
+import type { Branch } from '../api/multipath'
 
 type Mode = 'architect' | 'explorer'
 type SidebarTab = 'reference' | 'extract'
 type SaveState = 'saved' | 'dirty' | 'saving' | 'error'
 
-const API_BASE = 'http://127.0.0.1:8000/api'
+const API_BASE = `${API_ORIGIN}/api`
 
 const card: CSSProperties = {
   background: 'var(--card-bg)',
@@ -208,6 +211,21 @@ export default function WritingPage({
   const [selectedEventIds, setSelectedEventIds] = useState<string[]>([])
   const [direction, setDirection] = useState<string>(() => localStorage.getItem('ws.write.direction') || '')
   const [perspective, setPerspective] = useState<string>(() => localStorage.getItem('ws.write.perspective') || '第三人称限知 · 跟随主角')
+  // 可选多路径创作：默认关闭；开启后可选择某个推演分支作为素材。
+  const [multiPathCreative, setMultiPathCreative] = useState(() => localStorage.getItem('ws.write.multipath') === '1')
+  const [branches, setBranches] = useState<Branch[]>([])
+  const [branchId, setBranchId] = useState('')
+  useEffect(() => { localStorage.setItem('ws.write.multipath', multiPathCreative ? '1' : '0') }, [multiPathCreative])
+  useEffect(() => {
+    if (!multiPathCreative || !worldId) {
+      setBranches([])
+      setBranchId('')
+      return
+    }
+    listBranches(worldId)
+      .then((rows) => setBranches(rows.filter((b) => b.status !== 'archived')))
+      .catch(() => setBranches([]))
+  }, [multiPathCreative, worldId])
   const [generating, setGenerating] = useState(false)
   const [generatingText, setGeneratingText] = useState('')
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>('reference')
@@ -434,7 +452,9 @@ export default function WritingPage({
     setModalOpen(false)
     setGenerating(true)
     setGeneratingText('')
-    const effectiveEventIds = selectedEventIds.length > 0 ? selectedEventIds : events.slice(0, 5).map((event) => event.id)
+    // 选择分支时以分支内事件为素材，忽略上方的主时间线事件勾选。
+    const activeBranch = branches.find((branch) => branch.id === branchId)
+    const effectiveEventIds = branchId ? [] : (selectedEventIds.length > 0 ? selectedEventIds : events.slice(0, 5).map((event) => event.id))
     try {
       if (currentRef.current && dirtyRef.current) await saveCurrent()
       const full = await writingApi.streamGenerate(
@@ -443,6 +463,7 @@ export default function WritingPage({
           event_ids: effectiveEventIds,
           user_direction: direction,
           perspective,
+          branch_id: branchId || undefined,
         },
         (chunk) => setGeneratingText((prev) => prev + chunk)
       )
@@ -450,7 +471,9 @@ export default function WritingPage({
         throw new Error(full.replace('[生成中断', '').trim() || 'AI 没有返回正文，请检查模型额度后重试')
       }
       const chosen = events.filter((event) => effectiveEventIds.includes(event.id))
-      const title = chosen[0]?.name ? `推演 · ${chosen[0].name}` : `推演章节 ${stories.length + 1}`
+      const title = branchId && activeBranch
+        ? `推演 · ${activeBranch.name}`
+        : (chosen[0]?.name ? `推演 · ${chosen[0].name}` : `推演章节 ${stories.length + 1}`)
       const story = await writingApi.createStory({
         world_id: worldId,
         title,
@@ -1183,6 +1206,42 @@ export default function WritingPage({
                     </label>
                   )
                 })
+              )}
+            </div>
+            <div style={{ padding: '12px 20px', borderTop: '1px dashed var(--card-border)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', color: 'var(--text-main)', fontWeight: 700, cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={multiPathCreative}
+                  onChange={(event) => setMultiPathCreative(event.target.checked)}
+                />
+                启用多路径创作（可选）
+                <span style={{ fontSize: '10px', fontWeight: 400, color: 'var(--text-muted)' }}>
+                  关闭时按原有写作流程；开启后可选一个推演分支，围绕不同走向创作。
+                </span>
+              </label>
+              {multiPathCreative && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  <select
+                    value={branchId}
+                    onChange={(event) => setBranchId(event.target.value)}
+                    style={{ ...inputStyle, maxWidth: '360px', fontWeight: 400 }}
+                  >
+                    <option value="">主时间线（默认）</option>
+                    {branches.map((branch) => (
+                      <option key={branch.id} value={branch.id}>
+                        {branch.name}（{branch.node_count} 个节点）
+                      </option>
+                    ))}
+                  </select>
+                  <span style={{ fontSize: '10px', color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                    {branchId
+                      ? '将以该分支内的事件与推演记录为素材，上方主时间线事件勾选暂不生效。'
+                      : branches.length === 0
+                        ? '当前世界还没有推演分支，可先到「多路径推演」或 07 模拟运行中创建。'
+                        : '选择分支后，生成结果只来自该分支沙盒，不污染主时间线。'}
+                  </span>
+                </div>
               )}
             </div>
             <div style={{ padding: '14px 20px', borderTop: '1px dashed var(--card-border)', display: 'grid', gridTemplateColumns: '1.25fr 1fr', gap: '12px' }}>

@@ -1,6 +1,14 @@
 import { useState, useEffect } from 'react';
+import { API_ORIGIN } from '../api/config';
+import { createBranch, listBranches, listDirections, simulateBranch } from '../api/multipath';
+import type { Branch, Direction } from '../api/multipath';
 
-export default function SimulationPage({ onWriteChapter }: { onWriteChapter?: (eventId: string) => void }) {
+type Props = {
+  onWriteChapter?: (eventId: string) => void
+  onOpenMultipath?: () => void
+}
+
+export default function SimulationPage({ onWriteChapter, onOpenMultipath }: Props) {
   const [events, setEvents] = useState<any[]>([]);
   const [simulations, setSimulations] = useState<any[]>([]); // ✅ 记录已推演的数据
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
@@ -13,19 +21,26 @@ export default function SimulationPage({ onWriteChapter }: { onWriteChapter?: (e
   const [direction, setDirection] = useState<string>(() => localStorage.getItem('ws.sim.direction') || '');
   const [perspective, setPerspective] = useState<string>(() => localStorage.getItem('ws.sim.perspective') || '第三人称限知 · 跟随主导人物');
 
+  // 可选多路径：默认关闭，关闭时流程与原来完全一致。
+  const [multiPathEnabled, setMultiPathEnabled] = useState(false);
+  const [mpDirections, setMpDirections] = useState<Direction[]>([]);
+  const [mpBranches, setMpBranches] = useState<Branch[]>([]);
+  const [mpBusy, setMpBusy] = useState(false);
+  const [mpNote, setMpNote] = useState('');
+
   useEffect(() => { localStorage.setItem('ws.sim.direction', direction); }, [direction]);
   useEffect(() => { localStorage.setItem('ws.sim.perspective', perspective); }, [perspective]);
 
   useEffect(() => {
     // 拉取事件和推演记录
     Promise.all([
-      fetch("http://127.0.0.1:8000/api/events").then(res => res.json()),
-      fetch("http://127.0.0.1:8000/api/simulations").then(res => res.json())
+      fetch(`${API_ORIGIN}/api/events`).then(res => res.json()),
+      fetch(`${API_ORIGIN}/api/simulations`).then(res => res.json())
     ]).then(([eventsData, simsData]) => {
       setEvents(eventsData);
       setSimulations(simsData);
     }).catch(err => console.error("加载数据失败", err));
-    fetch("http://127.0.0.1:8000/api/ai/status")
+    fetch(`${API_ORIGIN}/api/ai/status`)
       .then(res => res.json())
       .then(setAiStatus)
       .catch(() => setAiStatus(null));
@@ -34,7 +49,7 @@ export default function SimulationPage({ onWriteChapter }: { onWriteChapter?: (e
   const probeAi = async () => {
     setAiProbing(true)
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/ai/status?probe=true")
+      const res = await fetch(`${API_ORIGIN}/api/ai/status?probe=true`)
       setAiStatus(await res.json())
     } catch {
       setAiStatus({ configured: false, probe_error: "无法连接后端" })
@@ -50,7 +65,7 @@ export default function SimulationPage({ onWriteChapter }: { onWriteChapter?: (e
       return;
     }
     
-    fetch(`http://127.0.0.1:8000/api/simulations/${selectedEvent.id}`)
+    fetch(`${API_ORIGIN}/api/simulations/${selectedEvent.id}`)
       .then(res => res.json())
       .then(data => {
         if (data && data.length > 0) {
@@ -96,7 +111,7 @@ export default function SimulationPage({ onWriteChapter }: { onWriteChapter?: (e
       setSimulationResult(null);
 
       try {
-        const res = await fetch("http://127.0.0.1:8000/api/simulate", {
+        const res = await fetch(`${API_ORIGIN}/api/simulate`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ event_id: ev.id, direction, perspective })
@@ -124,7 +139,7 @@ export default function SimulationPage({ onWriteChapter }: { onWriteChapter?: (e
     }
     
     // 刷新全局数据
-    fetch("http://127.0.0.1:8000/api/simulations").then(res => res.json()).then(data => setSimulations(data));
+    fetch(`${API_ORIGIN}/api/simulations`).then(res => res.json()).then(data => setSimulations(data));
     setLogs(prev => [...prev, `\n🎉 连续推演结束！世界线已更新。`]);
     setIsSimulating(false);
   };
@@ -142,7 +157,7 @@ export default function SimulationPage({ onWriteChapter }: { onWriteChapter?: (e
     setSimulationResult(null);
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/simulate", {
+      const res = await fetch(`${API_ORIGIN}/api/simulate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ event_id: selectedEvent.id, direction, perspective })
@@ -163,12 +178,65 @@ export default function SimulationPage({ onWriteChapter }: { onWriteChapter?: (e
       });
       
       // 刷新推演记录
-      fetch("http://127.0.0.1:8000/api/simulations").then(res => res.json()).then(data => setSimulations(data));
+      fetch(`${API_ORIGIN}/api/simulations`).then(res => res.json()).then(data => setSimulations(data));
       
     } catch (error: any) {
       setLogs(prev => [...prev, `❌ 错误：${error.message}`]);
     } finally {
       setIsSimulating(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!multiPathEnabled || !selectedEvent) {
+      setMpDirections([]);
+      setMpBranches([]);
+      return;
+    }
+    let alive = true;
+    Promise.all([
+      listDirections(selectedEvent.id).catch(() => [] as Direction[]),
+      (selectedEvent.world_id ? listBranches(selectedEvent.world_id) : Promise.resolve([] as Branch[])),
+    ]).then(([dirs, branches]) => {
+      if (!alive) return;
+      setMpDirections(dirs as Direction[]);
+      setMpBranches((branches as Branch[]).filter((b) => b.root_event_id === selectedEvent.id && b.status !== 'archived'));
+    });
+    return () => { alive = false; };
+  }, [multiPathEnabled, selectedEvent]);
+
+  const handleCreateBranch = async (dir?: Direction) => {
+    if (!selectedEvent) return;
+    setMpBusy(true);
+    try {
+      const fallback = dir ? `方向：${dir.name}` : `分支：${selectedEvent.name}`;
+      const name = (mpNote.trim() || fallback).slice(0, 40);
+      const branch = await createBranch({
+        root_event_id: selectedEvent.id,
+        source_direction_id: dir?.id,
+        name,
+      });
+      setMpBranches((prev) => [branch, ...prev]);
+      setMpNote('');
+      setLogs((prev) => [...prev, `⑂ 已创建分支「${branch.name}」（沙盒，不影响主时间线）`]);
+    } catch (error: any) {
+      setLogs((prev) => [...prev, `❌ 创建分支失败：${error.message || error}`]);
+    } finally {
+      setMpBusy(false);
+    }
+  };
+
+  const handleSimulateBranch = async (branch: Branch) => {
+    if (!selectedEvent) return;
+    setMpBusy(true);
+    try {
+      const result = await simulateBranch(branch.id, { event_id: selectedEvent.id, perspective });
+      setMpBranches((prev) => prev.map((b) => (b.id === branch.id ? { ...b, node_count: (b.node_count || 0) + 1 } : b)));
+      setLogs((prev) => [...prev, `⑂ 分支「${branch.name}」推演完成：${result.state_hint || '已写入分支快照'}`]);
+    } catch (error: any) {
+      setLogs((prev) => [...prev, `❌ 分支推演失败：${error.message || error}`]);
+    } finally {
+      setMpBusy(false);
     }
   };
 
@@ -283,6 +351,88 @@ export default function SimulationPage({ onWriteChapter }: { onWriteChapter?: (e
             />
             <span style={{ fontSize: '10px', lineHeight: 1.5 }}>视角决定重点观察谁，不改变世界客观变化。设置会自动记住。</span>
           </label>
+        </div>
+
+        <div style={{ padding: '10px 18px', borderBottom: '1px solid var(--card-border)', background: 'rgba(128,128,128,0.03)' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'var(--text-main)', fontWeight: 600, cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={multiPathEnabled}
+              onChange={(event) => setMultiPathEnabled(event.target.checked)}
+            />
+            启用多路径（可选）
+            <span style={{ fontSize: '10px', fontWeight: 400, color: 'var(--text-muted)' }}>
+              关闭时保持原有单线推演；开启后可从同一事件分出不同走向，结果存入沙盒。
+            </span>
+          </label>
+          {multiPathEnabled && (
+            <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '7px' }}>
+              {!selectedEvent && (
+                <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>先在左侧选择一个事件，再建分支。</div>
+              )}
+              {selectedEvent && (
+                <>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <input
+                      value={mpNote}
+                      onChange={(event) => setMpNote(event.target.value)}
+                      placeholder="分支名称（可选，留空自动命名）"
+                      style={{ flex: 1, padding: '5px 8px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'var(--card-bg)', color: 'var(--text-main)', fontSize: '11px' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => void handleCreateBranch()}
+                      disabled={mpBusy}
+                      style={{ padding: '5px 10px', borderRadius: '6px', border: '1px solid var(--primary-color)', background: 'transparent', color: 'var(--primary-color)', fontSize: '10px', cursor: mpBusy ? 'not-allowed' : 'pointer' }}
+                    >
+                      从此事件建分支
+                    </button>
+                  </div>
+                  {mpDirections.length > 0 && (
+                    <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', alignItems: 'center', fontSize: '10px', color: 'var(--text-muted)' }}>
+                      按方向建分支：
+                      {mpDirections.slice(0, 4).map((dir) => (
+                        <button
+                          key={dir.id}
+                          type="button"
+                          onClick={() => void handleCreateBranch(dir)}
+                          disabled={mpBusy}
+                          style={{ padding: '3px 7px', borderRadius: '999px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)', fontSize: '10px', cursor: mpBusy ? 'not-allowed' : 'pointer' }}
+                        >
+                          {dir.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {mpBranches.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      {mpBranches.slice(0, 4).map((branch) => (
+                        <div key={branch.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10px', color: 'var(--text-muted)' }}>
+                          <span style={{ color: 'var(--text-main)' }}>⑂ {branch.name}</span>
+                          <span>{branch.node_count} 个节点</span>
+                          <button
+                            type="button"
+                            onClick={() => void handleSimulateBranch(branch)}
+                            disabled={mpBusy}
+                            style={{ padding: '2px 6px', borderRadius: '5px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)', fontSize: '10px', cursor: mpBusy ? 'not-allowed' : 'pointer' }}
+                          >
+                            在分支中推演
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+              <button
+                type="button"
+                onClick={() => onOpenMultipath?.()}
+                style={{ alignSelf: 'flex-start', padding: '0', border: 'none', background: 'transparent', color: 'var(--primary-color)', fontSize: '10px', cursor: 'pointer' }}
+              >
+                前往多路径工作台（方向 / 节点 / 结局 / 对比）→
+              </button>
+            </div>
+          )}
         </div>
 
         <div style={{ flex: 1, padding: '24px', overflowY: 'auto', fontFamily: 'monospace', fontSize: '13px', lineHeight: 1.8, color: 'var(--text-main)' }}>

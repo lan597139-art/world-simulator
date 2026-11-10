@@ -19,6 +19,9 @@ function needsAiKey(url: string) {
       path === '/api/ai/status' ||
       path === '/api/simulate' ||
       path.startsWith('/api/writing/') ||
+      path.startsWith('/api/branches/') ||
+      /^\/api\/events\/[^/]+\/directions\/suggest$/.test(path) ||
+      path === '/api/assistant/chat' ||
       /^\/api\/writings\/[^/]+\/(analyze|extract)$/.test(path) ||
       /^\/api\/characters\/[^/]+\/biography\/generate$/.test(path)
     )

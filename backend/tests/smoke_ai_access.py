@@ -7,8 +7,11 @@ import urllib.request
 BASE = "http://127.0.0.1:8000/api"
 
 
-def call(path, headers=None):
-    req = urllib.request.Request(BASE + path, headers=headers or {})
+def call(path, headers=None, body=None, method="GET"):
+    data = json.dumps(body).encode("utf-8") if body is not None else None
+    req = urllib.request.Request(BASE + path, headers=headers or {}, data=data, method=method)
+    if body is not None:
+        req.add_header("Content-Type", "application/json")
     try:
         with urllib.request.urlopen(req, timeout=30) as response:
             return response.status, json.loads(response.read().decode() or "null")
@@ -43,6 +46,20 @@ def main():
     check("访客 Key 被识别", code == 200 and personal.get("using_personal_key") is True, str(personal))
     check("访客模型生效", personal.get("model") == "deepseek-ai/DeepSeek-V4.1-Flash", str(personal))
     check("不返回完整 Key", personal.get("key_hint") == "sk-v…7890", str(personal))
+
+    bogus = {"X-AI-API-Key": "sk-invalid-for-smoke", "X-AI-Base-URL": "https://api.siliconflow.cn/v1"}
+    code, worlds = call("/worlds")
+    world_id = next((w["id"] for w in worlds if not w.get("archived_at")), None) if isinstance(worlds, list) else None
+    code, events = call(f"/events?world_id={world_id}") if world_id else (0, [])
+    event_id = next((e["id"] for e in events if not e.get("branch_id")), None) if isinstance(events, list) else None
+    if event_id:
+        code, body = call("/simulate", bogus, {"event_id": event_id}, "POST")
+        check("07 AI 失败统一返回 502", code == 502, str(body))
+    else:
+        check("07 AI 失败统一返回 502", False, "无事件可测")
+
+    code, body = call("/writing/assist", bogus, {"action": "polish", "text": "测试文本"}, "POST")
+    check("08 AI 失败统一返回 502", code == 502, str(body))
 
     print(f"\n===== {passed} passed, {failed} failed")
     return 1 if failed else 0

@@ -14,11 +14,11 @@ passed = 0
 failed = 0
 
 
-def call(method, path, body=None):
+def call(method, path, body=None, headers=None):
     data = json.dumps(body).encode("utf-8") if body is not None else None
-    req = urllib.request.Request(
-        BASE + path, data=data, method=method, headers={"Content-Type": "application/json"}
-    )
+    merged = {"Content-Type": "application/json"}
+    merged.update(headers or {})
+    req = urllib.request.Request(BASE + path, data=data, method=method, headers=merged)
     try:
         with urllib.request.urlopen(req) as res:
             raw = res.read().decode("utf-8")
@@ -117,6 +117,36 @@ def main():
         other = next(d for d in drafts if d["entity_type"] != "character")
         code, _ = call("POST", f"/drafts/{other['id']}/ignore")
         check("POST 忽略草稿", code == 200)
+
+        # --- 可选多路径创作（阶段 F1）---
+        code, source_event = call(
+            "POST",
+            "/events",
+            {"world_id": world_id, "name": "分支素材事件", "description": "用于写作分支校验", "polarity": "威胁", "intensity": "中"},
+        )
+        check("创建分支素材事件", code == 200 and source_event.get("id"), str(source_event))
+        source_event_id = source_event["id"]
+
+        code, branch = call("POST", "/branches", {"root_event_id": source_event_id, "name": "写作支线"})
+        check("创建写作分支", code == 200 and branch.get("id"), str(branch))
+        branch_id = branch["id"]
+
+        code, _ = call("POST", "/writing/generate", {"world_id": world_id, "branch_id": "missing-branch"})
+        check("未知分支写作 404", code == 404, str(_))
+
+        code, empty = call("POST", "/writing/generate", {"world_id": world_id, "branch_id": branch_id})
+        check("分支无事件时 422 而不是空写", code == 422, str(empty))
+
+        bogus = {"X-AI-API-Key": "sk-invalid-for-smoke", "X-AI-Base-URL": "https://api.siliconflow.cn/v1"}
+        code, _ = call("POST", "/writing/assist", {"action": "polish", "text": "测试文本"}, headers=bogus)
+        check("08 AI 建流失败返回 502", code == 502, str(_))
+
+        code, _ = call("POST", "/writing/generate", {"world_id": world_id}, headers=bogus)
+        check("08 正文生成建流失败返回 502", code == 502, str(_))
+
+        code, _ = call("DELETE", f"/branches/{branch_id}")
+        code, archived = call("POST", "/writing/generate", {"world_id": world_id, "branch_id": branch_id})
+        check("已归档分支写作 409", code == 409, str(archived))
 
         code, _ = call("DELETE", f"/writings/{story_id}")
         check("DELETE /writings", code == 200)

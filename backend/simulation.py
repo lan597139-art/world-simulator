@@ -78,7 +78,8 @@ def simulate_event(payload: dict, db: Session = Depends(get_db)):
     
     print("✅ AI 推演返回完成，准备处理数据")
     if "error" in result:
-        raise HTTPException(status_code=500, detail=result["error"])
+        # AI 上游失败统一为 502，便于前端区分「后端故障」与「模型/额度问题」。
+        raise HTTPException(status_code=502, detail=result["error"])
 
     # ✅ 1. 处理 AI 返回的关系变化，直接反哺数据库
     rel_changes = result.get("relationship_changes", [])

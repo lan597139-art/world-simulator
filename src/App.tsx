@@ -417,6 +417,7 @@ export default function App() {
                 setWritingSeedEventIds([eventId])
                 navigate('writing')
               }}
+              onOpenMultipath={() => navigate('multipath')}
             />
           ) : activePage === 'multipath' ? (
             <MultiPathPage worldId={currentWorldId} />

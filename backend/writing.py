@@ -278,10 +278,24 @@ def generate_story(payload: dict, db: Session = Depends(get_db)):
     event_ids = _as_list(payload.get("event_ids"))
     user_direction = (payload.get("user_direction") or "").strip()[:2000]
     perspective = (payload.get("perspective") or "").strip()[:200]
+    branch_id = (payload.get("branch_id") or "").strip()[:64] or None
+    if branch_id:
+        branch = db.query(models.SimulationBranch).filter(models.SimulationBranch.id == branch_id).first()
+        if not branch:
+            fail(404, "BRANCH_NOT_FOUND", "推演分支不存在")
+        if branch.status == "archived":
+            fail(409, "BRANCH_ARCHIVED", "该分支已归档，无法作为写作素材")
+        world_id = world_id or branch.world_id
     if world_id:
         get_world(db, world_id)
+    if branch_id and world_id and branch.world_id != world_id:
+        fail(422, "BRANCH_WORLD_MISMATCH", "分支与所选世界不一致")
 
-    query = db.query(models.Event).filter(models.Event.branch_id.is_(None))
+    query = db.query(models.Event)
+    if branch_id:
+        query = query.filter(models.Event.branch_id == branch_id)
+    else:
+        query = query.filter(models.Event.branch_id.is_(None))
     if world_id:
         query = query.filter(models.Event.world_id == world_id)
     if event_ids:
@@ -292,7 +306,11 @@ def generate_story(payload: dict, db: Session = Depends(get_db)):
     if not events:
         fail(422, "NO_MATERIAL", "当前世界或选中的事件中没有内容，无法生成")
 
-    sims = db.query(models.SimulationRun).filter(models.SimulationRun.branch_id.is_(None))
+    sims = db.query(models.SimulationRun)
+    if branch_id:
+        sims = sims.filter(models.SimulationRun.branch_id == branch_id)
+    else:
+        sims = sims.filter(models.SimulationRun.branch_id.is_(None))
     if event_ids:
         sims = sims.filter(models.SimulationRun.event_id.in_(event_ids))
     elif world_id:
@@ -336,14 +354,19 @@ def generate_story(payload: dict, db: Session = Depends(get_db)):
 {context}
 """
 
+    try:
+        response = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.8,
+            stream=True,
+        )
+    except Exception as exc:  # pragma: no cover - network dependent
+        # 建流阶段失败（鉴权/模型不存在/额度）直接给出 502，而不是把错误混进正文。
+        fail(502, "AI_ERROR", _ai_error_message(exc))
+
     def stream():
         try:
-            response = client.chat.completions.create(
-                model=model,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.8,
-                stream=True,
-            )
             for chunk in response:
                 text = chunk.choices[0].delta.content
                 if text:
@@ -1060,14 +1083,18 @@ def assist_writing(payload: dict):
         user_prompt += f"\n【上下文】\n{context[:4000]}\n"
     user_prompt += f"\n【选中文字】\n{text[:8000]}"
 
+    try:
+        response = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": user_prompt}],
+            temperature=0.7,
+            stream=True,
+        )
+    except Exception as exc:  # pragma: no cover - network dependent
+        fail(502, "AI_ERROR", _ai_error_message(exc))
+
     def stream():
         try:
-            response = client.chat.completions.create(
-                model=model,
-                messages=[{"role": "user", "content": user_prompt}],
-                temperature=0.7,
-                stream=True,
-            )
             for chunk in response:
                 delta = chunk.choices[0].delta.content
                 if delta:

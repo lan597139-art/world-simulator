@@ -1,4 +1,6 @@
-const API_BASE = 'http://127.0.0.1:8000/api'
+import { API_ORIGIN } from './config'
+
+const API_BASE = `${API_ORIGIN}/api`
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
@@ -161,7 +163,7 @@ async function streamText(
 }
 
 export const streamGenerate = (
-  body: { world_id?: string; event_ids?: string[]; user_direction?: string; perspective?: string },
+  body: { world_id?: string; event_ids?: string[]; user_direction?: string; perspective?: string; branch_id?: string },
   onChunk: (text: string) => void,
   signal?: AbortSignal
 ) => streamText('/writing/generate', body, onChunk, signal)
