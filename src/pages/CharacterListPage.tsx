@@ -203,6 +203,16 @@ export default function CharacterListPage({
                 成长
               </button>
               <button
+                onClick={(event) => {
+                  event.stopPropagation()
+                  sessionStorage.setItem('ws.chatCharacterId', char.id)
+                  onNavigate?.('chat')
+                }}
+                style={{ padding: '8px 10px', background: 'rgba(128,128,128,0.08)', color: 'var(--primary-color)', border: '1px solid var(--primary-color)', borderRadius: '8px', cursor: 'pointer' }}
+              >
+                聊天
+              </button>
+              <button
                 onClick={(event) => { event.stopPropagation(); setBioCharacter({ id: char.id, name: char.name }) }}
                 style={{ padding: '8px 10px', background: 'rgba(128,128,128,0.08)', color: 'var(--text-main)', border: '1px solid var(--card-border)', borderRadius: '8px', cursor: 'pointer' }}
               >

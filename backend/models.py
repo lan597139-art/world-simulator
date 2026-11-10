@@ -963,3 +963,96 @@ class StoryRejoin(Base):
     note = Column(String, default="")
     status = Column(String, default="planned")
     created_at = Column(DateTime, default=_now)
+
+
+# =====================================================================
+# AI 角色聊天室：角色配置 / 会话 / 消息 / 记忆
+# =====================================================================
+class AiRole(Base):
+    """人物在聊天中的运行配置；由档案生成，不回写 characters。"""
+
+    __tablename__ = "ai_roles"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    world_id = Column(String, nullable=False, index=True)
+    character_id = Column(String, nullable=False, unique=True)
+    enabled = Column(Boolean, default=True, nullable=False)
+    display_name = Column(String, default="")
+    persona = Column(JSON, default=dict)
+    source = Column(String, default="auto")  # auto/manual
+    version = Column(Integer, default=1)
+    status = Column(String, default="active")
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now)
+
+
+class ChatThread(Base):
+    """私聊或群聊会话。"""
+
+    __tablename__ = "chat_threads"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    world_id = Column(String, nullable=False, index=True)
+    kind = Column(String, default="private")  # private/group
+    title = Column(String, default="")
+    status = Column(String, default="active")
+    settings = Column(JSON, default=dict)
+    summary = Column(Text, default="")
+    last_message_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=_now)
+
+
+class ChatParticipant(Base):
+    __tablename__ = "chat_participants"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    thread_id = Column(String, nullable=False, index=True)
+    character_id = Column(String, nullable=False)
+    role_id = Column(String, nullable=True)
+    order_index = Column(Integer, default=0)
+    speak_policy = Column(String, default="auto")  # auto/when_mentioned/silent
+    joined_at = Column(DateTime, default=_now)
+
+
+class ChatMessage(Base):
+    __tablename__ = "chat_messages"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    thread_id = Column(String, nullable=False, index=True)
+    sender_type = Column(String, default="user")  # user/character/system
+    character_id = Column(String, nullable=True)
+    content = Column(Text, default="")
+    reply_to_id = Column(String, nullable=True)
+    meta = Column(JSON, default=dict)
+    created_at = Column(DateTime, default=_now, index=True)
+
+
+class CharacterMemory(Base):
+    """角色记忆：按角色+线程隔离，不进入人物正式档案。"""
+
+    __tablename__ = "character_memories"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    world_id = Column(String, nullable=False, index=True)
+    character_id = Column(String, nullable=False, index=True)
+    thread_id = Column(String, nullable=True, index=True)
+    scope = Column(String, default="private")  # private/group/global
+    kind = Column(String, default="episodic")
+    content = Column(Text, default="")
+    importance = Column(Float, default=0.4)
+    source_message_ids = Column(JSON, default=list)
+    last_used_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=_now)
+
+
+class ChatPlan(Base):
+    """群聊发言计划（F5 使用，保留审计）。"""
+
+    __tablename__ = "chat_plans"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    thread_id = Column(String, nullable=False, index=True)
+    trigger_message_id = Column(String, nullable=True)
+    plan = Column(JSON, default=dict)
+    model = Column(String, default="")
+    created_at = Column(DateTime, default=_now)

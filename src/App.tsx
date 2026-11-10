@@ -14,6 +14,7 @@ import EventsPage from './pages/EventsPage'
 import SimulationPage from './pages/SimulationPage'
 import MultiPathPage from './pages/MultiPathPage'
 import StorylinePage from './pages/StorylinePage'
+import ChatPage from './pages/ChatPage'
 import WritingPage from './pages/WritingPage'
 import WorldDataPage from './pages/WorldDataPage'
 import WorldStructurePage from './pages/WorldStructurePage'
@@ -33,6 +34,7 @@ type PageKey =
   | 'simulation' 
   | 'multipath'
   | 'storyline'
+  | 'chat'
   | 'writing' 
   | 'world-building'
   | 'world-data' 
@@ -213,6 +215,7 @@ export default function App() {
       title: `当前世界：${currentWorldName}`, 
       items: [
         { key: 'character-management', label: dict.characterManagement, icon: '♙' },
+        { key: 'chat', label: 'AI 角色聊天', icon: '✉' },
         { key: 'world-structure', label: '世界结构', icon: '◈' },
         { key: 'world-data', label: '世界设定', icon: '🌍' },
         { key: 'relationships', label: dict.relationships, icon: '⛓' },
@@ -426,6 +429,8 @@ export default function App() {
             <MultiPathPage worldId={currentWorldId} />
           ) : activePage === 'storyline' ? (
             <StorylinePage worldId={currentWorldId} />
+          ) : activePage === 'chat' ? (
+            <ChatPage worldId={currentWorldId} />
           ) : activePage === 'writing' ? (
             <WritingPage worldId={currentWorldId} seedEventIds={writingSeedEventIds} />
            ) : activePage === 'timeline' ? (

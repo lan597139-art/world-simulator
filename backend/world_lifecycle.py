@@ -38,6 +38,14 @@ _STORY_TABLES = {
     "story_endings",
     "story_rejoins",
 }
+_CHAT_TABLES = {
+    "ai_roles",
+    "chat_threads",
+    "chat_participants",
+    "chat_messages",
+    "character_memories",
+    "chat_plans",
+}
 _GLOBAL_TABLES = ("location_types", "resource_types", "relationship_types")
 
 
@@ -52,6 +60,7 @@ def world_tables():
         if table.name not in _META_TABLES
         and table.name not in _MULTIPATH_TABLES
         and table.name not in _STORY_TABLES
+        and table.name not in _CHAT_TABLES
         and table.name != "worlds"
         and "world_id" in table.c
     ]
@@ -191,6 +200,19 @@ def _cascade_delete_world(db: Session, world_id: str):
     db.query(models.StoryUnit).filter(models.StoryUnit.world_id == world_id).delete(synchronize_session=False)
     db.query(models.StorySpace).filter(models.StorySpace.world_id == world_id).delete(synchronize_session=False)
     db.query(models.StoryProject).filter(models.StoryProject.world_id == world_id).delete(synchronize_session=False)
+
+    # 聊天室不进入世界快照；清理世界时按会话依赖顺序移除。
+    chat_thread_ids = [
+        row[0]
+        for row in db.query(models.ChatThread.id).filter(models.ChatThread.world_id == world_id).all()
+    ]
+    if chat_thread_ids:
+        db.query(models.ChatPlan).filter(models.ChatPlan.thread_id.in_(chat_thread_ids)).delete(synchronize_session=False)
+        db.query(models.ChatMessage).filter(models.ChatMessage.thread_id.in_(chat_thread_ids)).delete(synchronize_session=False)
+        db.query(models.ChatParticipant).filter(models.ChatParticipant.thread_id.in_(chat_thread_ids)).delete(synchronize_session=False)
+        db.query(models.ChatThread).filter(models.ChatThread.world_id == world_id).delete(synchronize_session=False)
+    db.query(models.CharacterMemory).filter(models.CharacterMemory.world_id == world_id).delete(synchronize_session=False)
+    db.query(models.AiRole).filter(models.AiRole.world_id == world_id).delete(synchronize_session=False)
 
     for table in reversed(world_tables()):
         db.execute(table.delete().where(table.c.world_id == world_id))
