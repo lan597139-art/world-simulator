@@ -36,6 +36,7 @@ from trash import router as trash_router
 from snapshots import router as snapshots_router
 from biography import router as biography_router
 from official import ensure_official_world, router as official_router
+from storyline import router as storyline_router
 
 # 建表（新表）+ 增量迁移（已有表加列、数据回填）
 models.Base.metadata.create_all(bind=engine)
@@ -96,6 +97,7 @@ for router in (
     official_router,
     multipath_router,
     assistant_router,
+    storyline_router,
 ):
     app.include_router(router)
 

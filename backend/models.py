@@ -813,3 +813,153 @@ class WorldSnapshot(Base):
     data = Column(Text, default="")
     entity_count = Column(Integer, default=0)
     created_at = Column(DateTime, default=_now, index=True)
+
+
+# =====================================================================
+# 故事线：故事 / 空间 / 结构单元 / 选择节点 / 结局
+# =====================================================================
+class StoryProject(Base):
+    """故事总览：一部作品的顶层容器（区别于 stories 章节表）。"""
+
+    __tablename__ = "story_projects"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    world_id = Column(String, nullable=False, index=True)
+    title = Column(String, default="未命名故事")
+    premise = Column(Text, default="")
+    status = Column(String, default="planning")  # planning/active/completed/archived
+    settings = Column(JSON, default=dict)
+    official_key = Column(String, unique=True, nullable=True)
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now)
+
+
+class StorySpace(Base):
+    """平行空间：绑定推演分支以获得独立快照；原始空间不绑定分支。"""
+
+    __tablename__ = "story_spaces"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    story_id = Column(String, nullable=False, index=True)
+    world_id = Column(String, nullable=False, index=True)
+    name = Column(String, default="")
+    is_original = Column(Boolean, default=False, nullable=False)
+    parent_space_id = Column(String, nullable=True)
+    fork_choice_id = Column(String, nullable=True)
+    branch_id = Column(String, nullable=True, unique=True)
+    base_node_id = Column(String, nullable=True)
+    status = Column(String, default="active")  # active/archived
+    summary = Column(Text, default="")
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now)
+
+
+class StoryUnit(Base):
+    """结构单元：主线 / 支线 / 副本 / 阶段，属于某个空间。"""
+
+    __tablename__ = "story_units"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    story_id = Column(String, nullable=False, index=True)
+    world_id = Column(String, nullable=False, index=True)
+    space_id = Column(String, nullable=False, index=True)
+    parent_unit_id = Column(String, nullable=True)
+    kind = Column(String, default="mainline")  # mainline/side/instance/phase
+    title = Column(String, default="")
+    summary = Column(Text, default="")
+    order_index = Column(Integer, default=0)
+    status = Column(String, default="planned")
+    meta = Column(JSON, default=dict)
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now)
+
+
+class StoryUnitEvent(Base):
+    """单元与既有事件的挂接（事件本身仍存于 events 表）。"""
+
+    __tablename__ = "story_unit_events"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    world_id = Column(String, nullable=False, index=True)
+    unit_id = Column(String, nullable=False, index=True)
+    event_id = Column(String, nullable=False, index=True)
+    role = Column(String, default="normal")  # normal/choice/climax/ending
+    order_index = Column(Integer, default=0)
+    is_shared = Column(Boolean, default=False, nullable=False)
+    note = Column(String, default="")
+    created_at = Column(DateTime, default=_now)
+
+
+class StoryChoice(Base):
+    """选择节点：发生在某空间，可产生多个平行空间。"""
+
+    __tablename__ = "story_choices"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    story_id = Column(String, nullable=False, index=True)
+    world_id = Column(String, nullable=False, index=True)
+    space_id = Column(String, nullable=False, index=True)
+    anchor_event_id = Column(String, nullable=True)
+    title = Column(String, default="")
+    description = Column(Text, default="")
+    precondition = Column(JSON, default=dict)
+    allow_rejoin = Column(Boolean, default=False, nullable=False)
+    status = Column(String, default="open")  # open/resolved/abandoned
+    resolved_option_id = Column(String, nullable=True)
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now)
+
+
+class StoryChoiceOption(Base):
+    """选择项：用户自定义方向；resolve 后指向一个空间。"""
+
+    __tablename__ = "story_choice_options"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    world_id = Column(String, nullable=False, index=True)
+    choice_id = Column(String, nullable=False, index=True)
+    label = Column(String, default="")
+    description = Column(Text, default="")
+    consequence = Column(Text, default="")
+    target_space_id = Column(String, nullable=True)
+    source = Column(String, default="user")  # user/ai
+    confirmed = Column(Boolean, default=True, nullable=False)
+    order_index = Column(Integer, default=0)
+    created_at = Column(DateTime, default=_now)
+
+
+class StoryEnding(Base):
+    """故事结局：最终 / 阶段 / 开放；可导入推演结局。"""
+
+    __tablename__ = "story_endings"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    story_id = Column(String, nullable=False, index=True)
+    world_id = Column(String, nullable=False, index=True)
+    space_id = Column(String, nullable=False, index=True)
+    node_id = Column(String, nullable=True)
+    name = Column(String, default="")
+    content = Column(Text, default="")
+    kind = Column(String, default="final")  # final/stage/open
+    is_final = Column(Boolean, default=False, nullable=False)
+    path_event_ids = Column(JSON, default=list)
+    path_node_ids = Column(JSON, default=list)
+    precondition = Column(JSON, default=dict)
+    source_ending_id = Column(String, nullable=True)
+    created_at = Column(DateTime, default=_now)
+
+
+class StoryRejoin(Base):
+    """空间汇合记录（v1 只记录，不做状态合并）。"""
+
+    __tablename__ = "story_rejoins"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    story_id = Column(String, nullable=False, index=True)
+    world_id = Column(String, nullable=False, index=True)
+    from_space_id = Column(String, nullable=False)
+    to_space_id = Column(String, nullable=False)
+    at_event_id = Column(String, nullable=True)
+    note = Column(String, default="")
+    status = Column(String, default="planned")
+    created_at = Column(DateTime, default=_now)

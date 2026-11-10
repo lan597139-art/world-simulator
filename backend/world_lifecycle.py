@@ -28,6 +28,16 @@ _MULTIPATH_TABLES = {
     "simulation_branch_nodes",
     "simulation_endings",
 }
+_STORY_TABLES = {
+    "story_projects",
+    "story_spaces",
+    "story_units",
+    "story_unit_events",
+    "story_choices",
+    "story_choice_options",
+    "story_endings",
+    "story_rejoins",
+}
 _GLOBAL_TABLES = ("location_types", "resource_types", "relationship_types")
 
 
@@ -41,6 +51,7 @@ def world_tables():
         for table in Base.metadata.sorted_tables
         if table.name not in _META_TABLES
         and table.name not in _MULTIPATH_TABLES
+        and table.name not in _STORY_TABLES
         and table.name != "worlds"
         and "world_id" in table.c
     ]
@@ -170,6 +181,16 @@ def _cascade_delete_world(db: Session, world_id: str):
     db.query(models.SimulationDirection).filter(
         models.SimulationDirection.world_id == world_id
     ).delete(synchronize_session=False)
+
+    # 故事线结构不进世界快照，但清理世界时必须一并移除，避免指向已重建的实体。
+    db.query(models.StoryEnding).filter(models.StoryEnding.world_id == world_id).delete(synchronize_session=False)
+    db.query(models.StoryRejoin).filter(models.StoryRejoin.world_id == world_id).delete(synchronize_session=False)
+    db.query(models.StoryChoiceOption).filter(models.StoryChoiceOption.world_id == world_id).delete(synchronize_session=False)
+    db.query(models.StoryChoice).filter(models.StoryChoice.world_id == world_id).delete(synchronize_session=False)
+    db.query(models.StoryUnitEvent).filter(models.StoryUnitEvent.world_id == world_id).delete(synchronize_session=False)
+    db.query(models.StoryUnit).filter(models.StoryUnit.world_id == world_id).delete(synchronize_session=False)
+    db.query(models.StorySpace).filter(models.StorySpace.world_id == world_id).delete(synchronize_session=False)
+    db.query(models.StoryProject).filter(models.StoryProject.world_id == world_id).delete(synchronize_session=False)
 
     for table in reversed(world_tables()):
         db.execute(table.delete().where(table.c.world_id == world_id))

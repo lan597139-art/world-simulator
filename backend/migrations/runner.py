@@ -25,6 +25,7 @@ MODULES = [
     "m013_simulation_presets",
     "m014_archive_trash_snapshots",
     "m015_multipath",
+    "m016_storyline",
 ]
 
 

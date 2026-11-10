@@ -13,6 +13,7 @@ import { checkBackendHealth } from "./api/client";
 import EventsPage from './pages/EventsPage'
 import SimulationPage from './pages/SimulationPage'
 import MultiPathPage from './pages/MultiPathPage'
+import StorylinePage from './pages/StorylinePage'
 import WritingPage from './pages/WritingPage'
 import WorldDataPage from './pages/WorldDataPage'
 import WorldStructurePage from './pages/WorldStructurePage'
@@ -31,6 +32,7 @@ type PageKey =
   | 'timeline' 
   | 'simulation' 
   | 'multipath'
+  | 'storyline'
   | 'writing' 
   | 'world-building'
   | 'world-data' 
@@ -223,6 +225,7 @@ export default function App() {
         { key: 'timeline', label: dict.timeline, icon: '⏱' },
         { key: 'simulation', label: dict.simulation, icon: '▷' },
         { key: 'multipath', label: '多路径推演', icon: '⑂' },
+        { key: 'storyline', label: '故事线管理', icon: '☰' },
         { key: 'writing', label: dict.writing, icon: '▤' },
       ]
     },
@@ -421,6 +424,8 @@ export default function App() {
             />
           ) : activePage === 'multipath' ? (
             <MultiPathPage worldId={currentWorldId} />
+          ) : activePage === 'storyline' ? (
+            <StorylinePage worldId={currentWorldId} />
           ) : activePage === 'writing' ? (
             <WritingPage worldId={currentWorldId} seedEventIds={writingSeedEventIds} />
            ) : activePage === 'timeline' ? (
