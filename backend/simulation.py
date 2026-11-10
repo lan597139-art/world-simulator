@@ -21,6 +21,8 @@ def simulate_event(payload: dict, db: Session = Depends(get_db)):
     event = db.query(models.Event).filter(models.Event.id == event_id).first()
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
+    if event.branch_id:
+        raise HTTPException(status_code=409, detail="该事件属于某个推演分支，请在分支中推演")
 
     if event.world_id:
         world = db.query(models.World).filter(models.World.id == event.world_id).first()

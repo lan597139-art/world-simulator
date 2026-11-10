@@ -24,6 +24,7 @@ MODULES = [
     "m012_character_runtime",
     "m013_simulation_presets",
     "m014_archive_trash_snapshots",
+    "m015_multipath",
 ]
 
 

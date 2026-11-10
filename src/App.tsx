@@ -12,12 +12,15 @@ import { getAllWorlds } from './services/worldService'
 import { checkBackendHealth } from "./api/client";
 import EventsPage from './pages/EventsPage'
 import SimulationPage from './pages/SimulationPage'
+import MultiPathPage from './pages/MultiPathPage'
 import WritingPage from './pages/WritingPage'
 import WorldDataPage from './pages/WorldDataPage'
 import WorldStructurePage from './pages/WorldStructurePage'
 import ArchivePage from './pages/ArchivePage'
 import TrashPage from './pages/TrashPage'
 import TimeMachinePage from './pages/TimeMachinePage'
+import AIAssistantPanel from './components/AIAssistantPanel'
+import { setAssistantPage } from './api/assistantContext'
 
 type PageKey = 
   | 'overview' 
@@ -27,6 +30,7 @@ type PageKey =
   | 'events' 
   | 'timeline' 
   | 'simulation' 
+  | 'multipath'
   | 'writing' 
   | 'world-building'
   | 'world-data' 
@@ -134,6 +138,16 @@ export default function App() {
     setActivePage(next)
   }
 
+  // 全局 AI 助手：路由切换时同步页面上下文，助手面板统一读取。
+  useEffect(() => {
+    setAssistantPage({
+      page: activePage,
+      label: pageLabel(activePage, dict),
+      worldId: currentWorldId || '',
+      worldName: currentWorldName || '',
+    })
+  }, [activePage, currentWorldId, currentWorldName, lang])
+
   useEffect(() => {
     const params = new URLSearchParams()
     if (currentWorldId) params.set('world', currentWorldId)
@@ -208,6 +222,7 @@ export default function App() {
       items: [
         { key: 'timeline', label: dict.timeline, icon: '⏱' },
         { key: 'simulation', label: dict.simulation, icon: '▷' },
+        { key: 'multipath', label: '多路径推演', icon: '⑂' },
         { key: 'writing', label: dict.writing, icon: '▤' },
       ]
     },
@@ -403,6 +418,8 @@ export default function App() {
                 navigate('writing')
               }}
             />
+          ) : activePage === 'multipath' ? (
+            <MultiPathPage worldId={currentWorldId} />
           ) : activePage === 'writing' ? (
             <WritingPage worldId={currentWorldId} seedEventIds={writingSeedEventIds} />
            ) : activePage === 'timeline' ? (
@@ -418,6 +435,7 @@ export default function App() {
         onClose={() => setAiAccessOpen(false)}
         onSaved={() => setHasPersonalAi(hasPersonalAiKey())}
       />
+      <AIAssistantPanel onNavigate={(page) => navigate(page as PageKey)} />
     </div>
   )
 }

@@ -538,6 +538,8 @@ class Event(Base):
     storyline = Column(String, default="主线")
     scale = Column(String, default="中观")
     caused_by = Column(JSON, default=list)
+    # 多路径推演：为空 = 主时间线；有值 = 该分支独有的后续事件
+    branch_id = Column(String, index=True)
 
 
 class EventEntity(Base):
@@ -570,6 +572,98 @@ class SimulationRun(Base):
     perspective = Column(String, default="")     # 作者预设推演视角
     world_changes = Column(String, default="")
     character_actions = Column(JSON, default=list)
+    # 多路径推演：为空 = 主时间线
+    branch_id = Column(String, index=True)
+    created_at = Column(DateTime, default=_now)
+
+
+# =====================================================================
+# 多路径推演（分支沙盒）
+# =====================================================================
+class SimulationDirection(Base):
+    """事件的发展方向（用户预设 / AI 建议）。"""
+
+    __tablename__ = "simulation_directions"
+
+    id = Column(String, primary_key=True, index=True, default=_uuid)
+    world_id = Column(String, index=True)
+    event_id = Column(String, index=True)
+    name = Column(String)
+    description = Column(Text, default="")
+    trigger_conditions = Column(JSON, default=list)
+    related_character_ids = Column(JSON, default=list)
+    cognition = Column(JSON, default=dict)          # {meaning, attribution, certainty}
+    engine_activation = Column(JSON, default=dict)  # {competing:[], dominant:[]}
+    behavior_output = Column(Text, default="")
+    reality_resistance = Column(Text, default="")
+    direct_result = Column(Text, default="")
+    future_impacts = Column(JSON, default=list)
+    sort_order = Column(Integer, default=0)
+    enabled = Column(Boolean, default=True, nullable=False)
+    source = Column(String, default="user")         # user / ai / ai_confirmed
+    confirmed = Column(Boolean, default=True, nullable=False)
+    note = Column(String, default="")
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now)
+
+
+class SimulationBranch(Base):
+    """一条平行推演分支（沙盒），状态存于快照，不污染主时间线。"""
+
+    __tablename__ = "simulation_branches"
+
+    id = Column(String, primary_key=True, index=True, default=_uuid)
+    world_id = Column(String, index=True)
+    root_event_id = Column(String, index=True)
+    source_direction_id = Column(String)
+    parent_branch_id = Column(String, index=True)
+    parent_node_id = Column(String)
+    name = Column(String)
+    note = Column(String, default="")
+    status = Column(String, default="active")       # active / paused / archived
+    base_snapshot = Column(JSON, default=dict)      # 分叉点全量状态（不可变）
+    current_snapshot = Column(JSON, default=dict)   # 当前沙盒状态
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now)
+
+
+class SimulationBranchNode(Base):
+    """分支路径节点：每次推演/回溯留一个带全量快照的锚点。"""
+
+    __tablename__ = "simulation_branch_nodes"
+
+    id = Column(String, primary_key=True, index=True, default=_uuid)
+    branch_id = Column(String, index=True)
+    world_id = Column(String, index=True)
+    seq = Column(Integer, default=0)
+    kind = Column(String, default="simulation")     # fork / simulation / manual_edit / ending
+    event_id = Column(String)
+    run_id = Column(String)
+    summary = Column(Text, default="")
+    source = Column(String, default="simulation")
+    snapshot = Column(JSON, default=dict)
+    rollback_reason = Column(String, default="")
+    created_at = Column(DateTime, default=_now)
+
+
+class SimulationEnding(Base):
+    """结局：锚定到某个分支节点，保存最终状态与路径。"""
+
+    __tablename__ = "simulation_endings"
+
+    id = Column(String, primary_key=True, index=True, default=_uuid)
+    world_id = Column(String, index=True)
+    branch_id = Column(String, index=True)
+    node_id = Column(String, index=True)
+    name = Column(String)
+    description = Column(Text, default="")
+    key_reasons = Column(Text, default="")
+    path_node_ids = Column(JSON, default=list)
+    character_final_states = Column(JSON, default=list)
+    relationship_changes = Column(JSON, default=list)
+    resource_changes = Column(JSON, default=list)
+    world_changes = Column(JSON, default=list)
+    allow_continue = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=_now)
 
 

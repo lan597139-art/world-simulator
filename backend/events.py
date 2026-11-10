@@ -27,7 +27,18 @@ def _normalize_datetimes(data: dict) -> dict:
 
 @router.post("/api/events")
 def create_event(event_data: dict, db: Session = Depends(get_db)):
-    new_event = models.Event(**_normalize_datetimes(dict(event_data)))
+    data = _normalize_datetimes(dict(event_data))
+    branch_id = data.get("branch_id")
+    if branch_id:
+        branch = db.query(models.SimulationBranch).filter(
+            models.SimulationBranch.id == str(branch_id)
+        ).first()
+        if not branch:
+            raise HTTPException(status_code=422, detail="分支不存在")
+        if data.get("world_id") and data.get("world_id") != branch.world_id:
+            raise HTTPException(status_code=409, detail="事件世界与分支世界不一致")
+        data["world_id"] = branch.world_id
+    new_event = models.Event(**data)
     db.add(new_event)
     db.flush()
     sync_event_entities(db, new_event)
@@ -38,20 +49,34 @@ def create_event(event_data: dict, db: Session = Depends(get_db)):
 
 # 支持按 world_id 过滤
 @router.get("/api/events")
-def list_events(world_id: Optional[str] = None, db: Session = Depends(get_db)):
+def list_events(
+    world_id: Optional[str] = None,
+    branch_id: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
     query = db.query(models.Event)
     if world_id is not None:
         query = query.filter(models.Event.world_id == world_id)
+    if branch_id:
+        # 分支视图：主时间线事件 + 该分支专属事件
+        query = query.filter(
+            (models.Event.branch_id == branch_id) | (models.Event.branch_id.is_(None))
+        )
+    else:
+        query = query.filter(models.Event.branch_id.is_(None))
     return query.order_by(models.Event.created_at.desc()).all()
 
 
 @router.get("/api/events/unprocessed")
 def get_unprocessed_events(world_id: Optional[str] = None, db: Session = Depends(get_db)):
-    query = db.query(models.Event)
+    query = db.query(models.Event).filter(models.Event.branch_id.is_(None))
     if world_id:
         query = query.filter(models.Event.world_id == world_id)
     events = query.all()
-    simulated_event_ids = [r.event_id for r in db.query(models.SimulationRun).all()]
+    simulated_event_ids = [
+        r.event_id
+        for r in db.query(models.SimulationRun).filter(models.SimulationRun.branch_id.is_(None)).all()
+    ]
     unprocessed = [e for e in events if e.id not in simulated_event_ids]
     unprocessed.sort(key=lambda x: x.created_at)
     return unprocessed

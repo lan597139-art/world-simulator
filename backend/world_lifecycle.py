@@ -9,7 +9,7 @@ import json
 from datetime import date, datetime
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 import models
@@ -21,15 +21,26 @@ _SELF_REFS = {
     "organization_units": "parent_unit_id",
 }
 _META_TABLES = {"world_snapshots", "trash_entries"}
+# 多路径推演表自带全量快照，若纳入世界快照会递归膨胀；世界快照/回滚时显式清理。
+_MULTIPATH_TABLES = {
+    "simulation_directions",
+    "simulation_branches",
+    "simulation_branch_nodes",
+    "simulation_endings",
+}
 _GLOBAL_TABLES = ("location_types", "resource_types", "relationship_types")
 
 
 def world_tables():
-    """所有按 world_id 归属的业务表，按外键依赖正序返回。"""
+    """所有按 world_id 归属的业务表，按外键依赖正序返回。
+
+    多路径推演表不参与世界快照（避免快照嵌套快照），由 _cascade_delete_world 显式清理。
+    """
     return [
         table
         for table in Base.metadata.sorted_tables
         if table.name not in _META_TABLES
+        and table.name not in _MULTIPATH_TABLES
         and table.name != "worlds"
         and "world_id" in table.c
     ]
@@ -62,14 +73,27 @@ def _row_dict(obj, table):
     return {column.name: _jsonable(getattr(obj, column.name, None)) for column in table.columns}
 
 
-def dump_world(db: Session, world_id: str) -> dict:
+def dump_world(db: Session, world_id: str, branch_id: str | None = None) -> dict:
+    """导出世界快照。
+
+    branch_id=None 时只导出主时间线（branch_id 为空的行），用于时光机/归档；
+    branch_id 有值时额外包含该分支的专属行，用于分支沙盒快照。
+    """
     world = db.query(models.World).filter(models.World.id == world_id).first()
     if not world:
         raise ValueError("世界不存在")
 
     tables: dict[str, list[dict]] = {}
     for table in world_tables():
-        rows = db.execute(select(table).where(table.c.world_id == world_id)).mappings().all()
+        stmt = select(table).where(table.c.world_id == world_id)
+        if "branch_id" in table.c:
+            if branch_id:
+                stmt = stmt.where(
+                    or_(table.c.branch_id.is_(None), table.c.branch_id == branch_id)
+                )
+            else:
+                stmt = stmt.where(table.c.branch_id.is_(None))
+        rows = db.execute(stmt).mappings().all()
         if rows:
             tables[table.name] = serialize_rows(rows)
 
@@ -131,6 +155,21 @@ def _cascade_delete_world(db: Session, world_id: str):
     db.query(models.TimeSettings).filter(
         models.TimeSettings.world_id == world_id
     ).update({models.TimeSettings.current_era_id: None}, synchronize_session=False)
+
+    # 多路径推演数据不属于世界快照，但整世界回滚/清空时必须一并清理，
+    # 否则旧分支会引用已被重建的实体 ID。
+    db.query(models.SimulationEnding).filter(
+        models.SimulationEnding.world_id == world_id
+    ).delete(synchronize_session=False)
+    db.query(models.SimulationBranchNode).filter(
+        models.SimulationBranchNode.world_id == world_id
+    ).delete(synchronize_session=False)
+    db.query(models.SimulationBranch).filter(
+        models.SimulationBranch.world_id == world_id
+    ).delete(synchronize_session=False)
+    db.query(models.SimulationDirection).filter(
+        models.SimulationDirection.world_id == world_id
+    ).delete(synchronize_session=False)
 
     for table in reversed(world_tables()):
         db.execute(table.delete().where(table.c.world_id == world_id))

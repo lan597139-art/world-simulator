@@ -281,7 +281,7 @@ def generate_story(payload: dict, db: Session = Depends(get_db)):
     if world_id:
         get_world(db, world_id)
 
-    query = db.query(models.Event)
+    query = db.query(models.Event).filter(models.Event.branch_id.is_(None))
     if world_id:
         query = query.filter(models.Event.world_id == world_id)
     if event_ids:
@@ -292,7 +292,7 @@ def generate_story(payload: dict, db: Session = Depends(get_db)):
     if not events:
         fail(422, "NO_MATERIAL", "当前世界或选中的事件中没有内容，无法生成")
 
-    sims = db.query(models.SimulationRun)
+    sims = db.query(models.SimulationRun).filter(models.SimulationRun.branch_id.is_(None))
     if event_ids:
         sims = sims.filter(models.SimulationRun.event_id.in_(event_ids))
     elif world_id:

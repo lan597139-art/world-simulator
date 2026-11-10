@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   DEFAULT_AI_BASE_URL,
   DEFAULT_AI_MODEL,
@@ -7,6 +7,15 @@ import {
   maskApiKey,
   saveAiSettings,
 } from '../api/aiSettings'
+import {
+  COST_LABELS,
+  CUSTOM_PRESET_ID,
+  MODEL_CATEGORIES,
+  NETWORK_LABELS,
+  findPresetByEndpoint,
+  getPreset,
+  presetWarnings,
+} from '../api/modelPresets'
 
 const inputStyle = {
   width: '100%',
@@ -39,6 +48,7 @@ export default function AiAccessModal({
   const [apiKey, setApiKey] = useState('')
   const [baseUrl, setBaseUrl] = useState(DEFAULT_AI_BASE_URL)
   const [model, setModel] = useState(DEFAULT_AI_MODEL)
+  const [presetId, setPresetId] = useState<string>(CUSTOM_PRESET_ID)
   const [busy, setBusy] = useState(false)
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null)
 
@@ -48,8 +58,36 @@ export default function AiAccessModal({
     setApiKey(settings.apiKey)
     setBaseUrl(settings.baseUrl)
     setModel(settings.model)
+    // 恢复优先级：显式保存的 custom 保持自定义 > 已保存的有效预设 >
+    // 按 baseUrl+model 反查（仅用于无 presetId 的旧配置）> 自定义
+    let next = CUSTOM_PRESET_ID
+    if (settings.presetId !== CUSTOM_PRESET_ID) {
+      const matched = getPreset(settings.presetId) || findPresetByEndpoint(settings.baseUrl, settings.model)
+      if (matched) next = matched.id
+    }
+    setPresetId(next)
     setResult(null)
   }, [open])
+
+  const selectedPreset = useMemo(() => getPreset(presetId), [presetId])
+  const warnings = useMemo(
+    () => (selectedPreset ? presetWarnings(selectedPreset) : []),
+    [selectedPreset]
+  )
+
+  const selectModel = (value: string) => {
+    setResult(null)
+    if (value === CUSTOM_PRESET_ID) {
+      // 切到自定义：保留当前输入，字段恢复可编辑
+      setPresetId(CUSTOM_PRESET_ID)
+      return
+    }
+    const preset = getPreset(value)
+    if (!preset) return
+    setPresetId(preset.id)
+    setBaseUrl(preset.baseUrl)
+    setModel(preset.modelId)
+  }
 
   if (!open) return null
 
@@ -60,7 +98,7 @@ export default function AiAccessModal({
     }
     setBusy(true)
     setResult(null)
-    saveAiSettings({ apiKey, baseUrl, model })
+    saveAiSettings({ apiKey, baseUrl, model, presetId })
     onSaved()
     try {
       const res = await fetch('http://127.0.0.1:8000/api/ai/status?probe=true')
@@ -80,6 +118,7 @@ export default function AiAccessModal({
   const clear = () => {
     clearAiSettings()
     setApiKey('')
+    setPresetId(CUSTOM_PRESET_ID)
     setResult({ ok: true, text: '已清除本浏览器保存的 Key。若站长关闭了共享 Key，请重新填写后才能使用 AI。' })
     onSaved()
   }
@@ -107,13 +146,57 @@ export default function AiAccessModal({
           <div>
             <h2 style={{ margin: 0, fontSize: '18px' }}>AI 接入设置</h2>
             <p style={{ margin: '5px 0 0', fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.7 }}>
-              填写你自己的 API Key，AI 推演与写作只消耗你的额度。
+              选择使用场景和模型，自动填写接口参数；AI 推演与写作只消耗你的额度。
             </p>
           </div>
           <button onClick={onClose} style={{ border: 'none', background: 'transparent', color: 'var(--text-muted)', fontSize: '22px', cursor: 'pointer', lineHeight: 1 }}>×</button>
         </div>
 
         <div style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div>
+            <label style={labelStyle}>使用场景与模型</label>
+            <select
+              value={presetId}
+              onChange={(event) => selectModel(event.target.value)}
+              style={{ ...inputStyle, appearance: 'auto' }}
+            >
+              {MODEL_CATEGORIES.map((category) => (
+                <optgroup key={category.id} label={category.label}>
+                  {category.presetIds.map((id) => {
+                    const preset = getPreset(id)
+                    if (!preset) return null
+                    const tags = [
+                      preset.provider,
+                      COST_LABELS[preset.costLevel],
+                      NETWORK_LABELS[preset.network],
+                    ].filter(Boolean)
+                    return (
+                      <option key={`${category.id}-${id}`} value={id} title={preset.description}>
+                        {preset.name}（{tags.join(' · ')}）
+                      </option>
+                    )
+                  })}
+                </optgroup>
+              ))}
+              <optgroup label="⚙️ 自定义模型">
+                <option value={CUSTOM_PRESET_ID}>自定义模型（手动填写 Base URL / Model ID）</option>
+              </optgroup>
+            </select>
+
+            {selectedPreset && (
+              <div style={{ marginTop: '8px', padding: '9px 11px', borderRadius: '9px', border: '1px solid var(--card-border)', background: 'rgba(128,128,128,0.06)' }}>
+                <p style={{ margin: 0, fontSize: '10.5px', color: 'var(--text-muted)', lineHeight: 1.7 }}>
+                  {selectedPreset.provider} · {selectedPreset.description}
+                </p>
+                {warnings.map((warning) => (
+                  <p key={warning} style={{ margin: '5px 0 0', fontSize: '10.5px', color: 'var(--text-main)', lineHeight: 1.7 }}>
+                    {warning}
+                  </p>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div>
             <label style={labelStyle}>API Key</label>
             <input
@@ -135,27 +218,31 @@ export default function AiAccessModal({
             <input
               value={baseUrl}
               onChange={(event) => setBaseUrl(event.target.value)}
+              disabled={Boolean(selectedPreset)}
               placeholder={DEFAULT_AI_BASE_URL}
-              style={inputStyle}
+              style={{ ...inputStyle, opacity: selectedPreset ? 0.65 : 1 }}
             />
             <p style={{ margin: '6px 0 0', fontSize: '10px', color: 'var(--text-muted)' }}>
-              硅基流动填 https://api.siliconflow.cn/v1；DeepSeek 填 https://api.deepseek.com。
+              {selectedPreset
+                ? '已按预设自动填写；如需修改接口地址，请切换到「⚙️ 自定义模型」。'
+                : '硅基流动填 https://api.siliconflow.cn/v1；DeepSeek 填 https://api.deepseek.com。'}
             </p>
           </div>
 
           <div>
-            <label style={labelStyle}>模型名</label>
+            <label style={labelStyle}>模型名（Model ID）</label>
             <input
               value={model}
               onChange={(event) => setModel(event.target.value)}
+              disabled={Boolean(selectedPreset)}
               placeholder={DEFAULT_AI_MODEL}
-              style={inputStyle}
+              style={{ ...inputStyle, opacity: selectedPreset ? 0.65 : 1 }}
             />
           </div>
 
           <div style={{ padding: '10px 12px', borderRadius: '9px', border: '1px solid var(--card-border)', background: 'rgba(128,128,128,0.06)', fontSize: '10px', color: 'var(--text-muted)', lineHeight: 1.8 }}>
             如果站长开启了共享 Key，不填写也可以使用站长的额度；公开部署建议关闭共享 Key。
-            保存后，本浏览器访问该网站时所有 AI 操作都会使用这份配置。
+            保存后，本浏览器访问该网站时所有 AI 操作（推演、写作、助手）都会使用这份配置。
           </div>
 
           {result && (

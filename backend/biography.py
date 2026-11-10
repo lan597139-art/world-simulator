@@ -49,7 +49,11 @@ def _life_entries(character: models.Character) -> list[dict]:
 
 def _timeline(db: Session, character: models.Character) -> tuple[list[dict], list[str], list[dict]]:
     world_id = character.world_id
-    events = db.query(models.Event).filter(models.Event.world_id == world_id).all()
+    events = (
+        db.query(models.Event)
+        .filter(models.Event.world_id == world_id, models.Event.branch_id.is_(None))
+        .all()
+    )
     event_entities = {
         row.event_id
         for row in db.query(models.EventEntity).filter(
@@ -73,7 +77,10 @@ def _timeline(db: Session, character: models.Character) -> tuple[list[dict], lis
     event_ids = {event.id for event in involved}
     runs = (
         db.query(models.SimulationRun)
-        .filter(models.SimulationRun.event_id.in_(event_ids))
+        .filter(
+            models.SimulationRun.event_id.in_(event_ids),
+            models.SimulationRun.branch_id.is_(None),
+        )
         .order_by(models.SimulationRun.created_at.asc())
         .all()
         if event_ids else []

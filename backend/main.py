@@ -28,6 +28,7 @@ from event_causality import router as event_causality_router
 from timeline import router as timeline_router
 from characters import router as character_router
 from simulation import router as simulation_router
+from multipath import router as multipath_router
 from writing import router as writing_router
 from archive import router as archive_router
 from trash import router as trash_router
@@ -92,6 +93,7 @@ for router in (
     snapshots_router,
     biography_router,
     official_router,
+    multipath_router,
 ):
     app.include_router(router)
 

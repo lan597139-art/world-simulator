@@ -208,3 +208,176 @@ def run_simulation(event_data: dict, characters_data: list):
     except Exception as e:
         print("❌ AI 推演报错:", e)
         return {"error": ai_error_message(e)}
+
+# ---------------------------------------------------------------------
+# 多路径推演：分支沙盒推演 与 方向发展建议
+# ---------------------------------------------------------------------
+
+_BRANCH_OUTPUT_FORMAT = """
+JSON 输出格式如下（严格 JSON，不要 Markdown）：
+{
+    "relationship_changes": [
+        {
+            "source_name": "起点人物名字",
+            "target_name": "终点人物名字",
+            "new_quadrant": "变化后的四象限（必须是：亲密/认同/敌对/漠视 之一）",
+            "reason": "关系变化的原因简述"
+        }
+    ],
+    "world_changes": "详细描述世界现实发生了哪些客观变化",
+    "actions": [
+        {
+            "name": "人物名字",
+            "engine": "激活的主导引擎（如 O 秩序）",
+            "engine_label": "建议的主导引擎标签（O/V/D/E/T，可留空）",
+            "cognition_reason": "该人物对事件的认知如何导向这个行动",
+            "action": "人物采取的具体行动",
+            "status": "行动结果"
+        }
+    ],
+    "memory_deposits": [
+        {"name": "人物名字", "content": "值得长期沉积的一句记忆"}
+    ],
+    "state_hint": "可选：S0/S1/S2/D0/D1/D2/Dec0/Dec1/Dec2 之一，无法判断则留空"
+}
+"""
+
+
+def run_branch_simulation(payload: dict):
+    """分支沙盒推演：输入事件+方向+人物认知+世界条件，输出行为与关系变化。
+
+    结果只由调用方写入分支快照，本函数不触碰数据库。
+    """
+    if not ai_config_status()["configured"]:
+        return {"error": "未配置 API Key：请在「AI 接入」填写自己的 Key，或由站长配置 backend/.env。"}
+
+    event = payload.get("event") or {}
+    direction = payload.get("direction") or {}
+    world = payload.get("world") or {}
+    characters = payload.get("characters") or []
+    rules = payload.get("rules") or []
+
+    prompt = "你是一个高度严谨的小说世界模拟引擎。现在在同一条世界的某条平行推演分支中推演事件。\n"
+    prompt += "分支推演只影响这条分支，不改变主时间线；请严格依据给定的人物状态、认知与世界条件输出。\n\n"
+    prompt += "【当前事件】\n"
+    prompt += f"名称：{event.get('name')}\n"
+    prompt += f"发生时间：{event.get('story_time') or '未指定'}\n"
+    prompt += f"发生地点：{event.get('location') or '未指定'}\n"
+    prompt += f"涉及组织：{event.get('organization') or '未指定'}\n"
+    prompt += f"描述：{event.get('description')}\n"
+    prompt += f"极性：{event.get('polarity')} | 强度：{event.get('intensity')}\n\n"
+
+    if direction:
+        prompt += "【作者预设的发展方向（最高优先，不得违背）】\n"
+        prompt += json.dumps(
+            {
+                "名称": direction.get("name"),
+                "描述": direction.get("description"),
+                "触发条件": direction.get("trigger_conditions"),
+                "事件认知": direction.get("cognition"),
+                "需求竞争与引擎激活": direction.get("engine_activation"),
+                "可能的行为输出": direction.get("behavior_output"),
+                "现实条件与外部阻力": direction.get("reality_resistance"),
+                "直接结果": direction.get("direct_result"),
+                "后续影响": direction.get("future_impacts"),
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        prompt += "\n若方向已给出直接结果，推演应与之相容；人物行动仍必须符合其认知与动力状态。\n\n"
+
+    prompt += "【世界条件（六轴压强 0-1，越高压力越大）】\n"
+    prompt += json.dumps(world, ensure_ascii=False, indent=2)
+    prompt += "\n\n"
+
+    prompt += "【涉及人物（含引擎、认知与人格阈值）】\n"
+    prompt += json.dumps(characters, ensure_ascii=False, indent=2)
+    prompt += "\n"
+    prompt += "说明：每人物的 perception 是 TA 对本次事件的主观认知；c_profile 是人格阈值，数值越低越容易被触发。\n"
+    prompt += "同一事件下，不同人物应当因认知、阈值与引擎差异产生不同判断与行动，禁止所有人反应一致。\n\n"
+
+    if rules:
+        prompt += "【当前生效的世界规则（可能影响行动代价）】\n"
+        prompt += json.dumps(rules, ensure_ascii=False, indent=2)
+        prompt += "\n\n"
+
+    prompt += "【推演要求】\n"
+    prompt += "1. 关系变化只在确有必要时输出，否则给空数组。\n"
+    prompt += "2. actions 必须逐个对应涉及人物，说明认知→行动的因果。\n"
+    prompt += "3. 不得编造人物未拥有的能力或资源；现实阻力应真实约束行动。\n"
+    prompt += _BRANCH_OUTPUT_FORMAT
+
+    try:
+        response = get_client().chat.completions.create(
+            model=get_model(),
+            messages=[{"role": "user", "content": prompt}],
+            response_format={"type": "json_object"},
+            temperature=0.7,
+            timeout=90.0,
+        )
+        return json.loads(response.choices[0].message.content)
+    except Exception as e:
+        print("❌ 分支推演报错:", e)
+        return {"error": ai_error_message(e)}
+
+
+_DIRECTION_FORMAT = """
+JSON 输出格式如下（严格 JSON，不要 Markdown）：
+{
+    "directions": [
+        {
+            "name": "方向名称（不超过 12 字）",
+            "description": "这个方向意味着什么",
+            "trigger_conditions": ["触发条件1", "触发条件2"],
+            "cognition": {
+                "meaning": "相关人物会如何理解这个事件",
+                "attribution": "会把原因归给谁/什么",
+                "certainty": "认知确定度 0-1"
+            },
+            "behavior_output": "可能的行为输出",
+            "reality_resistance": "现实条件与外部阻力",
+            "direct_result": "直接结果",
+            "future_impacts": ["后续影响1", "后续影响2"]
+        }
+    ]
+}
+"""
+
+
+def run_direction_suggestions(payload: dict):
+    """为事件生成多个可能的发展方向建议（仅返回，不落库，需用户确认）。"""
+    if not ai_config_status()["configured"]:
+        return {"error": "未配置 API Key：请在「AI 接入」填写自己的 Key，或由站长配置 backend/.env。"}
+
+    event = payload.get("event") or {}
+    characters = payload.get("characters") or []
+    world = payload.get("world") or {}
+    count = int(payload.get("count") or 4)
+    count = max(2, min(6, count))
+
+    prompt = "你是世界模拟器的推演助手。请为一个事件设计多个相互竞争的合理发展方向。\n"
+    prompt += "每个方向都应源自不同人物的需求竞争与认知差异，而不是简单的好坏选项。\n\n"
+    prompt += "【事件】\n"
+    prompt += json.dumps(event, ensure_ascii=False, indent=2)
+    prompt += "\n\n【相关人物】\n"
+    prompt += json.dumps(characters, ensure_ascii=False, indent=2)
+    prompt += "\n\n【世界条件】\n"
+    prompt += json.dumps(world, ensure_ascii=False, indent=2)
+    prompt += f"\n\n请给出 {count} 个方向。" + _DIRECTION_FORMAT
+
+    try:
+        response = get_client().chat.completions.create(
+            model=get_model(),
+            messages=[{"role": "user", "content": prompt}],
+            response_format={"type": "json_object"},
+            temperature=0.8,
+            timeout=90.0,
+        )
+        data = json.loads(response.choices[0].message.content)
+        directions = data.get("directions")
+        if not isinstance(directions, list):
+            return {"directions": []}
+        return {"directions": directions[:count]}
+    except Exception as e:
+        print("❌ 方向建议报错:", e)
+        return {"error": ai_error_message(e)}

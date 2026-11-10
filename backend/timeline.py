@@ -15,7 +15,9 @@ SCOPES = {"world", "character", "organization", "location", "resource", "social_
 
 
 def _event_items(db: Session, world_id: str, scope: str, entity_id: Optional[str]):
-    query = db.query(models.Event).filter(models.Event.world_id == world_id)
+    query = db.query(models.Event).filter(
+        models.Event.world_id == world_id, models.Event.branch_id.is_(None)
+    )
     if scope != "world" and entity_id:
         linked = {
             row[0]
@@ -31,14 +33,22 @@ def _event_items(db: Session, world_id: str, scope: str, entity_id: Optional[str
             linked |= {
                 row[0]
                 for row in db.query(models.Event.id)
-                .filter(models.Event.world_id == world_id, models.Event.location_id == entity_id)
+                .filter(
+                    models.Event.world_id == world_id,
+                    models.Event.location_id == entity_id,
+                    models.Event.branch_id.is_(None),
+                )
                 .all()
             }
         if scope == "organization":
             linked |= {
                 row[0]
                 for row in db.query(models.Event.id)
-                .filter(models.Event.world_id == world_id, models.Event.organization_id == entity_id)
+                .filter(
+                    models.Event.world_id == world_id,
+                    models.Event.organization_id == entity_id,
+                    models.Event.branch_id.is_(None),
+                )
                 .all()
             }
         if not linked:
