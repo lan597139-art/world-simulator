@@ -45,6 +45,7 @@ _CHAT_TABLES = {
     "chat_messages",
     "character_memories",
     "chat_plans",
+    "chat_impacts",
 }
 _GLOBAL_TABLES = ("location_types", "resource_types", "relationship_types")
 
@@ -208,6 +209,7 @@ def _cascade_delete_world(db: Session, world_id: str):
     ]
     if chat_thread_ids:
         db.query(models.ChatPlan).filter(models.ChatPlan.thread_id.in_(chat_thread_ids)).delete(synchronize_session=False)
+        db.query(models.ChatImpact).filter(models.ChatImpact.thread_id.in_(chat_thread_ids)).delete(synchronize_session=False)
         db.query(models.ChatMessage).filter(models.ChatMessage.thread_id.in_(chat_thread_ids)).delete(synchronize_session=False)
         db.query(models.ChatParticipant).filter(models.ChatParticipant.thread_id.in_(chat_thread_ids)).delete(synchronize_session=False)
         db.query(models.ChatThread).filter(models.ChatThread.world_id == world_id).delete(synchronize_session=False)

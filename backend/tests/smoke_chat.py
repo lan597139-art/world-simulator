@@ -43,7 +43,18 @@ class FakeCompletions:
     def create(self, **kwargs):
         self.calls.append(kwargs)
         system = kwargs["messages"][0]["content"]
-        if "调度器" in system:
+        if "世界演化分析器" in system:
+            content = json.dumps({
+                "summary": "对话让彼此更戒备",
+                "relationships": [{
+                    "source_id": PLAN_STATE["ids"][0], "target_id": PLAN_STATE["ids"][1],
+                    "quadrant": "戒备", "strength": "中", "power": "对等",
+                    "relation_type": "互相提防", "reason": "双方都在试探",
+                }],
+                "six_axis": {"threat": 0.05, "attachment": 0.02},
+                "negentropy": 0.02,
+            })
+        elif "调度器" in system:
             if PLAN_STATE["bad"]:
                 content = "我觉得应该让乙先说。"
             else:
@@ -159,6 +170,27 @@ db.close()
 check("兜底标记", plan_row is not None and plan_row.plan.get("fallback") is True, plan_row.plan if plan_row else None)
 
 check("私聊不可用 turns", api("POST", f"/api/chat/threads/{tid}/turns", {"content": "x"}, expect=409).status_code == 409)
+
+# ---- 聊天影响世界 ---------------------------------------------------
+impact = api("POST", f"/api/chat/threads/{group['id']}/impact/preview").json()
+check("影响预览返回关系", len(impact["relationships"]) == 1 and impact["relationships"][0]["quadrant"] == "戒备", impact)
+check("影响预览增量受限", impact["six_axis"].get("threat") == 0.05 and impact["negentropy"] == 0.02, impact)
+
+world_before = api("GET", f"/api/worlds/{wid}").json()
+base_threat = ((world_before.get("settings") or {}).get("six_axis") or {}).get("threat", 0)
+applied = api("POST", f"/api/chat/impact/{impact['id']}/apply", {}).json()
+check("应用影响创建关系", len(applied["relationship_ids"]) == 1, applied)
+check("六轴按增量更新", abs(applied["six_axis"].get("threat", 0) - (base_threat + 0.05)) < 0.0001, applied["six_axis"])
+check("影响已标记应用", applied["impact"]["status"] == "applied", applied["impact"])
+check("重复应用被拒", api("POST", f"/api/chat/impact/{impact['id']}/apply", {}, expect=409).status_code == 409)
+
+impact2 = api("POST", f"/api/chat/threads/{group['id']}/impact/preview").json()
+check("忽略影响", api("POST", f"/api/chat/impact/{impact2['id']}/dismiss").json()["status"] == "dismissed")
+check("忽略后不可应用", api("POST", f"/api/chat/impact/{impact2['id']}/apply", {}, expect=409).status_code == 409)
+
+# 私聊只有一个角色：关系应为空，但六轴仍可建议
+private_impact = api("POST", f"/api/chat/threads/{tid}/impact/preview").json()
+check("私聊不产生关系", private_impact["relationships"] == [], private_impact)
 
 # ---- 对话转事件 / 经历 ---------------------------------------------
 converted = api("POST", f"/api/chat/threads/{tid}/to-event", {"title": "药园对话"}).json()

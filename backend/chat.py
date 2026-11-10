@@ -1051,3 +1051,266 @@ def chat_to_experience(thread_id: str, payload: dict, db: Session = Depends(get_
     char.life_history = history[-200:]
     db.commit()
     return {"character_id": char.id, "life_history_count": len(char.life_history)}
+
+
+# ---------------------------------------------------------------------
+# 聊天影响世界：关系 / 六轴（预览 → 确认应用，全程留痕）
+# ---------------------------------------------------------------------
+SIX_AXIS_KEYS = ("scarcity", "threat", "status", "reputation", "attachment", "regulation")
+QUADRANTS = {"漠视", "友善", "信任", "戒备", "敌对", "竞争", "依赖"}
+STRENGTHS = {"弱", "中", "强"}
+POWERS = {"对等", "上风", "下风"}
+IMPACT_SYSTEM = (
+    "你是世界演化分析器。阅读一段角色对话，判断它对参与者之间的关系、世界六轴压力产生的"
+    "轻微变化。只输出 JSON，不要解释。\n"
+    "字段：{\"summary\":\"一句话\",\"relationships\":[{\"source_id\":\"\",\"target_id\":\"\","
+    "\"quadrant\":\"漠视|友善|信任|戒备|敌对|竞争|依赖\",\"strength\":\"弱|中|强\","
+    "\"power\":\"对等|上风|下风\",\"relation_type\":\"\",\"reason\":\"\"}],"
+    "\"six_axis\":{\"scarcity\":0.0,\"threat\":0.0,\"status\":0.0,\"reputation\":0.0,"
+    "\"attachment\":0.0,\"regulation\":0.0},\"negentropy\":0.0}\n"
+    "规则：\n"
+    "- 只评价对话中实际发生的互动，不要脑补；没有依据就返回空数组/0。\n"
+    "- 六轴与 negentropy 是增量，范围 -0.1~0.1；关系最多 4 条。\n"
+    "- 关系只能发生在给出的参与者之间，source/target 用角色 ID。"
+)
+
+
+def _impact_row(row: models.ChatImpact, roster: list[dict]) -> dict:
+    names = {item["character_id"]: item["name"] for item in roster}
+    proposal = row.proposal if isinstance(row.proposal, dict) else {}
+    relationships = []
+    for item in proposal.get("relationships") or []:
+        relationships.append(
+            {
+                **item,
+                "source_name": names.get(item.get("source_id"), item.get("source_id")),
+                "target_name": names.get(item.get("target_id"), item.get("target_id")),
+            }
+        )
+    return {
+        "id": row.id,
+        "thread_id": row.thread_id,
+        "status": row.status,
+        "summary": proposal.get("summary") or "",
+        "relationships": relationships,
+        "six_axis": proposal.get("six_axis") or {},
+        "negentropy": proposal.get("negentropy") or 0,
+        "applied": row.applied or {},
+        "model": row.model,
+        "created_at": _iso(row.created_at),
+    }
+
+
+def _parse_impact(text: str, allowed: set[str]) -> dict:
+    import json
+    import re
+
+    cleaned = text.strip()
+    fenced = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", cleaned, re.S)
+    if fenced:
+        cleaned = fenced.group(1)
+    else:
+        match = re.search(r"\{.*\}", cleaned, re.S)
+        if match:
+            cleaned = match.group(0)
+    try:
+        data = json.loads(cleaned)
+    except Exception:
+        fail(502, "AI_PARSE_ERROR", "AI 返回的影响建议不是合法 JSON，请重试")
+    if not isinstance(data, dict):
+        fail(502, "AI_PARSE_ERROR", "AI 返回的影响建议格式不正确")
+
+    relations = []
+    seen = set()
+    for item in (data.get("relationships") or [])[:4]:
+        if not isinstance(item, dict):
+            continue
+        sid = str(item.get("source_id") or "")
+        tid = str(item.get("target_id") or "")
+        if sid == tid or sid not in allowed or tid not in allowed or (sid, tid) in seen:
+            continue
+        quadrant = str(item.get("quadrant") or "")
+        if quadrant not in QUADRANTS:
+            continue
+        strength = str(item.get("strength") or "中")
+        power = str(item.get("power") or "对等")
+        seen.add((sid, tid))
+        relations.append(
+            {
+                "source_id": sid,
+                "target_id": tid,
+                "quadrant": quadrant,
+                "strength": strength if strength in STRENGTHS else "中",
+                "power": power if power in POWERS else "对等",
+                "relation_type": str(item.get("relation_type") or "对话影响")[:40],
+                "reason": str(item.get("reason") or "")[:300],
+            }
+        )
+
+    axis = {}
+    raw_axis = data.get("six_axis") if isinstance(data.get("six_axis"), dict) else {}
+    for key in SIX_AXIS_KEYS:
+        try:
+            number = float(raw_axis.get(key) or 0)
+        except (TypeError, ValueError):
+            continue
+        delta = max(-0.1, min(0.1, round(number, 3)))
+        if delta:
+            axis[key] = delta
+    try:
+        negentropy = float(data.get("negentropy") or 0)
+    except (TypeError, ValueError):
+        negentropy = 0.0
+    negentropy = max(-0.1, min(0.1, round(negentropy, 3)))
+    return {
+        "summary": str(data.get("summary") or "")[:300],
+        "relationships": relations,
+        "six_axis": axis,
+        "negentropy": negentropy,
+    }
+
+
+@router.post("/api/chat/threads/{thread_id}/impact/preview")
+def preview_impact(thread_id: str, db: Session = Depends(get_db)):
+    thread = _thread(db, thread_id)
+    count = db.query(models.ChatMessage).filter(models.ChatMessage.thread_id == thread.id).count()
+    if count < 2:
+        fail(409, "NOT_ENOUGH_MESSAGES", "至少需要一轮对话才能分析影响")
+    roster = _roster(db, thread)
+    if not ai_config_status()["configured"]:
+        fail(503, "AI_NOT_CONFIGURED", "未配置 AI API Key")
+    transcript = _transcript(db, thread, 20)
+    allowed = {item["character_id"] for item in roster}
+    relation_lines = []
+    if len(roster) > 1:
+        for a in roster:
+            for b in roster:
+                if a["character_id"] == b["character_id"]:
+                    continue
+                rel = (
+                    db.query(models.Relationship)
+                    .filter(
+                        models.Relationship.world_id == thread.world_id,
+                        models.Relationship.source_id == a["character_id"],
+                        models.Relationship.target_id == b["character_id"],
+                    )
+                    .first()
+                )
+                if rel:
+                    relation_lines.append(
+                        f"{a['name']}→{b['name']}：{rel.relation_type or ''} / {rel.source_quadrant} / {rel.source_strength}"
+                    )
+    prompt = (
+        f"参与者：\n" + "\n".join(f"- {item['character_id']}｜{item['name']}" for item in roster)
+        + "\n现有关系：\n" + ("\n".join(relation_lines) if relation_lines else "（无）")
+        + f"\n\n对话记录：\n{transcript[-6000:]}"
+    )
+    try:
+        response = get_client().chat.completions.create(
+            model=get_model(),
+            messages=[{"role": "system", "content": IMPACT_SYSTEM}, {"role": "user", "content": prompt}],
+            temperature=0.2,
+        )
+        text = (response.choices[0].message.content or "").strip()
+    except Exception as exc:
+        fail(502, "AI_ERROR", ai_error_message(exc))
+    proposal = _parse_impact(text, allowed)
+    row = models.ChatImpact(
+        world_id=thread.world_id,
+        thread_id=thread.id,
+        proposal=proposal,
+        status="pending",
+        model=get_model(),
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return _impact_row(row, roster)
+
+
+@router.post("/api/chat/impact/{impact_id}/apply")
+def apply_impact(impact_id: str, payload: dict, db: Session = Depends(get_db)):
+    row = get_or_404(db, models.ChatImpact, impact_id, "影响建议")
+    _world(db, row.world_id)
+    if row.status != "pending":
+        fail(409, "IMPACT_CLOSED", "该影响建议已处理")
+    thread = _thread(db, row.thread_id)
+    roster = _roster(db, thread)
+    proposal = row.proposal or {}
+    apply_relations = bool(payload.get("relationships", True))
+    apply_axes = bool(payload.get("six_axis", True))
+
+    applied_relations = []
+    if apply_relations:
+        for item in proposal.get("relationships") or []:
+            sid, tid = item.get("source_id"), item.get("target_id")
+            if not sid or not tid:
+                continue
+            rel = (
+                db.query(models.Relationship)
+                .filter(
+                    models.Relationship.world_id == row.world_id,
+                    models.Relationship.source_id == sid,
+                    models.Relationship.target_id == tid,
+                )
+                .first()
+            )
+            reason = item.get("reason") or ""
+            if rel:
+                rel.source_quadrant = item.get("quadrant") or rel.source_quadrant
+                rel.source_strength = item.get("strength") or rel.source_strength
+                rel.source_power = item.get("power") or rel.source_power
+                if reason:
+                    rel.description = ((rel.description or "") + f"；对话后：{reason}")[:2000]
+            else:
+                rel = models.Relationship(
+                    world_id=row.world_id,
+                    source_id=sid,
+                    source_type="character",
+                    target_id=tid,
+                    target_type="character",
+                    relation_type=item.get("relation_type") or "对话影响",
+                    description=reason[:2000],
+                    source_quadrant=item.get("quadrant") or "漠视",
+                    source_strength=item.get("strength") or "中",
+                    source_power=item.get("power") or "对等",
+                )
+                db.add(rel)
+            db.flush()
+            applied_relations.append(rel.id)
+
+    applied_axes = {}
+    if apply_axes and (proposal.get("six_axis") or proposal.get("negentropy")):
+        world = db.query(models.World).filter(models.World.id == row.world_id).first()
+        settings = dict(world.settings or {})
+        axis = dict(settings.get("six_axis") or {})
+        for key, delta in (proposal.get("six_axis") or {}).items():
+            if key not in SIX_AXIS_KEYS:
+                continue
+            base = float(axis.get(key) or 0)
+            axis[key] = max(0.0, min(1.0, round(base + float(delta), 3)))
+            applied_axes[key] = axis[key]
+        settings["six_axis"] = axis
+        negentropy = float(proposal.get("negentropy") or 0)
+        if negentropy:
+            base = float(settings.get("negentropy") or 0)
+            settings["negentropy"] = max(0.0, min(1.0, round(base + negentropy, 3)))
+        world.settings = settings
+        applied_axes["negentropy"] = settings.get("negentropy")
+
+    row.status = "applied"
+    row.applied = {"relationships": applied_relations, "six_axis": applied_axes}
+    db.commit()
+    db.refresh(row)
+    return {"impact": _impact_row(row, roster), "relationship_ids": applied_relations, "six_axis": applied_axes}
+
+
+@router.post("/api/chat/impact/{impact_id}/dismiss")
+def dismiss_impact(impact_id: str, db: Session = Depends(get_db)):
+    row = get_or_404(db, models.ChatImpact, impact_id, "影响建议")
+    _world(db, row.world_id)
+    if row.status != "pending":
+        return {"status": row.status}
+    row.status = "dismissed"
+    db.commit()
+    return {"status": "dismissed"}

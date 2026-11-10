@@ -102,6 +102,15 @@ export const groupTurn = (threadId: string, content: string) =>
     method: 'POST',
     body: JSON.stringify({ content }),
   })
+export const previewImpact = (threadId: string) =>
+  request<any>(`/chat/threads/${threadId}/impact/preview`, { method: 'POST' })
+export const applyImpact = (impactId: string) =>
+  request<{ impact: any; relationship_ids: string[]; six_axis: Record<string, number> }>(`/chat/impact/${impactId}/apply`, {
+    method: 'POST',
+    body: JSON.stringify({ relationships: true, six_axis: true }),
+  })
+export const dismissImpact = (impactId: string) =>
+  request<{ status: string }>(`/chat/impact/${impactId}/dismiss`, { method: 'POST' })
 export const chatToEvent = (threadId: string, payload: { title?: string; description?: string }) =>
   request<{ event: any }>(`/chat/threads/${threadId}/to-event`, { method: 'POST', body: JSON.stringify(payload) })
 export const chatToExperience = (threadId: string, payload: { character_id: string; title?: string; summary?: string }) =>

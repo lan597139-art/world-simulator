@@ -1056,3 +1056,19 @@ class ChatPlan(Base):
     plan = Column(JSON, default=dict)
     model = Column(String, default="")
     created_at = Column(DateTime, default=_now)
+
+
+class ChatImpact(Base):
+    """聊天对世界的影响建议（关系/六轴），须预览并确认后应用。"""
+
+    __tablename__ = "chat_impacts"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    world_id = Column(String, nullable=False, index=True)
+    thread_id = Column(String, nullable=False, index=True)
+    trigger_message_id = Column(String, nullable=True)
+    proposal = Column(JSON, default=dict)
+    applied = Column(JSON, default=dict)
+    status = Column(String, default="pending")  # pending/applied/dismissed
+    model = Column(String, default="")
+    created_at = Column(DateTime, default=_now)

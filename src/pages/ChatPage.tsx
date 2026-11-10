@@ -47,6 +47,8 @@ export default function ChatPage({ worldId }: { worldId?: string }) {
   const [showConvert, setShowConvert] = useState(false)
   const [eventTitle, setEventTitle] = useState('')
   const [writeExperience, setWriteExperience] = useState(false)
+  const [impact, setImpact] = useState<any | null>(null)
+  const [impactBusy, setImpactBusy] = useState(false)
   const [draft, setDraft] = useState('')
   const [busy, setBusy] = useState(false)
   const [log, setLog] = useState('')
@@ -226,6 +228,45 @@ export default function ChatPage({ worldId }: { worldId?: string }) {
     }
   }
 
+  const previewImpactNow = async () => {
+    if (!thread) return
+    setImpactBusy(true)
+    try {
+      const proposal = await api.previewImpact(thread.id)
+      setImpact(proposal)
+      setLog('影响建议已生成，确认后才会应用')
+    } catch (error: any) {
+      setLog(`❌ ${error.message || error}`)
+    } finally {
+      setImpactBusy(false)
+    }
+  }
+
+  const applyImpactNow = async () => {
+    if (!impact) return
+    setImpactBusy(true)
+    try {
+      const result = await api.applyImpact(impact.id)
+      setImpact(result.impact)
+      setLog(`影响已应用：关系 ${result.relationship_ids.length} 条`)
+    } catch (error: any) {
+      setLog(`❌ ${error.message || error}`)
+    } finally {
+      setImpactBusy(false)
+    }
+  }
+
+  const dismissImpactNow = async () => {
+    if (!impact) return
+    try {
+      await api.dismissImpact(impact.id)
+      setImpact(null)
+      setLog('影响建议已忽略')
+    } catch (error: any) {
+      setLog(`❌ ${error.message || error}`)
+    }
+  }
+
   const removeMemory = async (id: string) => {
     try {
       await api.deleteMemory(id)
@@ -293,9 +334,14 @@ export default function ChatPage({ worldId }: { worldId?: string }) {
         </div>
         {thread && messages.length > 0 && (
           <div>
-            <button style={{ ...btn, borderColor: 'var(--card-border)', color: 'var(--text-muted)' }} onClick={() => { setShowConvert((prev) => !prev); setEventTitle(`${thread.title} · 对话记录`) }}>
-              {showConvert ? '收起整理' : '整理为事件'}
-            </button>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <button style={{ ...btn, borderColor: 'var(--card-border)', color: 'var(--text-muted)' }} onClick={() => { setShowConvert((prev) => !prev); setEventTitle(`${thread.title} · 对话记录`) }}>
+                {showConvert ? '收起整理' : '整理为事件'}
+              </button>
+              <button style={{ ...btn, borderColor: 'var(--card-border)', color: 'var(--text-muted)' }} disabled={impactBusy} onClick={() => void previewImpactNow()}>
+                影响预览
+              </button>
+            </div>
             {showConvert && (
               <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '6px', flexWrap: 'wrap' }}>
                 <input value={eventTitle} onChange={(e) => setEventTitle(e.target.value)} placeholder="事件标题" style={{ ...input, flex: 1, minWidth: '160px' }} />
@@ -304,6 +350,30 @@ export default function ChatPage({ worldId }: { worldId?: string }) {
                 </label>
                 <button style={btn} disabled={busy} onClick={() => void convert()}>保存</button>
               </div>
+            )}
+          </div>
+        )}
+        {impact && (
+          <div style={{ border: '1px solid var(--card-border)', borderRadius: '8px', padding: '8px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+            <div style={{ fontSize: '12px', color: 'var(--text-main)' }}>{impact.summary || '影响建议'}</div>
+            {impact.relationships?.map((item: any, index: number) => (
+              <div key={index} style={hint}>
+                {item.source_name} → {item.target_name}：{item.quadrant} / {item.strength}（{item.reason || item.relation_type}）
+              </div>
+            ))}
+            {impact.six_axis && Object.keys(impact.six_axis).length > 0 && (
+              <div style={hint}>
+                六轴增量：{Object.entries(impact.six_axis).map(([key, value]) => `${key} ${Number(value) > 0 ? '+' : ''}${value}`).join(' · ')}
+                {impact.negentropy ? ` · negentropy ${impact.negentropy > 0 ? '+' : ''}${impact.negentropy}` : ''}
+              </div>
+            )}
+            {impact.status === 'pending' ? (
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <button style={btn} disabled={impactBusy} onClick={() => void applyImpactNow()}>应用影响</button>
+                <button style={{ ...btn, borderColor: 'var(--card-border)', color: 'var(--text-muted)' }} disabled={impactBusy} onClick={() => void dismissImpactNow()}>忽略</button>
+              </div>
+            ) : (
+              <div style={hint}>状态：{impact.status === 'applied' ? '已应用' : '已忽略'}</div>
             )}
           </div>
         )}

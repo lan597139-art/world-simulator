@@ -27,6 +27,7 @@ MODULES = [
     "m015_multipath",
     "m016_storyline",
     "m017_chat",
+    "m018_chat_impact",
 ]
 
 
