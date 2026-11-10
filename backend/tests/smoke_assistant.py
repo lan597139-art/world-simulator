@@ -93,6 +93,17 @@ def chat(body, expect=200):
     return response
 
 
+# ---- 健康自检 ------------------------------------------------------
+r = client.get("/api/assistant/health")
+check("健康检查返回 200", r.status_code == 200 and r.json().get("ok") is True, r.text[:160])
+check("健康检查报告 AI 已配置", r.json().get("ai_configured") is True, r.json())
+
+saved_status = assistant.ai_config_status
+assistant.ai_config_status = lambda: {"configured": False, "message": "未配置", "model": "m", "base_url": "b"}
+r = client.get("/api/assistant/health")
+check("健康检查如实报告未配置", r.status_code == 200 and r.json().get("ai_configured") is False, r.json())
+assistant.ai_config_status = saved_status
+
 # ---- 基础校验 -------------------------------------------------------
 r = chat({"messages": []}, expect=422)
 check("缺少对话内容返回 422", r.status_code == 422, r.status_code)

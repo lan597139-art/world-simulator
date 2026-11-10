@@ -37,6 +37,20 @@
 - AI 配置走既有请求级中间件（`X-AI-API-Key` / `X-AI-Base-URL` / `X-AI-Model`），访客 Key 与站长 Key 互不串用。
 - 未配置 Key → `503` + 中文提示；上游异常经 `ai_error_message` 转译为额度/鉴权/限流/超时/网络等中文文案，返回 `502`。
 
+### 1.1 自检接口
+
+`GET /api/assistant/health` →
+
+```json
+{"ok": true, "route": "/api/assistant/chat", "ai_configured": true, "model": "...", "base_url": "...", "message": ""}
+```
+
+前端面板打开时会探测该接口：
+
+- 404 → 顶部红条「后端未加载 AI 助手接口」，并在发送失败时把 `Not Found` 翻译成「后端未重启 / 部署的是旧版本」。
+- 连不上 → 顶部红条提示检查后端地址。
+- 正常 → 无提示，进入正常对话。
+
 ## 2. 上下文注入（只读）
 
 服务端只读取必要摘要，不整库外发：
@@ -60,12 +74,12 @@
 
 ## 4. 验收
 
-### 4.1 后端用例 `backend/tests/smoke_assistant.py`（17 项，全通过）
+### 4.1 后端用例 `backend/tests/smoke_assistant.py`（20 项，全通过）
 
 - 空消息 422；正常对话返回 reply；`context_label` 正确拼接。
 - prompt 注入世界、对象、表单字段、选中文本、动作白名单；历史角色过滤。
 - 动作清洗：数量上限、危险动作丢弃、`fill_form` 非可见字段丢弃、`update_entity` 越权 ID 与非法字段丢弃、`navigate` 非法页面丢弃。
-- 无上下文可用；空回复兜底；无 Key → 503；额度不足 → 502 中文提示。
+- 无上下文可用；空回复兜底；无 Key → 503；额度不足 → 502 中文提示；健康检查如实报告配置状态。
 
 ### 4.2 全量回归（209 项，全通过）
 

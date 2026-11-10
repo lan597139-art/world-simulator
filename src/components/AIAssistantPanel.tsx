@@ -195,6 +195,7 @@ export default function AIAssistantPanel({ onNavigate }: { onNavigate?: (page: s
   const [messages, setMessages] = useState<ChatMessage[]>(() => loadMessages())
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
+  const [backendState, setBackendState] = useState<'unknown' | 'ok' | 'missing' | 'offline'>('unknown')
   const [applied, setApplied] = useState<Record<string, string>>({})
   const [lastSelection, setLastSelection] = useState('')
   const [unread, setUnread] = useState(false)
@@ -219,6 +220,23 @@ export default function AIAssistantPanel({ onNavigate }: { onNavigate?: (page: s
     document.addEventListener('selectionchange', handler)
     return () => document.removeEventListener('selectionchange', handler)
   }, [])
+
+  useEffect(() => {
+    if (!open) return
+    let alive = true
+    fetch(`${API_ORIGIN}/api/assistant/health`)
+      .then(async (response) => {
+        if (!alive) return
+        if (response.ok) setBackendState('ok')
+        else setBackendState('missing')
+      })
+      .catch(() => {
+        if (alive) setBackendState('offline')
+      })
+    return () => {
+      alive = false
+    }
+  }, [open])
 
   useEffect(() => {
     if (open && listRef.current) {
@@ -341,12 +359,17 @@ export default function AIAssistantPanel({ onNavigate }: { onNavigate?: (page: s
         setMessages((prev) => [...prev, assistantMessage])
         if (!open) setUnread(true)
       } catch (error: any) {
+        let text = String(error?.message || error || 'AI 请求失败，请检查后端和「AI 接入」配置。')
+        if (/not found/i.test(text)) {
+          setBackendState('missing')
+          text = `当前后端没有「AI 助手」接口（${API_ORIGIN}/api/assistant/chat 返回 404）。通常是后端未重启或部署的还是旧版本，重启/重新部署后端后再试。`
+        }
         setMessages((prev) => [
           ...prev,
           {
             id: uid(),
             role: 'assistant',
-            content: String(error?.message || error || 'AI 请求失败，请检查后端和「AI 接入」配置。'),
+            content: text,
             error: true,
             pageKey: snapshot.page.page,
           },
@@ -562,6 +585,17 @@ export default function AIAssistantPanel({ onNavigate }: { onNavigate?: (page: s
               ×
             </button>
           </header>
+
+          {backendState === 'missing' && (
+            <div style={{ margin: '10px 14px 0', padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--danger-color)', color: 'var(--danger-color)', fontSize: '11px', lineHeight: 1.6 }}>
+              后端未加载 AI 助手接口（{API_ORIGIN}/api/assistant/chat → 404）。请重启后端或重新部署后再试。
+            </div>
+          )}
+          {backendState === 'offline' && (
+            <div style={{ margin: '10px 14px 0', padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--danger-color)', color: 'var(--danger-color)', fontSize: '11px', lineHeight: 1.6 }}>
+              连不上后端（{API_ORIGIN}）。请确认后端已启动、地址正确。
+            </div>
+          )}
 
           <div ref={listRef} style={{ flex: 1, overflowY: 'auto', padding: '15px 14px 8px', display: 'flex', flexDirection: 'column', gap: '11px' }}>
             {messages.length === 0 && (

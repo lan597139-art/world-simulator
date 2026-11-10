@@ -295,6 +295,20 @@ def _sanitize_actions(raw, context: dict, entity: Optional[dict], fields: list) 
     return actions
 
 
+@router.get("/api/assistant/health")
+def assistant_health():
+    """供前端自检：确认当前后端是否加载了助手接口。"""
+    status = ai_config_status()
+    return {
+        "ok": True,
+        "route": "/api/assistant/chat",
+        "ai_configured": bool(status.get("configured")),
+        "model": status.get("model"),
+        "base_url": status.get("base_url"),
+        "message": status.get("message"),
+    }
+
+
 @router.post("/api/assistant/chat")
 def assistant_chat(payload: dict, db: Session = Depends(get_db)):
     messages = payload.get("messages")
