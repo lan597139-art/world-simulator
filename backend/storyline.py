@@ -208,6 +208,20 @@ def _event(db: Session, event_id: str) -> models.Event:
     return get_or_404(db, models.Event, event_id, "事件")
 
 
+def _unit_depth(db: Session, unit: models.StoryUnit) -> int:
+    depth = 1
+    seen = set()
+    current = unit
+    while current.parent_unit_id and current.parent_unit_id not in seen:
+        seen.add(current.parent_unit_id)
+        parent = db.query(models.StoryUnit).filter(models.StoryUnit.id == current.parent_unit_id).first()
+        if not parent:
+            break
+        depth += 1
+        current = parent
+    return depth
+
+
 def _require(condition, code: str, message: str):
     if not condition:
         fail(422, code, message)
@@ -479,6 +493,8 @@ def create_unit(space_id: str, payload: dict, db: Session = Depends(get_db)):
         parent = _unit(db, parent_unit_id)
         if parent.space_id != space.id:
             fail(409, "UNIT_MISMATCH", "父单元不属于该空间")
+        if _unit_depth(db, parent) >= 4:
+            fail(422, "UNIT_DEPTH_EXCEEDED", "单元层级最多 4 层（故事→空间→单元→阶段）")
     status = str(payload.get("status") or "planned")
     if status not in UNIT_STATUS:
         fail(422, "INVALID_STATUS", "单元状态不合法")

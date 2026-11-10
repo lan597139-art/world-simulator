@@ -118,6 +118,7 @@ check("回复引用用户消息", sent["reply"]["reply_to_id"] == sent["user_mes
 call = FAKE.chat.completions.calls[-1]
 check("系统提示含角色设定", "甲师兄" in call["messages"][0]["content"] and "药园杂役" in call["messages"][0]["content"], call["messages"][0]["content"][:200])
 check("提示含记忆约束", "不替用户行动" in call["messages"][0]["content"], call["messages"][0]["content"][-200:])
+check("G13 提示不直写数值", "/100" not in call["messages"][0]["content"] and "引擎 生存：强" in call["messages"][0]["content"], call["messages"][0]["content"][:400])
 
 messages = api("GET", f"/api/chat/threads/{tid}/messages").json()
 check("消息按时间正序", [m["sender_type"] for m in messages] == ["user", "character"], messages)

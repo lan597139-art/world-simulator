@@ -111,7 +111,7 @@ export const applyImpact = (impactId: string) =>
   })
 export const dismissImpact = (impactId: string) =>
   request<{ status: string }>(`/chat/impact/${impactId}/dismiss`, { method: 'POST' })
-export const chatToEvent = (threadId: string, payload: { title?: string; description?: string }) =>
+export const chatToEvent = (threadId: string, payload: { title?: string; description?: string; message_count?: number }) =>
   request<{ event: any }>(`/chat/threads/${threadId}/to-event`, { method: 'POST', body: JSON.stringify(payload) })
 export const chatToExperience = (threadId: string, payload: { character_id: string; title?: string; summary?: string }) =>
   request<{ character_id: string; life_history_count: number }>(`/chat/threads/${threadId}/to-experience`, {

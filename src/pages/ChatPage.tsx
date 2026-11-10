@@ -47,6 +47,7 @@ export default function ChatPage({ worldId }: { worldId?: string }) {
   const [showConvert, setShowConvert] = useState(false)
   const [eventTitle, setEventTitle] = useState('')
   const [writeExperience, setWriteExperience] = useState(false)
+  const [convertCount, setConvertCount] = useState(10)
   const [impact, setImpact] = useState<any | null>(null)
   const [impactBusy, setImpactBusy] = useState(false)
   const [identityName, setIdentityName] = useState('')
@@ -218,7 +219,7 @@ export default function ChatPage({ worldId }: { worldId?: string }) {
     if (!thread || !messages.length) { setLog('❌ 先进行一段对话'); return }
     setBusy(true)
     try {
-      const result = await api.chatToEvent(thread.id, { title: eventTitle || undefined })
+      const result = await api.chatToEvent(thread.id, { title: eventTitle || undefined, message_count: convertCount })
       let message = `事件已创建：${result.event.name}`
       if (writeExperience && thread.participants[0]) {
         await api.chatToExperience(thread.id, { character_id: thread.participants[0].character_id, title: eventTitle || undefined })
@@ -380,6 +381,12 @@ export default function ChatPage({ worldId }: { worldId?: string }) {
             {showConvert && (
               <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '6px', flexWrap: 'wrap' }}>
                 <input value={eventTitle} onChange={(e) => setEventTitle(e.target.value)} placeholder="事件标题" style={{ ...input, flex: 1, minWidth: '160px' }} />
+                <input
+                  type="number" min={1} max={100} value={convertCount}
+                  onChange={(e) => setConvertCount(Math.max(1, Math.min(100, Number(e.target.value) || 1)))}
+                  title="取最近多少条消息"
+                  style={{ ...input, width: '64px' }}
+                />
                 <label style={{ ...hint, display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <input type="checkbox" checked={writeExperience} onChange={(e) => setWriteExperience(e.target.checked)} /> 写入角色经历
                 </label>

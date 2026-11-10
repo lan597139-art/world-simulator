@@ -528,6 +528,19 @@ def _user_identity_line(thread: models.ChatThread) -> str:
     return "用户在世界中的身份——" + "；".join(parts)
 
 
+def _engine_band(value) -> str:
+    """G13：提示词不直接写 0–100，只给强度档位 + 行为描述。"""
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return ""
+    if number >= 70:
+        return "强"
+    if number >= 40:
+        return "中"
+    return "弱"
+
+
 def _persona_lines(persona: dict) -> list[str]:
     lines = []
     identity = persona.get("identity") or {}
@@ -541,10 +554,10 @@ def _persona_lines(persona: dict) -> list[str]:
     for key, item in engines.items():
         if not isinstance(item, dict):
             continue
-        value = item.get("value")
-        text = f"{item.get('label') or key}（{value}/100）"
+        band = _engine_band(item.get("value"))
+        text = f"{item.get('label') or key}：{band or '未定'}"
         if item.get("behavior"):
-            text += f"：{item['behavior']}"
+            text += f"；{item['behavior']}"
         lines.append(f"引擎 {text}")
     dominance = persona.get("dominance") or {}
     if dominance.get("description"):
@@ -762,7 +775,7 @@ def _roster(db: Session, thread: models.ChatThread) -> list[dict]:
                 "character_id": part.character_id,
                 "name": role.display_name if role and role.display_name else (char.name if char else "角色"),
                 "role": identity.get("role") or "",
-                "engines": "、".join(f"{label}{value}" for label, value in top if label),
+                "engines": "、".join(f"{label}{_engine_band(value)}" for label, value in top if label),
                 "policy": part.speak_policy,
             }
         )
@@ -1000,7 +1013,7 @@ def chat_to_event(thread_id: str, payload: dict, db: Session = Depends(get_db)):
     title = str(payload.get("title") or "").strip()[:200]
     if not title:
         title = f"{thread.title} · 对话记录"
-    transcript = _transcript(db, thread, int(payload.get("message_count") or 10))
+    transcript = _transcript(db, thread, max(1, min(int(payload.get("message_count") or 10), 100)))
     description = str(payload.get("description") or "").strip()
     if description:
         description = f"{description}\n\n{transcript}"

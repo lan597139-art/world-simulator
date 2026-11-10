@@ -71,6 +71,13 @@ link1 = api("POST", f"/api/units/{main_unit['id']}/events", {"event_id": e1["id"
 check("挂接主时间线事件", link1["event_id"] == e1["id"], link1)
 check("重复挂接被拒", api("POST", f"/api/units/{main_unit['id']}/events", {"event_id": e1["id"]}, expect=409).status_code == 409)
 
+# G9：单元最多 4 层
+d2 = api("POST", f"/api/spaces/{original['id']}/units", {"kind": "phase", "title": "层2", "parent_unit_id": side_unit["id"]}).json()
+d3 = api("POST", f"/api/spaces/{original['id']}/units", {"kind": "phase", "title": "层3", "parent_unit_id": d2["id"]}).json()
+d4 = api("POST", f"/api/spaces/{original['id']}/units", {"kind": "phase", "title": "层4", "parent_unit_id": d3["id"]}).json()
+check("四层单元可建", d4["parent_unit_id"] == d3["id"], d4)
+check("第五层被拒", api("POST", f"/api/spaces/{original['id']}/units", {"kind": "phase", "title": "层5", "parent_unit_id": d4["id"]}, expect=422).status_code == 422)
+
 # ---- 选择节点 -------------------------------------------------------
 choice = api("POST", f"/api/spaces/{original['id']}/choices", {
     "anchor_event_id": e2["id"], "title": "是否走另一条路", "description": "关键选择"
