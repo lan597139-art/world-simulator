@@ -84,7 +84,7 @@ check("未确认 AI 选项不可采用", api("POST", f"/api/choices/{choice['id'
 
 resolved = api("POST", f"/api/choices/{choice['id']}/resolve", {"option_id": opt_a["id"]}).json()
 check("确定选择生成空间", resolved["space"]["is_original"] is False and resolved["space"]["branch_id"], resolved)
-check("选择节点已确定", resolved["choice"]["status"] == "resolved", resolved["choice"])
+check("多选项逐个探索", resolved["choice"]["status"] == "open" and resolved["choice"]["options"][0]["target_space_id"] == resolved["space"]["id"], resolved["choice"])
 space_a = resolved["space"]
 check("空间绑定分支节点", bool(space_a["base_node_id"]) and space_a["node_count"] >= 1, space_a)
 

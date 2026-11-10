@@ -36,6 +36,7 @@ from trash import router as trash_router
 from snapshots import router as snapshots_router
 from biography import router as biography_router
 from official import ensure_official_world, router as official_router
+from official_storyline import ensure_official_storyline
 from storyline import router as storyline_router
 
 # 建表（新表）+ 增量迁移（已有表加列、数据回填）
@@ -105,6 +106,7 @@ for router in (
 try:
     with SessionLocal() as db:
         ensure_official_world(db)
+        ensure_official_storyline(db)
 except Exception as exc:  # 数据缺失不应阻止后端启动
     print(f"官方演示世界初始化跳过: {exc}")
 

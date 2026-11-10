@@ -710,8 +710,6 @@ def add_option(choice_id: str, payload: dict, db: Session = Depends(get_db)):
 def resolve_choice(choice_id: str, payload: dict, db: Session = Depends(get_db)):
     choice = _choice(db, choice_id)
     story = _project(db, choice.story_id)
-    if choice.status == "resolved":
-        fail(409, "ALREADY_RESOLVED", "该选择节点已经确定方向")
     option_id = str(payload.get("option_id") or "").strip() or None
     option = None
     if option_id:
@@ -720,6 +718,8 @@ def resolve_choice(choice_id: str, payload: dict, db: Session = Depends(get_db))
             fail(409, "OPTION_MISMATCH", "选择项不属于该节点")
         if option.source == "ai" and not option.confirmed:
             fail(409, "OPTION_UNCONFIRMED", "AI 建议的选项需确认后才能采用")
+        if option.target_space_id:
+            fail(409, "OPTION_ALREADY_RESOLVED", "该选项已经生成过空间")
     space_name = str(payload.get("space_name") or "").strip()[:120]
     if not space_name:
         space_name = (option.label if option else "未命名空间")[:120]
@@ -757,11 +757,21 @@ def resolve_choice(choice_id: str, payload: dict, db: Session = Depends(get_db))
         )
         space.base_node_id = first_node.id if first_node else None
 
-    choice.status = "resolved"
     choice.resolved_option_id = option.id if option else None
     if option:
         option.target_space_id = space.id
         option.confirmed = True
+    remaining = (
+        db.query(models.StoryChoiceOption)
+        .filter(
+            models.StoryChoiceOption.choice_id == choice.id,
+            models.StoryChoiceOption.target_space_id.is_(None),
+            models.StoryChoiceOption.confirmed.is_(True),
+        )
+        .count()
+    )
+    # 多个选项可各自探索；全部选项都有空间后才自动标记已确定。
+    choice.status = "resolved" if remaining == 0 else "open"
     db.commit()
     db.refresh(space)
     return {"choice": _choice_row(db, choice), "space": _space_row(db, space)}

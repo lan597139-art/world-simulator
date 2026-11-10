@@ -79,4 +79,8 @@ def reset_official_world(world_id: str, db: Session = Depends(get_db)):
     world.deleted_at = None
     world.archived_at = None
     db.commit()
+    try:
+        ensure_official_storyline(db)
+    except Exception as exc:  # 故事线导入失败不阻断世界重置
+        print(f"官方故事线重建跳过: {exc}")
     return {"status": "ok", "reset": True, "world_id": world.id}
