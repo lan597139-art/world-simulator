@@ -43,7 +43,9 @@ class FakeCompletions:
     def create(self, **kwargs):
         self.calls.append(kwargs)
         system = kwargs["messages"][0]["content"]
-        if "世界演化分析器" in system:
+        if "压缩成" in system:
+            content = "摘要：双方讨论了药园的情况与墨居仁的异常。"
+        elif "世界演化分析器" in system:
             content = json.dumps({
                 "summary": "对话让彼此更戒备",
                 "relationships": [{
@@ -136,6 +138,28 @@ detail = api("GET", f"/api/chat/threads/{tid}").json()
 check("会话详情含消息", len(detail["messages"]) == 4, len(detail["messages"]))
 check("世界会话列表", any(t["id"] == tid for t in api("GET", f"/api/worlds/{wid}/chat/threads").json()))
 
+# ---- 用户身份 -------------------------------------------------------
+identity_patch = api("PATCH", f"/api/chat/threads/{tid}", {
+    "settings": {"user_identity": {"name": "韩师弟", "role": "记名弟子", "background": "刚入七玄门"}},
+}).json()
+check("会话用户身份保存", identity_patch["settings"]["user_identity"]["role"] == "记名弟子", identity_patch["settings"])
+
+api("POST", f"/api/chat/threads/{tid}/messages", {"content": "师兄，我能信你吗？"})
+last_prompt = FAKE.chat.completions.calls[-1]["messages"][0]["content"]
+check("角色提示含用户身份", "韩师弟" in last_prompt and "记名弟子" in last_prompt, last_prompt[-300:])
+
+# ---- 记忆摘要 -------------------------------------------------------
+db = SessionLocal()
+db.add_all([
+    models.ChatMessage(thread_id=tid, sender_type="user", content="我听说张铁出事了。"),
+    models.ChatMessage(thread_id=tid, sender_type="character", character_id=a["id"], content="别多问，最近少去药园。"),
+])
+db.commit()
+db.close()
+summary = api("POST", f"/api/chat/threads/{tid}/memories/summarize", {"character_id": a["id"]}).json()
+check("AI 摘要记忆生成", summary["importance"] == 0.65 and "摘要" in summary["content"], summary)
+check("摘要记忆可列出", any(row["kind"] == "memories" or row["content"].startswith("摘要") for row in api("GET", f"/api/chat/threads/{tid}/memories").json()))
+
 # ---- 群聊边界 -------------------------------------------------------
 group = api("POST", "/api/chat/threads", {"world_id": wid, "kind": "group", "character_ids": [b["id"], c["id"]]}).json()
 check("创建群聊", group["kind"] == "group" and len(group["participants"]) == 2, group)
@@ -208,6 +232,7 @@ check("非会话角色不可写经历", api("POST", f"/api/chat/threads/{tid}/to
 
 empty = api("POST", "/api/chat/threads", {"world_id": wid, "kind": "private", "character_id": b["id"]}).json()
 check("空会话不可整理", api("POST", f"/api/chat/threads/{empty['id']}/to-event", {}, expect=409).status_code == 409)
+check("消息不足不可摘要", api("POST", f"/api/chat/threads/{empty['id']}/memories/summarize", {}, expect=409).status_code == 409)
 
 api("PATCH", f"/api/chat/threads/{tid}", {"status": "archived"})
 check("归档会话拒绝发言", api("POST", f"/api/chat/threads/{tid}/messages", {"content": "?"}, expect=409).status_code == 409)

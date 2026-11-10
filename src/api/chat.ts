@@ -118,5 +118,10 @@ export const chatToExperience = (threadId: string, payload: { character_id: stri
     method: 'POST',
     body: JSON.stringify(payload),
   })
+export const summarizeMemories = (threadId: string, characterId?: string) =>
+  request<ChatMemory>(`/chat/threads/${threadId}/memories/summarize`, {
+    method: 'POST',
+    body: JSON.stringify(characterId ? { character_id: characterId } : {}),
+  })
 export const listMemories = (threadId: string) => request<ChatMemory[]>(`/chat/threads/${threadId}/memories`)
 export const deleteMemory = (id: string) => request<{ status: string }>(`/chat/memories/${id}`, { method: 'DELETE' })

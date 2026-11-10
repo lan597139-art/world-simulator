@@ -49,6 +49,8 @@ export default function ChatPage({ worldId }: { worldId?: string }) {
   const [writeExperience, setWriteExperience] = useState(false)
   const [impact, setImpact] = useState<any | null>(null)
   const [impactBusy, setImpactBusy] = useState(false)
+  const [identityName, setIdentityName] = useState('')
+  const [identityRole, setIdentityRole] = useState('')
   const [draft, setDraft] = useState('')
   const [busy, setBusy] = useState(false)
   const [log, setLog] = useState('')
@@ -92,6 +94,9 @@ export default function ChatPage({ worldId }: { worldId?: string }) {
         setThread(data)
         setMessages(data.messages || [])
         setMemories(memRows)
+        const identity = (data.settings || {}).user_identity || {}
+        setIdentityName(identity.name || '')
+        setIdentityRole(identity.role || '')
         const first = data.participants[0]
         if (first && data.kind === 'private') {
           api.getAiRole(first.character_id).then((item) => {
@@ -221,6 +226,36 @@ export default function ChatPage({ worldId }: { worldId?: string }) {
       }
       setLog(message)
       setShowConvert(false)
+    } catch (error: any) {
+      setLog(`❌ ${error.message || error}`)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const saveIdentity = async () => {
+    if (!thread) return
+    setBusy(true)
+    try {
+      const saved = await api.updateThread(thread.id, {
+        settings: { user_identity: { name: identityName, role: identityRole } },
+      })
+      setThread(saved)
+      setLog('我的身份已保存')
+    } catch (error: any) {
+      setLog(`❌ ${error.message || error}`)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const summarizeNow = async () => {
+    if (!thread) return
+    setBusy(true)
+    try {
+      const memory = await api.summarizeMemories(thread.id, thread.participants[0]?.character_id)
+      setMemories((prev) => [memory, ...prev])
+      setLog('已生成 AI 摘要记忆')
     } catch (error: any) {
       setLog(`❌ ${error.message || error}`)
     } finally {
@@ -410,6 +445,14 @@ export default function ChatPage({ worldId }: { worldId?: string }) {
       </div>
 
       <div style={{ ...card, width: '300px', overflowY: 'auto' }}>
+        <h3 style={{ margin: 0, fontSize: '13px' }}>我的身份</h3>
+        <div style={{ ...hint }}>角色会知道你在世界中的身份；留空则按外来交谈者处理。</div>
+        <div style={{ display: 'flex', gap: '5px' }}>
+          <input value={identityName} onChange={(e) => setIdentityName(e.target.value)} placeholder="称呼，如：韩师弟" style={{ ...input, flex: 1 }} />
+          <input value={identityRole} onChange={(e) => setIdentityRole(e.target.value)} placeholder="身份，如：记名弟子" style={{ ...input, flex: 1 }} />
+        </div>
+        <button style={btn} disabled={busy || !thread} onClick={() => void saveIdentity()}>保存身份</button>
+
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <h3 style={{ margin: 0, fontSize: '13px' }}>角色配置</h3>
           <div style={{ flex: 1 }} />
@@ -447,7 +490,11 @@ export default function ChatPage({ worldId }: { worldId?: string }) {
           </>
         ) : <div style={hint}>选择私聊后显示角色配置。</div>}
 
-        <h3 style={{ margin: '6px 0 0', fontSize: '13px' }}>对话记忆</h3>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px' }}>
+          <h3 style={{ margin: 0, fontSize: '13px' }}>对话记忆</h3>
+          <div style={{ flex: 1 }} />
+          <button style={{ ...btn, padding: '3px 8px' }} disabled={busy || !thread || (thread?.message_count || 0) < 6} onClick={() => void summarizeNow()}>AI 摘要</button>
+        </div>
         {memories.map((memory) => (
           <div key={memory.id} style={{ border: '1px solid var(--card-border)', borderRadius: '7px', padding: '7px', display: 'flex', gap: '6px', alignItems: 'flex-start' }}>
             <div style={{ ...hint, flex: 1, color: 'var(--text-main)' }}>{memory.content}</div>

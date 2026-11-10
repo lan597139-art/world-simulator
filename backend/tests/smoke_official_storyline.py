@@ -54,6 +54,19 @@ try:
     check("正史最终结局", ("反杀后入黄枫谷", "final") in kinds, kinds)
     check("出逃线开放结局", ("亡命未定", "open") in kinds, kinds)
 
+    empty_participants = [
+        event.name for event in db.query(models.Event).filter(models.Event.world_id == wid).all()
+        if not (event.participants or [])
+    ]
+    check("事件参与者已回填", empty_participants == [], empty_participants)
+
+    empty_chapters = (
+        db.query(models.Story)
+        .filter(models.Story.world_id == wid, models.Story.title == "第 3 章", models.Story.word_count == 0)
+        .count()
+    )
+    check("空章节已清理", empty_chapters == 0, empty_chapters)
+
     axis = (world.settings or {}).get("six_axis") or {}
     check("演示六轴已填", len(axis) == 6, axis)
 
