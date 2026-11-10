@@ -13,3 +13,5 @@ for suite in "${SUITES[@]}"; do
   printf '%-30s %s\n' "$suite" "$line"
 done
 printf 'TOTAL %s passed across %s suites\n' "$total" "${#SUITES[@]}"
+echo "== 迁移副本演练 =="
+"$PY" migrations/rehearse.py | tail -3

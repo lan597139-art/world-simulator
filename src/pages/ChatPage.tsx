@@ -52,6 +52,7 @@ export default function ChatPage({ worldId }: { worldId?: string }) {
   const [impactBusy, setImpactBusy] = useState(false)
   const [identityName, setIdentityName] = useState('')
   const [identityRole, setIdentityRole] = useState('')
+  const [oocAllowed, setOocAllowed] = useState(false)
   const [draft, setDraft] = useState('')
   const [busy, setBusy] = useState(false)
   const [log, setLog] = useState('')
@@ -98,6 +99,7 @@ export default function ChatPage({ worldId }: { worldId?: string }) {
         const identity = (data.settings || {}).user_identity || {}
         setIdentityName(identity.name || '')
         setIdentityRole(identity.role || '')
+        setOocAllowed(Boolean((data.settings || {}).ooc_allowed))
         const first = data.participants[0]
         if (first && data.kind === 'private') {
           api.getAiRole(first.character_id).then((item) => {
@@ -239,7 +241,7 @@ export default function ChatPage({ worldId }: { worldId?: string }) {
     setBusy(true)
     try {
       const saved = await api.updateThread(thread.id, {
-        settings: { user_identity: { name: identityName, role: identityRole } },
+        settings: { user_identity: { name: identityName, role: identityRole }, ooc_allowed: oocAllowed },
       })
       setThread(saved)
       setLog('我的身份已保存')
@@ -458,6 +460,10 @@ export default function ChatPage({ worldId }: { worldId?: string }) {
           <input value={identityName} onChange={(e) => setIdentityName(e.target.value)} placeholder="称呼，如：韩师弟" style={{ ...input, flex: 1 }} />
           <input value={identityRole} onChange={(e) => setIdentityRole(e.target.value)} placeholder="身份，如：记名弟子" style={{ ...input, flex: 1 }} />
         </div>
+        <label style={{ ...hint, display: 'flex', alignItems: 'center', gap: '5px' }}>
+          <input type="checkbox" checked={oocAllowed} onChange={(e) => setOocAllowed(e.target.checked)} />
+          允许出戏（被明确询问时承认这是角色扮演）
+        </label>
         <button style={btn} disabled={busy || !thread} onClick={() => void saveIdentity()}>保存身份</button>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>

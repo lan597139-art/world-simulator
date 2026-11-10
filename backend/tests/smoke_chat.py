@@ -119,7 +119,6 @@ call = FAKE.chat.completions.calls[-1]
 check("系统提示含角色设定", "甲师兄" in call["messages"][0]["content"] and "药园杂役" in call["messages"][0]["content"], call["messages"][0]["content"][:200])
 check("提示含记忆约束", "不替用户行动" in call["messages"][0]["content"], call["messages"][0]["content"][-200:])
 check("G13 提示不直写数值", "/100" not in call["messages"][0]["content"] and "引擎 生存：强" in call["messages"][0]["content"], call["messages"][0]["content"][:400])
-
 messages = api("GET", f"/api/chat/threads/{tid}/messages").json()
 check("消息按时间正序", [m["sender_type"] for m in messages] == ["user", "character"], messages)
 check("消息分页限制", len(api("GET", f"/api/chat/threads/{tid}/messages?limit=1").json()) == 1)
@@ -129,6 +128,14 @@ check("对话产生记忆", len(memories) == 1 and "药园" in memories[0]["cont
 check("删除记忆", api("DELETE", f"/api/chat/memories/{memories[0]['id']}").status_code == 200)
 check("记忆已删除", len(api("GET", f"/api/chat/threads/{tid}/memories").json()) == 0)
 
+
+check("G21 默认不出戏", "不主动说明自己是 AI" in call["messages"][0]["content"], call["messages"][0]["content"][-300:])
+
+api("PATCH", f"/api/chat/threads/{tid}", {"settings": {"ooc_allowed": True}})
+api("POST", f"/api/chat/threads/{tid}/messages", {"content": "你是不是 AI？"})
+ooc_prompt = FAKE.chat.completions.calls[-1]["messages"][0]["content"]
+check("G21 允许出戏时提示", "可以简短说明这是角色扮演" in ooc_prompt, ooc_prompt[-300:])
+
 # ---- 关闭开关 -------------------------------------------------------
 api("PUT", f"/api/characters/{a['id']}/ai-role", {"enabled": False})
 check("关闭角色后拒绝发言", api("POST", f"/api/chat/threads/{tid}/messages", {"content": "在吗"}, expect=409).status_code == 409)
@@ -136,7 +143,7 @@ api("PUT", f"/api/characters/{a['id']}/ai-role", {"enabled": True})
 check("重新开启后可发言", api("POST", f"/api/chat/threads/{tid}/messages", {"content": "还在吗"}).status_code == 200)
 
 detail = api("GET", f"/api/chat/threads/{tid}").json()
-check("会话详情含消息", len(detail["messages"]) == 4, len(detail["messages"]))
+check("会话详情含消息", len(detail["messages"]) == 6, len(detail["messages"]))
 check("世界会话列表", any(t["id"] == tid for t in api("GET", f"/api/worlds/{wid}/chat/threads").json()))
 
 # ---- 用户身份 -------------------------------------------------------
@@ -174,12 +181,13 @@ check("移除后可再加入", api("POST", f"/api/chat/threads/{group['id']}/par
 # ---- 群聊调度 -------------------------------------------------------
 PLAN_STATE["ids"] = [a["id"], c["id"]]
 turn = api("POST", f"/api/chat/threads/{group['id']}/turns", {"content": "你们怎么看墨居仁？"}).json()
-check("群聊一轮多角色发言", len(turn["replies"]) == 2 and {r["character_id"] for r in turn["replies"]} == {a["id"], c["id"]}, turn)
+check("群聊一轮多角色发言", len(turn["replies"]) == 3 and {r["character_id"] for r in turn["replies"]} == {a["id"], b["id"], c["id"]}, turn)
 check("群聊计划返回", [p["character_id"] for p in turn["plan"]] == [a["id"], c["id"]], turn["plan"])
 group_msgs = api("GET", f"/api/chat/threads/{group['id']}/messages").json()
-check("群聊消息落库", len(group_msgs) == 3 and group_msgs[0]["sender_type"] == "user", group_msgs)
+check("群聊消息落库", len(group_msgs) == 4 and group_msgs[0]["sender_type"] == "user", group_msgs)
+check("G18 第二轮标记", turn["replies"][-1]["meta"].get("round") == 2, turn["replies"][-1])
 group_mem = api("GET", f"/api/chat/threads/{group['id']}/memories").json()
-check("群聊每位发言者形成记忆", len(group_mem) == 2, group_mem)
+check("群聊每位发言者形成记忆", len(group_mem) == 3, group_mem)
 
 db = SessionLocal()
 plan_row = db.query(models.ChatPlan).filter(models.ChatPlan.thread_id == group["id"]).order_by(models.ChatPlan.created_at.desc()).first()
@@ -188,7 +196,7 @@ check("调度计划持久化", plan_row is not None and len(plan_row.plan.get("s
 
 PLAN_STATE["bad"] = True
 fallback = api("POST", f"/api/chat/threads/{group['id']}/turns", {"content": "那你们打算怎么办？"}).json()
-check("非法计划规则兜底", 1 <= len(fallback["replies"]) <= 2, fallback)
+check("非法计划规则兜底", 1 <= len(fallback["replies"]) <= 3, fallback)
 db = SessionLocal()
 plan_row = db.query(models.ChatPlan).filter(models.ChatPlan.thread_id == group["id"]).order_by(models.ChatPlan.created_at.desc()).first()
 db.close()
