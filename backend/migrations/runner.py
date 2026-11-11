@@ -32,6 +32,7 @@ MODULES = [
     "m020_event_participants",
     "m021_users_scene",
     "m022_event_choices",
+    "m023_story_threads",
 ]
 
 

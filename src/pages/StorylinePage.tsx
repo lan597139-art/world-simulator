@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { API_ORIGIN } from '../api/config'
 import * as api from '../api/storyline'
 import { listStories as listChapters } from '../api/writing'
+import StoryThreadsModal from '../components/StoryThreadsModal'
 import type { StoryChoice, StoryDetail, StoryEnding, StoryProject, StorySpace, StoryUnit, StoryUnitEvent } from '../api/storyline'
 
 const card: React.CSSProperties = {
@@ -53,6 +54,7 @@ export default function StorylinePage({ worldId }: { worldId?: string }) {
   const [chapterOptions, setChapterOptions] = useState<any[]>([])
   const [spaceChapters, setSpaceChapters] = useState<any[]>([])
   const [chapterPick, setChapterPick] = useState('')
+  const [showThreads, setShowThreads] = useState(false)
   const [events, setEvents] = useState<any[]>([])
   const [log, setLog] = useState('')
 
@@ -252,10 +254,14 @@ export default function StorylinePage({ worldId }: { worldId?: string }) {
         </select>
         <input value={newStoryTitle} onChange={(e) => setNewStoryTitle(e.target.value)} placeholder="新故事名" style={{ ...input, width: '150px' }} />
         <button style={btn} onClick={() => void createStoryNow()}>+ 故事</button>
+        {detail && <button style={btn} onClick={() => setShowThreads(true)}>人物线</button>}
         <div style={{ flex: 1 }} />
         {log && <div style={{ ...hint, maxWidth: '45%', color: 'var(--text-main)' }}>{log}</div>}
       </div>
 
+      {showThreads && detail && (
+        <StoryThreadsModal storyId={detail.id} worldId={detail.world_id} onClose={() => setShowThreads(false)} />
+      )}
       <div style={{ display: 'flex', gap: '12px', flex: 1, minHeight: 0 }}>
         <div style={{ ...card, width: '240px', overflowY: 'auto' }}>
           <h3 style={sectionTitle}>空间</h3>

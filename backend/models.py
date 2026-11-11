@@ -1132,3 +1132,49 @@ class EventChoiceOption(Base):
     confirmed = Column(Boolean, default=True)
     order_index = Column(Integer, default=0)
     created_at = Column(DateTime, default=_now)
+
+
+class StoryThread(Base):
+    """人物故事线：配角也可拥有独立主线；事件通过 thread_events 引用。"""
+
+    __tablename__ = "story_threads"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    story_id = Column(String, nullable=False, index=True)
+    world_id = Column(String, nullable=False, index=True)
+    character_id = Column(String, nullable=True, index=True)
+    parent_thread_id = Column(String)
+    kind = Column(String, default="main")  # main/side/copy/shadow/ensemble
+    title = Column(String, nullable=False)
+    order_index = Column(Integer, default=0)
+    status = Column(String, default="active")
+    meta = Column(JSON, default=dict)
+    created_at = Column(DateTime, default=_now)
+
+
+class StoryThreadEvent(Base):
+    __tablename__ = "story_thread_events"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    world_id = Column(String, nullable=False)
+    thread_id = Column(String, ForeignKey("story_threads.id", ondelete="CASCADE"), nullable=False, index=True)
+    event_id = Column(String, ForeignKey("events.id", ondelete="CASCADE"), nullable=False, index=True)
+    order_index = Column(Integer, default=0)
+    role = Column(String, default="")
+    note = Column(String, default="")
+    created_at = Column(DateTime, default=_now)
+
+
+class StoryThreadEdge(Base):
+    __tablename__ = "story_thread_edges"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    story_id = Column(String, nullable=False, index=True)
+    world_id = Column(String, nullable=False)
+    from_thread_id = Column(String, nullable=False)
+    from_event_id = Column(String, nullable=True)
+    to_thread_id = Column(String, nullable=False)
+    to_event_id = Column(String, nullable=True)
+    edge_type = Column(String, default="impact")  # converge/impact/fork
+    note = Column(String, default="")
+    created_at = Column(DateTime, default=_now)

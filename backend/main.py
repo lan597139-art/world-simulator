@@ -15,6 +15,7 @@ from migrations.runner import run_migrations
 from nodes import router as nodes_router, seed_world
 from users import router as users_router, ensure_local_user
 from event_choices import router as event_choices_router
+from story_threads import router as story_threads_router
 from geography import router as geography_router
 from orgs import router as orgs_router
 from events import router as event_router
@@ -84,6 +85,7 @@ for router in (
     simulation_router,
     users_router,
     event_choices_router,
+    story_threads_router,
     writing_router,
     nodes_router,
     geography_router,
