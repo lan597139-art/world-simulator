@@ -64,12 +64,16 @@ def _thread_row(db, row):
 
 
 def _edge_row(db, row):
+    from_event = db.query(models.Event).filter(models.Event.id == row.from_event_id).first() if row.from_event_id else None
+    to_event = db.query(models.Event).filter(models.Event.id == row.to_event_id).first() if row.to_event_id else None
     return {
         "id": row.id,
         "from_thread_id": row.from_thread_id,
         "from_event_id": row.from_event_id,
+        "from_event_name": from_event.name if from_event else "",
         "to_thread_id": row.to_thread_id,
         "to_event_id": row.to_event_id,
+        "to_event_name": to_event.name if to_event else "",
         "edge_type": row.edge_type,
         "note": row.note or "",
     }
@@ -138,6 +142,31 @@ def update_thread(thread_id: str, payload: dict, db: Session = Depends(get_db)):
         row.kind = kind
     if "status" in payload:
         row.status = str(payload.get("status") or "active")[:20]
+    if "character_id" in payload:
+        character_id = str(payload.get("character_id") or "").strip() or None
+        if character_id:
+            char = db.query(models.Character).filter(models.Character.id == character_id).first()
+            if not char or char.world_id != row.world_id:
+                _fail(409, "人物不在该世界")
+        row.character_id = character_id
+    if "parent_thread_id" in payload:
+        parent_id = str(payload.get("parent_thread_id") or "").strip() or None
+        if parent_id:
+            if parent_id == row.id:
+                _fail(422, "人物线不能以自己为父线")
+            parent = _thread(db, parent_id)
+            if parent.story_id != row.story_id:
+                _fail(409, "父人物线不属于该故事")
+            cursor = parent
+            guard = 0
+            while cursor.parent_thread_id and guard < 100:
+                if cursor.parent_thread_id == row.id:
+                    _fail(422, "人物线父子关系成环")
+                cursor = _thread(db, cursor.parent_thread_id)
+                guard += 1
+        row.parent_thread_id = parent_id
+    if "order_index" in payload:
+        row.order_index = int(payload.get("order_index") or 0)
     db.commit()
     db.refresh(row)
     return _thread_row(db, row)
@@ -176,12 +205,21 @@ def attach_event(thread_id: str, payload: dict, db: Session = Depends(get_db)):
     )
     if existing:
         _fail(409, "事件已在这条人物线中")
-    count = db.query(models.StoryThreadEvent).filter(models.StoryThreadEvent.thread_id == thread.id).count()
+    links = (
+        db.query(models.StoryThreadEvent)
+        .filter(models.StoryThreadEvent.thread_id == thread.id)
+        .order_by(models.StoryThreadEvent.order_index.asc(), models.StoryThreadEvent.created_at.asc())
+        .all()
+    )
+    position = int(payload.get("order_index") if payload.get("order_index") is not None else len(links))
+    position = max(0, min(position, len(links)))
+    for index, item in enumerate(links):
+        item.order_index = index if index < position else index + 1
     link = models.StoryThreadEvent(
         world_id=thread.world_id,
         thread_id=thread.id,
         event_id=event.id,
-        order_index=int(payload.get("order_index") or count),
+        order_index=position,
         role=str(payload.get("role") or "")[:50],
         note=str(payload.get("note") or "")[:500],
     )
@@ -189,6 +227,51 @@ def attach_event(thread_id: str, payload: dict, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(link)
     return _thread_row(db, thread)
+
+
+@router.patch("/api/story-thread-events/{link_id}")
+def update_event_link(link_id: str, payload: dict, db: Session = Depends(get_db)):
+    link = db.query(models.StoryThreadEvent).filter(models.StoryThreadEvent.id == link_id).first()
+    if not link:
+        _fail(404, "关联不存在")
+    source = _thread(db, link.thread_id)
+    target = source
+    target_id = str(payload.get("thread_id") or "").strip() or None
+    if target_id and target_id != source.id:
+        target = _thread(db, target_id)
+        if target.story_id != source.story_id or target.world_id != source.world_id:
+            _fail(409, "目标人物线不属于该故事")
+        duplicate = (
+            db.query(models.StoryThreadEvent)
+            .filter(
+                models.StoryThreadEvent.thread_id == target.id,
+                models.StoryThreadEvent.event_id == link.event_id,
+                models.StoryThreadEvent.id != link.id,
+            )
+            .first()
+        )
+        if duplicate:
+            _fail(409, "事件已在这条人物线中")
+        link.thread_id = target.id
+    if "role" in payload:
+        link.role = str(payload.get("role") or "")[:50]
+    if "note" in payload:
+        link.note = str(payload.get("note") or "")[:500]
+    if "order_index" in payload or target_id:
+        links = (
+            db.query(models.StoryThreadEvent)
+            .filter(models.StoryThreadEvent.thread_id == target.id, models.StoryThreadEvent.id != link.id)
+            .order_by(models.StoryThreadEvent.order_index.asc(), models.StoryThreadEvent.created_at.asc())
+            .all()
+        )
+        position = int(payload.get("order_index") if payload.get("order_index") is not None else len(links))
+        position = max(0, min(position, len(links)))
+        links.insert(position, link)
+        for index, item in enumerate(links):
+            item.order_index = index
+    db.commit()
+    db.refresh(link)
+    return {"status": "ok", "thread": _thread_row(db, target), "link_id": link.id}
 
 
 @router.delete("/api/story-thread-events/{link_id}")
@@ -220,8 +303,10 @@ def create_edge(story_id: str, payload: dict, db: Session = Depends(get_db)):
     to_id = str(payload.get("to_thread_id") or "").strip()
     if not from_id or not to_id:
         _fail(422, "缺少起点/终点人物线")
-    if from_id == to_id:
-        _fail(422, "同一人物线不能连边")
+    from_event_id = str(payload.get("from_event_id") or "").strip() or None
+    to_event_id = str(payload.get("to_event_id") or "").strip() or None
+    if from_id == to_id and (not from_event_id or not to_event_id or from_event_id == to_event_id):
+        _fail(422, "同一人物线内只能连接两个不同事件")
     for thread_id in (from_id, to_id):
         row = _thread(db, thread_id)
         if row.story_id != story.id:
@@ -229,13 +314,25 @@ def create_edge(story_id: str, payload: dict, db: Session = Depends(get_db)):
     edge_type = str(payload.get("edge_type") or "impact")
     if edge_type not in {"converge", "impact", "fork"}:
         _fail(422, "关系类型不合法")
+    for event_id, thread_id in ((from_event_id, from_id), (to_event_id, to_id)):
+        if not event_id:
+            continue
+        event = db.query(models.Event).filter(models.Event.id == event_id).first()
+        if not event or event.world_id != story.world_id:
+            _fail(409, "关联事件不在该世界")
+        linked = db.query(models.StoryThreadEvent).filter(
+            models.StoryThreadEvent.thread_id == thread_id,
+            models.StoryThreadEvent.event_id == event_id,
+        ).first()
+        if not linked:
+            _fail(409, "事件未挂在这条人物线上")
     row = models.StoryThreadEdge(
         story_id=story.id,
         world_id=story.world_id,
         from_thread_id=from_id,
-        from_event_id=str(payload.get("from_event_id") or "").strip() or None,
+        from_event_id=from_event_id,
         to_thread_id=to_id,
-        to_event_id=str(payload.get("to_event_id") or "").strip() or None,
+        to_event_id=to_event_id,
         edge_type=edge_type,
         note=str(payload.get("note") or "")[:500],
     )

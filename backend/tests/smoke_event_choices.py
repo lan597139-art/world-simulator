@@ -48,6 +48,13 @@ def run():
     bad = client.post(f"/api/event-choices/{cid}/options", json={"label": "跨世界", "outcome_event_id": foreign["id"]})
     check("跨世界后续事件被拒", bad.status_code == 409, bad.text)
 
+    second = client.post(f"/api/event-choices/{cid}/options", json={"label": "第二分支", "consequence": "另一结果"})
+    sid2 = second.json()["id"]
+    moved = client.patch(f"/api/event-choice-options/{sid2}", json={"order_index": 0})
+    check("结果分支可排序", moved.status_code == 200, moved.text)
+    ordered = client.get(f"/api/events/{a['id']}/choices").json()[0]["options"]
+    check("排序后第二分支居首", ordered[0]["id"] == sid2, ordered)
+
     sandbox = client.post(f"/api/event-choice-options/{oid}/sandbox", json={})
     check("选项可生成沙盒", sandbox.status_code == 200 and sandbox.json().get("branch_id"), sandbox.text)
     again = client.post(f"/api/event-choice-options/{oid}/sandbox", json={})

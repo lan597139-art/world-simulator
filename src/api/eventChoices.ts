@@ -46,6 +46,15 @@ export interface EventChoice {
 export const listEventChoices = (eventId: string) => request<EventChoice[]>(`/events/${eventId}/choices`)
 export const createEventChoice = (eventId: string, payload: { title: string; description?: string }) =>
   request<EventChoice>(`/events/${eventId}/choices`, { method: 'POST', body: JSON.stringify(payload) })
+export const updateEventChoice = (choiceId: string, payload: { title?: string; description?: string; status?: string }) =>
+  request<EventChoice>(`/event-choices/${choiceId}`, { method: 'PATCH', body: JSON.stringify(payload) })
+export const updateEventOption = (optionId: string, payload: { label?: string; consequence?: string; outcome_event_id?: string | null; order_index?: number }) =>
+  request<EventChoiceOption>(`/event-choice-options/${optionId}`, { method: 'PATCH', body: JSON.stringify(payload) })
+export const createFollowUpEvent = (worldId: string, name: string) =>
+  request<{ id: string; name: string }>(`/events`, {
+    method: 'POST',
+    body: JSON.stringify({ world_id: worldId, name, description: '', storyline: '支线', scale: '中观' }),
+  })
 export const deleteEventChoice = (choiceId: string) =>
   request<{ status: string }>(`/event-choices/${choiceId}`, { method: 'DELETE' })
 export const createEventOption = (

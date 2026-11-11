@@ -1,423 +1,542 @@
 import { useEffect, useMemo, useState } from 'react'
 import { API_ORIGIN } from '../api/config'
-import * as api from '../api/storyline'
-import { listStories as listChapters } from '../api/writing'
-import StoryThreadsModal from '../components/StoryThreadsModal'
-import type { StoryChoice, StoryDetail, StoryEnding, StoryProject, StorySpace, StoryUnit, StoryUnitEvent } from '../api/storyline'
+import * as storyApi from '../api/storyline'
+import * as api from '../api/storyThreads'
+import type { StoryProject } from '../api/storyline'
+
+type EventLite = {
+  id: string
+  name: string
+  description?: string
+  story_time?: string
+  storyline?: string
+  scale?: string
+  participants?: string[]
+  domain?: string[]
+}
+type CharacterLite = { id: string; name: string }
+
+const KIND_LABEL: Record<string, string> = {
+  main: '主线', side: '支线', copy: '副本', shadow: '暗线/影线', ensemble: '群像',
+}
+const KIND_COLOR: Record<string, string> = {
+  main: 'var(--primary-color)', side: '#7a9e7e', copy: '#a58ac1', shadow: '#b08a5a', ensemble: '#7d8fa8',
+}
+const LANE_W = 286
+const LANE_GAP = 22
+const PAD = 18
+const HEADER_H = 62
+const CARD_H = 84
+const CARD_GAP = 12
 
 const card: React.CSSProperties = {
-  background: 'var(--card-bg)',
-  border: '1px solid var(--card-border)',
-  borderRadius: '12px',
-  padding: '14px',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '10px',
-  minHeight: 0,
+  background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '12px', padding: '12px',
+  display: 'flex', flexDirection: 'column', gap: '9px', minHeight: 0,
 }
-
-const sectionTitle: React.CSSProperties = { margin: 0, fontSize: '14px', color: 'var(--text-main)' }
-const hint: React.CSSProperties = { fontSize: '10px', color: 'var(--text-muted)', lineHeight: 1.6 }
+const hint: React.CSSProperties = { fontSize: '10px', color: 'var(--text-muted)', lineHeight: 1.65 }
 const input: React.CSSProperties = {
-  padding: '6px 8px',
-  borderRadius: '6px',
-  border: '1px solid var(--card-border)',
-  background: 'var(--card-bg)',
-  color: 'var(--text-main)',
-  fontSize: '11px',
-  minWidth: 0,
+  padding: '7px 9px', borderRadius: '7px', border: '1px solid var(--card-border)', background: 'var(--card-bg)',
+  color: 'var(--text-main)', fontSize: '11px', minWidth: 0, boxSizing: 'border-box',
 }
 const btn: React.CSSProperties = {
-  padding: '5px 10px',
-  borderRadius: '6px',
-  border: '1px solid var(--primary-color)',
-  background: 'transparent',
-  color: 'var(--primary-color)',
-  fontSize: '10px',
-  cursor: 'pointer',
-  whiteSpace: 'nowrap',
+  padding: '6px 10px', borderRadius: '7px', border: '1px solid var(--card-border)', background: 'transparent',
+  color: 'var(--text-main)', fontSize: '10px', cursor: 'pointer', whiteSpace: 'nowrap',
 }
 
-const UNIT_LABEL: Record<string, string> = { mainline: '主线', side: '支线', instance: '副本', phase: '阶段' }
-const ENDING_LABEL: Record<string, string> = { final: '最终', stage: '阶段', open: '开放' }
+function laneX(index: number) { return PAD + index * (LANE_W + LANE_GAP) }
+function cardY(index: number) { return HEADER_H + 14 + index * (CARD_H + CARD_GAP) }
 
-export default function StorylinePage({ worldId }: { worldId?: string }) {
+export default function StorylinePage({ worldId, onOpenEvents }: { worldId?: string; onOpenEvents?: () => void }) {
   const [stories, setStories] = useState<StoryProject[]>([])
   const [storyId, setStoryId] = useState('')
-  const [detail, setDetail] = useState<StoryDetail | null>(null)
-  const [spaceId, setSpaceId] = useState('')
-  const [units, setUnits] = useState<StoryUnit[]>([])
-  const [unitEvents, setUnitEvents] = useState<Record<string, StoryUnitEvent[]>>({})
-  const [selectedUnitId, setSelectedUnitId] = useState('')
-  const [choices, setChoices] = useState<StoryChoice[]>([])
-  const [endings, setEndings] = useState<StoryEnding[]>([])
-  const [chapterOptions, setChapterOptions] = useState<any[]>([])
-  const [spaceChapters, setSpaceChapters] = useState<any[]>([])
-  const [chapterPick, setChapterPick] = useState('')
-  const [showThreads, setShowThreads] = useState(false)
-  const [events, setEvents] = useState<any[]>([])
+  const [threads, setThreads] = useState<api.StoryThread[]>([])
+  const [edges, setEdges] = useState<api.ThreadEdge[]>([])
+  const [events, setEvents] = useState<EventLite[]>([])
+  const [characters, setCharacters] = useState<CharacterLite[]>([])
+  const [loading, setLoading] = useState(false)
+  const [importing, setImporting] = useState(false)
   const [log, setLog] = useState('')
 
-  const [newStoryTitle, setNewStoryTitle] = useState('')
-  const [newSpaceName, setNewSpaceName] = useState('')
-  const [newUnitTitle, setNewUnitTitle] = useState('')
-  const [newUnitKind, setNewUnitKind] = useState('side')
-  const [eventPick, setEventPick] = useState('')
-  const [sharedPick, setSharedPick] = useState(false)
-  const [newChoiceTitle, setNewChoiceTitle] = useState('')
-  const [newChoiceAnchor, setNewChoiceAnchor] = useState('')
-  const [optionDraft, setOptionDraft] = useState<Record<string, string>>({})
-  const [newEndingName, setNewEndingName] = useState('')
-  const [newEndingKind, setNewEndingKind] = useState('open')
+  const [query, setQuery] = useState('')
+  const [filterCharacter, setFilterCharacter] = useState('')
+  const [filterLine, setFilterLine] = useState('')
+  const [filterScale, setFilterScale] = useState('')
 
-  const space = useMemo(() => detail?.spaces.find((item) => item.id === spaceId) || null, [detail, spaceId])
-  const selectedUnit = useMemo(() => units.find((item) => item.id === selectedUnitId) || null, [units, selectedUnitId])
+  const [newStoryTitle, setNewStoryTitle] = useState('')
+  const [newThreadTitle, setNewThreadTitle] = useState('')
+  const [newThreadKind, setNewThreadKind] = useState('main')
+  const [newThreadCharacter, setNewThreadCharacter] = useState('')
+
+  const [selectedLinkId, setSelectedLinkId] = useState('')
+  const [selectedThreadId, setSelectedThreadId] = useState('')
+  const [connectMode, setConnectMode] = useState(false)
+  const [connectFrom, setConnectFrom] = useState<{ linkId: string; threadId: string; eventId: string } | null>(null)
+  const [editingThread, setEditingThread] = useState(false)
+  const [threadTitle, setThreadTitle] = useState('')
+  const [threadKind, setThreadKind] = useState('main')
+  const [threadCharacter, setThreadCharacter] = useState('')
+
+  const currentStory = stories.find((item) => item.id === storyId) || null
+  const selectedThread = threads.find((item) => item.id === selectedThreadId) || null
+  const selectedLink = threads.flatMap((thread) => thread.events).find((item) => item.id === selectedLinkId) || null
+  const selectedEvent = selectedLink ? events.find((item) => item.id === selectedLink.event_id) || null : null
+
+  const characterName = (id?: string | null) => characters.find((item) => item.id === id)?.name || ''
+  const participantLabel = (event: EventLite) => (event.participants || []).map((id) => characterName(id) || id).join('、')
+
+  const loadStory = async (id: string) => {
+    if (!id) { setThreads([]); setEdges([]); return }
+    setLoading(true)
+    try {
+      const [threadRows, edgeRows] = await Promise.all([api.listThreads(id), api.listThreadEdges(id)])
+      setThreads(threadRows)
+      setEdges(edgeRows)
+      setSelectedThreadId((prev) => (prev && threadRows.some((t) => t.id === prev) ? prev : threadRows[0]?.id || ''))
+    } catch (error: any) { setLog(`❌ ${error.message || error}`) }
+    finally { setLoading(false) }
+  }
 
   useEffect(() => {
     if (!worldId) return
     Promise.all([
-      api.listStories(worldId),
+      storyApi.listStories(worldId),
       fetch(`${API_ORIGIN}/api/events?world_id=${worldId}`).then((res) => res.json()),
-    ])
-      .then(([rows, eventRows]) => {
-        setStories(rows)
-        setEvents(Array.isArray(eventRows) ? eventRows : [])
-        setStoryId((prev) => (prev && rows.some((row) => row.id === prev) ? prev : rows[0]?.id || ''))
-      })
-      .catch((error) => setLog(String(error.message || error)))
+      fetch(`${API_ORIGIN}/api/characters?world_id=${worldId}`).then((res) => res.json()),
+    ]).then(([storyRows, eventRows, charRows]) => {
+      setStories(storyRows)
+      setEvents(Array.isArray(eventRows) ? eventRows : [])
+      setCharacters(Array.isArray(charRows) ? charRows.map((row: any) => ({ id: row.id, name: row.name })) : [])
+      setStoryId((prev) => (prev && storyRows.some((row) => row.id === prev) ? prev : storyRows[0]?.id || ''))
+    }).catch((error) => setLog(`❌ ${error.message || error}`))
   }, [worldId])
 
-  useEffect(() => {
-    if (!storyId) {
-      setDetail(null)
-      return
-    }
-    listChapters(worldId).then((rows) => setChapterOptions(rows)).catch(() => undefined)
-    api.getStory(storyId)
-      .then((data) => {
-        setDetail(data)
-        setSpaceId((prev) => (prev && data.spaces.some((s) => s.id === prev) ? prev : data.original_space_id || data.spaces[0]?.id || ''))
-      })
-      .catch((error) => setLog(String(error.message || error)))
-  }, [storyId])
+  useEffect(() => { void loadStory(storyId) }, [storyId])
 
-  const reloadStory = () => storyId && api.getStory(storyId).then(setDetail).catch(() => undefined)
-
-  useEffect(() => {
-    if (!spaceId) {
-      setUnits([]); setChoices([]); setEndings([])
-      return
-    }
-    Promise.all([api.listUnits(spaceId), api.listChoices(spaceId), api.listEndings(spaceId), api.listSpaceChapters(spaceId)])
-      .then(async ([unitRows, choiceRows, endingRows, chapterRows]) => {
-        setUnits(unitRows)
-        setChoices(choiceRows)
-        setEndings(endingRows)
-        setSpaceChapters(chapterRows)
-        const pairs = await Promise.all(unitRows.map((unit) => api.listUnitEvents(unit.id).then((rows) => [unit.id, rows] as const)))
-        setUnitEvents(Object.fromEntries(pairs))
-        setSelectedUnitId((prev) => (prev && unitRows.some((u) => u.id === prev) ? prev : unitRows[0]?.id || ''))
-      })
-      .catch((error) => setLog(String(error.message || error)))
-  }, [spaceId])
-
-  const guard = async (work: () => Promise<string | void>, success: string) => {
+  const createStoryNow = async () => {
+    if (!worldId || !newStoryTitle.trim()) return
     try {
-      const detail = await work()
-      setLog(detail || success)
-    } catch (error: any) {
-      setLog(`❌ ${error.message || error}`)
+      const created = await storyApi.createStory({ world_id: worldId, title: newStoryTitle.trim() })
+      setStories((prev) => [...prev, created])
+      setStoryId(created.id)
+      setNewStoryTitle('')
+      setLog('故事已创建')
+    } catch (error: any) { setLog(`❌ ${error.message || error}`) }
+  }
+
+  const createThreadNow = async () => {
+    if (!storyId || !newThreadTitle.trim()) return
+    try {
+      await api.createThread(storyId, {
+        title: newThreadTitle.trim(), kind: newThreadKind, character_id: newThreadCharacter || undefined,
+      })
+      setNewThreadTitle(''); setNewThreadCharacter('')
+      await loadStory(storyId)
+      setLog('故事线已创建')
+    } catch (error: any) { setLog(`❌ ${error.message || error}`) }
+  }
+
+  const importLegacy = async () => {
+    if (!storyId || importing) return
+    if (!window.confirm('把该故事既有的结构事件导入为故事树？事件仍引用 05 事件库，不会复制或删除事件。')) return
+    setImporting(true)
+    try {
+      const detail = await storyApi.getStory(storyId)
+      const known = [...threads]
+      let created = 0
+      let attached = 0
+      for (const space of detail.spaces) {
+        const units = await storyApi.listUnits(space.id)
+        for (const unit of units) {
+          const title = space.id === detail.original_space_id ? unit.title : `${space.name} · ${unit.title}`
+          let thread = known.find((row) => row.title === title)
+          if (!thread) {
+            const kind = unit.kind === 'mainline' ? 'main' : unit.kind === 'instance' ? 'copy' : 'side'
+            thread = await api.createThread(storyId, { title, kind })
+            known.push(thread)
+            created += 1
+          }
+          const unitEvents = await storyApi.listUnitEvents(unit.id)
+          for (const link of unitEvents) {
+            if (thread.events.some((row) => row.event_id === link.event_id)) continue
+            const updated = await api.attachThreadEvent(thread.id, link.event_id)
+            thread = updated
+            attached += 1
+          }
+        }
+      }
+      await loadStory(storyId)
+      setLog(created || attached ? `已从既有故事生成 ${created} 条线，引用 ${attached} 个事件` : '既有故事没有可导入的结构事件')
+    } catch (error: any) { setLog(`❌ ${error.message || error}`) }
+    finally { setImporting(false) }
+  }
+
+  const attachEvent = async (threadId: string, eventId: string, index?: number) => {
+    try {
+      await api.attachThreadEvent(threadId, eventId, index)
+      await loadStory(storyId)
+      setLog('事件已放入故事树')
+    } catch (error: any) { setLog(`❌ ${error.message || error}`) }
+  }
+
+  const moveLink = async (linkId: string, threadId: string, index: number) => {
+    try {
+      await api.updateThreadEvent(linkId, { thread_id: threadId, order_index: index })
+      await loadStory(storyId)
+      setSelectedThreadId(threadId)
+      setLog('事件位置已调整')
+    } catch (error: any) { setLog(`❌ ${error.message || error}`) }
+  }
+
+  const removeLink = async (linkId: string) => {
+    try {
+      await api.detachThreadEvent(linkId)
+      if (selectedLinkId === linkId) setSelectedLinkId('')
+      await loadStory(storyId)
+      setLog('事件已从故事树移除，事件库中的事件不受影响')
+    } catch (error: any) { setLog(`❌ ${error.message || error}`) }
+  }
+
+  const moveThread = async (threadId: string, index: number) => {
+    try {
+      await api.updateThread(threadId, { order_index: index })
+      await loadStory(storyId)
+      setLog('故事线顺序已调整')
+    } catch (error: any) { setLog(`❌ ${error.message || error}`) }
+  }
+
+  const saveThread = async () => {
+    if (!selectedThread || !threadTitle.trim()) return
+    try {
+      await api.updateThread(selectedThread.id, {
+        title: threadTitle.trim(), kind: threadKind, character_id: threadCharacter || null,
+      })
+      setEditingThread(false)
+      await loadStory(storyId)
+      setLog('故事线已更新')
+    } catch (error: any) { setLog(`❌ ${error.message || error}`) }
+  }
+
+  const deleteThreadNow = async () => {
+    if (!selectedThread) return
+    if (!window.confirm(`删除故事线「${selectedThread.title}」？事件库中的事件不会被删除。`)) return
+    try {
+      await api.deleteThread(selectedThread.id)
+      setSelectedThreadId('')
+      await loadStory(storyId)
+      setLog('故事线已删除')
+    } catch (error: any) { setLog(`❌ ${error.message || error}`) }
+  }
+
+  const startConnect = (thread: api.StoryThread, link: api.StoryThread['events'][number]) => {
+    if (!connectMode) return
+    if (!connectFrom) {
+      setConnectFrom({ linkId: link.id, threadId: thread.id, eventId: link.event_id })
+      setLog('已选择起点事件，再点击目标事件建立叙事连线')
+      return
+    }
+    if (connectFrom.linkId === link.id) { setConnectFrom(null); return }
+    void createEdge(connectFrom, { linkId: link.id, threadId: thread.id, eventId: link.event_id })
+  }
+
+  const createEdge = async (from: { linkId: string; threadId: string; eventId: string }, to: { linkId: string; threadId: string; eventId: string }) => {
+    try {
+      await api.createThreadEdge(storyId, {
+        from_thread_id: from.threadId, to_thread_id: to.threadId,
+        from_event_id: from.eventId, to_event_id: to.eventId, edge_type: 'impact',
+      })
+      setConnectFrom(null)
+      setConnectMode(false)
+      await loadStory(storyId)
+      setLog('叙事连线已建立')
+    } catch (error: any) { setLog(`❌ ${error.message || error}`) }
+  }
+
+  const removeEdge = async (edgeId: string) => {
+    try {
+      await api.deleteThreadEdge(edgeId)
+      await loadStory(storyId)
+      setLog('连线已删除')
+    } catch (error: any) { setLog(`❌ ${error.message || error}`) }
+  }
+
+  const handleLaneDrop = (event: React.DragEvent, thread: api.StoryThread) => {
+    event.preventDefault()
+    const eventId = event.dataTransfer.getData('application/x-event-id')
+    const linkId = event.dataTransfer.getData('application/x-link-id')
+    if (eventId) void attachEvent(thread.id, eventId)
+    else if (linkId) {
+      const index = threads.find((item) => item.id === thread.id)?.events.length || 0
+      void moveLink(linkId, thread.id, index)
     }
   }
 
-  const createStoryNow = () => guard(async () => {
-    if (!worldId || !newStoryTitle.trim()) throw new Error('请填写故事名')
-    const story = await api.createStory({ world_id: worldId, title: newStoryTitle.trim() })
-    setStories((prev) => [...prev, story])
-    setStoryId(story.id)
-    setNewStoryTitle('')
-  }, '故事已创建')
+  const handleCardDrop = (event: React.DragEvent, thread: api.StoryThread, index: number) => {
+    event.preventDefault(); event.stopPropagation()
+    const eventId = event.dataTransfer.getData('application/x-event-id')
+    const linkId = event.dataTransfer.getData('application/x-link-id')
+    if (eventId) void attachEvent(thread.id, eventId, index)
+    else if (linkId) void moveLink(linkId, thread.id, index)
+  }
 
-  const addOriginal = () => guard(async () => {
-    if (!detail || !newSpaceName.trim()) throw new Error('请填写空间名')
-    const created = await api.createSpace(detail.id, { name: newSpaceName.trim(), is_original: true })
-    await reloadStory()
-    setSpaceId(created.id)
-    setNewSpaceName('')
-  }, '原始空间已创建')
-
-  const addUnitNow = () => guard(async () => {
-    if (!space) return
-    if (!newUnitTitle.trim()) throw new Error('请填写单元名')
-    await api.createUnit(space.id, { kind: newUnitKind, title: newUnitTitle.trim() })
-    setNewUnitTitle('')
-    setSpaceId(space.id)
-    const rows = await api.listUnits(space.id)
-    setUnits(rows)
-  }, '结构单元已创建')
-
-  const addEventNow = () => guard(async () => {
-    if (!selectedUnit || !eventPick) throw new Error('先选单元和事件')
-    await api.addUnitEvent(selectedUnit.id, { event_id: eventPick, is_shared: sharedPick })
-    const rows = await api.listUnitEvents(selectedUnit.id)
-    setUnitEvents((prev) => ({ ...prev, [selectedUnit.id]: rows }))
-    setEventPick('')
-    setSharedPick(false)
-  }, '事件已挂接')
-
-  const removeEvent = (unitId: string, eventId: string) => guard(async () => {
-    await api.removeUnitEvent(unitId, eventId)
-    const rows = await api.listUnitEvents(unitId)
-    setUnitEvents((prev) => ({ ...prev, [unitId]: rows }))
-  }, '已解除挂接')
-
-  const createChoiceNow = () => guard(async () => {
-    if (!space || !newChoiceTitle.trim()) throw new Error('请填写选择标题')
-    const choice = await api.createChoice(space.id, {
-      title: newChoiceTitle.trim(),
-      anchor_event_id: newChoiceAnchor || undefined,
+  const filteredEvents = useMemo(() => {
+    const needle = query.trim().toLowerCase()
+    return events.filter((event) => {
+      if (needle && !`${event.name} ${event.description || ''}`.toLowerCase().includes(needle)) return false
+      if (filterCharacter && !(event.participants || []).includes(filterCharacter)) return false
+      if (filterLine && event.storyline !== filterLine) return false
+      if (filterScale && event.scale !== filterScale) return false
+      return true
     })
-    setChoices((prev) => [...prev, choice])
-    setNewChoiceTitle('')
-    setNewChoiceAnchor('')
-  }, '选择节点已创建')
+  }, [events, query, filterCharacter, filterLine, filterScale])
 
-  const addOptionNow = (choiceId: string) => guard(async () => {
-    const label = (optionDraft[choiceId] || '').trim()
-    if (!label) throw new Error('请填写选项文案')
-    const option = await api.addOption(choiceId, { label })
-    setChoices((prev) => prev.map((item) => (item.id === choiceId ? { ...item, options: [...item.options, option] } : item)))
-    setOptionDraft((prev) => ({ ...prev, [choiceId]: '' }))
-  }, '选项已添加')
+  const storylineOptions = useMemo(() => Array.from(new Set(events.map((e) => e.storyline).filter(Boolean))), [events])
+  const canvasWidth = Math.max(760, PAD * 2 + threads.length * LANE_W + Math.max(0, threads.length - 1) * LANE_GAP)
+  const canvasHeight = Math.max(480, HEADER_H + 20 + Math.max(1, ...threads.map((t) => t.events.length)) * (CARD_H + CARD_GAP) + 80)
 
-  const resolveNow = (choice: StoryChoice, optionId: string) => guard(async () => {
-    const result = await api.resolveChoice(choice.id, { option_id: optionId })
-    setChoices((prev) => prev.map((item) => (item.id === choice.id ? result.choice : item)))
-    await reloadStory()
-    setSpaceId(result.space.id)
-  }, '已进入新空间')
-
-  const addEndingNow = () => guard(async () => {
-    if (!space || !newEndingName.trim()) throw new Error('请填写结局名')
-    const ending = await api.createEnding(space.id, {
-      name: newEndingName.trim(),
-      kind: newEndingKind,
-      is_final: newEndingKind === 'final',
-    })
-    setEndings((prev) => [...prev, ending])
-    setNewEndingName('')
-  }, '结局已保存')
-
-  const linkChapterNow = () => guard(async () => {
-    if (!detail || !space || !chapterPick) throw new Error('先选章节和空间')
-    await api.linkChapter(detail.id, { chapter_id: chapterPick, space_id: space.id })
-    setSpaceChapters(await api.listSpaceChapters(space.id))
-    await reloadStory()
-    setChapterPick('')
-  }, '章节已关联')
-
-  const unlinkChapterNow = (linkId: string) => guard(async () => {
-    await api.unlinkChapter(linkId)
-    setSpaceChapters((prev) => prev.filter((row) => row.id !== linkId))
-  }, '章节关联已解除')
-
-  const compareNow = () => guard(async () => {
-    const original = detail?.spaces.find((item) => item.is_original)
-    if (!original || !space) throw new Error('缺少可对比的空间')
-    if (original.id === space.id) throw new Error('当前就是正史空间')
-    const result = await api.compareSpaces([original.id, space.id])
-    const counts = result.differences?.event_counts || {}
-    return `对比：${Object.entries(counts).map(([name, count]) => `${name} ${count} 个事件`).join(' · ')}`
-  }, '对比完成')
-
-  const rollbackNow = () => guard(async () => {
-    if (!space?.base_node_id) throw new Error('该空间没有可回溯的分叉节点')
-    await api.rollbackSpace(space.id, space.base_node_id, '故事线回溯')
-    await reloadStory()
-  }, '已回溯到分叉节点')
-
-  const availableEvents = useMemo(() => {
-    if (!space) return events
-    if (space.branch_id) return events.filter((event) => event.branch_id === space.branch_id || !event.branch_id)
-    return events.filter((event) => !event.branch_id)
-  }, [events, space])
-
-  if (!worldId) return <div style={{ padding: '2rem', color: 'var(--text-muted)' }}>请先进入一个世界。</div>
+  const linkPosition = (threadId: string, eventId: string) => {
+    const threadIndex = threads.findIndex((thread) => thread.id === threadId)
+    const thread = threads[threadIndex]
+    if (!thread || threadIndex < 0) return null
+    const eventIndex = thread.events.findIndex((link) => link.event_id === eventId)
+    if (eventIndex < 0) return null
+    return { x: laneX(threadIndex) + 12, y: cardY(eventIndex), centerY: cardY(eventIndex) + CARD_H / 2 }
+  }
 
   return (
-    <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '12px', height: 'calc(100vh - 60px)', boxSizing: 'border-box' }}>
-      <div style={{ ...card, flexDirection: 'row', alignItems: 'center', gap: '10px', padding: '10px 14px' }}>
-        <h2 style={{ ...sectionTitle, fontSize: '16px', marginRight: '6px' }}>故事线管理</h2>
-        <select value={storyId} onChange={(e) => setStoryId(e.target.value)} style={{ ...input, maxWidth: '200px' }}>
+    <div style={{ padding: '1rem', height: 'calc(100vh - 60px)', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      <div style={{ ...card, flexDirection: 'row', alignItems: 'center', padding: '10px 14px', gap: '8px', flexWrap: 'wrap' }}>
+        <h2 style={{ margin: 0, fontSize: '16px', color: 'var(--text-main)' }}>故事线管理</h2>
+        <select value={storyId} onChange={(e) => setStoryId(e.target.value)} style={{ ...input, maxWidth: '190px' }}>
           <option value="">选择故事</option>
           {stories.map((story) => <option key={story.id} value={story.id}>{story.title}</option>)}
         </select>
-        <input value={newStoryTitle} onChange={(e) => setNewStoryTitle(e.target.value)} placeholder="新故事名" style={{ ...input, width: '150px' }} />
+        <input value={newStoryTitle} onChange={(e) => setNewStoryTitle(e.target.value)} placeholder="新故事名" style={{ ...input, width: '140px' }} />
         <button style={btn} onClick={() => void createStoryNow()}>+ 故事</button>
-        {detail && <button style={btn} onClick={() => setShowThreads(true)}>人物线</button>}
+        <button style={btn} onClick={() => onOpenEvents?.()}>管理 05 事件</button>
+        {threads.length === 0 && <button style={btn} disabled={importing} onClick={() => void importLegacy()}>{importing ? '导入中…' : '从既有故事导入'}</button>}
         <div style={{ flex: 1 }} />
-        {log && <div style={{ ...hint, maxWidth: '45%', color: 'var(--text-main)' }}>{log}</div>}
+        {connectMode && <span style={{ fontSize: '10px', color: 'var(--primary-color)' }}>{connectFrom ? '点击目标事件完成连线' : '点击起点事件开始连线'}</span>}
+        <button style={{ ...btn, ...(connectMode ? { borderColor: 'var(--primary-color)', color: 'var(--primary-color)' } : {}) }}
+          onClick={() => { setConnectMode((prev) => !prev); setConnectFrom(null) }}>{connectMode ? '退出连线' : '连线'}</button>
+        <span style={{ ...hint }}>{threads.length} 条线 · {threads.reduce((sum, t) => sum + t.events.length, 0)} 事件 · {edges.length} 连线</span>
       </div>
 
-      {showThreads && detail && (
-        <StoryThreadsModal storyId={detail.id} worldId={detail.world_id} onClose={() => setShowThreads(false)} />
-      )}
-      <div style={{ display: 'flex', gap: '12px', flex: 1, minHeight: 0 }}>
-        <div style={{ ...card, width: '240px', overflowY: 'auto' }}>
-          <h3 style={sectionTitle}>空间</h3>
-          <div style={{ display: 'flex', gap: '6px' }}>
-            <input value={newSpaceName} onChange={(e) => setNewSpaceName(e.target.value)} placeholder="空间名" style={{ ...input, flex: 1 }} />
-            <button style={btn} onClick={() => void addOriginal()}>+ 正史</button>
-          </div>
-          <div style={{ ...hint }}>正史空间只挂主时间线事件；分叉空间由「选择节点」生成。</div>
-          {detail?.spaces.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setSpaceId(item.id)}
-              style={{
-                textAlign: 'left', padding: '8px', borderRadius: '8px', cursor: 'pointer',
-                border: `1px solid ${item.id === spaceId ? 'var(--primary-color)' : 'var(--card-border)'}`,
-                background: item.id === spaceId ? 'rgba(128,128,128,0.12)' : 'transparent',
-                color: 'var(--text-main)', fontSize: '11px', display: 'flex', flexDirection: 'column', gap: '3px',
-              }}
-            >
-              <span style={{ fontWeight: 600 }}>{item.is_original ? '◉ 正史' : '⑂'} {item.name}</span>
-              <span style={hint}>{item.unit_count} 单元 · {item.ending_count} 结局 · {item.chapter_count} 章{item.branch_id ? ` · ${item.node_count} 节点` : ''}</span>
-            </button>
-          ))}
-          {space && (
-            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-              <button style={btn} onClick={() => void compareNow()}>对比正史</button>
-              {space.branch_id && <button style={btn} onClick={() => void rollbackNow()}>回溯分叉点</button>}
-            </div>
-          )}
+      {!storyId ? (
+        <div style={{ ...card, flex: 1, alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '12px' }}>
+          {stories.length === 0 ? '当前世界还没有故事。先创建故事，再从 05 事件库组织剧情。' : '选择一条故事开始编辑。'}
         </div>
-
-        <div style={{ ...card, flex: 1, overflowY: 'auto' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <h3 style={sectionTitle}>结构单元 {space ? `· ${space.name}` : ''}</h3>
-            <div style={{ flex: 1 }} />
-            <select value={newUnitKind} onChange={(e) => setNewUnitKind(e.target.value)} style={input}>
-              {Object.entries(UNIT_LABEL).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-            </select>
-            <input value={newUnitTitle} onChange={(e) => setNewUnitTitle(e.target.value)} placeholder="单元名" style={{ ...input, width: '110px' }} />
-            <button style={btn} onClick={() => void addUnitNow()}>+ 单元</button>
-          </div>
-          {units.map((unit) => (
-            <div
-              key={unit.id}
-              onClick={() => setSelectedUnitId(unit.id)}
-              style={{
-                border: `1px solid ${unit.id === selectedUnitId ? 'var(--primary-color)' : 'var(--card-border)'}`,
-                borderRadius: '8px', padding: '9px', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '6px',
-              }}
-            >
-              <div style={{ display: 'flex', gap: '6px', alignItems: 'center', fontSize: '12px', color: 'var(--text-main)' }}>
-                <span style={{ color: 'var(--primary-color)', fontSize: '10px' }}>{UNIT_LABEL[unit.kind] || unit.kind}</span>
-                <strong>{unit.title}</strong>
-                <span style={hint}>{unit.event_count} 事件</span>
-              </div>
-              {unit.summary && <div style={hint}>{unit.summary}</div>}
-              <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
-                {(unitEvents[unit.id] || []).map((link) => (
-                  <span
-                    key={link.id}
-                    style={{ padding: '2px 7px', borderRadius: '999px', border: '1px solid var(--card-border)', fontSize: '10px', color: 'var(--text-muted)' }}
-                    title={link.is_shared ? '正史共享事件' : '专属事件'}
-                  >
-                    {link.event_name || link.event_id.slice(0, 6)}{link.is_shared ? ' · 共享' : ''}
-                    <button
-                      style={{ border: 'none', background: 'transparent', color: 'var(--danger-color)', cursor: 'pointer', fontSize: '10px', padding: '0 0 0 4px' }}
-                      onClick={(e) => { e.stopPropagation(); void removeEvent(unit.id, link.event_id) }}
-                    >×</button>
-                  </span>
-                ))}
-              </div>
+      ) : (
+        <div style={{ display: 'flex', gap: '10px', flex: 1, minHeight: 0 }}>
+          {/* 左：事件库 */}
+          <div style={{ ...card, width: '266px', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <h3 style={{ margin: 0, fontSize: '13px', color: 'var(--text-main)' }}>事件库</h3>
+              <div style={{ flex: 1 }} />
+              <span style={hint}>{filteredEvents.length}/{events.length}</span>
             </div>
-          ))}
-          {space && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', borderTop: '1px dashed var(--card-border)', paddingTop: '10px' }}>
-              <div style={{ fontSize: '11px', color: 'var(--text-main)' }}>挂事件到：{selectedUnit?.title || '（先选单元）'}</div>
-              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                <select value={eventPick} onChange={(e) => setEventPick(e.target.value)} style={{ ...input, flex: 1 }}>
-                  <option value="">选择事件</option>
-                  {availableEvents.map((event) => <option key={event.id} value={event.id}>{event.name}</option>)}
-                </select>
-                <label style={{ ...hint, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <input type="checkbox" checked={sharedPick} onChange={(e) => setSharedPick(e.target.checked)} /> 正史共享
-                </label>
-                <button style={btn} onClick={() => void addEventNow()}>挂接</button>
-              </div>
+            <div style={{ ...hint }}>来自 05 事件管理；拖到中间故事树即可引用。</div>
+            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="搜索事件…" style={input} />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px' }}>
+              <select value={filterCharacter} onChange={(e) => setFilterCharacter(e.target.value)} style={input}>
+                <option value="">全部人物</option>
+                {characters.map((char) => <option key={char.id} value={char.id}>{char.name}</option>)}
+              </select>
+              <select value={filterLine} onChange={(e) => setFilterLine(e.target.value)} style={input}>
+                <option value="">全部剧情线</option>
+                {storylineOptions.map((line) => <option key={line} value={line}>{line}</option>)}
+              </select>
+              <select value={filterScale} onChange={(e) => setFilterScale(e.target.value)} style={{ ...input, gridColumn: '1 / -1' }}>
+                <option value="">全部层级</option>
+                <option value="宏观">宏观</option>
+                <option value="中观">中观</option>
+                <option value="微观">微观</option>
+              </select>
             </div>
-          )}
-        </div>
-
-        <div style={{ ...card, width: '320px', overflowY: 'auto' }}>
-          <h3 style={sectionTitle}>选择节点</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-            <input value={newChoiceTitle} onChange={(e) => setNewChoiceTitle(e.target.value)} placeholder="选择标题，如：是否反杀" style={input} />
-            <select value={newChoiceAnchor} onChange={(e) => setNewChoiceAnchor(e.target.value)} style={input}>
-              <option value="">锚定事件（可选）</option>
-              {availableEvents.map((event) => <option key={event.id} value={event.id}>{event.name}</option>)}
-            </select>
-            <button style={btn} onClick={() => void createChoiceNow()}>+ 选择节点</button>
+            {filteredEvents.length === 0 && <div style={{ ...hint, padding: '8px' }}>没有匹配事件。可在 05 创建新事件。</div>}
+            {filteredEvents.map((event) => (
+              <div key={event.id} draggable data-library-event={event.id}
+                onDragStart={(e) => { e.dataTransfer.setData('application/x-event-id', event.id); e.dataTransfer.effectAllowed = 'copy' }}
+                style={{ padding: '8px', borderRadius: '7px', border: '1px solid var(--card-border)', cursor: 'grab', background: 'rgba(128,128,128,0.04)' }}>
+                <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-main)' }}>{event.name}</div>
+                <div style={{ ...hint, marginTop: '3px' }}>{event.storyline || '未分线'} · {event.scale || '未分层'}{participantLabel(event) ? ` · ${participantLabel(event)}` : ''}</div>
+                {event.description && <div style={{ ...hint, marginTop: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{event.description}</div>}
+              </div>
+            ))}
           </div>
-          {choices.map((choice) => (
-            <div key={choice.id} style={{ border: '1px solid var(--card-border)', borderRadius: '8px', padding: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <div style={{ fontSize: '12px', color: 'var(--text-main)' }}><strong>{choice.title}</strong> <span style={hint}>{choice.status === 'resolved' ? '已确定' : '待选择'}</span></div>
-              {choice.options.map((option) => (
-                <div key={option.id} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ fontSize: '11px', color: 'var(--text-main)', flex: 1 }}>{option.label}{option.target_space_id ? ' → 已建空间' : ''}</span>
-                  {!option.target_space_id && choice.status !== 'resolved' && (
-                    <button style={btn} onClick={() => void resolveNow(choice, option.id)}>进入</button>
-                  )}
+
+          {/* 中：故事树 */}
+          <div style={{ ...card, flex: 1, minWidth: 0, padding: 0, overflow: 'hidden' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '9px 12px', borderBottom: '1px solid var(--card-border)', flexWrap: 'wrap' }}>
+              <h3 style={{ margin: 0, fontSize: '13px', color: 'var(--text-main)' }}>故事树</h3>
+              <input value={newThreadTitle} onChange={(e) => setNewThreadTitle(e.target.value)} placeholder="主线/支线名称，如：韩立成长线" style={{ ...input, flex: 1, minWidth: '150px' }} />
+              <select value={newThreadKind} onChange={(e) => setNewThreadKind(e.target.value)} style={input}>
+                {Object.entries(KIND_LABEL).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+              </select>
+              <select value={newThreadCharacter} onChange={(e) => setNewThreadCharacter(e.target.value)} style={input}>
+                <option value="">不绑定人物</option>
+                {characters.map((char) => <option key={char.id} value={char.id}>{char.name}</option>)}
+              </select>
+              <button style={btn} onClick={() => void createThreadNow()}>+ 故事线</button>
+            </div>
+
+            <div style={{ position: 'relative', overflow: 'auto', flex: 1 }}>
+              {loading && <div style={{ ...hint, padding: '10px' }}>加载故事树…</div>}
+              {threads.length === 0 && !loading && (
+                <div style={{ padding: '50px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '12px', lineHeight: 2 }}>
+                  从一个目标开始：创建「主线」，再把 05 事件拖进来。<br />支线、副本、暗线可以稍后添加。
+                </div>
+              )}
+              {threads.length > 0 && (
+                <div style={{ position: 'relative', width: canvasWidth, height: canvasHeight }}>
+                  <svg width={canvasWidth} height={canvasHeight} style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 2 }}>
+                    {edges.map((edge) => {
+                      const from = edge.from_event_id ? linkPosition(edge.from_thread_id, edge.from_event_id) : { x: laneX(threads.findIndex((t) => t.id === edge.from_thread_id)) + LANE_W - 12, y: HEADER_H / 2 + 4, centerY: HEADER_H / 2 + 4 }
+                      const to = edge.to_event_id ? linkPosition(edge.to_thread_id, edge.to_event_id) : { x: laneX(threads.findIndex((t) => t.id === edge.to_thread_id)) + 12, y: HEADER_H / 2 + 4, centerY: HEADER_H / 2 + 4 }
+                      if (!from || !to) return null
+                      const x1 = from.x + (edge.from_event_id ? LANE_W - 24 : 0)
+                      const y1 = from.centerY
+                      const x2 = to.x
+                      const y2 = to.centerY
+                      const mid = (x1 + x2) / 2
+                      return (
+                        <g key={edge.id}>
+                          <path d={`M ${x1} ${y1} C ${mid} ${y1}, ${mid} ${y2}, ${x2} ${y2}`} fill="none" stroke="var(--primary-color)" strokeWidth="1.4" opacity="0.7" />
+                          <circle cx={x2} cy={y2} r="3" fill="var(--primary-color)" opacity="0.8" />
+                        </g>
+                      )
+                    })}
+                  </svg>
+
+                  {threads.map((thread, threadIndex) => (
+                    <div key={thread.id} data-story-lane={thread.id}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => handleLaneDrop(e, thread)}
+                      onClick={() => setSelectedThreadId(thread.id)}
+                      style={{
+                        position: 'absolute', left: laneX(threadIndex), top: 8, width: LANE_W, bottom: 8,
+                        border: `1px solid ${selectedThreadId === thread.id ? 'var(--primary-color)' : 'var(--card-border)'}`,
+                        borderRadius: '10px', background: 'rgba(128,128,128,0.035)', zIndex: 1,
+                      }}>
+                      <div style={{ height: HEADER_H, padding: '10px 12px', borderBottom: '1px dashed var(--card-border)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: KIND_COLOR[thread.kind] || 'var(--text-muted)' }} />
+                          <strong style={{ fontSize: '12.5px', color: 'var(--text-main)' }}>{thread.title}</strong>
+                          <span style={{ flex: 1 }} />
+                          <button style={{ ...btn, padding: '1px 4px', fontSize: '9px' }} disabled={threadIndex === 0}
+                            onClick={(e) => { e.stopPropagation(); void moveThread(thread.id, threadIndex - 1) }}>←</button>
+                          <button style={{ ...btn, padding: '1px 4px', fontSize: '9px' }} disabled={threadIndex === threads.length - 1}
+                            onClick={(e) => { e.stopPropagation(); void moveThread(thread.id, threadIndex + 1) }}>→</button>
+                          <span style={{ ...hint }}>{KIND_LABEL[thread.kind] || thread.kind}</span>
+                        </div>
+                        <div style={{ ...hint, marginTop: '4px' }}>{thread.character_name || '未绑定人物'} · {thread.events.length} 事件</div>
+                      </div>
+                      <div style={{ padding: '8px' }}>
+                        {thread.events.map((link, index) => {
+                          const event = events.find((row) => row.id === link.event_id)
+                          const isSelected = selectedLinkId === link.id
+                          const isConnectSource = connectFrom?.linkId === link.id
+                          return (
+                            <div key={link.id} draggable data-story-link={link.id} data-story-event={link.event_id}
+                              onDragStart={(e) => { e.dataTransfer.setData('application/x-link-id', link.id); e.dataTransfer.effectAllowed = 'move' }}
+                              onDragOver={(e) => e.preventDefault()}
+                              onDrop={(e) => handleCardDrop(e, thread, index)}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setSelectedThreadId(thread.id)
+                                setSelectedLinkId(link.id)
+                                if (connectMode) startConnect(thread, link)
+                              }}
+                              style={{
+                                height: CARD_H, boxSizing: 'border-box', padding: '8px', marginBottom: CARD_GAP,
+                                borderRadius: '8px', cursor: connectMode ? 'crosshair' : 'grab',
+                                border: `1px solid ${isConnectSource ? 'var(--primary-color)' : isSelected ? 'var(--text-main)' : 'var(--card-border)'}`,
+                                background: isSelected || isConnectSource ? 'rgba(128,128,128,0.12)' : 'var(--card-bg)',
+                                display: 'flex', flexDirection: 'column', gap: '4px', overflow: 'hidden',
+                              }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>{index + 1}</span>
+                                <strong style={{ fontSize: '11.5px', color: 'var(--text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{event?.name || link.event_name || '事件'}</strong>
+                              </div>
+                              <div style={{ ...hint, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{event?.description || '暂无说明'}</div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '3px', marginTop: 'auto' }}>
+                                <span style={{ ...hint, fontSize: '9px' }}>{event?.storyline || ''}</span>
+                                <span style={{ flex: 1 }} />
+                                <button style={{ ...btn, padding: '1px 4px', fontSize: '9px' }} onClick={(e) => { e.stopPropagation(); void moveLink(link.id, thread.id, Math.max(0, index - 1)) }}>↑</button>
+                                <button style={{ ...btn, padding: '1px 4px', fontSize: '9px' }} onClick={(e) => { e.stopPropagation(); void moveLink(link.id, thread.id, Math.min(thread.events.length - 1, index + 1)) }}>↓</button>
+                                <button style={{ ...btn, padding: '1px 4px', fontSize: '9px', color: 'var(--danger-color)' }} onClick={(e) => { e.stopPropagation(); void removeLink(link.id) }}>×</button>
+                              </div>
+                            </div>
+                          )
+                        })}
+                        {thread.events.length === 0 && <div style={{ ...hint, textAlign: 'center', padding: '18px 6px', border: '1px dashed var(--card-border)', borderRadius: '8px' }}>拖事件到这里</div>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 右：检查器 */}
+          <div style={{ ...card, width: '252px', overflowY: 'auto' }}>
+            <h3 style={{ margin: 0, fontSize: '13px', color: 'var(--text-main)' }}>详情</h3>
+            {selectedEvent ? (
+              <>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-main)' }}>{selectedEvent.name}</div>
+                <div style={hint}>{selectedEvent.storyline || '未分线'} · {selectedEvent.scale || '未分层'} · {selectedEvent.story_time || ''}</div>
+                {selectedEvent.description && <div style={{ fontSize: '11px', color: 'var(--text-main)', lineHeight: 1.7 }}>{selectedEvent.description}</div>}
+                {participantLabel(selectedEvent) && <div style={hint}>人物：{participantLabel(selectedEvent)}</div>}
+                <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                  <button style={btn} onClick={() => onOpenEvents?.()}>到 05 编辑</button>
+                  <button style={{ ...btn, color: 'var(--danger-color)' }} onClick={() => selectedLink && void removeLink(selectedLink.id)}>移出故事树</button>
+                </div>
+              </>
+            ) : selectedThread ? (
+              <>
+                {editingThread ? (
+                  <>
+                    <input value={threadTitle} onChange={(e) => setThreadTitle(e.target.value)} style={input} />
+                    <select value={threadKind} onChange={(e) => setThreadKind(e.target.value)} style={input}>
+                      {Object.entries(KIND_LABEL).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                    </select>
+                    <select value={threadCharacter} onChange={(e) => setThreadCharacter(e.target.value)} style={input}>
+                      <option value="">不绑定人物</option>
+                      {characters.map((char) => <option key={char.id} value={char.id}>{char.name}</option>)}
+                    </select>
+                    <div style={{ display: 'flex', gap: '5px' }}>
+                      <button style={btn} onClick={() => void saveThread()}>保存</button>
+                      <button style={btn} onClick={() => setEditingThread(false)}>取消</button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-main)' }}>{selectedThread.title}</div>
+                    <div style={hint}>{KIND_LABEL[selectedThread.kind] || selectedThread.kind} · {selectedThread.character_name || '未绑定人物'} · {selectedThread.events.length} 事件</div>
+                    <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                      <button style={btn} onClick={() => { setEditingThread(true); setThreadTitle(selectedThread.title); setThreadKind(selectedThread.kind); setThreadCharacter(selectedThread.character_id || '') }}>编辑故事线</button>
+                      <button style={{ ...btn, color: 'var(--danger-color)' }} onClick={() => void deleteThreadNow()}>删除</button>
+                    </div>
+                  </>
+                )}
+              </>
+            ) : (
+              <div style={hint}>点击故事线或事件查看详情。拖拽事件可调整位置或移入其他线。</div>
+            )}
+
+            <div style={{ borderTop: '1px dashed var(--card-border)', paddingTop: '8px', marginTop: '4px' }}>
+              <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '5px' }}>叙事连线</div>
+              {edges.length === 0 && <div style={hint}>点击顶部「连线」，再依次点击起点/目标事件。</div>}
+              {edges.map((edge) => (
+                <div key={edge.id} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', color: 'var(--text-muted)', padding: '4px 0', borderBottom: '1px dashed var(--card-border)' }}>
+                  <span style={{ flex: 1 }}>{edge.from_event_name || edge.from_thread_id.slice(0, 6)} → {edge.to_event_name || edge.to_thread_id.slice(0, 6)}</span>
+                  <button style={{ ...btn, padding: '1px 4px', color: 'var(--danger-color)' }} onClick={() => void removeEdge(edge.id)}>×</button>
                 </div>
               ))}
-              <div style={{ display: 'flex', gap: '5px' }}>
-                <input
-                  value={optionDraft[choice.id] || ''}
-                  onChange={(e) => setOptionDraft((prev) => ({ ...prev, [choice.id]: e.target.value }))}
-                  placeholder="新选项"
-                  style={{ ...input, flex: 1 }}
-                />
-                <button style={btn} onClick={() => void addOptionNow(choice.id)}>+ 选项</button>
-              </div>
             </div>
-          ))}
-
-          <h3 style={{ ...sectionTitle, marginTop: '6px' }}>结局</h3>
-          <div style={{ display: 'flex', gap: '5px' }}>
-            <input value={newEndingName} onChange={(e) => setNewEndingName(e.target.value)} placeholder="结局名" style={{ ...input, flex: 1 }} />
-            <select value={newEndingKind} onChange={(e) => setNewEndingKind(e.target.value)} style={input}>
-              {Object.entries(ENDING_LABEL).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-            </select>
-            <button style={btn} onClick={() => void addEndingNow()}>+</button>
+            {log && <div style={{ fontSize: '10px', color: log.startsWith('❌') ? 'var(--danger-color)' : 'var(--text-muted)', lineHeight: 1.6 }}>{log}</div>}
           </div>
-          {endings.map((ending) => (
-            <div key={ending.id} style={{ border: '1px solid var(--card-border)', borderRadius: '7px', padding: '7px', fontSize: '11px', color: 'var(--text-main)' }}>
-              <strong>{ending.name}</strong> <span style={hint}>{ENDING_LABEL[ending.kind] || ending.kind}{ending.source_ending_id ? ' · 来自推演' : ''}</span>
-            </div>
-          ))}
-          {!space && <div style={hint}>先创建/选择一个空间。</div>}
-
-          <h3 style={{ ...sectionTitle, marginTop: '6px' }}>关联章节</h3>
-          <div style={{ display: 'flex', gap: '5px' }}>
-            <select value={chapterPick} onChange={(e) => setChapterPick(e.target.value)} style={{ ...input, flex: 1 }}>
-              <option value="">选择章节</option>
-              {chapterOptions.map((chapter) => <option key={chapter.id} value={chapter.id}>{chapter.title}{chapter.word_count ? ` · ${chapter.word_count}字` : ''}</option>)}
-            </select>
-            <button style={btn} onClick={() => void linkChapterNow()}>关联</button>
-          </div>
-          {spaceChapters.map((row) => (
-            <div key={row.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid var(--card-border)', borderRadius: '7px', padding: '6px', fontSize: '11px', color: 'var(--text-main)' }}>
-              <span style={{ flex: 1 }}>{row.title}{row.unit_id ? ' · 单元内' : ''}</span>
-              <span style={hint}>{row.word_count} 字</span>
-              <button style={{ ...btn, padding: '2px 6px', borderColor: 'var(--danger-color)', color: 'var(--danger-color)' }} onClick={() => void unlinkChapterNow(row.id)}>解除</button>
-            </div>
-          ))}
-          {!spaceChapters.length && <div style={hint}>该空间还没有关联章节。</div>}
         </div>
-      </div>
+      )}
     </div>
   )
 }

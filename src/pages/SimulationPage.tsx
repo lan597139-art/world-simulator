@@ -5,10 +5,9 @@ import type { Branch, Direction } from '../api/multipath';
 
 type Props = {
   onWriteChapter?: (eventId: string) => void
-  onOpenMultipath?: () => void
 }
 
-export default function SimulationPage({ onWriteChapter, onOpenMultipath }: Props) {
+export default function SimulationPage({ onWriteChapter }: Props) {
   const [events, setEvents] = useState<any[]>([]);
   const [simulations, setSimulations] = useState<any[]>([]); // ✅ 记录已推演的数据
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
@@ -424,13 +423,6 @@ export default function SimulationPage({ onWriteChapter, onOpenMultipath }: Prop
                   )}
                 </>
               )}
-              <button
-                type="button"
-                onClick={() => onOpenMultipath?.()}
-                style={{ alignSelf: 'flex-start', padding: '0', border: 'none', background: 'transparent', color: 'var(--primary-color)', fontSize: '10px', cursor: 'pointer' }}
-              >
-                前往多路径工作台（方向 / 节点 / 结局 / 对比）→
-              </button>
             </div>
           )}
         </div>

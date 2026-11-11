@@ -180,6 +180,17 @@ def update_option(option_id: str, payload: dict, db: Session = Depends(get_db)):
         row.outcome_event_id = outcome_id
     if "confirmed" in payload:
         row.confirmed = bool(payload.get("confirmed"))
+    if "order_index" in payload:
+        siblings = (
+            db.query(models.EventChoiceOption)
+            .filter(models.EventChoiceOption.choice_id == row.choice_id, models.EventChoiceOption.id != row.id)
+            .order_by(models.EventChoiceOption.order_index.asc(), models.EventChoiceOption.created_at.asc())
+            .all()
+        )
+        position = max(0, min(int(payload.get("order_index") or 0), len(siblings)))
+        siblings.insert(position, row)
+        for index, item in enumerate(siblings):
+            item.order_index = index
     db.commit()
     db.refresh(row)
     return _option_row(db, row)

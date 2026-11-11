@@ -58,6 +58,30 @@ def run():
     })
     check("DAG 影响边可建", edge.status_code == 200 and edge.json()["edge_type"] == "impact", edge.text)
 
+    e2_link = client.post(f"/api/story-threads/{mid}/events", json={"event_id": e2["id"]})
+    link_id = e2_link.json()["events"][-1]["id"]
+    moved = client.patch(f"/api/story-thread-events/{link_id}", json={"thread_id": bid, "order_index": 0})
+    check("事件可移动并排序", moved.status_code == 200 and moved.json()["thread"]["id"] == bid, moved.text)
+    ordered = client.get(f"/api/stories/{sid}/threads").json()
+    moved_thread = next(t for t in ordered if t["id"] == bid)
+    check("移动后位于首位", moved_thread["events"][0]["event_id"] == e2["id"], moved_thread)
+
+    event_edge = client.post(f"/api/stories/{sid}/thread-edges", json={
+        "from_thread_id": mid, "to_thread_id": bid, "edge_type": "impact",
+        "from_event_id": e1["id"], "to_event_id": e1["id"],
+    })
+    check("事件级连线可建", event_edge.status_code == 200 and event_edge.json()["from_event_name"] == "共同事件", event_edge.text)
+    same_lane = client.post(f"/api/stories/{sid}/thread-edges", json={
+        "from_thread_id": bid, "to_thread_id": bid, "edge_type": "impact",
+        "from_event_id": e2["id"], "to_event_id": e1["id"],
+    })
+    check("同线事件可连线", same_lane.status_code == 200, same_lane.text)
+    invalid_edge = client.post(f"/api/stories/{sid}/thread-edges", json={
+        "from_thread_id": mid, "to_thread_id": bid, "edge_type": "impact",
+        "from_event_id": e2["id"], "to_event_id": e1["id"],
+    })
+    check("未挂线事件不能连线", invalid_edge.status_code == 409, invalid_edge.text)
+
     client.delete(f"/api/story-threads/{bid}")
     db = SessionLocal()
     event_alive = db.query(models.Event).filter(models.Event.id == e1["id"]).first() is not None

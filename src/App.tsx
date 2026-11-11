@@ -236,7 +236,6 @@ export default function App() {
       items: [
         { key: 'timeline', label: dict.timeline, icon: '⏱' },
         { key: 'simulation', label: dict.simulation, icon: '▷' },
-        { key: 'multipath', label: '多路径推演', icon: '⑂' },
         { key: 'storyline', label: '故事线管理', icon: '☰' },
         { key: 'writing', label: dict.writing, icon: '▤' },
       ]
@@ -431,19 +430,18 @@ export default function App() {
               onNavigate={(page) => navigate(page as PageKey)}
             />
           ) : activePage === 'events' ? (
-            <EventsPage worldId={currentWorldId} />
+            <EventsPage worldId={currentWorldId} onOpenSandbox={() => navigate('multipath')} />
           ) : activePage === 'simulation' ? (
             <SimulationPage
               onWriteChapter={(eventId) => {
                 setWritingSeedEventIds([eventId])
                 navigate('writing')
               }}
-              onOpenMultipath={() => navigate('multipath')}
             />
           ) : activePage === 'multipath' ? (
             <MultiPathPage worldId={currentWorldId} />
           ) : activePage === 'storyline' ? (
-            <StorylinePage worldId={currentWorldId} />
+            <StorylinePage worldId={currentWorldId} onOpenEvents={() => navigate('events')} />
           ) : activePage === 'chat' ? (
             <ChatPage worldId={currentWorldId} />
           ) : activePage === 'writing' ? (

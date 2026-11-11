@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import EventCausalityPanel from '../components/EventCausalityPanel';
+import EventChoicePanel from '../components/EventChoicePanel';
 
-export default function EventsPage({ worldId }: { worldId?: string }) {
+export default function EventsPage({ worldId, onOpenSandbox }: { worldId?: string; onOpenSandbox?: () => void }) {
   const [events, setEvents] = useState<any[]>([]);
   const [characters, setCharacters] = useState<any[]>([]);
   
@@ -67,10 +68,14 @@ export default function EventsPage({ worldId }: { worldId?: string }) {
       });
       
       if (res.ok) {
-        // ✅ 保存成功后重置表单加上 caused_by: []
-        setFormData({ name: '', domain: [], polarity: '威胁', intensity: '中', description: '', participants: [], story_time: '', location_id: '', organization_id: '', storyline: '主线', scale: '中观', caused_by: [] });
-        setEditingId(null);
-        loadData();
+        const saved = await res.json().catch(() => null);
+        if (!editingId && saved?.id) {
+          setEditingId(saved.id);
+          await loadData();
+          alert('事件已创建。可在下方「事件发展与选择」中添加选择、结果与后续事件。');
+        } else {
+          await loadData();
+        }
       }
     } catch (error) {
       console.error("保存事件失败", error);
@@ -122,9 +127,21 @@ export default function EventsPage({ worldId }: { worldId?: string }) {
       
       {/* 顶部创建/编辑表单 */}
       <div className="glass-card" style={{ padding: '24px' }}>
-        <h2 style={{ margin: '0 0 20px 0', fontSize: '20px', color: 'var(--text-main)' }}>
-          {editingId ? '✏️ 修改事件' : '创建新事件'}
-        </h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' }}>
+          <div>
+            <h2 style={{ margin: 0, fontSize: '20px', color: 'var(--text-main)' }}>
+              {editingId ? '编辑事件与多剧情' : '创建事件'}
+            </h2>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>先保存事件，再为它添加选择、结果、后续事件；普通事件可以只保留一个既定结果。</div>
+          </div>
+          <div style={{ flex: 1 }} />
+          {onOpenSandbox && (
+            <button type="button" onClick={onOpenSandbox}
+              style={{ padding: '7px 11px', borderRadius: '7px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '11px' }}>
+              分支沙盒 · 多路径能力
+            </button>
+          )}
+        </div>
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           
@@ -257,15 +274,32 @@ export default function EventsPage({ worldId }: { worldId?: string }) {
         </div>
       </div>
 
-      {editingId && (
+      {editingId ? (
         <div className="glass-card" style={{ padding: '20px' }}>
-          <EventChoicePanel eventId={editingId} events={events.map((e: any) => ({ id: e.id, name: e.name }))} />
+          <EventChoicePanel
+            eventId={editingId}
+            eventName={formData.name}
+            worldId={worldId}
+            events={events.map((e: any) => ({ id: e.id, name: e.name }))}
+            onEventsChanged={loadData}
+            onOpenSandbox={() => onOpenSandbox?.()}
+          />
+        </div>
+      ) : (
+        <div className="glass-card" style={{ padding: '20px', borderStyle: 'dashed' }}>
+          <h3 style={{ margin: 0, fontSize: '14px', color: 'var(--text-main)' }}>事件发展与选择</h3>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px', lineHeight: 1.7 }}>
+            保存事件后，这里会出现多剧情编辑区：可添加多个选择，分别配置结果、后续事件与平行沙盒。删除或调整分支不会改动事件基础字段。
+          </div>
         </div>
       )}
 
-      {/* 下方事件列表 */}
+      {/* 下方事件库 */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        <h2 style={{ margin: 0, fontSize: '20px', color: 'var(--text-main)' }}>事件时间线</h2>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+          <h2 style={{ margin: 0, fontSize: '20px', color: 'var(--text-main)' }}>事件库</h2>
+          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>故事线管理从这里引用事件，不复制事件数据</span>
+        </div>
         {events.length === 0 ? (
           <div className="glass-card" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>暂无事件，请在上方创建。</div>
         ) : (
