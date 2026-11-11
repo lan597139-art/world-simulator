@@ -1,0 +1,96 @@
+{
+  "passed": 10,
+  "total": 10,
+  "results": [
+    {
+      "model": "deepseek-ai/DeepSeek-V3.2",
+      "path": "/api/ai/status",
+      "status": 200,
+      "seconds": 0.01,
+      "chars": 316,
+      "sample": "{\"configured\": true, \"using_personal_key\": true, \"shared_key_enabled\": true, \"server_key_configured\": true, \"key_hint\": \"sk-a…hovh\", \"base_url\": \"https://api.siliconflow.cn/v1\", \"m",
+      "error": null
+    },
+    {
+      "model": "deepseek-ai/DeepSeek-V3.2",
+      "path": "/api/simulate",
+      "status": 200,
+      "seconds": 11.14,
+      "chars": 354,
+      "sample": "{\"relationship_changes\": [], \"world_changes\": \"在一个未指明具体地点和时间的雨夜，甲与乙进行了一次会面，雨水持续落下，冲刷着周围的环境，但这次会面并未留下任何公开的、足以显著改变外部世界格局的痕迹，其影响仅局限于参与者之间。\", \"actions\": [{\"name\": \"甲\", \"engine\": \"未知\", ",
+      "error": null
+    },
+    {
+      "model": "deepseek-ai/DeepSeek-V3.2",
+      "path": "/api/events/6a9f6b2b-9832-4398-8489-4231fe6776df/directions/suggest",
+      "status": 200,
+      "seconds": 63.3,
+      "chars": 2461,
+      "sample": "{\"directions\": [{\"name\": \"信息交换与协议达成\", \"description\": \"双方均视此次见面为一次关键的信息交换机会，旨在达成某种临时或长期协议，以解决共同面临的问题或实现各自目标。\", \"trigger_conditions\": [\"双方事先有约或共同紧迫需求\", \"都认为对方掌握关键信息或资源\", \"环境（雨夜）提供了隐蔽",
+      "error": null
+    },
+    {
+      "model": "deepseek-ai/DeepSeek-V3.2",
+      "path": "/api/writing/generate",
+      "status": 200,
+      "seconds": 75.84,
+      "chars": 1310,
+      "sample": "雨是黄昏时分开始落的，起初只是细密的针脚，后来就成了撕扯不断的灰白帘幕。城郊废弃的调车场，铁轨早已锈蚀，枕木间野草疯长，在雨水的重压下倒伏一片，又挣扎着挺起，周而复始。两盏残破的街灯，隔着一百多米，各自笼着一团昏黄湿晕的光，光里是疾落的雨丝，光外是沉甸甸的、吸饱了水汽的黑暗。\n\n甲先到。他站在东边那盏灯更远处，几乎完全融在黑暗里，只有偶尔闪电划过天际的刹那，",
+      "error": null
+    },
+    {
+      "model": "deepseek-ai/DeepSeek-V3.2",
+      "path": "/api/writing/assist",
+      "status": 200,
+      "seconds": 4.36,
+      "chars": 92,
+      "sample": "他推开门，房间里光线昏沉。  \n她就站在那里——像是早被遗落在时间里的某个瞬间，忽然被这推门的动作惊醒了。  \n空气凝着旧灰尘的气息，可她的轮廓却清晰得割人。  \n他没有动，只是看着。",
+      "error": null
+    },
+    {
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "path": "/api/ai/status",
+      "status": 200,
+      "seconds": 0.01,
+      "chars": 320,
+      "sample": "{\"configured\": true, \"using_personal_key\": true, \"shared_key_enabled\": true, \"server_key_configured\": true, \"key_hint\": \"sk-a…hovh\", \"base_url\": \"https://api.siliconflow.cn/v1\", \"m",
+      "error": null
+    },
+    {
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "path": "/api/simulate",
+      "status": 200,
+      "seconds": 3.8,
+      "chars": 283,
+      "sample": "{\"relationship_changes\": [], \"world_changes\": \"雨夜中，甲乙两人在无人街角短暂交谈后各自离开，雨水冲刷了所有痕迹，世界没有因此发生任何可观测的实质改变。\", \"actions\": [{\"name\": \"甲\", \"engine\": \"O 秩序\", \"action\": \"在雨中与乙会面，简单交换信息后保持冷静离开\",",
+      "error": null
+    },
+    {
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "path": "/api/events/6a9f6b2b-9832-4398-8489-4231fe6776df/directions/suggest",
+      "status": 200,
+      "seconds": 14.88,
+      "chars": 2021,
+      "sample": "{\"directions\": [{\"name\": \"误会与敌意对峙\", \"description\": \"双方将对方视为潜在威胁，雨夜加深猜疑，对话充满试探和对抗，最终可能爆发冲突。\", \"trigger_conditions\": [\"两人曾有过不愉快经历或未解矛盾\", \"其中一方携带武器或表现出警戒姿态\", \"雨声掩盖了对方部分话语，导致误读\"], \"cog",
+      "error": null
+    },
+    {
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "path": "/api/writing/generate",
+      "status": 200,
+      "seconds": 146.53,
+      "chars": 1099,
+      "sample": "雨下到第三天，城市的排水系统终于发出了疲惫的呜咽。他站在废弃煤气厂铁门外的梧桐树下，风衣领子竖起来，雨水顺着尼龙面料汇成细线，滴进皮鞋与脚踝之间那道狭窄的缝隙。鞋里的袜子已经湿透，但他没有动。\n\n远处传来脚步声，刻意放轻了，混在雨声里几乎难以分辨。他等了两秒，才从树影里迈出半步。\n\n“你迟了四分钟。”他说。\n\n来人停在路灯照不到的暗处，伞沿压得很低，只露出一",
+      "error": null
+    },
+    {
+      "model": "deepseek-ai/DeepSeek-V4-Flash",
+      "path": "/api/writing/assist",
+      "status": 200,
+      "seconds": 3.61,
+      "chars": 140,
+      "sample": "他推开门，一步跨进屋里。光从身后涌进来，在地板上拉出一道瘦长的影子。他顿了一下——目光越过椅背、桌角、窗台，落在她身上。她正侧身坐着，没回头，像是早知道他来了，又像是谁来了都与她无关。空气里浮着细微的尘粒，在斜照的光里慢慢打转。他没再往前走，只是看着，过了两三秒，才轻轻带上了门。",
+      "error": null
+    }
+  ]
+}
