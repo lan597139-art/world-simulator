@@ -47,6 +47,14 @@ def main():
     check("访客模型生效", personal.get("model") == "deepseek-ai/DeepSeek-V4.1-Flash", str(personal))
     check("不返回完整 Key", personal.get("key_hint") == "sk-v…7890", str(personal))
 
+    code, shared_model = call("/ai/status", {"X-AI-Model": "deepseek-ai/DeepSeek-V4.1-Flash"})
+    check(
+        "共享 Key 下模型头生效",
+        code == 200 and shared_model.get("model") == "deepseek-ai/DeepSeek-V4.1-Flash"
+        and shared_model.get("using_personal_key") is False,
+        str(shared_model),
+    )
+
     bogus = {"X-AI-API-Key": "sk-invalid-for-smoke", "X-AI-Base-URL": "https://api.siliconflow.cn/v1"}
     code, worlds = call("/worlds")
     world_id = next((w["id"] for w in worlds if not w.get("archived_at")), None) if isinstance(worlds, list) else None

@@ -22,6 +22,7 @@ function needsAiKey(url: string) {
       path.startsWith('/api/branches/') ||
       /^\/api\/events\/[^/]+\/directions\/suggest$/.test(path) ||
       path === '/api/assistant/chat' ||
+      path.startsWith('/api/chat/') ||
       /^\/api\/writings\/[^/]+\/(analyze|extract)$/.test(path) ||
       /^\/api\/characters\/[^/]+\/biography\/generate$/.test(path)
     )

@@ -55,24 +55,31 @@ def _read_config() -> tuple[str, str, str]:
     env_model = (os.getenv("DEEPSEEK_MODEL") or DEFAULT_MODEL).strip() or DEFAULT_MODEL
 
     personal = _personal_ai.get()
-    if personal and personal.get("key"):
-        return (
-            personal["key"],
-            _safe_base_url(personal.get("base_url") or "") or env_base,
-            (personal.get("model") or env_model).strip() or env_model,
-        )
+    if personal:
+        # 模型头可独立于 Key 生效；Base URL 只随个人 Key 生效，避免无 Key 时被用作代理。
+        model = (personal.get("model") or env_model).strip() or env_model
+        if personal.get("key"):
+            return (
+                personal["key"],
+                _safe_base_url(personal.get("base_url") or "") or env_base,
+                model,
+            )
+        return (env_key if _server_key_enabled() else ""), env_base, model
     return (env_key if _server_key_enabled() else ""), env_base, env_model
 
 
 def set_request_ai_config(key: str = "", base_url: str = "", model: str = ""):
     """中间件调用：返回 ContextVar token，请求结束后必须 reset。"""
     key = (key or "").strip()
-    if not key or len(key) > 300:
+    model = (model or "").strip()[-120:]
+    if not key and not model:
+        return None
+    if key and len(key) > 300:
         return None
     return _personal_ai.set({
         "key": key,
         "base_url": (base_url or "").strip()[:500],
-        "model": (model or "").strip()[:120],
+        "model": model,
     })
 
 
