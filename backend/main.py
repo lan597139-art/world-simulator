@@ -21,6 +21,8 @@ from axis_objects import router as axis_objects_router, seed_official_axis_objec
 from personas import router as personas_router
 from event_sandbox import router as event_sandbox_router
 from diary import router as diary_router
+from products import router as products_router
+from information_sources import router as information_sources_router
 from auth import router as auth_router, auth_middleware
 from geography import router as geography_router
 from orgs import router as orgs_router
@@ -102,6 +104,8 @@ for router in (
     personas_router,
     event_sandbox_router,
     diary_router,
+    products_router,
+    information_sources_router,
     auth_router,
     writing_router,
     nodes_router,
@@ -154,10 +158,13 @@ def _owned(world: models.World, request: Request):
 
 
 @app.get("/api/worlds", response_model=List[schemas.WorldResponse])
-def get_worlds(request: Request, product_scene: Optional[str] = None, db: Session = Depends(get_db)):
+def get_worlds(request: Request, product_scene: Optional[str] = None,
+               include_workspace: bool = False, db: Session = Depends(get_db)):
     query = db.query(models.World).filter(
         models.World.deleted_at.is_(None), models.World.archived_at.is_(None)
     )
+    if not include_workspace:
+        query = query.filter(models.World.is_product_workspace.is_(False))
     query = query.filter(
         (models.World.owner_id == _current_user_id(request)) | (models.World.is_official.is_(True))
     )
@@ -177,8 +184,11 @@ def get_world(world_id: str, request: Request, db: Session = Depends(get_db)):
 
 @app.post("/api/worlds", response_model=schemas.WorldResponse)
 def create_world(world: schemas.WorldCreate, request: Request, db: Session = Depends(get_db)):
-    if world.product_scene and world.product_scene not in {"game", "literature", "companion", "diary"}:
+    product_scene = world.product_scene or "game"
+    if product_scene not in {"game", "literature", "companion", "diary"}:
         raise HTTPException(status_code=422, detail="product_scene 只能是 game/literature/companion/diary")
+    if product_scene in {"companion", "diary"}:
+        raise HTTPException(status_code=403, detail="AI 伴侣/日记与传记不开放世界管理，不能创建普通世界")
     now = datetime.utcnow().isoformat()
     db_world = models.World(
         name=world.name,
@@ -192,7 +202,7 @@ def create_world(world: schemas.WorldCreate, request: Request, db: Session = Dep
         time_status="paused",
         settings={},
         owner_id=_current_user_id(request),
-        product_scene=world.product_scene,
+        product_scene=product_scene,
     )
     db.add(db_world)
     db.flush()
@@ -210,7 +220,15 @@ def update_world(world_id: str, world: schemas.WorldUpdate, request: Request, db
         raise HTTPException(status_code=404, detail="World not found")
     _owned(db_world, request)
 
-    for key, value in world.model_dump(exclude_unset=True).items():
+    changes = world.model_dump(exclude_unset=True)
+    new_scene = changes.get("product_scene")
+    if new_scene and new_scene not in {"game", "literature", "companion", "diary"}:
+        raise HTTPException(status_code=422, detail="product_scene 只能是 game/literature/companion/diary")
+    if new_scene in {"companion", "diary"} and not db_world.is_product_workspace:
+        raise HTTPException(status_code=403, detail="AI 伴侣/日记与传记不开放世界管理，不能把普通世界改为该产品")
+    if db_world.is_product_workspace and new_scene and new_scene != db_world.product_scene:
+        raise HTTPException(status_code=403, detail="产品自动工作空间不能切换产品归属")
+    for key, value in changes.items():
         setattr(db_world, key, value)
 
     db_world.updatedAt = datetime.utcnow().isoformat()

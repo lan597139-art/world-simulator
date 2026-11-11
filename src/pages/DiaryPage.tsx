@@ -3,15 +3,17 @@ import * as api from '../api/diary'
 
 const SOURCE_LABEL: Record<string, string> = {
   user: '手写', chat: '聊天摘录', event: '事件', branch: '分支', import: '导入', ai_draft: 'AI 草案',
+  self_memory: '本人回忆', other_account: '他人叙述', evidence: '资料/证据', ai_inference: 'AI 推断 · 待核实',
 }
 
 function today() {
   return new Date().toISOString().slice(0, 10)
 }
 
-export default function DiaryPage() {
+export default function DiaryPage({
+  product = 'diary', worldId = '', onOpenSources,
+}: { product?: string; worldId?: string; onOpenSources?: () => void }) {
   const [entries, setEntries] = useState<api.DiaryEntry[]>([])
-  const [worlds, setWorlds] = useState<any[]>([])
   const [sourceFilter, setSourceFilter] = useState('')
   const [selectedId, setSelectedId] = useState('')
   const [editing, setEditing] = useState(false)
@@ -20,32 +22,28 @@ export default function DiaryPage() {
   const [content, setContent] = useState('')
   const [mood, setMood] = useState('')
   const [tags, setTags] = useState('')
-  const [worldId, setWorldId] = useState('')
   const [busy, setBusy] = useState(false)
   const [log, setLog] = useState('')
 
   const load = async () => {
     try {
-      setEntries(await api.listDiary({ source_type: sourceFilter || undefined }))
+      setEntries(await api.listDiary({ product, source_type: sourceFilter || undefined }))
     } catch (error: any) { setLog(`❌ ${error.message || error}`) }
   }
 
-  useEffect(() => { void load() }, [sourceFilter])
-  useEffect(() => {
-    fetch('http://127.0.0.1:8000/api/worlds').then((r) => r.json()).then(setWorlds).catch(() => undefined)
-  }, [])
+  useEffect(() => { void load() }, [sourceFilter, product])
 
   const selected = entries.find((entry) => entry.id === selectedId)
 
   const startNew = () => {
     setEditing(true); setSelectedId(''); setDate(today()); setTitle(''); setContent('')
-    setMood(''); setTags(''); setWorldId(''); setLog('')
+    setMood(''); setTags(''); setLog('')
   }
 
   const startEdit = (entry: api.DiaryEntry) => {
     setEditing(true); setSelectedId(entry.id); setDate(entry.entry_date); setTitle(entry.title)
     setContent(entry.content); setMood(entry.mood); setTags((entry.tags || []).join(', '))
-    setWorldId(entry.world_id || ''); setLog('')
+    setLog('')
   }
 
   const save = async () => {
@@ -58,7 +56,7 @@ export default function DiaryPage() {
         world_id: worldId || undefined,
       }
       if (selectedId) await api.updateDiary(selectedId, payload)
-      else await api.createDiary({ ...payload, source_type: 'user' })
+      else await api.createDiary({ ...payload, source_type: 'self_memory', product_key: product })
       setEditing(false); setLog('已保存')
       await load()
     } catch (error: any) { setLog(`❌ ${error.message || error}`) }
@@ -97,6 +95,7 @@ export default function DiaryPage() {
           <option value="">全部来源</option>
           {Object.entries(SOURCE_LABEL).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
         </select>
+        <button style={btn} onClick={onOpenSources}>信息来源管理</button>
         <button style={btn} onClick={startNew}>+ 写日记</button>
       </div>
 
@@ -134,10 +133,9 @@ export default function DiaryPage() {
                 <input value={mood} onChange={(e) => setMood(e.target.value)} placeholder="心情（可选）" style={{ ...input, flex: 1 }} />
                 <input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="标签，逗号分隔" style={{ ...input, flex: 2 }} />
               </div>
-              <select value={worldId} onChange={(e) => setWorldId(e.target.value)} style={input}>
-                <option value="">不关联世界（推荐）</option>
-                {worlds.map((world) => <option key={world.id} value={world.id}>{world.name}</option>)}
-              </select>
+              <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                本条日记会归入「日记与传记」独立数据空间；来源可在「信息来源管理」中逐条核实，AI 推断不会自动成为事实。
+              </div>
               <textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder="今天发生了什么？"
                 style={{ ...input, minHeight: '220px', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.7 }} />
               <div style={{ display: 'flex', gap: '7px' }}>

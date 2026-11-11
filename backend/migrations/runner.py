@@ -42,6 +42,8 @@ MODULES = [
     "m030_axis_objects",
     "m031_personal_personas",
     "m032_event_sandbox_scenarios",
+    "m033_product_spaces",
+    "m034_product_workspace_unique",
 ]
 
 

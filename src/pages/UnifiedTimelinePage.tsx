@@ -55,10 +55,13 @@ function Chip({ active, onClick, children }: { active: boolean; onClick: () => v
   )
 }
 
-export default function UnifiedTimelinePage({ worldId, worldName }: { worldId: string; worldName?: string }) {
+export default function UnifiedTimelinePage({ worldId, worldName, mode = 'world' }: { worldId: string; worldName?: string; mode?: string }) {
+  const scopes = mode === 'world'
+    ? SCOPES
+    : [{ key: 'world', label: '全部记录' }, { key: 'character', label: '人物' }] as const
   const [scope, setScope] = useState<ScopeKey>('world')
   const [entityId, setEntityId] = useState('')
-  const [kinds, setKinds] = useState<string[]>(['event', 'history', 'transaction'])
+  const [kinds, setKinds] = useState<string[]>(mode === 'world' ? ['event', 'history', 'transaction'] : ['event', 'history'])
   const [data, setData] = useState<{ counts: Record<string, number>; items: api.TimelineItem[] } | null>(null)
   const [error, setError] = useState('')
   const [selected, setSelected] = useState<api.TimelineItem | null>(null)
@@ -175,9 +178,9 @@ export default function UnifiedTimelinePage({ worldId, worldName }: { worldId: s
       <div style={{ ...card, padding: '16px 18px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: '10px' }}>
           <div>
-            <div style={{ fontSize: '16px', color: 'var(--text-main)' }}>统一时间线</div>
+            <div style={{ fontSize: '16px', color: 'var(--text-main)' }}>{mode === 'life' ? '人生时间线' : mode === 'interaction' ? '互动时间线' : '统一时间线'}</div>
             <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '3px' }}>
-              当前世界：{worldName || '未选择'} · 只读取事件、状态历史与资源流水，不重复维护历史
+              当前空间：{worldName || '未选择'} · {mode === 'life' ? '按人生经历与记录整理时间顺序，不做世界推演' : mode === 'interaction' ? '按互动事件与关系变化整理时间顺序' : '只读取事件、状态历史与资源流水，不重复维护历史'}
             </div>
           </div>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
@@ -186,7 +189,7 @@ export default function UnifiedTimelinePage({ worldId, worldName }: { worldId: s
         </div>
 
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', marginTop: '14px' }}>
-          {SCOPES.map((item) => (
+          {scopes.map((item) => (
             <Chip key={item.key} active={scope === item.key} onClick={() => setScope(item.key)}>
               {item.label}
             </Chip>
@@ -194,7 +197,7 @@ export default function UnifiedTimelinePage({ worldId, worldName }: { worldId: s
 
           {scope !== 'world' && (
             <select style={selectStyle} value={entityId} onChange={(e) => setEntityId(e.target.value)}>
-              <option value="">选择{SCOPES.find((s) => s.key === scope)?.label}</option>
+              <option value="">选择{scopes.find((s) => s.key === scope)?.label}</option>
               {options.map((option: any) => (
                 <option key={option.id} value={option.id}>
                   {option.name}

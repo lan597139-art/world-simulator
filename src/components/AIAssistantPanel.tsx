@@ -36,7 +36,7 @@ type ChatMessage = {
   error?: boolean
 }
 
-const STORAGE_KEY = 'ws.assistant.chat.v1'
+const STORAGE_PREFIX = 'ws.assistant.chat.v2'
 
 const PAGE_LABELS: Record<string, string> = {
   overview: '世界总览',
@@ -53,6 +53,11 @@ const PAGE_LABELS: Record<string, string> = {
   archive: '归档库',
   trash: '回收站',
   'time-machine': '时光机',
+  personas: '个人 AI 人格',
+  memories: '记忆管理',
+  'companion-runtime': '人格运行',
+  'information-sources': '信息来源管理',
+  diary: '日记与传记',
 }
 
 const ENTITY_LABELS: Record<string, string> = {
@@ -77,9 +82,13 @@ function uid() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
 }
 
-function loadMessages(): ChatMessage[] {
+function storageKey(product: string) {
+  return `${STORAGE_PREFIX}.${product || 'game'}`
+}
+
+function loadMessages(product = 'game'): ChatMessage[] {
   try {
-    const raw = sessionStorage.getItem(STORAGE_KEY)
+    const raw = sessionStorage.getItem(storageKey(product))
     if (!raw) return []
     const rows = JSON.parse(raw)
     return Array.isArray(rows) ? rows.slice(-40) : []
@@ -88,9 +97,9 @@ function loadMessages(): ChatMessage[] {
   }
 }
 
-function saveMessages(messages: ChatMessage[]) {
+function saveMessages(messages: ChatMessage[], product = 'game') {
   try {
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(messages.slice(-40)))
+    sessionStorage.setItem(storageKey(product), JSON.stringify(messages.slice(-40)))
   } catch {
     // 隐私模式或容量不足时静默失败。
   }
@@ -201,10 +210,10 @@ function actionTone(type: string) {
   return '打开页面'
 }
 
-export default function AIAssistantPanel({ onNavigate }: { onNavigate?: (page: string) => void }) {
+export default function AIAssistantPanel({ onNavigate, product = 'game' }: { onNavigate?: (page: string) => void; product?: string }) {
   const state = useSyncExternalStore(subscribeAssistant, getAssistantState, getAssistantState)
   const [open, setOpen] = useState(false)
-  const [messages, setMessages] = useState<ChatMessage[]>(() => loadMessages())
+  const [messages, setMessages] = useState<ChatMessage[]>(() => loadMessages(product))
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
   const [backendState, setBackendState] = useState<'unknown' | 'ok' | 'missing' | 'offline'>('unknown')
@@ -221,7 +230,14 @@ export default function AIAssistantPanel({ onNavigate }: { onNavigate?: (page: s
   const inputRef = useRef<HTMLTextAreaElement | null>(null)
   const panelRef = useRef<HTMLDivElement | null>(null)
 
-  useEffect(() => { if (!personaId) saveMessages(messages) }, [messages, personaId])
+  useEffect(() => { if (!personaId) saveMessages(messages, product) }, [messages, personaId, product])
+
+  useEffect(() => {
+    setMessages(loadMessages(product))
+    setPersonaId('')
+    setPersonaThreadId('')
+    if (product !== 'companion') setPersonas([])
+  }, [product])
 
   useEffect(() => {
     const handler = () => {
@@ -237,14 +253,14 @@ export default function AIAssistantPanel({ onNavigate }: { onNavigate?: (page: s
   }, [])
 
   useEffect(() => {
-    if (!open) return
-    void listPersonas().then(setPersonas).catch(() => setPersonas([]))
-  }, [open])
+    if (!open || product !== 'companion') return
+    void listPersonas('companion').then(setPersonas).catch(() => setPersonas([]))
+  }, [open, product])
 
   useEffect(() => {
     if (!open) return
     if (!personaId) {
-      setMessages(loadMessages())
+      setMessages(loadMessages(product))
       setPersonaThreadId('')
       return
     }
@@ -574,7 +590,7 @@ export default function AIAssistantPanel({ onNavigate }: { onNavigate?: (page: s
     setMessages([])
     setApplied({})
     try {
-      sessionStorage.removeItem(STORAGE_KEY)
+      sessionStorage.removeItem(storageKey(product))
     } catch {
       // ignore
     }
@@ -693,17 +709,19 @@ export default function AIAssistantPanel({ onNavigate }: { onNavigate?: (page: s
                   {personaId ? '独立人格 · 独立记忆' : '上下文已接入'}
                 </span>
               </div>
-              <select
-                value={personaId}
-                onChange={(event) => setPersonaId(event.target.value)}
-                title="选择通用助手或某个个人 AI 人格"
-                style={{ marginTop: 4, maxWidth: '100%', padding: '3px 5px', borderRadius: 6, border: '1px solid var(--card-border)', background: 'var(--bg-color)', color: 'var(--text-main)', fontSize: 10 }}
-              >
-                <option value="">通用助手（页面上下文 / 工具）</option>
-                {personas.map((persona) => (
-                  <option key={persona.id} value={persona.id}>人格：{persona.name}</option>
-                ))}
-              </select>
+              {product === 'companion' && (
+                <select
+                  value={personaId}
+                  onChange={(event) => setPersonaId(event.target.value)}
+                  title="选择通用助手或某个个人 AI 人格"
+                  style={{ marginTop: 4, maxWidth: '100%', padding: '3px 5px', borderRadius: 6, border: '1px solid var(--card-border)', background: 'var(--bg-color)', color: 'var(--text-main)', fontSize: 10 }}
+                >
+                  <option value="">通用助手（页面上下文 / 工具）</option>
+                  {personas.map((persona) => (
+                    <option key={persona.id} value={persona.id}>人格：{persona.name}</option>
+                  ))}
+                </select>
+              )}
               <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '3px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={contextText}>
                 {contextText}
               </div>

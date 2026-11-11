@@ -2,8 +2,8 @@ import type { World, WorldType } from '../types/world'
 
 const API_BASE_URL = "http://127.0.0.1:8000/api";
 
-export async function getAllWorlds(): Promise<World[]> {
-  const res = await fetch(`${API_BASE_URL}/worlds`);
+export async function getAllWorlds(includeWorkspace = false): Promise<World[]> {
+  const res = await fetch(`${API_BASE_URL}/worlds?include_workspace=${includeWorkspace ? 'true' : 'false'}`);
   if (!res.ok) throw new Error("获取世界失败");
   return await res.json();
 }

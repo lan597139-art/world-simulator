@@ -10,12 +10,16 @@ export default function CharacterListPage({
   focusCharacterId,
   onBack,
   onNavigate,
+  productMode = 'full',
+  showPersonas = false,
 }: {
   worldId?: string,
   worldName?: string,
   focusCharacterId?: string | null,
   onBack: () => void,
   onNavigate?: (page: string) => void,
+  productMode?: string,
+  showPersonas?: boolean,
 }) {
   const [characters, setCharacters] = useState<any[]>([]);
   const [runtimeMeta, setRuntimeMeta] = useState<Record<string, { version: number; main_color: string }>>({});
@@ -137,20 +141,23 @@ export default function CharacterListPage({
           </h1>
           <p style={{ margin: '8px 0 0', color: 'var(--text-muted)' }}>
             当前共有 {characters.length} 个人物档案
+            {productMode === 'light' && <span style={{ marginLeft: 8, fontSize: 10, padding: '2px 7px', borderRadius: 9, border: '1px solid var(--card-border)' }}>轻量人物模式：只维护身份、关系与陪伴资料</span>}
           </p>
         </div>
 
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-          <button
-            onClick={() => setPersonaOpen(true)}
-            title="管理个人 AI 人格：独立 ESA、会话与记忆"
-            style={{
-              padding: '10px 16px', background: 'var(--card-bg)', color: 'var(--text-main)',
-              border: '1px solid var(--primary-color)', borderRadius: '8px', cursor: 'pointer', fontWeight: 600,
-            }}
-          >
-            个人 AI 人格
-          </button>
+          {showPersonas && (
+            <button
+              onClick={() => setPersonaOpen(true)}
+              title="管理个人 AI 人格：独立 ESA、会话与记忆"
+              style={{
+                padding: '10px 16px', background: 'var(--card-bg)', color: 'var(--text-main)',
+                border: '1px solid var(--primary-color)', borderRadius: '8px', cursor: 'pointer', fontWeight: 600,
+              }}
+            >
+              AI 伴侣 · 个人人格
+            </button>
+          )}
           <button
             onClick={() => openEditor(null)}
             style={{
@@ -214,12 +221,14 @@ export default function CharacterListPage({
               >
                 编辑档案
               </button>
-              <button
-                onClick={(event) => { event.stopPropagation(); openEditor(char.id, 'growth'); }}
-                style={{ padding: '8px 10px', background: 'transparent', color: 'var(--text-main)', border: '1px solid var(--card-border)', borderRadius: '8px', cursor: 'pointer' }}
-              >
-                成长
-              </button>
+              {productMode !== 'light' && (
+                <button
+                  onClick={(event) => { event.stopPropagation(); openEditor(char.id, 'growth'); }}
+                  style={{ padding: '8px 10px', background: 'transparent', color: 'var(--text-main)', border: '1px solid var(--card-border)', borderRadius: '8px', cursor: 'pointer' }}
+                >
+                  成长
+                </button>
+              )}
               <button
                 onClick={(event) => {
                   event.stopPropagation()
@@ -274,7 +283,7 @@ export default function CharacterListPage({
           onClose={() => setBioCharacter(null)}
         />
       )}
-      <PersonaManager open={personaOpen} onClose={() => setPersonaOpen(false)} />
+      {showPersonas && <PersonaManager open={personaOpen} onClose={() => setPersonaOpen(false)} />}
     </div>
   );
 }

@@ -14,6 +14,7 @@ export interface World {
 
   type: WorldType
   product_scene?: string | null
+  is_product_workspace?: boolean
 
   background: string
 

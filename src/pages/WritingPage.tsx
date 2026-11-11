@@ -197,9 +197,11 @@ const EDITOR_CSS = `
 export default function WritingPage({
   worldId,
   seedEventIds,
+  productMode = 'narrative',
 }: {
   worldId?: string
   seedEventIds?: string[]
+  productMode?: string
 }) {
   const [stories, setStories] = useState<StoryItem[]>([])
   const [current, setCurrent] = useState<StoryItem | null>(null)
@@ -783,7 +785,7 @@ export default function WritingPage({
         <header style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
           <div style={{ minWidth: 0, flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', color: 'var(--text-muted)', letterSpacing: '0.1em' }}>
-              08 写作工作台
+              {productMode === 'biography' ? '08 传记写作 · 基于人生记录' : '08 写作工作台'}
               {current && <ModeBadge mode={current.mode} />}
             </div>
             {current ? (
@@ -813,6 +815,7 @@ export default function WritingPage({
             )}
             <div style={{ marginTop: '5px', fontSize: '11px', color: 'var(--text-muted)' }}>
               {current ? `${current.word_count || words} 字 · ${saveLabel} · 最后修改 ${fmtTime(current.updated_at)}` : '先选一种模式开始'}
+              {productMode === 'biography' && <span style={{ marginLeft: 8, padding: '2px 6px', borderRadius: 8, border: '1px solid var(--card-border)' }}>传记模式：事实须有来源，AI 推断不能自动写成事实</span>}
             </div>
           </div>
 

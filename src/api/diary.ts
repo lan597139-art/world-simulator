@@ -12,10 +12,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T
 }
 
-export type DiarySource = 'user' | 'chat' | 'event' | 'branch' | 'import' | 'ai_draft'
+export type DiarySource =
+  | 'user' | 'chat' | 'event' | 'branch' | 'import' | 'ai_draft'
+  | 'self_memory' | 'other_account' | 'evidence' | 'ai_inference'
 
 export interface DiaryEntry {
   id: string
+  product_key?: string
   world_id?: string | null
   character_id?: string | null
   entry_date: string
@@ -30,11 +33,12 @@ export interface DiaryEntry {
   updated_at?: string | null
 }
 
-export const listDiary = (params: { source_type?: string; world_id?: string } = {}) => {
+export const listDiary = (params: { product?: string; source_type?: string; world_id?: string } = {}) => {
   const query = new URLSearchParams()
+  query.set('product', params.product || 'diary')
   if (params.source_type) query.set('source_type', params.source_type)
   if (params.world_id) query.set('world_id', params.world_id)
-  return request<DiaryEntry[]>(`/diary/entries${query.toString() ? `?${query}` : ''}`)
+  return request<DiaryEntry[]>(`/diary/entries?${query}`)
 }
 
 export const createDiary = (payload: Partial<DiaryEntry> & { content: string }) =>

@@ -1,7 +1,7 @@
 import { API_ORIGIN } from './config'
 
 export type Persona = {
-  id: string; name: string; identity: string; description: string
+  id: string; product_key?: string; name: string; identity: string; description: string
   esa: Record<string, any>; traits: string[]; cognition: Record<string, any>
   expression: Record<string, any>; interaction: Record<string, any>
   memory_policy: Record<string, any>; public_profile: Record<string, any>
@@ -23,7 +23,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>
 }
 
-export const listPersonas = () => request<Persona[]>('/personas')
+export const listPersonas = (product = 'companion') =>
+  request<Persona[]>(`/personas?product=${encodeURIComponent(product)}`)
 export const createPersona = (payload: Partial<Persona>) =>
   request<Persona>('/personas', { method: 'POST', body: JSON.stringify(payload) })
 export const updatePersona = (id: string, payload: Partial<Persona>) =>

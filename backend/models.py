@@ -63,6 +63,7 @@ class World(Base):
     type = Column(String, default="custom")
     owner_id = Column(String, index=True)
     product_scene = Column(String, index=True)  # game / literature / companion / diary
+    is_product_workspace = Column(Boolean, default=False, index=True)  # 伴侣/日记产品的隐藏工作空间
     background = Column(String, default="")
     createdAt = Column(String)
     updatedAt = Column(String)
@@ -1251,6 +1252,7 @@ class PersonalPersona(Base):
 
     id = Column(String, primary_key=True, default=_uuid)
     owner_user_id = Column(String, nullable=False, index=True, default="local")
+    product_key = Column(String, default="companion", index=True)
     name = Column(String, nullable=False)
     identity = Column(String, default="")
     description = Column(Text, default="")
@@ -1343,6 +1345,32 @@ class DiaryEntry(Base):
     tags = Column(JSON, default=list)
     source_type = Column(String, default="user", index=True)  # user/chat/event/branch/import/ai_draft
     source_ref = Column(JSON, default=dict)
+    visibility = Column(String, default="private")
+    product_key = Column(String, default="diary", index=True)
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now)
+
+class InformationSource(Base):
+    """信息来源：本人回忆、他人叙述、资料证据与 AI 推断。
+
+    AI 推断默认 inference/confirmed=False；只有用户显式确认后才能转为事实。
+    """
+
+    __tablename__ = "information_sources"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    owner_user_id = Column(String, nullable=False, index=True, default="local")
+    product_key = Column(String, default="diary", index=True)
+    world_id = Column(String, index=True)
+    character_id = Column(String, index=True)
+    event_id = Column(String, index=True)
+    title = Column(String, default="")
+    source_type = Column(String, default="self_memory", index=True)  # self_memory/other_account/document/evidence/ai_inference
+    content = Column(Text, default="")
+    source_date = Column(String, default="")
+    status = Column(String, default="unconfirmed", index=True)  # confirmed/unconfirmed/inference
+    confidence = Column(Float, default=0.5)
+    citation = Column(Text, default="")
     visibility = Column(String, default="private")
     created_at = Column(DateTime, default=_now)
     updated_at = Column(DateTime, default=_now)

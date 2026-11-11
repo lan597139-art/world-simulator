@@ -47,11 +47,14 @@ export default function RelationshipsPage({
   worldId,
   onOpenCharacter,
   onNavigate,
+  mode = 'world',
 }: {
   worldId?: string;
   onOpenCharacter?: (characterId: string) => void;
   onNavigate?: (page: string) => void;
+  mode?: string;
 }) {
+  const simpleRelations = mode !== 'world'
   const [nodes, setNodes] = useState<any[]>([]);
   const [edges, setEdges] = useState<any[]>([]);
   const [characters, setCharacters] = useState<any[]>([]);
@@ -314,7 +317,9 @@ export default function RelationshipsPage({
       
       {/* 顶部控制栏 */}
       <div style={{ padding: '16px', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '8px' }}>
-        <span style={{ fontSize: '14px', color: 'var(--text-main)', fontWeight: 600 }}>04 关系与组织（点击线条可编辑关系本质）</span>
+        <span style={{ fontSize: '14px', color: 'var(--text-main)', fontWeight: 600 }}>
+          {mode === 'relationship' ? '04 互动关系（只维护人物之间的关系）' : mode === 'life' ? '04 人物关系（只记录真实存在的人物关系）' : '04 关系与组织（点击线条可编辑关系本质）'}
+        </span>
         <button 
           onClick={() => { 
             setEditingId(null); 
@@ -339,7 +344,10 @@ export default function RelationshipsPage({
           label="范围"
           value={filters.scope}
           onChange={(value) => setFilters({ ...filters, scope: value })}
-          options={[
+          options={simpleRelations ? [
+            { value: 'all', label: '全部' },
+            { value: 'character', label: '人物之间' },
+          ] : [
             { value: 'all', label: '全部' },
             { value: 'character', label: '人物之间' },
             { value: 'organization', label: '涉及组织' },
@@ -399,15 +407,17 @@ export default function RelationshipsPage({
                   <optgroup label="人物">
                     {characters.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </optgroup>
-                  <optgroup label="组织">
-                    {organizations.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
-                  </optgroup>
-                  <optgroup label="地点">
-                    {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-                  </optgroup>
-                  <optgroup label="资源">
-                    {resources.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-                  </optgroup>
+                  {!simpleRelations && <>
+                    <optgroup label="组织">
+                      {organizations.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+                    </optgroup>
+                    <optgroup label="地点">
+                      {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                    </optgroup>
+                    <optgroup label="资源">
+                      {resources.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                    </optgroup>
+                  </>}
                 </select>
               </div>
               <div>
@@ -417,15 +427,17 @@ export default function RelationshipsPage({
                   <optgroup label="人物">
                     {characters.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </optgroup>
-                  <optgroup label="组织">
-                    {organizations.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
-                  </optgroup>
-                  <optgroup label="地点">
-                    {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-                  </optgroup>
-                  <optgroup label="资源">
-                    {resources.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-                  </optgroup>
+                  {!simpleRelations && <>
+                    <optgroup label="组织">
+                      {organizations.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+                    </optgroup>
+                    <optgroup label="地点">
+                      {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                    </optgroup>
+                    <optgroup label="资源">
+                      {resources.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                    </optgroup>
+                  </>}
                 </select>
               </div>
               <div>

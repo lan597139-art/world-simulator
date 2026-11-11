@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 import models
+import product_config as pc
 from ai_engine import ai_config_status, ai_error_message, get_client, get_model
 from database import get_db
 
@@ -45,7 +46,8 @@ def _thread(db: Session, persona_id: str, thread_id: str) -> models.PersonaThrea
 def _row(row: models.PersonalPersona) -> dict:
     policy = row.memory_policy if isinstance(row.memory_policy, dict) else {}
     return {
-        "id": row.id, "name": row.name, "identity": row.identity or "",
+        "id": row.id, "product_key": row.product_key or "companion",
+        "name": row.name, "identity": row.identity or "",
         "description": row.description or "", "avatar": row.avatar or "",
         "esa": row.esa or {}, "traits": row.traits or [], "cognition": row.cognition or {},
         "expression": row.expression or {}, "interaction": row.interaction or {},
@@ -86,9 +88,14 @@ def _clean_persona(payload: dict) -> dict:
 
 
 @router.get("/api/personas")
-def list_personas(db: Session = Depends(get_db)):
+def list_personas(product: str = "companion", db: Session = Depends(get_db)):
+    try:
+        pc.require_module(product, "personas")
+    except (ValueError, PermissionError) as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
     rows = db.query(models.PersonalPersona).filter(
         models.PersonalPersona.owner_user_id == OWNER,
+        models.PersonalPersona.product_key == product,
         models.PersonalPersona.status != "archived",
     ).order_by(models.PersonalPersona.created_at.asc()).all()
     return [_row(row) for row in rows]
@@ -96,10 +103,15 @@ def list_personas(db: Session = Depends(get_db)):
 
 @router.post("/api/personas")
 def create_persona(payload: dict, db: Session = Depends(get_db)):
+    product = str(payload.get("product_key") or "companion").strip().lower()
+    try:
+        pc.require_module(product, "personas")
+    except (ValueError, PermissionError) as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
     clean = _clean_persona(payload)
     if not clean.get("name"):
         raise HTTPException(status_code=422, detail="人格名称不能为空")
-    row = models.PersonalPersona(owner_user_id=OWNER, **clean)
+    row = models.PersonalPersona(owner_user_id=OWNER, product_key=product, **clean)
     db.add(row)
     db.commit()
     db.refresh(row)

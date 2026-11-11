@@ -35,7 +35,10 @@ const btn: React.CSSProperties = {
 }
 const hint: React.CSSProperties = { fontSize: '10px', color: 'var(--text-muted)', lineHeight: 1.6 }
 
-export default function ChatPage({ worldId }: { worldId?: string }) {
+export default function ChatPage({ worldId, product = 'game', onOpenPersonas }: {
+  worldId?: string; product?: string; onOpenPersonas?: () => void
+}) {
+  const companion = product === 'companion'
   const [threads, setThreads] = useState<ChatThread[]>([])
   const [characters, setCharacters] = useState<any[]>([])
   const [threadId, setThreadId] = useState('')
@@ -351,7 +354,8 @@ export default function ChatPage({ worldId }: { worldId?: string }) {
   return (
     <div style={{ padding: '1rem', display: 'flex', gap: '12px', height: 'calc(100vh - 60px)', boxSizing: 'border-box' }}>
       <div style={{ ...card, width: '250px' }}>
-        <h3 style={{ margin: 0, fontSize: '14px' }}>AI 角色聊天</h3>
+        <h3 style={{ margin: 0, fontSize: '14px' }}>{companion ? 'AI 伴侣角色' : 'AI 角色聊天'}</h3>
+        {companion && <button type="button" style={btn} onClick={onOpenPersonas}>管理个人 AI 人格</button>}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           <select value={selectedChar} onChange={(e) => setSelectedChar(e.target.value)} style={input}>
             {characters.map((char) => <option key={char.id} value={char.id}>{char.name}</option>)}
@@ -374,7 +378,7 @@ export default function ChatPage({ worldId }: { worldId?: string }) {
             <button style={btn} disabled={busy || groupIds.length < 2} onClick={() => void createGroup()}>+ 创建群聊</button>
           </details>
         </div>
-        <div style={{ ...hint }}>角色回复由其档案中的引擎、印记、经历与关系生成，不会替你做决定。</div>
+        <div style={{ ...hint }}>{companion ? '角色与个人 AI 人格彼此独立：角色是伴侣世界中的 AI 人物，人格是你自己的多个 AI 身份；两边会话与记忆不混用。' : '角色回复由其档案中的引擎、印记、经历与关系生成，不会替你做决定。'}</div>
         <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
           {threads.map((item) => (
             <button

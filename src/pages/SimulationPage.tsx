@@ -5,9 +5,11 @@ import type { Branch, Direction } from '../api/multipath';
 
 type Props = {
   onWriteChapter?: (eventId: string) => void
+  auxiliary?: boolean
+  worldId?: string
 }
 
-export default function SimulationPage({ onWriteChapter }: Props) {
+export default function SimulationPage({ onWriteChapter, auxiliary = false, worldId = '' }: Props) {
   const [events, setEvents] = useState<any[]>([]);
   const [simulations, setSimulations] = useState<any[]>([]); // ✅ 记录已推演的数据
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
@@ -33,7 +35,7 @@ export default function SimulationPage({ onWriteChapter }: Props) {
   useEffect(() => {
     // 拉取事件和推演记录
     Promise.all([
-      fetch(`${API_ORIGIN}/api/events`).then(res => res.json()),
+      fetch(`${API_ORIGIN}/api/events${worldId ? `?world_id=${worldId}` : ''}`).then(res => res.json()),
       fetch(`${API_ORIGIN}/api/simulations`).then(res => res.json())
     ]).then(([eventsData, simsData]) => {
       setEvents(eventsData);
@@ -43,7 +45,7 @@ export default function SimulationPage({ onWriteChapter }: Props) {
       .then(res => res.json())
       .then(setAiStatus)
       .catch(() => setAiStatus(null));
-  }, []);
+  }, [worldId]);
 
   const probeAi = async () => {
     setAiProbing(true)
@@ -245,8 +247,11 @@ export default function SimulationPage({ onWriteChapter }: Props) {
       {/* 1. 左侧：事件库 */}
       <div className="glass-card" style={{ width: '300px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ padding: '16px', borderBottom: '1px solid var(--card-border)' }}>
-          <h3 style={{ margin: 0, fontSize: '16px', color: 'var(--text-main)' }}>事件注入台</h3>
-          <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>选择事件或开启自动推演</p>
+          <h3 style={{ margin: 0, fontSize: '16px', color: 'var(--text-main)' }}>{auxiliary ? '辅助推演 · 事件注入' : '事件注入台'}</h3>
+          <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>{auxiliary ? '文学创作以人物与叙事为主，这里只辅助检查事件可能走向' : '选择事件或开启自动推演'}</p>
+          {auxiliary && <div style={{ marginTop: 9, padding: 7, borderRadius: 6, border: '1px dashed var(--card-border)', fontSize: 10, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+            辅助模式不会自动改写正文或故事线；推演结果需要你手动采纳。
+          </div>}
           {aiStatus && (
             <div style={{ marginTop: '10px', padding: '7px 9px', borderRadius: '6px', border: '1px solid var(--card-border)', background: aiStatus.configured ? 'rgba(128,128,128,0.08)' : 'rgba(255,69,58,0.08)', fontSize: '10px', lineHeight: 1.6, color: 'var(--text-muted)' }}>
               {aiStatus.configured

@@ -25,6 +25,14 @@ import { authLogout } from './api/auth'
 import TimeMachinePage from './pages/TimeMachinePage'
 import AIAssistantPanel from './components/AIAssistantPanel'
 import { setAssistantPage } from './api/assistantContext'
+import ProductSwitcher from './components/ProductSwitcher'
+import PersonaPage from './pages/PersonaPage'
+import MemoryPage from './pages/MemoryPage'
+import CompanionRuntimePage from './pages/CompanionRuntimePage'
+import InformationSourcesPage from './pages/InformationSourcesPage'
+import { ensureProductWorkspace, fetchProductMatrix } from './api/productConfig'
+import { FALLBACK_MATRIX, getStoredProduct, productByKey, storeProduct } from './product/products'
+import type { ProductConfig, ProductKey, ProductMatrix } from './product/types'
 
 type PageKey = 
   | 'overview' 
@@ -45,6 +53,10 @@ type PageKey =
   | 'trash'
   | 'time-machine'
   | 'diary'
+  | 'personas'
+  | 'memories'
+  | 'companion-runtime'
+  | 'information-sources'
 
 export type Language = 'zh' | 'en'
 
@@ -79,14 +91,27 @@ export const t = {
 
 function pageLabel(key: PageKey, dict: Record<string, string>): string {
   const map: Partial<Record<PageKey, string>> = {
+    overview: dict.overview,
     'world-building': dict.worldBuilding,
     'world-structure': dict.worldStructure || '世界结构',
     'world-data': '世界设定',
     'world-management': dict.worldManagement,
     'character-management': dict.characterManagement,
+    chat: 'AI 角色聊天',
+    relationships: dict.relationships,
+    events: dict.events,
+    timeline: dict.timeline,
+    simulation: dict.simulation,
+    storyline: '故事线管理',
+    writing: dict.writing,
     'archive': '归档库',
     'trash': '回收站',
     'time-machine': '时光机',
+    personas: '个人 AI 人格',
+    memories: '记忆管理',
+    'companion-runtime': '人格运行',
+    'information-sources': '信息来源管理',
+    diary: '日记与传记',
   }
   return map[key] || dict[key] || key
 }
@@ -94,12 +119,20 @@ function pageLabel(key: PageKey, dict: Record<string, string>): string {
 const initialParams = new URLSearchParams(window.location.search)
 const initialWorldId = initialParams.get('world') || sessionStorage.getItem('ws.worldId') || ''
 const initialPage = (initialParams.get('page') as PageKey) || 'overview'
-const WORLD_FREE_PAGES: PageKey[] = ['overview', 'world-management', 'world-building', 'diary', 'archive', 'trash']
+const initialProduct = getStoredProduct()
+const WORLD_FREE_PAGES: PageKey[] = [
+  'overview', 'world-management', 'world-building', 'diary', 'archive', 'trash',
+  'information-sources', 'personas', 'memories', 'companion-runtime',
+]
 
 export default function App() {
   const [activePage, setActivePage] = useState<PageKey>(
     !initialWorldId && !WORLD_FREE_PAGES.includes(initialPage) ? 'overview' : initialPage
   )
+  const [product, setProduct] = useState<ProductKey>(initialProduct)
+  const [productMatrix, setProductMatrix] = useState<ProductMatrix>(FALLBACK_MATRIX)
+  const [productError, setProductError] = useState('')
+  const productConfig = productByKey(productMatrix.products, product)
   const [selectedWorldId, setSelectedWorldId] = useState<string | null>(null) // 用于建设页
   const [lang, setLang] = useState<Language>('zh')
   const dict = t[lang]
@@ -145,6 +178,75 @@ export default function App() {
     setActivePage(next)
   }
 
+  useEffect(() => {
+    void fetchProductMatrix().then((data) => setProductMatrix(data))
+  }, [])
+
+  const applyProductWorld = (world: any) => {
+    if (!world) return
+    setCurrentWorldId(world.id)
+    setCurrentWorldName(world.name)
+    sessionStorage.setItem('ws.worldId', world.id)
+    sessionStorage.setItem('ws.worldName', world.name)
+    setAllWorldsList((prev) => {
+      const exists = prev.some((item) => item.id === world.id)
+      return exists ? prev : [...prev, world]
+    })
+  }
+
+  const clearProductWorld = () => {
+    setCurrentWorldId('')
+    setCurrentWorldName('')
+    sessionStorage.removeItem('ws.worldId')
+    sessionStorage.removeItem('ws.worldName')
+  }
+
+  const switchProduct = async (nextKey: ProductKey) => {
+    if (nextKey === product) return
+    const next = productByKey(productMatrix.products, nextKey)
+    setProductError('')
+    storeProduct(nextKey)
+    setProduct(nextKey)
+    setNavStack([])
+    setWritingSeedEventIds([])
+    const current = allWorldsList.find((item) => item.id === currentWorldId)
+    if (current && current.product_scene !== nextKey) clearProductWorld()
+    setActivePage(next.home as PageKey)
+    // 自动工作空间由下方 effect 统一创建，避免切换时重复 POST。
+  }
+
+  // 伴侣/日记产品没有世界管理：首次进入自动准备隐藏工作空间，不让用户配置世界。
+  useEffect(() => {
+    if (!productConfig.auto_workspace) return
+    const current = allWorldsList.find((item) => item.id === currentWorldId)
+    if (current && current.product_scene === product) return
+    let cancelled = false
+    void ensureProductWorkspace(product).then((world) => {
+      if (!cancelled) applyProductWorld(world)
+    }).catch((error) => {
+      if (!cancelled) setProductError(error?.message || `${productConfig.label}工作空间创建失败`)
+    })
+    return () => { cancelled = true }
+  }, [product, productConfig.auto_workspace, allWorldsList.length])
+
+  // 产品级路由守卫：未开放模块不可通过 URL、快捷键或遗留入口直接进入。
+  useEffect(() => {
+    if (!productConfig.allowed_modules.includes(activePage)) {
+      setActivePage(productConfig.home as PageKey)
+      return
+    }
+    if (!WORLD_FREE_PAGES.includes(activePage) && !currentWorldId) {
+      setActivePage(productConfig.permissions.world_management ? 'world-management' : (productConfig.home as PageKey))
+    }
+  }, [product, productConfig, activePage, currentWorldId])
+
+  useEffect(() => {
+    if (productConfig.auto_workspace && !currentWorldId) {
+      // 防止空白：正在创建工作空间时显示产品首页的空状态，而不是通用世界页。
+      if (activePage === 'world-management') setActivePage(productConfig.home as PageKey)
+    }
+  }, [productConfig, currentWorldId, activePage])
+
   // 全局 AI 助手：路由切换时同步页面上下文，助手面板统一读取。
   useEffect(() => {
     setAssistantPage({
@@ -157,17 +259,18 @@ export default function App() {
 
   useEffect(() => {
     const params = new URLSearchParams()
+    params.set('product', product)
     if (currentWorldId) params.set('world', currentWorldId)
-    if (activePage !== 'overview') params.set('page', activePage)
+    if (activePage !== productConfig.home) params.set('page', activePage)
     const qs = params.toString()
     window.history.replaceState(null, '', qs ? `?${qs}` : window.location.pathname)
-  }, [activePage, currentWorldId])
+  }, [activePage, currentWorldId, product, productConfig.home])
 
   useEffect(() => {
     checkBackendHealth().then(data => {
       setBackendStatus(data && data.status === "ok" ? "connected" : "error")
     })
-    getAllWorlds().then(data => {
+    getAllWorlds(true).then(data => {
       setAllWorldsList(data)
       const stored = sessionStorage.getItem('ws.worldId')
       const target = initialWorldId || stored
@@ -193,6 +296,11 @@ export default function App() {
   function handleEnterWorld(id: string) {
     const world = allWorldsList.find(w => w.id === id);
     if (world) {
+      if (world.product_scene && world.product_scene !== product) {
+        const next = world.product_scene as ProductKey
+        storeProduct(next)
+        setProduct(next)
+      }
       setCurrentWorldId(id);
       setCurrentWorldName(world.name);
       sessionStorage.setItem('ws.worldId', id);
@@ -210,66 +318,24 @@ export default function App() {
     sessionStorage.removeItem('ws.worldName');
     window.history.replaceState(null, '', window.location.pathname);
     setNavStack([]);
-    setActivePage('world-management');
+    setActivePage((productConfig.auto_workspace ? productConfig.home : 'world-management') as PageKey);
   }
-  // ✅ 动态导航：根据是否进入世界，渲染不同的菜单
-  const navigation: { title: string; items: { key: PageKey; label: string; icon: string }[] }[] = currentWorldId ? [
-    {
-      title: '个人',
-      items: [
-        { key: 'diary', label: '日记与传记', icon: '✎' },
-      ]
-    },
-    { 
-      title: `当前世界：${currentWorldName}`, 
-      items: [
-        { key: 'character-management', label: dict.characterManagement, icon: '♙' },
-        { key: 'chat', label: 'AI 角色聊天', icon: '✉' },
-        { key: 'world-structure', label: '世界结构', icon: '◈' },
-        { key: 'world-data', label: '世界设定', icon: '🌍' },
-        { key: 'relationships', label: dict.relationships, icon: '⛓' },
-        { key: 'events', label: dict.events, icon: '◇' },
-      ]
-    },
-    { 
-      title: dict.simSystem, 
-      items: [
-        { key: 'timeline', label: dict.timeline, icon: '⏱' },
-        { key: 'simulation', label: dict.simulation, icon: '▷' },
-        { key: 'storyline', label: '故事线管理', icon: '☰' },
-        { key: 'writing', label: dict.writing, icon: '▤' },
-      ]
-    },
-    {
-      title: '数据安全',
-      items: [
-        { key: 'time-machine', label: '时光机', icon: '⏳' },
-        { key: 'archive', label: '归档库', icon: '▣' },
-        { key: 'trash', label: '回收站', icon: '♻' },
-      ]
-    }
-  ] : [
-    { 
-      title: dict.workbench, 
-      items: [
-        { key: 'overview', label: dict.overview, icon: '◫' },
-        { key: 'diary', label: '日记与传记', icon: '✎' }
-      ] 
-    },
-    { 
-      title: dict.worldBuild, 
-      items: [
-        { key: 'world-management', label: dict.worldManagement, icon: '◎' },
-      ]
-    },
-    {
-      title: '数据安全',
-      items: [
-        { key: 'archive', label: '归档库', icon: '▣' },
-        { key: 'trash', label: '回收站', icon: '♻' },
-      ]
-    }
-  ]
+  const navIcons: Record<string, string> = {
+    overview: '◫', 'world-management': '◎', 'character-management': '♙', chat: '✉',
+    'world-structure': '◈', 'world-data': '🌍', relationships: '⛓', events: '◇',
+    timeline: '⏱', simulation: '▷', storyline: '☰', writing: '▤',
+    'time-machine': '⏳', archive: '▣', trash: '♻', personas: '✦', memories: '◉',
+    'companion-runtime': '◌', 'information-sources': '⌕', diary: '✎',
+  }
+  const navigation: { title: string; items: { key: PageKey; label: string; icon: string }[] }[] =
+    productConfig.nav_groups.map((group) => ({
+      title: group.title,
+      items: group.items.map((item) => ({
+        key: item.page as PageKey,
+        label: item.label,
+        icon: navIcons[item.module] || '•',
+      })),
+    }))
 
   return (
     <div className="app-shell" style={{ display: 'flex', height: '100vh', overflow: 'hidden', backgroundColor: 'var(--bg-color)' }}>
@@ -284,8 +350,13 @@ export default function App() {
           </div>
         </div>
 
-        {/* ✅ 返回世界书架按钮 */}
-        {currentWorldId && (
+        <div style={{ padding: '0 1rem', marginBottom: '0.8rem' }}>
+          <ProductSwitcher product={productConfig} configs={productMatrix.products} onSelect={(key) => void switchProduct(key)} />
+          {productError && <div style={{ marginTop: 6, fontSize: 9.5, color: 'var(--danger-color)', lineHeight: 1.5 }}>{productError}</div>}
+        </div>
+
+        {/* 隐藏产品工作空间不允许退出；普通世界可返回书架 */}
+        {currentWorldId && !productConfig.auto_workspace && (
           <div style={{ padding: '0 1rem', marginBottom: '1rem' }}>
             <button onClick={handleExitWorld} style={{ width: '100%', padding: '10px', background: 'rgba(128,128,128,0.1)', color: 'var(--text-main)', border: '1px solid var(--card-border)', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', textAlign: 'left', display: 'flex', gap: '8px' }}>
               <span>←</span> 退出当前世界
@@ -351,6 +422,7 @@ export default function App() {
             </button>
             {currentWorldId ? (
               <>
+                <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 8, border: '1px solid var(--card-border)', marginRight: 8 }}>{productConfig.icon} {productConfig.short}</span>
                 <span style={{ color: 'var(--primary-color)', fontWeight: 600 }}>[{currentWorldName}]</span>
                 <span style={{ margin: '0 8px' }}>/</span>
                 <strong style={{ color: 'var(--text-main)' }}>
@@ -359,6 +431,7 @@ export default function App() {
               </>
             ) : (
               <>
+                <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 8, border: '1px solid var(--card-border)', marginRight: 8 }}>{productConfig.icon} {productConfig.short}</span>
                 <span>{dict.workbench}</span><span style={{ margin: '0 8px' }}>/</span>
                 <strong style={{ color: 'var(--text-main)' }}>
                   {pageLabel(activePage, dict)}
@@ -367,6 +440,7 @@ export default function App() {
             )}
           </div>
           <div className="topbar-right" style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '12px', color: 'var(--text-muted)' }}>
+            <ProductSwitcher compact product={productConfig} configs={productMatrix.products} onSelect={(key) => void switchProduct(key)} />
             <button
               type="button"
               onClick={() => setAiAccessOpen(true)}
@@ -385,14 +459,18 @@ export default function App() {
         </header>
 
         <div className="page-content" style={{ flex: 1, overflowY: 'auto', backgroundColor: 'transparent' }}>
-          <ErrorBoundary onReset={() => setActivePage('overview')}>
+          <ErrorBoundary onReset={() => setActivePage(productConfig.home as PageKey)}>
           {activePage === 'overview' ? (
-            <OverviewPage onNavigate={navigate} lang={lang} dict={dict} />
+            <OverviewPage
+              onNavigate={navigate} lang={lang} dict={dict}
+              product={product} productConfig={productConfig}
+              onSelectProduct={(key) => void switchProduct(key)}
+            />
           ) : activePage === 'diary' ? (
-            <DiaryPage />
+            <DiaryPage product={product} worldId={currentWorldId} onOpenSources={() => navigate('information-sources')} />
           ) : activePage === 'world-management' ? (
             <WorldsPage 
-              lang={lang} dict={dict}
+              lang={lang} dict={dict} product={product}
               onEnterWorld={handleEnterWorld}
               onOpenWorldBuilding={(id) => { setSelectedWorldId(id); navigate('world-building');}} 
             />
@@ -400,6 +478,7 @@ export default function App() {
             <WorldBuildingPage 
               lang={lang as 'zh' | 'en'} 
               worldId={selectedWorldId || currentWorldId || ''} 
+              product={product}
               onBack={goBack} 
             />
           ) : activePage === 'character-management' ? (
@@ -407,6 +486,8 @@ export default function App() {
               worldId={currentWorldId || undefined} 
               worldName={currentWorldName || ''}
               focusCharacterId={focusCharacterId}
+              productMode={productConfig.modes['character-management'] || 'full'}
+              showPersonas={product === 'companion'}
               onBack={() => { setFocusCharacterId(null); goBack(); }}
               onNavigate={(page) => navigate(page as PageKey)}
             />
@@ -423,16 +504,27 @@ export default function App() {
           ) : activePage === 'relationships' ? (
             <RelationshipsPage
               worldId={currentWorldId}
+              mode={productConfig.modes.relationships}
               onOpenCharacter={(characterId) => {
                 setFocusCharacterId(characterId)
                 navigate('character-management')
               }}
               onNavigate={(page) => navigate(page as PageKey)}
             />
+          ) : activePage === 'personas' ? (
+            <PersonaPage />
+          ) : activePage === 'memories' ? (
+            <MemoryPage />
+          ) : activePage === 'companion-runtime' ? (
+            <CompanionRuntimePage onOpenPersonas={() => navigate('personas')} />
+          ) : activePage === 'information-sources' ? (
+            <InformationSourcesPage worldId={currentWorldId} />
           ) : activePage === 'events' ? (
-            <EventsPage worldId={currentWorldId} onOpenSandbox={() => navigate('multipath')} onNavigate={(page) => navigate(page as PageKey)} />
+            <EventsPage worldId={currentWorldId} mode={productConfig.modes.events} onOpenSandbox={() => navigate('multipath')} onNavigate={(page) => navigate(page as PageKey)} />
           ) : activePage === 'simulation' ? (
             <SimulationPage
+              worldId={currentWorldId}
+              auxiliary={productConfig.modes.simulation === 'auxiliary'}
               onWriteChapter={(eventId) => {
                 setWritingSeedEventIds([eventId])
                 navigate('writing')
@@ -443,11 +535,11 @@ export default function App() {
           ) : activePage === 'storyline' ? (
             <StorylinePage worldId={currentWorldId} onOpenEvents={() => navigate('events')} />
           ) : activePage === 'chat' ? (
-            <ChatPage worldId={currentWorldId} />
+            <ChatPage worldId={currentWorldId} product={product} onOpenPersonas={() => navigate('personas')} />
           ) : activePage === 'writing' ? (
-            <WritingPage worldId={currentWorldId} seedEventIds={writingSeedEventIds} />
+            <WritingPage worldId={currentWorldId} seedEventIds={writingSeedEventIds} productMode={productConfig.modes.writing} />
            ) : activePage === 'timeline' ? (
-           <UnifiedTimelinePage worldId={currentWorldId} worldName={currentWorldName} />
+           <UnifiedTimelinePage worldId={currentWorldId} worldName={currentWorldName} mode={productConfig.modes.timeline} />
           ) : (
             <div style={{ padding: '2rem', color: 'var(--text-main)' }}><h1>开发中</h1></div>
           )}
@@ -459,13 +551,18 @@ export default function App() {
         onClose={() => setAiAccessOpen(false)}
         onSaved={() => setHasPersonalAi(hasPersonalAiKey())}
       />
-      <AIAssistantPanel onNavigate={(page) => navigate(page as PageKey)} />
+      <AIAssistantPanel product={product} onNavigate={(page) => navigate(page as PageKey)} />
     </div>
   )
 }
 
 // ================= 01 总览页面组件 =================
-function OverviewPage({ onNavigate, lang, dict }: { onNavigate: (page: PageKey) => void, lang: Language, dict: any }) {
+function OverviewPage({
+  onNavigate, lang, dict, product, productConfig, onSelectProduct,
+}: {
+  onNavigate: (page: PageKey) => void; lang: Language; dict: any
+  product: ProductKey; productConfig: ProductConfig; onSelectProduct: (key: ProductKey) => void
+}) {
   const [worlds, setWorlds] = useState<any[]>([])
   const [charCount, setCharCount] = useState(0)
   const [eventCount, setEventCount] = useState(0)
@@ -473,19 +570,36 @@ function OverviewPage({ onNavigate, lang, dict }: { onNavigate: (page: PageKey) 
   const [recentEvents, setRecentEvents] = useState<any[]>([])
 
   useEffect(() => {
-    getAllWorlds().then(data => setWorlds(data))
-    fetch("http://127.0.0.1:8000/api/characters").then(res => res.json()).then(data => setCharCount(data.length)).catch(console.error)
-    fetch("http://127.0.0.1:8000/api/events").then(res => res.json()).then(data => { setEventCount(data.length); setRecentEvents(data.slice(0, 3)) }).catch(console.error)
-    fetch("http://127.0.0.1:8000/api/simulations").then(res => res.json()).then(data => { if (Array.isArray(data)) setSimCount(data.length); }).catch(console.error)
-  }, [])
+    let cancelled = false
+    void getAllWorlds().then((all) => {
+      if (cancelled) return
+      const mine = all.filter((w: any) => w.product_scene === product && !w.is_product_workspace)
+      setWorlds(mine)
+      const ids = new Set(mine.map((w: any) => w.id))
+      void fetch("http://127.0.0.1:8000/api/characters").then((res) => res.json()).then((data) => {
+        if (!cancelled && Array.isArray(data)) setCharCount(data.filter((row: any) => ids.has(row.world_id)).length)
+      }).catch(console.error)
+      void fetch("http://127.0.0.1:8000/api/events").then((res) => res.json()).then((data) => {
+        if (cancelled || !Array.isArray(data)) return
+        const rows = data.filter((row: any) => ids.has(row.world_id))
+        setEventCount(rows.length); setRecentEvents(rows.slice(0, 3))
+      }).catch(console.error)
+    }).catch(console.error)
+    void fetch("http://127.0.0.1:8000/api/simulations").then((res) => res.json()).then((data) => {
+      if (!cancelled && Array.isArray(data)) setSimCount(data.length)
+    }).catch(console.error)
+    return () => { cancelled = true }
+  }, [product])
 
   return (
     <div className="overview-page" style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
       <section className="page-heading" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <div className="eyebrow" style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>{dict.dashboard}</div>
-          <h1 style={{ margin: 0, color: 'var(--text-main)', fontSize: '24px' }}>{dict.overview.replace('01 ', '')}</h1>
-          <p style={{ margin: '8px 0 0', color: 'var(--text-muted)', fontSize: '14px' }}>{dict.overviewDesc}</p>
+          <div className="eyebrow" style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>
+            {productConfig.icon} {productConfig.label} · {dict.dashboard}
+          </div>
+          <h1 style={{ margin: 0, color: 'var(--text-main)', fontSize: '24px' }}>{productConfig.label}工作台</h1>
+          <p style={{ margin: '8px 0 0', color: 'var(--text-muted)', fontSize: '14px', maxWidth: 760, lineHeight: 1.7 }}>{productConfig.description}</p>
         </div>
         <button className="primary-button" type="button" onClick={() => onNavigate('world-management')} style={{ padding: '0.75rem 1.5rem', background: 'var(--text-main)', color: 'var(--bg-color)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>
           {dict.createWorld}
@@ -493,33 +607,27 @@ function OverviewPage({ onNavigate, lang, dict }: { onNavigate: (page: PageKey) 
       </section>
 
       <section style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '1rem', marginTop: '2rem' }}>
-        {[
-          { key: 'game', icon: '🎮', title: lang === 'zh' ? '游戏创作' : 'Game Creation', desc: lang === 'zh' ? '人物、NPC、世界规则、任务事件与多结局' : 'NPCs, rules, quests and endings', target: 'world-management' as PageKey },
-          { key: 'literature', icon: '📖', title: lang === 'zh' ? '文学创作' : 'Literary Creation', desc: lang === 'zh' ? '人物关系、事件、故事线、平行空间与写作' : 'Characters, events, storylines and writing', target: 'world-management' as PageKey },
-          { key: 'companion', icon: '💬', title: lang === 'zh' ? 'AI 伴侣' : 'AI Companion', desc: lang === 'zh' ? '私人角色、长期记忆、私聊与群聊' : 'Private characters, memory and chats', target: 'chat' as PageKey },
-          { key: 'diary', icon: '📔', title: lang === 'zh' ? '日记与传记' : 'Diary & Biography', desc: lang === 'zh' ? '独立日记、人生经历、来源标签与传记' : 'Independent diary, life timeline and sources', target: 'diary' as PageKey },
-        ].map((scene) => (
+        {FALLBACK_MATRIX.products.map((scene) => (
           <button
             key={scene.key}
             type="button"
-            disabled={!scene.target}
-            onClick={() => {
-              if (!scene.target) return
-              sessionStorage.setItem('ws.productScene', scene.key)
-              onNavigate(scene.target)
-            }}
+            onClick={() => onSelectProduct(scene.key)}
             style={{
-              textAlign: 'left', padding: '1.25rem', borderRadius: '12px', cursor: scene.target ? 'pointer' : 'not-allowed',
-              background: 'var(--card-bg, rgba(128,128,128,0.05))', border: '1px solid var(--card-border)',
-              color: 'var(--text-main)', opacity: scene.target ? 1 : 0.55,
+              textAlign: 'left', padding: '1.25rem', borderRadius: '12px', cursor: 'pointer',
+              background: scene.key === product ? 'color-mix(in srgb, var(--primary-color) 9%, var(--card-bg))' : 'var(--card-bg, rgba(128,128,128,0.05))',
+              border: `1px solid ${scene.key === product ? 'var(--primary-color)' : 'var(--card-border)'}`,
+              color: 'var(--text-main)',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <span style={{ fontSize: '24px' }}>{scene.icon}</span>
-              <strong style={{ fontSize: '16px' }}>{scene.title}</strong>
-              {!scene.target && <span style={{ fontSize: '10px', color: 'var(--text-muted)', border: '1px solid var(--card-border)', borderRadius: '10px', padding: '2px 6px' }}>建设中</span>}
+              <strong style={{ fontSize: '16px' }}>{scene.label}</strong>
+              {scene.key === product && <span style={{ fontSize: '10px', color: 'var(--primary-color)', border: '1px solid var(--primary-color)', borderRadius: '10px', padding: '2px 6px' }}>当前产品</span>}
             </div>
-            <p style={{ margin: '10px 0 0', fontSize: '12.5px', color: 'var(--text-muted)', lineHeight: 1.6 }}>{scene.desc}</p>
+            <p style={{ margin: '10px 0 0', fontSize: '12.5px', color: 'var(--text-muted)', lineHeight: 1.6 }}>{scene.description}</p>
+            <div style={{ marginTop: 10, fontSize: 10, color: 'var(--text-muted)' }}>
+              {scene.nav_groups.flatMap((group) => group.items).length} 个功能入口 · 点击切换产品
+            </div>
           </button>
         ))}
       </section>

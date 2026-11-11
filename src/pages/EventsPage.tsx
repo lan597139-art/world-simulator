@@ -3,7 +3,12 @@ import EventCausalityPanel from '../components/EventCausalityPanel';
 import EventChoicePanel from '../components/EventChoicePanel';
 import EventSandboxModal from '../components/EventSandboxModal';
 
-export default function EventsPage({ worldId, onOpenSandbox, onNavigate }: { worldId?: string; onOpenSandbox?: () => void; onNavigate?: (page: string) => void }) {
+export default function EventsPage({ worldId, onOpenSandbox, onNavigate, mode = 'narrative' }: {
+  worldId?: string; onOpenSandbox?: () => void; onNavigate?: (page: string) => void
+  mode?: 'narrative' | 'interaction' | 'life'
+}) {
+  const narrative = mode === 'narrative'
+  const modeTitle = mode === 'interaction' ? '互动事件' : mode === 'life' ? '人生经历' : '事件'
   const [events, setEvents] = useState<any[]>([]);
   const [characters, setCharacters] = useState<any[]>([]);
   
@@ -132,32 +137,36 @@ export default function EventsPage({ worldId, onOpenSandbox, onNavigate }: { wor
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' }}>
           <div>
             <h2 style={{ margin: 0, fontSize: '20px', color: 'var(--text-main)' }}>
-              {editingId ? '编辑事件与多剧情' : '创建事件'}
+              {editingId ? `编辑${modeTitle}` : `记录${modeTitle}`}
             </h2>
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>先保存事件，再为它添加选择、结果、后续事件；普通事件可以只保留一个既定结果。</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+              {mode === 'life' ? '记录真实发生的人生经历和人物记忆，不生成平行分支，也不做世界推演。'
+                : mode === 'interaction' ? '记录 AI 伴侣角色之间/与你发生的重要互动，不做世界结构编辑与完整模拟。'
+                : '先保存事件，再为它添加选择、结果、后续事件；普通事件可以只保留一个既定结果。'}
+            </div>
           </div>
           <div style={{ flex: 1 }} />
-          <span style={{ fontSize: '11px', color: 'var(--text-muted)', border: '1px dashed var(--card-border)', borderRadius: '7px', padding: '6px 9px' }}>
+          {narrative && <span style={{ fontSize: '11px', color: 'var(--text-muted)', border: '1px dashed var(--card-border)', borderRadius: '7px', padding: '6px 9px' }}>
             流程：保存事件 → 在下方事件库选择事件 → 事件详情中的「分支沙盒」
-          </span>
+          </span>}
         </div>
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           
           <div style={{ display: 'flex', gap: '16px' }}>
             <div style={{ flex: 2 }}>
-              <label style={{ fontSize: '13px', color: 'var(--text-main)', fontWeight: 600, display: 'block', marginBottom: '8px' }}>事件名称</label>
+              <label style={{ fontSize: '13px', color: 'var(--text-main)', fontWeight: 600, display: 'block', marginBottom: '8px' }}>{mode === 'interaction' ? '互动名称' : mode === 'life' ? '经历名称' : '事件名称'}</label>
               <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} 
                 style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)' }} placeholder="例如：公司宣布缩减预算" />
             </div>
             <div style={{ flex: 1 }}>
-              <label style={{ fontSize: '13px', color: 'var(--text-main)', fontWeight: 600, display: 'block', marginBottom: '8px' }}>小说内时间</label>
+              <label style={{ fontSize: '13px', color: 'var(--text-main)', fontWeight: 600, display: 'block', marginBottom: '8px' }}>{mode === 'interaction' ? '互动发生时间' : mode === 'life' ? '发生日期/时间' : '小说内时间'}</label>
               <input type="text" value={formData.story_time} onChange={e => setFormData({...formData, story_time: e.target.value})} 
                 style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)' }} placeholder="例如：第三年春" />
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '16px' }}>
+          {narrative && <div style={{ display: 'flex', gap: '16px' }}>
             <div style={{ flex: 1 }}>
               <label style={{ fontSize: '13px', color: 'var(--text-main)', fontWeight: 600, display: 'block', marginBottom: '8px' }}>剧情线</label>
               <select value={formData.storyline} onChange={e => setFormData({...formData, storyline: e.target.value})} 
@@ -175,7 +184,7 @@ export default function EventsPage({ worldId, onOpenSandbox, onNavigate }: { wor
                 <option value="微观">🍵 微观 (日常/支线)</option>
               </select>
             </div>
-          </div>
+          </div>}
 
           <div>
             <label style={{ fontSize: '13px', color: 'var(--text-main)', fontWeight: 600, display: 'block', marginBottom: '8px' }}>事件领域（可多选）</label>
@@ -235,8 +244,8 @@ export default function EventsPage({ worldId, onOpenSandbox, onNavigate }: { wor
             </div>
           </div>
 
-          {/* ✅ 新增：前置事件（因果关联） */}
-          <div>
+          {/* ✅ 新增：前置事件（因果关联），仅叙事模式开放 */}
+          {narrative && <div>
             <label style={{ fontSize: '13px', color: 'var(--primary-color)', fontWeight: 600, display: 'block', marginBottom: '8px' }}>🔗 因果关系（选择是由哪些事件引发的）</label>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', maxHeight: '120px', overflowY: 'auto', padding: '8px', border: '1px dashed var(--card-border)', borderRadius: '8px' }}>
               {events.filter(e => e.id !== editingId).length === 0 ? (
@@ -250,7 +259,7 @@ export default function EventsPage({ worldId, onOpenSandbox, onNavigate }: { wor
                 ))
               )}
             </div>
-          </div>
+          </div>}
 
           <div>
             <label style={{ fontSize: '13px', color: 'var(--text-main)', fontWeight: 600, display: 'block', marginBottom: '8px' }}>客观事实描述</label>
@@ -273,7 +282,7 @@ export default function EventsPage({ worldId, onOpenSandbox, onNavigate }: { wor
         </div>
       </div>
 
-      {editingId ? (
+      {narrative && (editingId ? (
         <div className="glass-card" style={{ padding: '20px' }}>
           <EventChoicePanel
             eventId={editingId}
@@ -291,13 +300,13 @@ export default function EventsPage({ worldId, onOpenSandbox, onNavigate }: { wor
             保存事件后，这里会出现多剧情编辑区：可添加多个选择，分别配置结果、后续事件与平行沙盒。删除或调整分支不会改动事件基础字段。
           </div>
         </div>
-      )}
+      ))}
 
       {/* 下方事件库 */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-          <h2 style={{ margin: 0, fontSize: '20px', color: 'var(--text-main)' }}>事件库</h2>
-          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>故事线管理从这里引用事件，不复制事件数据</span>
+          <h2 style={{ margin: 0, fontSize: '20px', color: 'var(--text-main)' }}>{mode === 'life' ? '人生经历库' : mode === 'interaction' ? '互动事件库' : '事件库'}</h2>
+          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{narrative ? '故事线管理从这里引用事件，不复制事件数据' : '只记录与人物相关的事实/互动，不进入故事线与世界推演'}</span>
         </div>
         {events.length === 0 ? (
           <div className="glass-card" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>暂无事件，请在上方创建。</div>
@@ -327,7 +336,7 @@ export default function EventsPage({ worldId, onOpenSandbox, onNavigate }: { wor
                 
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                   <span style={{ padding: '4px 10px', background: 'rgba(128,128,128,0.15)', borderRadius: '20px', fontSize: '12px', color: 'var(--text-main)', marginRight: '8px' }}>{event.polarity} · {event.intensity}</span>
-                  <button onClick={(e) => { e.stopPropagation(); setSandboxEvent(event); }} style={{ background: 'transparent', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', fontSize: '13px', fontWeight: 700 }}>🧪 事件详情 · 分支沙盒</button>
+                  {narrative && <button onClick={(e) => { e.stopPropagation(); setSandboxEvent(event); }} style={{ background: 'transparent', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', fontSize: '13px', fontWeight: 700 }}>🧪 事件详情 · 分支沙盒</button>}
                   <button onClick={(e) => { e.stopPropagation(); handleEdit(event); }} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '13px' }}>✏️ 编辑</button>
                   <button onClick={(e) => { e.stopPropagation(); void handleDelete(event.id); }} style={{ background: 'transparent', border: 'none', color: 'var(--danger-color)', cursor: 'pointer', fontSize: '13px' }}>🗑️ 删除</button>
                 </div>

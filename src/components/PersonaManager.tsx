@@ -62,7 +62,7 @@ const TEMPLATES: { key: string; label: string; payload: Partial<api.Persona> }[]
 const ENGINE_KEYS = ['V', 'O', 'D', 'E', 'T'] as const
 const ENGINE_LABEL: Record<string, string> = { V: 'V 价值/欲望', O: 'O 机会/开放', D: 'D 防御/威胁', E: 'E 表达/能量', T: 'T 信任/依恋' }
 
-export default function PersonaManager({ open, onClose }: { open: boolean; onClose: () => void }) {
+export default function PersonaManager({ open, onClose, embedded = false }: { open: boolean; onClose: () => void; embedded?: boolean }) {
   const [personas, setPersonas] = useState<api.Persona[]>([])
   const [selectedId, setSelectedId] = useState('')
   const [draft, setDraft] = useState<Partial<api.Persona> | null>(null)
@@ -203,15 +203,20 @@ export default function PersonaManager({ open, onClose }: { open: boolean; onClo
   if (!open) return null
 
   return (
-    <div style={overlay} onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}>
-      <div style={{ ...card, width: 1080, maxWidth: '100%', height: '86vh', maxHeight: 820, padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'var(--bg-color)' }}>
+    <div
+      style={embedded
+        ? { position: 'relative', height: 'calc(100vh - 118px)', minHeight: 560, padding: 0 }
+        : overlay}
+      onMouseDown={(e) => { if (!embedded && e.target === e.currentTarget) onClose() }}
+    >
+      <div style={{ ...card, width: embedded ? '100%' : 1080, maxWidth: '100%', height: embedded ? '100%' : '86vh', maxHeight: embedded ? 'none' : 820, padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'var(--bg-color)' }}>
         <header style={{ padding: '12px 15px', borderBottom: '1px solid var(--card-border)', display: 'flex', alignItems: 'center', gap: 10 }}>
           <div>
-            <strong style={{ fontSize: 15 }}>03 人物管理 · 个人 AI 人格</strong>
+            <strong style={{ fontSize: 15 }}>{embedded ? '个人 AI 人格 · 独立身份与长期记忆' : '03 人物管理 · 个人 AI 人格'}</strong>
             <div style={tiny}>每个人格是独立身份：有自己的 ESA 动力、表达、会话历史与记忆，不会自动混用。</div>
           </div>
           <span style={{ flex: 1 }} />
-          <button type="button" style={btn} onClick={onClose}>关闭</button>
+          {!embedded && <button type="button" style={btn} onClick={onClose}>关闭</button>}
         </header>
         {error && <div style={{ padding: '6px 14px', color: 'var(--danger-color)', fontSize: 11, background: 'rgba(239,68,68,.07)' }}>{error}</div>}
         <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: '220px minmax(0, 1fr) 330px' }}>

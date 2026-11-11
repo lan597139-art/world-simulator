@@ -6,11 +6,15 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 import models
+import product_config as pc
 from database import get_db
 
 router = APIRouter(tags=["diary"])
 
-SOURCES = {"user", "chat", "event", "branch", "import", "ai_draft"}
+SOURCES = {
+    "user", "chat", "event", "branch", "import", "ai_draft",
+    "self_memory", "other_account", "evidence", "ai_inference",
+}
 
 
 def _fail(code, message):
@@ -30,6 +34,7 @@ def _row(row: models.DiaryEntry) -> dict:
         "tags": row.tags or [],
         "source_type": row.source_type,
         "source_ref": row.source_ref or {},
+        "product_key": row.product_key or "diary",
         "visibility": row.visibility,
         "created_at": row.created_at.isoformat() if row.created_at else None,
         "updated_at": row.updated_at.isoformat() if row.updated_at else None,
@@ -37,8 +42,16 @@ def _row(row: models.DiaryEntry) -> dict:
 
 
 @router.get("/api/diary/entries")
-def list_entries(world_id: str = "", source_type: str = "", limit: int = 200, db: Session = Depends(get_db)):
-    query = db.query(models.DiaryEntry).filter(models.DiaryEntry.owner_user_id == "local")
+def list_entries(world_id: str = "", source_type: str = "", product: str = "diary", limit: int = 200,
+                 db: Session = Depends(get_db)):
+    try:
+        pc.require_module(product, "diary")
+    except (ValueError, PermissionError) as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    query = db.query(models.DiaryEntry).filter(
+        models.DiaryEntry.owner_user_id == "local",
+        models.DiaryEntry.product_key == product,
+    )
     if world_id:
         query = query.filter(models.DiaryEntry.world_id == world_id)
     if source_type:
@@ -51,6 +64,11 @@ def list_entries(world_id: str = "", source_type: str = "", limit: int = 200, db
 
 @router.post("/api/diary/entries")
 def create_entry(payload: dict, db: Session = Depends(get_db)):
+    product = str(payload.get("product_key") or "diary").strip().lower()
+    try:
+        pc.require_module(product, "diary")
+    except (ValueError, PermissionError) as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
     content = str(payload.get("content") or "").strip()
     if not content:
         _fail(422, "日记内容不能为空")
@@ -84,6 +102,7 @@ def create_entry(payload: dict, db: Session = Depends(get_db)):
         source_type=source,
         source_ref=payload.get("source_ref") if isinstance(payload.get("source_ref"), dict) else {},
         visibility="private",
+        product_key=product,
     )
     db.add(row)
     db.commit()

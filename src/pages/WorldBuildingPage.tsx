@@ -498,7 +498,7 @@ function TagGroup({ label, selected, options, onChange, lang }: { label: string,
 // =========================================================
 // 3. 页面主体 (宏观 -> 中观 -> 微观 排布)
 // =========================================================
-export default function WorldBuildingPage({ worldId, onBack, lang }: { worldId: string, onBack?: () => void, lang: string }) {
+export default function WorldBuildingPage({ worldId, onBack, lang, product = 'game' }: { worldId: string, onBack?: () => void, lang: string, product?: 'game' | 'literature' | 'companion' | 'diary' }) {
   const [activeSubTab, setActiveSubTab] = useState<string>('era')
   const [config, setConfig] = useState<any>(null)
   const [worldName, setWorldName] = useState('')
@@ -560,7 +560,7 @@ export default function WorldBuildingPage({ worldId, onBack, lang }: { worldId: 
           description: 'Custom World',
           type: 'fiction',
           background: backgroundStr,
-          product_scene: sessionStorage.getItem('ws.productScene') || undefined
+          product_scene: product
         })
       } else {
         // 如果是编辑现有世界，用 worldId 去更新
