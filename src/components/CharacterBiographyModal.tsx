@@ -17,8 +17,17 @@ type BiographyData = {
   timeline: TimelineItem[]
   relationships: { other_name: string; other_type: string; relation_type: string; quadrant?: string; description?: string }[]
   stats: { events: number; life_entries: number; growth_entries: number; simulations: number }
-  latest: { id: string; title: string; content: string; engine: string; created_at: string } | null
+  latest: { id: string; title: string; content: string; engine: string; citations?: Citation[]; created_at: string } | null
+  citations?: Citation[]
   ai_configured: boolean
+}
+
+type Citation = {
+  kind: string
+  id: string
+  title: string
+  story_time?: string
+  source_type?: string
 }
 
 const API = 'http://127.0.0.1:8000/api'
@@ -27,6 +36,7 @@ const kindLabel: Record<string, string> = {
   event: '世界事件',
   life: '生平经历',
   growth: '成长校准',
+  diary: '日记',
 }
 
 export default function CharacterBiographyModal({
@@ -239,6 +249,23 @@ export default function CharacterBiographyModal({
                   </div>
                   <div style={{ padding: '18px', borderRadius: '10px', border: '1px solid var(--card-border)', background: 'rgba(128,128,128,0.04)', fontSize: '13px', lineHeight: 1.95, whiteSpace: 'pre-wrap' }}>
                     {data.latest.content}
+                  </div>
+                </div>
+              )}
+              {data?.citations && data.citations.length > 0 && (
+                <div style={{ marginTop: '14px', padding: '12px', borderRadius: '10px', border: '1px dashed var(--card-border)' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 600, marginBottom: '7px' }}>
+                    引用来源 · {data.citations.length} 项
+                    <span style={{ fontWeight: 400, color: 'var(--text-muted)', marginLeft: '7px' }}>文档级溯源，不表示逐句引用</span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                    {data.citations.map((citation, index) => (
+                      <div key={`${citation.kind}-${citation.id}-${index}`} style={{ fontSize: '10.5px', color: 'var(--text-muted)', display: 'flex', gap: '6px' }}>
+                        <span style={{ color: 'var(--primary-color)' }}>{kindLabel[citation.kind] || citation.kind}</span>
+                        <span style={{ flex: 1, color: 'var(--text-main)' }}>{citation.title}</span>
+                        <span>{citation.story_time || ''}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}

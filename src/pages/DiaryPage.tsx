@@ -89,7 +89,7 @@ export default function DiaryPage() {
         <div>
           <h1 style={{ margin: 0, fontSize: '22px', color: 'var(--text-main)' }}>日记与传记</h1>
           <p style={{ margin: '5px 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>
-            日记独立于世界；传记生成待 K3 开放。每条记录保留来源标签。
+            日记独立于世界；传记可从人物页生成并列出引用来源。每条记录保留来源标签。
           </p>
         </div>
         <div style={{ flex: 1 }} />
@@ -159,7 +159,7 @@ export default function DiaryPage() {
                   <button style={btn} onClick={() => startEdit(selected)}>编辑</button>
                 </>
               ) : (
-                <div>选择左侧日记，或点击「写日记」。<br />传记将基于日记与人生经历生成，需明确引用来源。</div>
+                <div>选择左侧日记，或点击「写日记」。<br />传记在人物页生成，基于事件、经历与日记，并列出文档级引用来源。</div>
               )}
             </div>
           )}

@@ -35,6 +35,7 @@ MODULES = [
     "m023_story_threads",
     "m024_self_avatar",
     "m025_diary",
+    "m026_biography_citations",
 ]
 
 

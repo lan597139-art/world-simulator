@@ -812,6 +812,7 @@ class CharacterBiography(Base):
     title = Column(String, default="")
     content = Column(Text, default="")
     source_event_ids = Column(JSON, default=list)
+    citations = Column(JSON, default=list)  # [{kind,id,title,...}] 文档级来源
     engine = Column(String, default="local")  # ai/local/manual
     created_at = Column(DateTime, default=_now, index=True)
 

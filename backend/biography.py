@@ -259,10 +259,51 @@ def _ai_biography(character: models.Character, timeline: list[dict], relationshi
         return fallback + f"\n\n> AI 生成暂不可用：{ai_error_message(exc)}", "local"
 
 
+def _citations(db: Session, character: models.Character, timeline: list[dict], source_event_ids: list[str]) -> list[dict]:
+    """文档级可追溯来源：事件/生平/成长/日记；不伪造逐句引用。"""
+    refs: list[dict] = []
+    seen = set()
+    for event_id in source_event_ids:
+        event = db.query(models.Event).filter(models.Event.id == event_id).first()
+        if event and event_id not in seen:
+            seen.add(event_id)
+            refs.append({
+                "kind": "event", "id": event.id, "title": event.name,
+                "story_time": event.story_time or "",
+            })
+    life_index = growth_index = 0
+    for item in timeline:
+        if item.get("kind") == "life":
+            life_index += 1
+            refs.append({
+                "kind": "life", "id": f"life:{life_index}", "title": item.get("title") or "生平经历",
+                "story_time": item.get("time") or "",
+            })
+        elif item.get("kind") == "growth":
+            growth_index += 1
+            refs.append({
+                "kind": "growth", "id": f"growth:{growth_index}", "title": item.get("title") or "成长校准",
+                "story_time": item.get("time") or "",
+            })
+    diaries = (
+        db.query(models.DiaryEntry)
+        .filter(models.DiaryEntry.character_id == character.id)
+        .order_by(models.DiaryEntry.entry_date.asc())
+        .all()
+    )
+    for entry in diaries:
+        refs.append({
+            "kind": "diary", "id": entry.id, "title": entry.title or "日记",
+            "story_time": entry.entry_date, "source_type": entry.source_type,
+        })
+    return refs
+
+
 @router.get("/api/characters/{character_id}/biography")
 def get_biography(character_id: str, db: Session = Depends(get_db)):
     character = _character_or_404(db, character_id)
     timeline, source_event_ids, runs = _timeline(db, character)
+    citations = _citations(db, character, timeline, source_event_ids)
     latest = (
         db.query(models.CharacterBiography)
         .filter(models.CharacterBiography.character_id == character.id)
@@ -291,8 +332,10 @@ def get_biography(character_id: str, db: Session = Depends(get_db)):
             "title": latest.title,
             "content": latest.content,
             "engine": latest.engine,
+            "citations": latest.citations or [],
             "created_at": latest.created_at,
         } if latest else None,
+        "citations": citations,
         "ai_configured": ai_config_status()["configured"],
     }
 
@@ -302,6 +345,7 @@ def generate_biography(character_id: str, payload: dict | None = None, db: Sessi
     character = _character_or_404(db, character_id)
     timeline, source_event_ids, _ = _timeline(db, character)
     relationships = _relationships(db, character)
+    citations = _citations(db, character, timeline, source_event_ids)
     content, engine = _ai_biography(character, timeline, relationships)
     title = f"《{character.name}·生平自传》"
     row = models.CharacterBiography(
@@ -310,6 +354,7 @@ def generate_biography(character_id: str, payload: dict | None = None, db: Sessi
         title=title,
         content=content,
         source_event_ids=source_event_ids,
+        citations=citations,
         engine=engine,
     )
     db.add(row)
@@ -327,6 +372,7 @@ def generate_biography(character_id: str, payload: dict | None = None, db: Sessi
 @router.post("/api/characters/{character_id}/biography")
 def save_biography(character_id: str, payload: dict, db: Session = Depends(get_db)):
     character = _character_or_404(db, character_id)
+    timeline, source_event_ids, _ = _timeline(db, character)
     content = str(payload.get("content") or "").strip()
     if not content:
         raise HTTPException(status_code=422, detail="自传内容不能为空")
@@ -335,7 +381,9 @@ def save_biography(character_id: str, payload: dict, db: Session = Depends(get_d
         character_id=character.id,
         title=str(payload.get("title") or f"《{character.name}·生平自传》")[:120],
         content=content,
-        source_event_ids=payload.get("source_event_ids") or [],
+        source_event_ids=payload.get("source_event_ids") or source_event_ids,
+        citations=payload.get("citations") if isinstance(payload.get("citations"), list)
+        else _citations(db, character, timeline, source_event_ids),
         engine="manual",
     )
     db.add(row)
