@@ -1098,3 +1098,37 @@ class StoryChapterLink(Base):
     chapter_id = Column(String, nullable=False, unique=True)
     order_index = Column(Integer, default=0)
     created_at = Column(DateTime, default=_now)
+
+
+class EventChoice(Base):
+    """05 事件内的选择点；与故事线 story_choices 并存，作为事件层定义。"""
+
+    __tablename__ = "event_choices"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    world_id = Column(String, nullable=False, index=True)
+    event_id = Column(String, ForeignKey("events.id", ondelete="CASCADE"), nullable=False, index=True)
+    title = Column(String, nullable=False)
+    description = Column(Text, default="")
+    precondition = Column(JSON, default=dict)
+    status = Column(String, default="open")
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now)
+
+
+class EventChoiceOption(Base):
+    """选择项：结果文本 + 可选后续事件 + 可选沙盒分支。"""
+
+    __tablename__ = "event_choice_options"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    world_id = Column(String, nullable=False, index=True)
+    choice_id = Column(String, ForeignKey("event_choices.id", ondelete="CASCADE"), nullable=False, index=True)
+    label = Column(String, nullable=False)
+    consequence = Column(Text, default="")
+    outcome_event_id = Column(String, ForeignKey("events.id", ondelete="SET NULL"))
+    target_branch_id = Column(String)
+    source = Column(String, default="user")
+    confirmed = Column(Boolean, default=True)
+    order_index = Column(Integer, default=0)
+    created_at = Column(DateTime, default=_now)

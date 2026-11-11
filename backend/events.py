@@ -113,6 +113,16 @@ def delete_event(event_id: str, db: Session = Depends(get_db)):
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
     db.query(models.EventEntity).filter(models.EventEntity.event_id == event.id).delete()
+    choice_ids = [
+        row[0] for row in db.query(models.EventChoice.id).filter(models.EventChoice.event_id == event.id).all()
+    ]
+    if choice_ids:
+        db.query(models.EventChoiceOption).filter(
+            models.EventChoiceOption.choice_id.in_(choice_ids)
+        ).delete(synchronize_session=False)
+        db.query(models.EventChoice).filter(models.EventChoice.id.in_(choice_ids)).delete(
+            synchronize_session=False
+        )
     db.delete(event)
     db.commit()
     return {"status": "ok", "message": "Event deleted"}

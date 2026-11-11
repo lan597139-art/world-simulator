@@ -257,6 +257,12 @@ export default function EventsPage({ worldId }: { worldId?: string }) {
         </div>
       </div>
 
+      {editingId && (
+        <div className="glass-card" style={{ padding: '20px' }}>
+          <EventChoicePanel eventId={editingId} events={events.map((e: any) => ({ id: e.id, name: e.name }))} />
+        </div>
+      )}
+
       {/* 下方事件列表 */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         <h2 style={{ margin: 0, fontSize: '20px', color: 'var(--text-main)' }}>事件时间线</h2>
