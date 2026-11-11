@@ -165,6 +165,11 @@ export default function CharacterListPage({
             </div>
             <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)' }}>ID: {char.id}</p>
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              {char.persona_type === 'self' && (
+                <span style={{ fontSize: '10px', padding: '3px 8px', borderRadius: '12px', border: '1px solid var(--primary-color)', color: 'var(--primary-color)' }}>
+                  自我人物 · 我
+                </span>
+              )}
               <span style={{ fontSize: '10px', padding: '3px 8px', borderRadius: '12px', border: '1px solid var(--card-border)', color: 'var(--text-muted)' }}>
                 {runtimeMeta[char.id]?.version ? `运行态 v${runtimeMeta[char.id].version} · 主色调 ${runtimeMeta[char.id].main_color}` : '种子状态 · 尚未成长校准'}
               </span>

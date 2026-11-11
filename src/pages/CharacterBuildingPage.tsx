@@ -308,6 +308,7 @@ export default function CharacterBuildingPage({
 
 // 在组件内部：
 const [selectedWorldId, setSelectedWorldId] = useState(worldId || '') // 记录当前选择的世界
+const [personaType, setPersonaType] = useState<'npc' | 'self'>('npc')
 const [allWorlds, setAllWorlds] = useState<any[]>([]) // 记录所有世界的列表
 
 // 在 useEffect 里加载所有世界：
@@ -333,6 +334,7 @@ useEffect(() => {
         
         // 2. 绑定世界
         if (data.world_id) setSelectedWorldId(data.world_id);
+        if (data.persona_type === 'self') setPersonaType('self');
 
         // 3. 五引擎与主导关系
         if (data.engines) {
@@ -1073,7 +1075,8 @@ useEffect(() => {
         reality_conditions: sandboxData,
         thought_imprints: individualData,
         life_history: { ...historyData, events: updatedEvents }, // 使用同步后的数据
-        initial_state: { initialData, initialGoals, initialRelations, initialResources }
+        initial_state: { initialData, initialGoals, initialRelations, initialResources },
+        persona_type: personaType
       };
 
       const url = characterId && characterId !== 'new' 
@@ -1206,6 +1209,19 @@ useEffect(() => {
           {currentModule.id === 'basic' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
               <div className="glass-card" style={{ padding: '24px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>人物类型</span>
+                  {([['npc', 'AI 角色'], ['self', '自我人物（我）']] as const).map(([value, label]) => (
+                    <button key={value} type="button" onClick={() => setPersonaType(value)}
+                      style={{
+                        padding: '4px 10px', borderRadius: '14px', fontSize: '11px', cursor: 'pointer',
+                        border: `1px solid ${personaType === value ? 'var(--primary-color)' : 'var(--card-border)'}`,
+                        background: personaType === value ? 'rgba(128,128,128,0.12)' : 'transparent',
+                        color: personaType === value ? 'var(--primary-color)' : 'var(--text-muted)',
+                      }}>{label}</button>
+                  ))}
+                  <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>自我人物用于 AI 伴侣中"你"的身份；每个世界一个。</span>
+                </div>
                 <h3 style={{ margin: '0 0 20px 0', fontSize: '15px', color: 'var(--text-main)' }}>👤 身份识别与社会坐标</h3>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
                   <TextField label="人物名称" value={charData.name} onChange={v => updateChar('name', v)} placeholder="例如：张三" />

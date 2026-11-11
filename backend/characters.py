@@ -27,6 +27,22 @@ def get_characters(world_id: str, db: Session = Depends(get_db)):
 
 @router.post("/api/characters")
 def create_character(char_data: dict, db: Session = Depends(get_db)):
+    persona_type = str(char_data.get("persona_type") or "npc")
+    if persona_type not in {"npc", "self"}:
+        raise HTTPException(status_code=422, detail="persona_type 只能是 npc/self")
+    char_data["persona_type"] = persona_type
+    if persona_type == "self":
+        world_id = char_data.get("world_id")
+        if not world_id:
+            raise HTTPException(status_code=422, detail="自我人物必须归属世界")
+        exists = db.query(models.Character).filter(
+            models.Character.world_id == world_id,
+            models.Character.persona_type == "self",
+            models.Character.archived_at.is_(None),
+        ).first()
+        if exists:
+            raise HTTPException(status_code=409, detail="该世界已存在自我人物")
+        char_data["owner_user_id"] = "local"
     new_char = models.Character(**char_data)
     db.add(new_char)
     db.commit()
@@ -45,6 +61,21 @@ def update_character(character_id: str, char_data: dict, db: Session = Depends(g
     character = db.query(models.Character).filter(models.Character.id == character_id).first()
     if not character:
         raise HTTPException(status_code=404, detail="Character not found")
+
+    if "persona_type" in char_data:
+        persona_type = str(char_data.get("persona_type") or "npc")
+        if persona_type not in {"npc", "self"}:
+            raise HTTPException(status_code=422, detail="persona_type 只能是 npc/self")
+        if persona_type == "self" and character.persona_type != "self":
+            exists = db.query(models.Character).filter(
+                models.Character.world_id == character.world_id,
+                models.Character.persona_type == "self",
+                models.Character.id != character.id,
+                models.Character.archived_at.is_(None),
+            ).first()
+            if exists:
+                raise HTTPException(status_code=409, detail="该世界已存在自我人物")
+            char_data["owner_user_id"] = "local"
 
     for key, value in char_data.items():
         if hasattr(character, key):

@@ -255,6 +255,9 @@ class Character(Base):
     runtime_state = Column(JSON, default=dict)
     archived_at = Column(DateTime)
     created_at = Column(DateTime, default=_now)
+    # K1：自我人物与 AI 角色同表；self 表示用户在这个世界中的化身。
+    persona_type = Column(String, default="npc", index=True)
+    owner_user_id = Column(String)
 
 
 # =====================================================================

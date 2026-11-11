@@ -51,6 +51,8 @@ export default function ChatPage({ worldId }: { worldId?: string }) {
   const [impact, setImpact] = useState<any | null>(null)
   const [impactBusy, setImpactBusy] = useState(false)
   const [identityName, setIdentityName] = useState('')
+  const [selfCharacters, setSelfCharacters] = useState<any[]>([])
+  const [selfCharacterId, setSelfCharacterId] = useState('')
   const [identityRole, setIdentityRole] = useState('')
   const [oocAllowed, setOocAllowed] = useState(false)
   const [draft, setDraft] = useState('')
@@ -84,6 +86,10 @@ export default function ChatPage({ worldId }: { worldId?: string }) {
         })
       })
       .catch((error) => setLog(String(error.message || error)))
+    fetch(`http://127.0.0.1:8000/api/characters?world_id=${worldId}`)
+      .then((res) => res.json())
+      .then((rows) => setSelfCharacters((Array.isArray(rows) ? rows : []).filter((c: any) => c.persona_type === 'self')))
+      .catch(() => setSelfCharacters([]))
   }, [worldId])
 
   useEffect(() => {
@@ -99,6 +105,7 @@ export default function ChatPage({ worldId }: { worldId?: string }) {
         const identity = (data.settings || {}).user_identity || {}
         setIdentityName(identity.name || '')
         setIdentityRole(identity.role || '')
+        setSelfCharacterId((data.settings || {}).user_character_id || '')
         setOocAllowed(Boolean((data.settings || {}).ooc_allowed))
         const first = data.participants[0]
         if (first && data.kind === 'private') {
@@ -241,7 +248,7 @@ export default function ChatPage({ worldId }: { worldId?: string }) {
     setBusy(true)
     try {
       const saved = await api.updateThread(thread.id, {
-        settings: { user_identity: { name: identityName, role: identityRole }, ooc_allowed: oocAllowed },
+        settings: { user_identity: { name: identityName, role: identityRole }, user_character_id: selfCharacterId, ooc_allowed: oocAllowed },
       })
       setThread(saved)
       setLog('我的身份已保存')
@@ -456,6 +463,12 @@ export default function ChatPage({ worldId }: { worldId?: string }) {
       <div style={{ ...card, width: '300px', overflowY: 'auto' }}>
         <h3 style={{ margin: 0, fontSize: '13px' }}>我的身份</h3>
         <div style={{ ...hint }}>角色会知道你在世界中的身份；留空则按外来交谈者处理。</div>
+        {selfCharacters.length > 0 && (
+          <select value={selfCharacterId} onChange={(e) => setSelfCharacterId(e.target.value)} style={input}>
+            <option value="">不绑定自我人物（使用下方手填身份）</option>
+            {selfCharacters.map((c: any) => <option key={c.id} value={c.id}>自我人物：{c.name}</option>)}
+          </select>
+        )}
         <div style={{ display: 'flex', gap: '5px' }}>
           <input value={identityName} onChange={(e) => setIdentityName(e.target.value)} placeholder="称呼，如：韩师弟" style={{ ...input, flex: 1 }} />
           <input value={identityRole} onChange={(e) => setIdentityRole(e.target.value)} placeholder="身份，如：记名弟子" style={{ ...input, flex: 1 }} />
