@@ -40,13 +40,14 @@ export interface EventChoice {
   description: string
   precondition: Record<string, unknown>
   status: string
+  order_index: number
   options: EventChoiceOption[]
 }
 
 export const listEventChoices = (eventId: string) => request<EventChoice[]>(`/events/${eventId}/choices`)
 export const createEventChoice = (eventId: string, payload: { title: string; description?: string }) =>
   request<EventChoice>(`/events/${eventId}/choices`, { method: 'POST', body: JSON.stringify(payload) })
-export const updateEventChoice = (choiceId: string, payload: { title?: string; description?: string; status?: string }) =>
+export const updateEventChoice = (choiceId: string, payload: { title?: string; description?: string; status?: string; order_index?: number }) =>
   request<EventChoice>(`/event-choices/${choiceId}`, { method: 'PATCH', body: JSON.stringify(payload) })
 export const updateEventOption = (optionId: string, payload: { label?: string; consequence?: string; outcome_event_id?: string | null; order_index?: number }) =>
   request<EventChoiceOption>(`/event-choice-options/${optionId}`, { method: 'PATCH', body: JSON.stringify(payload) })

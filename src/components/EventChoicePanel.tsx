@@ -31,6 +31,8 @@ export default function EventChoicePanel({
   const [busy, setBusy] = useState(false)
   const [log, setLog] = useState('')
   const [relation, setRelation] = useState<string[]>([])
+  const [editingChoice, setEditingChoice] = useState<{ id: string; title: string; description: string } | null>(null)
+  const [editingOption, setEditingOption] = useState<{ id: string; label: string; consequence: string; outcome_event_id: string } | null>(null)
 
   const load = async () => {
     try {
@@ -45,6 +47,8 @@ export default function EventChoicePanel({
     setActiveChoice('')
     setExtraEvents([])
     setRelation([])
+    setEditingChoice(null)
+    setEditingOption(null)
     setLog('')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId])
@@ -97,24 +101,6 @@ export default function EventChoicePanel({
     } finally {
       setBusy(false)
     }
-  }
-
-  const editChoice = async (choice: api.EventChoice) => {
-    const nextTitle = window.prompt('选择名称', choice.title)
-    if (nextTitle === null || !nextTitle.trim()) return
-    const nextDescription = window.prompt('选择说明', choice.description || '')
-    await run(() => api.updateEventChoice(choice.id, {
-      title: nextTitle.trim(), description: nextDescription ?? choice.description,
-    }), '选择已更新')
-  }
-
-  const editOption = async (option: api.EventChoiceOption) => {
-    const nextLabel = window.prompt('选项名称', option.label)
-    if (nextLabel === null || !nextLabel.trim()) return
-    const nextResult = window.prompt('选择结果', option.consequence || '')
-    await run(() => api.updateEventOption(option.id, {
-      label: nextLabel.trim(), consequence: nextResult ?? option.consequence,
-    }), '选项已更新')
   }
 
   const buildRelation = async () => {
@@ -176,19 +162,66 @@ export default function EventChoicePanel({
         还没有选择。添加第一个选择，例如「立即揭发 / 暗中调查 / 与叛徒合作」。
       </div>}
 
-      {choices.map((choice) => (
-        <div key={choice.id} style={{ border: '1px solid var(--card-border)', borderRadius: '8px', padding: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      {choices.map((choice, choiceIndex) => (
+        <div key={choice.id} data-choice-id={choice.id} style={{ border: '1px solid var(--card-border)', borderRadius: '8px', padding: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <strong style={{ fontSize: '13px', color: 'var(--text-main)' }}>{choice.title}</strong>
             <span style={{ flex: 1 }} />
-            <button style={btnStyle} disabled={busy} onClick={() => void editChoice(choice)}>编辑选择</button>
+            <button style={{ ...btnStyle, padding: '2px 5px' }} disabled={busy || choiceIndex === 0}
+              onClick={() => void run(() => api.updateEventChoice(choice.id, { order_index: choiceIndex - 1 }), '选择顺序已调整')}>↑</button>
+            <button style={{ ...btnStyle, padding: '2px 5px' }} disabled={busy || choiceIndex === choices.length - 1}
+              onClick={() => void run(() => api.updateEventChoice(choice.id, { order_index: choiceIndex + 1 }), '选择顺序已调整')}>↓</button>
+            <button style={btnStyle} disabled={busy}
+              onClick={() => setEditingChoice({ id: choice.id, title: choice.title, description: choice.description || '' })}>编辑选择</button>
             <button style={{ ...btnStyle, color: 'var(--danger-color)' }} disabled={busy}
               onClick={() => void run(() => api.deleteEventChoice(choice.id), '选择已删除')}>删除</button>
           </div>
-          {choice.description && <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{choice.description}</div>}
+          {!editingChoice && choice.description && <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{choice.description}</div>}
+
+          {editingChoice?.id === choice.id && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', border: '1px dashed var(--card-border)', borderRadius: '6px', padding: '7px' }}>
+              <input value={editingChoice.title} onChange={(e) => setEditingChoice({ ...editingChoice, title: e.target.value })}
+                placeholder="选择名称" style={inputStyle} />
+              <input value={editingChoice.description} onChange={(e) => setEditingChoice({ ...editingChoice, description: e.target.value })}
+                placeholder="选择说明（可选）" style={inputStyle} />
+              <div style={{ display: 'flex', gap: '5px' }}>
+                <button style={btnStyle} disabled={busy || !editingChoice.title.trim()} onClick={() => void run(async () => {
+                  await api.updateEventChoice(choice.id, { title: editingChoice.title.trim(), description: editingChoice.description })
+                  setEditingChoice(null)
+                }, '选择已更新')}>保存选择</button>
+                <button style={btnStyle} onClick={() => setEditingChoice(null)}>取消</button>
+              </div>
+            </div>
+          )}
 
           {choice.options.map((option, optionIndex) => (
-            <div key={option.id} style={{ background: 'rgba(128,128,128,0.06)', borderRadius: '6px', padding: '7px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+            <div key={option.id} data-option-id={option.id} style={{ background: 'rgba(128,128,128,0.06)', borderRadius: '6px', padding: '7px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+              {editingOption?.id === option.id ? (
+                <>
+                  <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                    <input value={editingOption.label} onChange={(e) => setEditingOption({ ...editingOption, label: e.target.value })}
+                      placeholder="选项名称" style={{ ...inputStyle, flex: 1, minWidth: '120px' }} />
+                    <input value={editingOption.consequence} onChange={(e) => setEditingOption({ ...editingOption, consequence: e.target.value })}
+                      placeholder="结果说明" style={{ ...inputStyle, flex: 1, minWidth: '160px' }} />
+                  </div>
+                  <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <select value={editingOption.outcome_event_id} onChange={(e) => setEditingOption({ ...editingOption, outcome_event_id: e.target.value })}
+                      style={{ ...inputStyle, flex: 1, minWidth: '150px' }}>
+                      <option value="">后续事件（可选）</option>
+                      {outcomeEvents.map((ev) => <option key={ev.id} value={ev.id}>{ev.name}</option>)}
+                    </select>
+                    <button style={btnStyle} disabled={busy || !editingOption.label.trim()} onClick={() => void run(async () => {
+                      await api.updateEventOption(option.id, {
+                        label: editingOption.label.trim(), consequence: editingOption.consequence,
+                        outcome_event_id: editingOption.outcome_event_id || null,
+                      })
+                      setEditingOption(null)
+                    }, '结果已更新')}>保存结果</button>
+                    <button style={btnStyle} onClick={() => setEditingOption(null)}>取消</button>
+                  </div>
+                </>
+              ) : (
+                <>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                 <strong style={{ fontSize: '12px', color: 'var(--text-main)' }}>{option.label}</strong>
                 <span style={{ flex: 1 }} />
@@ -197,7 +230,8 @@ export default function EventChoicePanel({
                   onClick={() => void run(() => api.updateEventOption(option.id, { order_index: optionIndex - 1 }), '结果顺序已调整')}>↑</button>
                 <button style={{ ...btnStyle, padding: '2px 5px' }} disabled={busy || optionIndex === choice.options.length - 1}
                   onClick={() => void run(() => api.updateEventOption(option.id, { order_index: optionIndex + 1 }), '结果顺序已调整')}>↓</button>
-                <button style={btnStyle} disabled={busy} onClick={() => void editOption(option)}>编辑结果</button>
+                <button style={btnStyle} disabled={busy}
+                  onClick={() => setEditingOption({ id: option.id, label: option.label, consequence: option.consequence || '', outcome_event_id: option.outcome_event_id || '' })}>编辑结果</button>
                 {option.target_branch_id ? (
                   <button style={{ ...btnStyle, borderColor: 'var(--primary-color)', color: 'var(--primary-color)' }}
                     onClick={() => onOpenSandbox?.(option.target_branch_id!)}>进入沙盒</button>
@@ -209,6 +243,8 @@ export default function EventChoicePanel({
                   onClick={() => void run(() => api.deleteEventOption(option.id), '结果已删除')}>×</button>
               </div>
               {option.consequence && <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>结果：{option.consequence}</div>}
+                </>
+              )}
             </div>
           ))}
 

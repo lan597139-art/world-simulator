@@ -1131,6 +1131,7 @@ class EventChoice(Base):
     description = Column(Text, default="")
     precondition = Column(JSON, default=dict)
     status = Column(String, default="open")
+    order_index = Column(Integer, default=0)
     created_at = Column(DateTime, default=_now)
     updated_at = Column(DateTime, default=_now)
 

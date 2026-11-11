@@ -43,6 +43,13 @@ def run():
     listing = client.get(f"/api/events/{a['id']}/choices").json()
     check("选择列表含选项", len(listing) == 1 and len(listing[0]["options"]) == 1, listing)
 
+    choice2 = client.post(f"/api/events/{a['id']}/choices", json={"title": "第二条选择"})
+    cid2 = choice2.json()["id"]
+    reordered = client.patch(f"/api/event-choices/{cid2}", json={"order_index": 0})
+    check("选择点可排序", reordered.status_code == 200, reordered.text)
+    choice_list = client.get(f"/api/events/{a['id']}/choices").json()
+    check("选择排序持久化", [row["id"] for row in choice_list] == [cid2, cid], choice_list)
+
     other = client.post("/api/worlds", json={"name": f"选择外世界-{suffix}"}).json()
     foreign = client.post("/api/events", json={"world_id": other["id"], "name": "外部"}).json()
     bad = client.post(f"/api/event-choices/{cid}/options", json={"label": "跨世界", "outcome_event_id": foreign["id"]})
@@ -52,7 +59,7 @@ def run():
     sid2 = second.json()["id"]
     moved = client.patch(f"/api/event-choice-options/{sid2}", json={"order_index": 0})
     check("结果分支可排序", moved.status_code == 200, moved.text)
-    ordered = client.get(f"/api/events/{a['id']}/choices").json()[0]["options"]
+    ordered = next(row for row in client.get(f"/api/events/{a['id']}/choices").json() if row["id"] == cid)["options"]
     check("排序后第二分支居首", ordered[0]["id"] == sid2, ordered)
 
     sandbox = client.post(f"/api/event-choice-options/{oid}/sandbox", json={})

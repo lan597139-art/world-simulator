@@ -70,6 +70,7 @@ def _choice_row(db: Session, row: models.EventChoice) -> dict:
         "description": row.description or "",
         "precondition": row.precondition or {},
         "status": row.status,
+        "order_index": row.order_index or 0,
         "options": [_option_row(db, item) for item in options],
     }
 
@@ -80,7 +81,7 @@ def list_choices(event_id: str, db: Session = Depends(get_db)):
     rows = (
         db.query(models.EventChoice)
         .filter(models.EventChoice.event_id == event_id)
-        .order_by(models.EventChoice.created_at.asc())
+        .order_by(models.EventChoice.order_index.asc(), models.EventChoice.created_at.asc())
         .all()
     )
     return [_choice_row(db, row) for row in rows]
@@ -92,12 +93,14 @@ def create_choice(event_id: str, payload: dict, db: Session = Depends(get_db)):
     title = str(payload.get("title") or "").strip()[:200]
     if not title:
         _fail(422, "缺少选择点标题")
+    count = db.query(models.EventChoice).filter(models.EventChoice.event_id == event.id).count()
     row = models.EventChoice(
         world_id=event.world_id,
         event_id=event.id,
         title=title,
         description=str(payload.get("description") or "")[:2000],
         precondition=payload.get("precondition") if isinstance(payload.get("precondition"), dict) else {},
+        order_index=int(payload.get("order_index") if payload.get("order_index") is not None else count),
     )
     db.add(row)
     db.commit()
@@ -113,6 +116,17 @@ def update_choice(choice_id: str, payload: dict, db: Session = Depends(get_db)):
             setattr(row, field, str(payload.get(field) or "")[:2000])
     if "precondition" in payload and isinstance(payload.get("precondition"), dict):
         row.precondition = payload["precondition"]
+    if "order_index" in payload:
+        siblings = (
+            db.query(models.EventChoice)
+            .filter(models.EventChoice.event_id == row.event_id, models.EventChoice.id != row.id)
+            .order_by(models.EventChoice.order_index.asc(), models.EventChoice.created_at.asc())
+            .all()
+        )
+        position = max(0, min(int(payload.get("order_index") or 0), len(siblings)))
+        siblings.insert(position, row)
+        for index, item in enumerate(siblings):
+            item.order_index = index
     row.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(row)
@@ -126,6 +140,15 @@ def delete_choice(choice_id: str, db: Session = Depends(get_db)):
         synchronize_session=False
     )
     db.delete(row)
+    db.flush()
+    remaining = (
+        db.query(models.EventChoice)
+        .filter(models.EventChoice.event_id == row.event_id)
+        .order_by(models.EventChoice.order_index.asc(), models.EventChoice.created_at.asc())
+        .all()
+    )
+    for index, item in enumerate(remaining):
+        item.order_index = index
     db.commit()
     return {"status": "removed"}
 

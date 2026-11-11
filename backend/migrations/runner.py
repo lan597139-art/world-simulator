@@ -37,6 +37,7 @@ MODULES = [
     "m025_diary",
     "m026_biography_citations",
     "m027_auth",
+    "m028_event_choice_order",
 ]
 
 
