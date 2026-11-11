@@ -15,7 +15,7 @@ def call(path, headers=None, body=None, method="GET"):
     if body is not None:
         req.add_header("Content-Type", "application/json")
     try:
-        with urllib.request.urlopen(req, timeout=30) as response:
+        with urllib.request.urlopen(req, timeout=150) as response:
             return response.status, json.loads(response.read().decode() or "null")
     except urllib.error.HTTPError as error:
         return error.code, error.read().decode()

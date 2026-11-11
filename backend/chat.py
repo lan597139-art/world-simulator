@@ -16,6 +16,7 @@ import models
 from ai_engine import ai_config_status, ai_error_message, get_client, get_model
 from common import fail, get_or_404, utcnow
 from database import get_db
+from axis_objects import effective_objects, aggregate_axis
 
 router = APIRouter()
 
@@ -1407,6 +1408,24 @@ def apply_impact(impact_id: str, payload: dict, db: Session = Depends(get_db)):
             settings["negentropy"] = max(0.0, min(1.0, round(base + negentropy, 3)))
         world.settings = settings
         applied_axes["negentropy"] = settings.get("negentropy")
+
+        # 若世界已经使用具象压强对象，则对话影响同步落到对象值上；
+        # 设置里的六轴仅作为旧数据回退，不再是被多模块读取的唯一真源。
+        object_rows = db.query(models.AxisObject).filter(
+            models.AxisObject.world_id == world.id,
+            models.AxisObject.event_id.is_(None),
+            models.AxisObject.branch_id.is_(None),
+            models.AxisObject.axis.in_(list(SIX_AXIS_KEYS) + ["negentropy"]),
+        ).all()
+        if object_rows:
+            for obj in object_rows:
+                delta = float((proposal.get("six_axis") or {}).get(obj.axis) or 0)
+                if obj.axis == "negentropy":
+                    delta = float(proposal.get("negentropy") or 0)
+                obj.value = max(0.0, min(1.0, round(float(obj.value or 0) + delta, 3)))
+            db.flush()
+            aggregate = aggregate_axis(effective_objects(db, world.id))
+            applied_axes = {key: aggregate.get(key, value) for key, value in applied_axes.items()}
 
     row.status = "applied"
     row.applied = {"relationships": applied_relations, "six_axis": applied_axes}

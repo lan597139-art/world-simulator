@@ -38,6 +38,10 @@ MODULES = [
     "m026_biography_citations",
     "m027_auth",
     "m028_event_choice_order",
+    "m029_story_tree_nodes",
+    "m030_axis_objects",
+    "m031_personal_personas",
+    "m032_event_sandbox_scenarios",
 ]
 
 

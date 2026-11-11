@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import type { CSSProperties, ReactNode } from 'react'
 import { API_ORIGIN } from '../api/config'
 import { loadAiSettings } from '../api/aiSettings'
+import { listPersonas, listPersonaThreads, listPersonaMessages, chatWithPersona, type Persona } from '../api/personas'
 import { getAssistantState, subscribeAssistant } from '../api/assistantContext'
 import {
   applyDomFormPatch,
@@ -213,11 +214,14 @@ export default function AIAssistantPanel({ onNavigate }: { onNavigate?: (page: s
   const [isNarrow, setIsNarrow] = useState(
     () => typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches
   )
+  const [personas, setPersonas] = useState<Persona[]>([])
+  const [personaId, setPersonaId] = useState('')
+  const [personaThreadId, setPersonaThreadId] = useState('')
   const listRef = useRef<HTMLDivElement | null>(null)
   const inputRef = useRef<HTMLTextAreaElement | null>(null)
   const panelRef = useRef<HTMLDivElement | null>(null)
 
-  useEffect(() => saveMessages(messages), [messages])
+  useEffect(() => { if (!personaId) saveMessages(messages) }, [messages, personaId])
 
   useEffect(() => {
     const handler = () => {
@@ -231,6 +235,33 @@ export default function AIAssistantPanel({ onNavigate }: { onNavigate?: (page: s
     document.addEventListener('selectionchange', handler)
     return () => document.removeEventListener('selectionchange', handler)
   }, [])
+
+  useEffect(() => {
+    if (!open) return
+    void listPersonas().then(setPersonas).catch(() => setPersonas([]))
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
+    if (!personaId) {
+      setMessages(loadMessages())
+      setPersonaThreadId('')
+      return
+    }
+    let alive = true
+    void listPersonaThreads(personaId).then(async (threads) => {
+      if (!alive) return
+      if (!threads.length) { setPersonaThreadId(''); setMessages([]); return }
+      setPersonaThreadId(threads[0].id)
+      const rows = await listPersonaMessages(personaId, threads[0].id)
+      if (!alive) return
+      setMessages(rows.map((row) => ({
+        id: row.id, role: row.role === 'user' ? 'user' : 'assistant', content: row.content,
+        contextLabel: `人格：${personas.find((p) => p.id === personaId)?.name || ''}`,
+      })))
+    }).catch(() => { if (alive) { setMessages([]); setPersonaThreadId('') } })
+    return () => { alive = false }
+  }, [open, personaId])
 
   useEffect(() => {
     if (!open) return
@@ -282,6 +313,10 @@ export default function AIAssistantPanel({ onNavigate }: { onNavigate?: (page: s
   const fieldCount = state.form?.fields.length || 0
 
   const contextText = useMemo(() => {
+    if (personaId) {
+      const persona = personas.find((p) => p.id === personaId)
+      return `独立人格「${persona?.name || '个人 AI'}」 · 独立会话与记忆`
+    }
     const bits = [pageLabel]
     if (state.page.worldName) bits.push(state.page.worldName)
     if (entity?.name) {
@@ -290,10 +325,13 @@ export default function AIAssistantPanel({ onNavigate }: { onNavigate?: (page: s
     }
     if (fieldCount) bits.push(`${fieldCount} 个表单字段`)
     return bits.join(' · ')
-  }, [pageLabel, state.page.worldName, entity, fieldCount])
+  }, [pageLabel, state.page.worldName, entity, fieldCount, personaId, personas])
 
   const quickPrompts = useMemo(() => {
     const prompts: string[] = []
+    if (personaId) {
+      return ['帮我整理一下今天的任务和优先级', '陪我梳理一下现在的状态', '用你的方式回答：我接下来该做什么？']
+    }
     if (entity?.type === 'character') prompts.push('概括当前人物，并指出设定上的冲突')
     else if (entity?.type === 'story') prompts.push('分析当前章节的节奏，给我下一步建议')
     else if (entity?.type === 'event') prompts.push('帮我补全当前事件的因果与影响')
@@ -302,7 +340,7 @@ export default function AIAssistantPanel({ onNavigate }: { onNavigate?: (page: s
     prompts.push('解释当前页面，告诉我下一步能做什么')
     prompts.push('你能帮我做什么？')
     return Array.from(new Set(prompts)).slice(0, 3)
-  }, [entity, fieldCount])
+  }, [entity, fieldCount, personaId])
 
   const send = useCallback(
     async (preset?: string, options?: { hidden?: boolean; autoRun?: boolean; demo?: boolean }) => {
@@ -330,6 +368,21 @@ export default function AIAssistantPanel({ onNavigate }: { onNavigate?: (page: s
       setInput('')
       setSending(true)
       setUnread(false)
+      if (personaId) {
+        try {
+          const result = await chatWithPersona(personaId, text, personaThreadId || undefined)
+          setPersonaThreadId(result.thread_id)
+          setMessages((prev) => [...prev, {
+            id: uid(), role: 'assistant', content: result.reply,
+            contextLabel: `人格：${result.persona.name}`,
+          }])
+        } catch (error: any) {
+          setMessages((prev) => [...prev, {
+            id: uid(), role: 'assistant', content: String(error?.message || '人格对话失败'), error: true,
+          }])
+        } finally { setSending(false) }
+        return
+      }
       try {
         const settings = loadAiSettings()
         const headers: Record<string, string> = { 'Content-Type': 'application/json' }
@@ -422,7 +475,7 @@ export default function AIAssistantPanel({ onNavigate }: { onNavigate?: (page: s
         setSending(false)
       }
     },
-    [input, lastSelection, messages, open, sending]
+    [input, lastSelection, messages, open, sending, personaId, personaThreadId]
   )
 
   const sendRef = useRef(send)
@@ -635,11 +688,22 @@ export default function AIAssistantPanel({ onNavigate }: { onNavigate?: (page: s
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <strong style={{ fontSize: '14px', color: 'var(--text-main)' }}>全局 AI 助手</strong>
+                <strong style={{ fontSize: '14px', color: 'var(--text-main)' }}>{personaId ? (personas.find((p) => p.id === personaId)?.name || '个人 AI 人格') : '全局 AI 助手'}</strong>
                 <span style={{ fontSize: '10px', color: 'var(--text-muted)', border: '1px solid var(--card-border)', borderRadius: '20px', padding: '1px 6px' }}>
-                  上下文已接入
+                  {personaId ? '独立人格 · 独立记忆' : '上下文已接入'}
                 </span>
               </div>
+              <select
+                value={personaId}
+                onChange={(event) => setPersonaId(event.target.value)}
+                title="选择通用助手或某个个人 AI 人格"
+                style={{ marginTop: 4, maxWidth: '100%', padding: '3px 5px', borderRadius: 6, border: '1px solid var(--card-border)', background: 'var(--bg-color)', color: 'var(--text-main)', fontSize: 10 }}
+              >
+                <option value="">通用助手（页面上下文 / 工具）</option>
+                {personas.map((persona) => (
+                  <option key={persona.id} value={persona.id}>人格：{persona.name}</option>
+                ))}
+              </select>
               <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '3px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={contextText}>
                 {contextText}
               </div>

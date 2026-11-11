@@ -1200,6 +1200,133 @@ class StoryThreadEdge(Base):
     created_at = Column(DateTime, default=_now)
 
 
+class StoryTreeNode(Base):
+    """故事树节点：树干/树枝下的具体事件叶，或待填充位置。"""
+
+    __tablename__ = "story_tree_nodes"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    world_id = Column(String, nullable=False, index=True)
+    story_id = Column(String, nullable=False, index=True)
+    thread_id = Column(String, ForeignKey("story_threads.id", ondelete="CASCADE"), nullable=False, index=True)
+    parent_node_id = Column(String, nullable=True, index=True)
+    event_id = Column(String, ForeignKey("events.id", ondelete="SET NULL"), nullable=True, index=True)
+    title = Column(String, default="")
+    node_status = Column(String, default="filled")  # filled / pending / new
+    order_index = Column(Integer, default=0)
+    collapsed = Column(Boolean, default=False)
+    note = Column(String, default="")
+    meta = Column(JSON, default=dict)
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now)
+
+
+class AxisObject(Base):
+    """六轴压强/负熵的具象对象；同一维度允许多个独立数值对象。"""
+
+    __tablename__ = "axis_objects"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    world_id = Column(String, nullable=False, index=True)
+    axis = Column(String, nullable=False, index=True)  # scarcity/threat/status/reputation/attachment/regulation/negentropy
+    name = Column(String, nullable=False)
+    category = Column(String, default="")
+    description = Column(Text, default="")
+    value = Column(Float, default=0.0)
+    scope_type = Column(String, default="world")  # world/event/branch
+    scope_id = Column(String, nullable=True, index=True)
+    event_id = Column(String, nullable=True, index=True)
+    branch_id = Column(String, nullable=True, index=True)
+    linked_factors = Column(JSON, default=list)
+    source = Column(String, default="initial")  # initial/event/user/simulation
+    status = Column(String, default="active")
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now)
+
+
+class PersonalPersona(Base):
+    """用户的个人 AI 人格；独立身份、ESA 配置、会话与记忆。"""
+
+    __tablename__ = "personal_personas"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    owner_user_id = Column(String, nullable=False, index=True, default="local")
+    name = Column(String, nullable=False)
+    identity = Column(String, default="")
+    description = Column(Text, default="")
+    avatar = Column(String, default="")
+    esa = Column(JSON, default=dict)           # engines V/O/D/E/T + defense/cognition
+    traits = Column(JSON, default=list)
+    cognition = Column(JSON, default=dict)
+    expression = Column(JSON, default=dict)
+    interaction = Column(JSON, default=dict)
+    memory_policy = Column(JSON, default=dict)  # share_public_profile, isolation
+    public_profile = Column(JSON, default=dict)
+    tools = Column(JSON, default=list)
+    status = Column(String, default="active")
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now)
+
+
+class PersonaThread(Base):
+    __tablename__ = "persona_threads"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    persona_id = Column(String, ForeignKey("personal_personas.id", ondelete="CASCADE"), nullable=False, index=True)
+    owner_user_id = Column(String, nullable=False, default="local", index=True)
+    title = Column(String, default="")
+    summary = Column(Text, default="")
+    status = Column(String, default="active")
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now)
+
+
+class PersonaMessage(Base):
+    __tablename__ = "persona_messages"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    thread_id = Column(String, ForeignKey("persona_threads.id", ondelete="CASCADE"), nullable=False, index=True)
+    persona_id = Column(String, nullable=False, index=True)
+    role = Column(String, default="user")  # user/persona/system
+    content = Column(Text, default="")
+    meta = Column(JSON, default=dict)
+    created_at = Column(DateTime, default=_now)
+
+
+class PersonaMemory(Base):
+    __tablename__ = "persona_memories"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    persona_id = Column(String, ForeignKey("personal_personas.id", ondelete="CASCADE"), nullable=False, index=True)
+    thread_id = Column(String, nullable=True, index=True)
+    kind = Column(String, default="episodic")
+    content = Column(Text, default="")
+    importance = Column(Float, default=0.4)
+    source = Column(String, default="chat")
+    created_at = Column(DateTime, default=_now)
+
+
+class EventSandboxScenario(Base):
+    """针对已有事件的分支沙盒探索方案；不复制/覆盖原始事件。"""
+
+    __tablename__ = "event_sandbox_scenarios"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    world_id = Column(String, nullable=False, index=True)
+    event_id = Column(String, ForeignKey("events.id", ondelete="CASCADE"), nullable=False, index=True)
+    title = Column(String, nullable=False)
+    note = Column(Text, default="")
+    preset_options = Column(JSON, default=list)
+    constraints = Column(JSON, default=list)
+    supports = Column(JSON, default=list)
+    potentials = Column(JSON, default=list)
+    factors = Column(JSON, default=list)
+    branch_id = Column(String, nullable=True)
+    status = Column(String, default="draft")
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now)
+
+
 class DiaryEntry(Base):
     """日记独立于世界：world_id 可空，不进入世界快照，也不随世界删除。"""
 

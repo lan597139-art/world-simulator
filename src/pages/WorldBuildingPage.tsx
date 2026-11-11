@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { initializeWorldBuildingConfig, getWorldBuildingConfig } from '../services/worldBuildingService'
 import { getWorldById } from '../services/worldService'
 import { createWorld, updateWorld, deleteWorld } from '../services/worldService'
+import AxisObjectsPanel from '../components/AxisObjectsPanel'
 
 // =========================================================
 // 1. 数据字典 (已按宏观-中观-微观重新梳理，去除了所有序号)
@@ -624,6 +625,12 @@ export default function WorldBuildingPage({ worldId, onBack, lang }: { worldId: 
             </button>
           </div>
         </header>
+
+        {worldId && (
+          <section className="glass-card" style={{ padding: '1.1rem 1.3rem' }}>
+            <AxisObjectsPanel worldId={worldId} title="六轴压强 · 世界基础配置" />
+          </section>
+        )}
 
         {/* 2. 母导航 (宏观-中观-微观) */}
         <div style={{ display: 'flex', gap: '1rem', position: 'sticky', top: 0, zIndex: 25, padding: '10px 0', background: 'var(--bg-color)' }}>

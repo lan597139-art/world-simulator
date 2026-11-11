@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import AxisObjectsPanel from '../components/AxisObjectsPanel'
 import { API_ORIGIN } from '../api/config'
 import {
   applyBranch,
@@ -788,24 +789,12 @@ export default function MultiPathPage({ worldId }: { worldId: string }) {
           </div>
 
           <div style={panelStyle}>
-            <strong style={{ fontSize: '12.5px' }}>世界六轴压强</strong>
-            {SIX_AXIS.map((axis) => (
-              <div key={axis.key}>
-                <label style={labelStyle}>{axis.label}（0-1，越高压力越大）</label>
-                <input
-                  style={inputStyle}
-                  type="number"
-                  min={0}
-                  max={1}
-                  step={0.05}
-                  value={Number(sixAxis[axis.key] ?? 0)}
-                  onChange={(e) => setSixAxis({ ...sixAxis, [axis.key]: Number(e.target.value) })}
-                />
-              </div>
-            ))}
-            <label style={labelStyle}>负熵（环境修复力，0-1）</label>
-            <input style={inputStyle} type="number" min={0} max={1} step={0.05} value={Number(negentropy ?? 0)} onChange={(e) => setNegentropy(Number(e.target.value))} />
-            <button style={btn} disabled={busy} onClick={saveSixAxis}>保存六轴</button>
+            <AxisObjectsPanel
+              worldId={worldId}
+              branchId={selectedBranchId || undefined}
+              compact
+              title="六轴压强 · 分支沙盒调用"
+            />
           </div>
 
           <div style={panelStyle}>

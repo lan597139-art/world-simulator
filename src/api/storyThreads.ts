@@ -25,7 +25,7 @@ export interface ThreadEdge {
 }
 
 export const listThreads = (storyId: string) => request<StoryThread[]>(`/stories/${storyId}/threads`)
-export const createThread = (storyId: string, payload: { title: string; kind?: string; character_id?: string }) =>
+export const createThread = (storyId: string, payload: { title: string; kind?: string; character_id?: string; parent_thread_id?: string }) =>
   request<StoryThread>(`/stories/${storyId}/threads`, { method: 'POST', body: JSON.stringify(payload) })
 export const deleteThread = (threadId: string) =>
   request<{ status: string }>(`/story-threads/${threadId}`, { method: 'DELETE' })

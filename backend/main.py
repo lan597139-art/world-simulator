@@ -16,6 +16,10 @@ from nodes import router as nodes_router, seed_world
 from users import router as users_router, ensure_local_user
 from event_choices import router as event_choices_router
 from story_threads import router as story_threads_router
+from story_tree import router as story_tree_router
+from axis_objects import router as axis_objects_router, seed_official_axis_objects
+from personas import router as personas_router
+from event_sandbox import router as event_sandbox_router
 from diary import router as diary_router
 from auth import router as auth_router, auth_middleware
 from geography import router as geography_router
@@ -42,6 +46,8 @@ from snapshots import router as snapshots_router
 from biography import router as biography_router
 from official import ensure_official_world, router as official_router
 from official_storyline import ensure_official_storyline
+from story_tree_seed import seed_official_tree
+from supplement_demo import seed_supplement_demo
 from storyline import router as storyline_router
 from chat import router as chat_router
 
@@ -91,6 +97,10 @@ for router in (
     users_router,
     event_choices_router,
     story_threads_router,
+    story_tree_router,
+    axis_objects_router,
+    personas_router,
+    event_sandbox_router,
     diary_router,
     auth_router,
     writing_router,
@@ -122,6 +132,9 @@ try:
     with SessionLocal() as db:
         ensure_official_world(db)
         ensure_official_storyline(db)
+        seed_official_tree(db)
+        seed_official_axis_objects(db)
+        seed_supplement_demo(db)
 except Exception as exc:  # 数据缺失不应阻止后端启动
     print(f"官方演示世界初始化跳过: {exc}")
 

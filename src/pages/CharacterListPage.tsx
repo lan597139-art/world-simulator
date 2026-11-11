@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import CharacterBuildingPage from './CharacterBuildingPage';
-import CharacterBiographyModal from '../components/CharacterBiographyModal';
+import CharacterBiographyModal from '../components/CharacterBiographyModal'
+import PersonaManager from '../components/PersonaManager';
 // Dexie 本地库暂时不再使用，保留 database.ts 文件本身
 
 export default function CharacterListPage({
@@ -22,6 +23,7 @@ export default function CharacterListPage({
   const [editingCharId, setEditingCharId] = useState<string | null>(null);
   const [editingModule, setEditingModule] = useState('basic');
   const [bioCharacter, setBioCharacter] = useState<{ id: string; name: string } | null>(null);
+  const [personaOpen, setPersonaOpen] = useState(false);
 
   const openEditor = (id: string | null, module = 'basic') => {
     setEditingCharId(id)
@@ -138,17 +140,28 @@ export default function CharacterListPage({
           </p>
         </div>
 
-        {/* ✅ 修复：去掉了写死的 #fff，换成了全局按钮文字变量，去掉了蓝紫色的发光 */}
-        <button
-          onClick={() => openEditor(null)}
-          style={{
-            padding: '10px 20px', background: 'var(--primary-color)', color: 'var(--primary-text)',
-            border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600,
-            boxShadow: '0 4px 14px rgba(0, 0, 0, 0.1)'
-          }}
-        >
-          + 创建新人物
-        </button>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <button
+            onClick={() => setPersonaOpen(true)}
+            title="管理个人 AI 人格：独立 ESA、会话与记忆"
+            style={{
+              padding: '10px 16px', background: 'var(--card-bg)', color: 'var(--text-main)',
+              border: '1px solid var(--primary-color)', borderRadius: '8px', cursor: 'pointer', fontWeight: 600,
+            }}
+          >
+            个人 AI 人格
+          </button>
+          <button
+            onClick={() => openEditor(null)}
+            style={{
+              padding: '10px 20px', background: 'var(--primary-color)', color: 'var(--primary-text)',
+              border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600,
+              boxShadow: '0 4px 14px rgba(0, 0, 0, 0.1)'
+            }}
+          >
+            + 创建新人物
+          </button>
+        </div>
       </header>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
@@ -261,6 +274,7 @@ export default function CharacterListPage({
           onClose={() => setBioCharacter(null)}
         />
       )}
+      <PersonaManager open={personaOpen} onClose={() => setPersonaOpen(false)} />
     </div>
   );
 }

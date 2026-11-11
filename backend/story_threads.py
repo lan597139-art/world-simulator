@@ -178,6 +178,9 @@ def delete_thread(thread_id: str, db: Session = Depends(get_db)):
     children = db.query(models.StoryThread).filter(models.StoryThread.parent_thread_id == row.id).all()
     for child in children:
         child.parent_thread_id = None
+    db.query(models.StoryTreeNode).filter(models.StoryTreeNode.thread_id == row.id).delete(
+        synchronize_session=False
+    )
     db.query(models.StoryThreadEvent).filter(models.StoryThreadEvent.thread_id == row.id).delete(
         synchronize_session=False
     )

@@ -10,7 +10,7 @@ export WS_AUTH_DISABLED=1
 export WS_TEST_TOKEN="$("$PY" tests/make_test_session.py)"
 cleanup() { "$PY" tests/clear_test_session.py >/dev/null 2>&1 || true; }
 trap cleanup EXIT
-SUITES=(smoke_flow smoke_auth smoke_writing smoke_character_runtime smoke_ai_access smoke_product smoke_workspace smoke_storyline smoke_event_choices smoke_story_threads smoke_self_avatar smoke_diary smoke_biography_citations smoke_official_storyline smoke_chat smoke_multipath smoke_assistant)
+SUITES=(smoke_flow smoke_auth smoke_writing smoke_character_runtime smoke_ai_access smoke_product smoke_workspace smoke_storyline smoke_event_choices smoke_story_threads smoke_self_avatar smoke_diary smoke_biography_citations smoke_official_storyline smoke_chat smoke_multipath smoke_assistant smoke_supplement)
 total=0
 for suite in "${SUITES[@]}"; do
   line="$("$PY" "tests/${suite}.py" | tail -1)"

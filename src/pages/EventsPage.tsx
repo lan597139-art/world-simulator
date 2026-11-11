@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import EventCausalityPanel from '../components/EventCausalityPanel';
 import EventChoicePanel from '../components/EventChoicePanel';
+import EventSandboxModal from '../components/EventSandboxModal';
 
-export default function EventsPage({ worldId, onOpenSandbox }: { worldId?: string; onOpenSandbox?: () => void }) {
+export default function EventsPage({ worldId, onOpenSandbox, onNavigate }: { worldId?: string; onOpenSandbox?: () => void; onNavigate?: (page: string) => void }) {
   const [events, setEvents] = useState<any[]>([]);
   const [characters, setCharacters] = useState<any[]>([]);
   
@@ -27,6 +28,7 @@ export default function EventsPage({ worldId, onOpenSandbox }: { worldId?: strin
   });
   
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [sandboxEvent, setSandboxEvent] = useState<any | null>(null);
 
   const loadData = async () => {
     try {
@@ -135,12 +137,9 @@ export default function EventsPage({ worldId, onOpenSandbox }: { worldId?: strin
             <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>先保存事件，再为它添加选择、结果、后续事件；普通事件可以只保留一个既定结果。</div>
           </div>
           <div style={{ flex: 1 }} />
-          {onOpenSandbox && (
-            <button type="button" onClick={onOpenSandbox}
-              style={{ padding: '7px 11px', borderRadius: '7px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '11px' }}>
-              分支沙盒 · 多路径能力
-            </button>
-          )}
+          <span style={{ fontSize: '11px', color: 'var(--text-muted)', border: '1px dashed var(--card-border)', borderRadius: '7px', padding: '6px 9px' }}>
+            流程：保存事件 → 在下方事件库选择事件 → 事件详情中的「分支沙盒」
+          </span>
         </div>
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -328,6 +327,7 @@ export default function EventsPage({ worldId, onOpenSandbox }: { worldId?: strin
                 
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                   <span style={{ padding: '4px 10px', background: 'rgba(128,128,128,0.15)', borderRadius: '20px', fontSize: '12px', color: 'var(--text-main)', marginRight: '8px' }}>{event.polarity} · {event.intensity}</span>
+                  <button onClick={(e) => { e.stopPropagation(); setSandboxEvent(event); }} style={{ background: 'transparent', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', fontSize: '13px', fontWeight: 700 }}>🧪 事件详情 · 分支沙盒</button>
                   <button onClick={(e) => { e.stopPropagation(); handleEdit(event); }} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '13px' }}>✏️ 编辑</button>
                   <button onClick={(e) => { e.stopPropagation(); void handleDelete(event.id); }} style={{ background: 'transparent', border: 'none', color: 'var(--danger-color)', cursor: 'pointer', fontSize: '13px' }}>🗑️ 删除</button>
                 </div>
@@ -389,6 +389,13 @@ export default function EventsPage({ worldId, onOpenSandbox }: { worldId?: strin
           ))
         )}
       </div>
+      {sandboxEvent && (
+        <EventSandboxModal
+          event={sandboxEvent}
+          onClose={() => setSandboxEvent(null)}
+          onNavigate={onNavigate}
+        />
+      )}
     </div>
   );
 }

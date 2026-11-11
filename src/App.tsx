@@ -13,7 +13,7 @@ import { checkBackendHealth } from "./api/client";
 import EventsPage from './pages/EventsPage'
 import SimulationPage from './pages/SimulationPage'
 import MultiPathPage from './pages/MultiPathPage'
-import StorylinePage from './pages/StorylinePage'
+import StorylinePage from './pages/StoryTreePage'
 import ChatPage from './pages/ChatPage'
 import WritingPage from './pages/WritingPage'
 import WorldDataPage from './pages/WorldDataPage'
@@ -430,7 +430,7 @@ export default function App() {
               onNavigate={(page) => navigate(page as PageKey)}
             />
           ) : activePage === 'events' ? (
-            <EventsPage worldId={currentWorldId} onOpenSandbox={() => navigate('multipath')} />
+            <EventsPage worldId={currentWorldId} onOpenSandbox={() => navigate('multipath')} onNavigate={(page) => navigate(page as PageKey)} />
           ) : activePage === 'simulation' ? (
             <SimulationPage
               onWriteChapter={(eventId) => {

@@ -23,6 +23,7 @@ import world_lifecycle as lifecycle
 from ai_engine import run_branch_simulation, run_direction_suggestions
 from common import fail, get_or_404, parse_datetime, utcnow
 from database import get_db
+from axis_objects import effective_objects, aggregate_axis
 
 router = APIRouter()
 
@@ -370,12 +371,16 @@ def suggest_directions(event_id: str, payload: Optional[dict] = None, db: Sessio
         for char in chars
     ]
     world = _world(db, event.world_id)
-    axis = (world.settings or {}).get("six_axis") if isinstance(world.settings, dict) else {}
+    axis = aggregate_axis(effective_objects(db, world.id, event.id))
     result = run_direction_suggestions(
         {
             "event": _event_ai_payload(db, event),
             "characters": chars_payload,
-            "world": {"six_axis": axis or {}, "name": world.name, "background": (world.background or "")[:800]},
+            "world": {
+                "six_axis": axis or {},
+                "axis_objects": effective_objects(db, world.id, event.id),
+                "name": world.name, "background": (world.background or "")[:800],
+            },
             "count": (payload or {}).get("count") or 4,
         }
     )
@@ -957,14 +962,32 @@ def simulate_branch(branch_id: str, payload: dict, db: Session = Depends(get_db)
     ][:10]
 
     world_row = _world_row(snapshot)
+    sandbox_scenario = db.query(models.EventSandboxScenario).filter(
+        models.EventSandboxScenario.branch_id == branch.id,
+        models.EventSandboxScenario.event_id == event.id,
+        models.EventSandboxScenario.status == "active",
+    ).order_by(models.EventSandboxScenario.updated_at.desc()).first()
+    scenario_payload = None
+    if sandbox_scenario:
+        scenario_payload = {
+            "title": sandbox_scenario.title,
+            "note": sandbox_scenario.note or "",
+            "preset_options": sandbox_scenario.preset_options or [],
+            "constraints": sandbox_scenario.constraints or [],
+            "supports": sandbox_scenario.supports or [],
+            "potentials": sandbox_scenario.potentials or [],
+            "factors": sandbox_scenario.factors or [],
+        }
     result = run_branch_simulation(
         {
             "event": _event_ai_payload(db, event),
             "direction": _direction_row(direction) if direction else {},
+            "sandbox_scenario": scenario_payload,
             "characters": chars_payload,
             "world": {
                 "name": world_row.get("name"),
-                "six_axis": _six_axis(snapshot),
+                "six_axis": aggregate_axis(effective_objects(db, branch.world_id, event.id, branch.id)),
+                "axis_objects": effective_objects(db, branch.world_id, event.id, branch.id),
                 "branch_changes": (_world_settings(snapshot).get("branch_changes") or [])[-5:],
             },
             "rules": rules,
@@ -1503,8 +1526,14 @@ SIX_AXIS_KEYS = ("scarcity", "threat", "status", "reputation", "attachment", "re
 def get_six_axis(world_id: str, db: Session = Depends(get_db)):
     world = _world(db, world_id)
     settings = world.settings if isinstance(world.settings, dict) else {}
-    axis = settings.get("six_axis")
-    return {"six_axis": axis if isinstance(axis, dict) else {}, "negentropy": settings.get("negentropy")}
+    objects = effective_objects(db, world.id)
+    aggregate = aggregate_axis(objects)
+    axis = aggregate if objects else (settings.get("six_axis") if isinstance(settings.get("six_axis"), dict) else {})
+    return {
+        "six_axis": axis,
+        "negentropy": aggregate.get("negentropy") if objects else settings.get("negentropy"),
+        "objects": objects,
+    }
 
 
 @router.put("/api/worlds/{world_id}/six-axis")

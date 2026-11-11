@@ -123,6 +123,17 @@ def delete_event(event_id: str, db: Session = Depends(get_db)):
         db.query(models.EventChoice).filter(models.EventChoice.id.in_(choice_ids)).delete(
             synchronize_session=False
         )
+    # 树节点只引用事件：删事件时保留结构位置，退化为可重新填充的待填充位。
+    db.query(models.StoryTreeNode).filter(models.StoryTreeNode.event_id == event.id).update(
+        {models.StoryTreeNode.event_id: None, models.StoryTreeNode.node_status: "pending"},
+        synchronize_session=False,
+    )
+    db.query(models.EventSandboxScenario).filter(
+        models.EventSandboxScenario.event_id == event.id
+    ).delete(synchronize_session=False)
+    db.query(models.AxisObject).filter(models.AxisObject.event_id == event.id).delete(
+        synchronize_session=False
+    )
     db.delete(event)
     db.commit()
     return {"status": "ok", "message": "Event deleted"}

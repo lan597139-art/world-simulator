@@ -303,6 +303,13 @@ def run_branch_simulation(payload: dict):
     prompt += "说明：每人物的 perception 是 TA 对本次事件的主观认知；c_profile 是人格阈值，数值越低越容易被触发。\n"
     prompt += "同一事件下，不同人物应当因认知、阈值与引擎差异产生不同判断与行动，禁止所有人反应一致。\n\n"
 
+    scenario = payload.get("sandbox_scenario")
+    if isinstance(scenario, dict):
+        prompt += "【05 分支沙盒方案（作者配置，优先级高于模型自由发挥）】\n"
+        prompt += json.dumps(scenario, ensure_ascii=False, indent=2)
+        prompt += "\n说明：预设选项是作者给出的探索方向；约束条件必须遵守；支持条件是成立前提；"
+        prompt += "潜在条件只是未确认的可能性，不得自动写成既成事实；可能关联只做因果参考。\n\n"
+
     if rules:
         prompt += "【当前生效的世界规则（可能影响行动代价）】\n"
         prompt += json.dumps(rules, ensure_ascii=False, indent=2)

@@ -16,6 +16,7 @@ import models
 from ai_engine import ai_config_status, ai_error_message, get_client, get_model
 from common import fail
 from database import get_db
+from axis_objects import effective_objects, aggregate_axis
 
 router = APIRouter()
 
@@ -125,6 +126,13 @@ def _entity_summary(db: Session, entity_type: str, entity_id: str) -> Optional[d
     }
 
 
+def _axis_summary(db: Session, world_id: str, settings: dict) -> dict:
+    objects = effective_objects(db, world_id)
+    if objects:
+        return aggregate_axis(objects)
+    return settings.get("six_axis") if isinstance(settings.get("six_axis"), dict) else {}
+
+
 def _world_context(db: Session, world_id: str) -> Optional[dict]:
     world = db.query(models.World).filter(models.World.id == world_id).first()
     if not world:
@@ -148,7 +156,8 @@ def _world_context(db: Session, world_id: str) -> Optional[dict]:
         "type": world.type,
         "official": bool(world.is_official),
         "background": _clip(world.background, 700),
-        "six_axis": settings.get("six_axis") if isinstance(settings.get("six_axis"), dict) else {},
+        "six_axis": _axis_summary(db, world_id, settings),
+        "axis_objects": effective_objects(db, world_id)[:24],
         "character_count": character_count,
         "recent_events": [
             {
