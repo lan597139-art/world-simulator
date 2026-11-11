@@ -34,6 +34,7 @@ MODULES = [
     "m022_event_choices",
     "m023_story_threads",
     "m024_self_avatar",
+    "m025_diary",
 ]
 
 

@@ -49,6 +49,8 @@ _CHAT_TABLES = {
     "chat_impacts",
 }
 _GLOBAL_TABLES = ("location_types", "resource_types", "relationship_types")
+# 日记独立于世界：不进入快照，世界删除也不清理。
+_DIARY_TABLES = {"diary_entries"}
 
 
 def world_tables():
@@ -63,6 +65,7 @@ def world_tables():
         and table.name not in _MULTIPATH_TABLES
         and table.name not in _STORY_TABLES
         and table.name not in _CHAT_TABLES
+        and table.name not in _DIARY_TABLES
         and table.name != "worlds"
         and "world_id" in table.c
     ]

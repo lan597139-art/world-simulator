@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { API_ORIGIN } from '../api/config'
 import * as api from '../api/chat'
+import { createDiary } from '../api/diary'
 import type { AiRole, ChatMemory, ChatMessage, ChatThread } from '../api/chat'
 
 const card: React.CSSProperties = {
@@ -243,6 +244,30 @@ export default function ChatPage({ worldId }: { worldId?: string }) {
     }
   }
 
+  const saveChatDiary = async () => {
+    if (!thread || messages.length === 0) return
+    setBusy(true)
+    try {
+      const excerpt = messages.slice(-6).map((message) => {
+        const who = message.sender_type === 'user' ? '我' : (characterName(message.character_id) || '角色')
+        return `${who}：${message.content}`
+      }).join('\n')
+      await createDiary({
+        content: excerpt,
+        title: `与${thread.title.replace(/^与|的对话$/g, '')}的对话摘录`,
+        source_type: 'chat',
+        source_ref: { thread_id: thread.id },
+        world_id: thread.world_id,
+        entry_date: new Date().toISOString().slice(0, 10),
+      })
+      setLog('最近对话已存为日记（来源：聊天摘录）')
+    } catch (error: any) {
+      setLog(`❌ ${error.message || error}`)
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const saveIdentity = async () => {
     if (!thread) return
     setBusy(true)
@@ -478,6 +503,7 @@ export default function ChatPage({ worldId }: { worldId?: string }) {
           允许出戏（被明确询问时承认这是角色扮演）
         </label>
         <button style={btn} disabled={busy || !thread} onClick={() => void saveIdentity()}>保存身份</button>
+        <button style={btn} disabled={busy || !thread || messages.length === 0} onClick={() => void saveChatDiary()}>最近对话存为日记</button>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <h3 style={{ margin: 0, fontSize: '13px' }}>角色配置</h3>

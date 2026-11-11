@@ -1181,3 +1181,24 @@ class StoryThreadEdge(Base):
     edge_type = Column(String, default="impact")  # converge/impact/fork
     note = Column(String, default="")
     created_at = Column(DateTime, default=_now)
+
+
+class DiaryEntry(Base):
+    """日记独立于世界：world_id 可空，不进入世界快照，也不随世界删除。"""
+
+    __tablename__ = "diary_entries"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    owner_user_id = Column(String, nullable=False, index=True)
+    world_id = Column(String, index=True)
+    character_id = Column(String)
+    entry_date = Column(String, nullable=False, index=True)
+    title = Column(String, default="")
+    content = Column(Text, nullable=False)
+    mood = Column(String, default="")
+    tags = Column(JSON, default=list)
+    source_type = Column(String, default="user", index=True)  # user/chat/event/branch/import/ai_draft
+    source_ref = Column(JSON, default=dict)
+    visibility = Column(String, default="private")
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now)

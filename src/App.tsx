@@ -20,6 +20,7 @@ import WorldDataPage from './pages/WorldDataPage'
 import WorldStructurePage from './pages/WorldStructurePage'
 import ArchivePage from './pages/ArchivePage'
 import TrashPage from './pages/TrashPage'
+import DiaryPage from './pages/DiaryPage'
 import TimeMachinePage from './pages/TimeMachinePage'
 import AIAssistantPanel from './components/AIAssistantPanel'
 import { setAssistantPage } from './api/assistantContext'
@@ -42,6 +43,7 @@ type PageKey =
   | 'archive'
   | 'trash'
   | 'time-machine'
+  | 'diary'
 
 export type Language = 'zh' | 'en'
 
@@ -91,7 +93,7 @@ function pageLabel(key: PageKey, dict: Record<string, string>): string {
 const initialParams = new URLSearchParams(window.location.search)
 const initialWorldId = initialParams.get('world') || sessionStorage.getItem('ws.worldId') || ''
 const initialPage = (initialParams.get('page') as PageKey) || 'overview'
-const WORLD_FREE_PAGES: PageKey[] = ['overview', 'world-management', 'world-building', 'archive', 'trash']
+const WORLD_FREE_PAGES: PageKey[] = ['overview', 'world-management', 'world-building', 'diary', 'archive', 'trash']
 
 export default function App() {
   const [activePage, setActivePage] = useState<PageKey>(
@@ -211,6 +213,12 @@ export default function App() {
   }
   // ✅ 动态导航：根据是否进入世界，渲染不同的菜单
   const navigation: { title: string; items: { key: PageKey; label: string; icon: string }[] }[] = currentWorldId ? [
+    {
+      title: '个人',
+      items: [
+        { key: 'diary', label: '日记与传记', icon: '✎' },
+      ]
+    },
     { 
       title: `当前世界：${currentWorldName}`, 
       items: [
@@ -244,7 +252,8 @@ export default function App() {
     { 
       title: dict.workbench, 
       items: [
-        { key: 'overview', label: dict.overview, icon: '◫' }
+        { key: 'overview', label: dict.overview, icon: '◫' },
+        { key: 'diary', label: '日记与传记', icon: '✎' }
       ] 
     },
     { 
@@ -376,6 +385,8 @@ export default function App() {
           <ErrorBoundary onReset={() => setActivePage('overview')}>
           {activePage === 'overview' ? (
             <OverviewPage onNavigate={navigate} lang={lang} dict={dict} />
+          ) : activePage === 'diary' ? (
+            <DiaryPage />
           ) : activePage === 'world-management' ? (
             <WorldsPage 
               lang={lang} dict={dict}
@@ -484,7 +495,7 @@ function OverviewPage({ onNavigate, lang, dict }: { onNavigate: (page: PageKey) 
           { key: 'game', icon: '🎮', title: lang === 'zh' ? '游戏创作' : 'Game Creation', desc: lang === 'zh' ? '人物、NPC、世界规则、任务事件与多结局' : 'NPCs, rules, quests and endings', target: 'world-management' as PageKey },
           { key: 'literature', icon: '📖', title: lang === 'zh' ? '文学创作' : 'Literary Creation', desc: lang === 'zh' ? '人物关系、事件、故事线、平行空间与写作' : 'Characters, events, storylines and writing', target: 'world-management' as PageKey },
           { key: 'companion', icon: '💬', title: lang === 'zh' ? 'AI 伴侣' : 'AI Companion', desc: lang === 'zh' ? '私人角色、长期记忆、私聊与群聊' : 'Private characters, memory and chats', target: 'chat' as PageKey },
-          { key: 'diary', icon: '📔', title: lang === 'zh' ? '日记与传记' : 'Diary & Biography', desc: lang === 'zh' ? '日记、人生经历、人物关系与传记（建设中）' : 'Diary, life timeline and biography (soon)', target: null },
+          { key: 'diary', icon: '📔', title: lang === 'zh' ? '日记与传记' : 'Diary & Biography', desc: lang === 'zh' ? '独立日记、人生经历、来源标签与传记' : 'Independent diary, life timeline and sources', target: 'diary' as PageKey },
         ].map((scene) => (
           <button
             key={scene.key}
