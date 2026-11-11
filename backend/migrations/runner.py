@@ -30,6 +30,7 @@ MODULES = [
     "m018_chat_impact",
     "m019_story_chapters",
     "m020_event_participants",
+    "m021_users_scene",
 ]
 
 

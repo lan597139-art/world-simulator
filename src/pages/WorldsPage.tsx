@@ -15,6 +15,7 @@ export default function WorldsPage({
 }) {
   const [worlds, setWorlds] = useState<World[]>([])
   const [loading, setLoading] = useState(true)
+  const [sceneFilter, setSceneFilter] = useState(sessionStorage.getItem('ws.productScene') || 'all')
 
   const loadWorlds = async () => {
     try {
@@ -69,6 +70,11 @@ export default function WorldsPage({
     }
   }
 
+  const sceneLabels: Record<string, string> = { game: '游戏', literature: '文学', companion: '伴侣' }
+  const filteredWorlds = sceneFilter === 'all'
+    ? worlds
+    : worlds.filter((w) => !w.product_scene || w.product_scene === sceneFilter)
+
   if (loading) return <div style={{ padding: '2rem', color: 'var(--text-main)' }}>Loading...</div>
 
   return (
@@ -77,7 +83,7 @@ export default function WorldsPage({
         <div>
           <h1 style={{ margin: 0, color: 'var(--text-main)', fontSize: '24px', fontWeight: 500 }}>{dict?.worlds || '世界管理'}</h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '0.5rem' }}>
-            {lang === 'zh' ? `共收录 ${worlds.length} 个世界` : `Total Worlds: ${worlds.length}`}
+            {lang === 'zh' ? `共收录 ${filteredWorlds.length} 个世界` : `Total Worlds: ${filteredWorlds.length}`}
           </p>
         </div>
 
@@ -93,13 +99,31 @@ export default function WorldsPage({
         </button>
       </div>
 
+      <div style={{ display: 'flex', gap: '6px', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+        {['all', 'game', 'literature'].map((scene) => (
+          <button
+            key={scene}
+            type="button"
+            onClick={() => { setSceneFilter(scene); sessionStorage.setItem('ws.productScene', scene) }}
+            style={{
+              padding: '5px 10px', fontSize: '11px', borderRadius: '14px', cursor: 'pointer',
+              background: sceneFilter === scene ? 'var(--text-main)' : 'transparent',
+              color: sceneFilter === scene ? 'var(--bg-color)' : 'var(--text-muted)',
+              border: '1px solid var(--card-border)',
+            }}
+          >
+            {scene === 'all' ? '全部' : sceneLabels[scene]}
+          </button>
+        ))}
+      </div>
+
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '24px' }}>
         {worlds.length === 0 ? (
           <div className="glass-card" style={{ padding: '3rem', color: 'var(--text-muted)', gridColumn: '1 / -1', textAlign: 'center', borderStyle: 'dashed' }}>
             {lang === 'zh' ? '数据库空空如也，请点击右上角“创建新世界”。' : 'No worlds found. Click "New World" to start.'}
           </div>
         ) : (
-          worlds.map(w => (
+          filteredWorlds.map(w => (
             <div key={w.id} className="glass-card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
@@ -107,6 +131,11 @@ export default function WorldsPage({
                 {w.is_official && (
                   <span style={{ padding: '3px 8px', borderRadius: '20px', background: 'rgba(128,128,128,0.14)', border: '1px solid var(--card-border)', color: 'var(--text-muted)', fontSize: '9px', fontWeight: 600 }}>
                     官方演示 · 锁定
+                  </span>
+                )}
+                {w.product_scene && (
+                  <span style={{ padding: '3px 8px', borderRadius: '20px', background: 'rgba(128,128,128,0.1)', border: '1px solid var(--card-border)', color: 'var(--text-muted)', fontSize: '9px' }}>
+                    {sceneLabels[w.product_scene] || w.product_scene}
                   </span>
                 )}
               </div>

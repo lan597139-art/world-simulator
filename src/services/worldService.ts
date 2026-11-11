@@ -20,6 +20,7 @@ export async function createWorld(data: {
   description: string
   type: WorldType
   background: string
+  product_scene?: string
 }): Promise<World> {
   const res = await fetch(`${API_BASE_URL}/worlds`, {
     method: 'POST',

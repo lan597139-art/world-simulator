@@ -452,7 +452,7 @@ export default function App() {
 }
 
 // ================= 01 总览页面组件 =================
-function OverviewPage({ onNavigate, dict }: { onNavigate: (page: PageKey) => void, lang: Language, dict: any }) {
+function OverviewPage({ onNavigate, lang, dict }: { onNavigate: (page: PageKey) => void, lang: Language, dict: any }) {
   const [worlds, setWorlds] = useState<any[]>([])
   const [charCount, setCharCount] = useState(0)
   const [eventCount, setEventCount] = useState(0)
@@ -477,6 +477,38 @@ function OverviewPage({ onNavigate, dict }: { onNavigate: (page: PageKey) => voi
         <button className="primary-button" type="button" onClick={() => onNavigate('world-management')} style={{ padding: '0.75rem 1.5rem', background: 'var(--text-main)', color: 'var(--bg-color)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>
           {dict.createWorld}
         </button>
+      </section>
+
+      <section style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '1rem', marginTop: '2rem' }}>
+        {[
+          { key: 'game', icon: '🎮', title: lang === 'zh' ? '游戏创作' : 'Game Creation', desc: lang === 'zh' ? '人物、NPC、世界规则、任务事件与多结局' : 'NPCs, rules, quests and endings', target: 'world-management' as PageKey },
+          { key: 'literature', icon: '📖', title: lang === 'zh' ? '文学创作' : 'Literary Creation', desc: lang === 'zh' ? '人物关系、事件、故事线、平行空间与写作' : 'Characters, events, storylines and writing', target: 'world-management' as PageKey },
+          { key: 'companion', icon: '💬', title: lang === 'zh' ? 'AI 伴侣' : 'AI Companion', desc: lang === 'zh' ? '私人角色、长期记忆、私聊与群聊' : 'Private characters, memory and chats', target: 'chat' as PageKey },
+          { key: 'diary', icon: '📔', title: lang === 'zh' ? '日记与传记' : 'Diary & Biography', desc: lang === 'zh' ? '日记、人生经历、人物关系与传记（建设中）' : 'Diary, life timeline and biography (soon)', target: null },
+        ].map((scene) => (
+          <button
+            key={scene.key}
+            type="button"
+            disabled={!scene.target}
+            onClick={() => {
+              if (!scene.target) return
+              sessionStorage.setItem('ws.productScene', scene.key)
+              onNavigate(scene.target)
+            }}
+            style={{
+              textAlign: 'left', padding: '1.25rem', borderRadius: '12px', cursor: scene.target ? 'pointer' : 'not-allowed',
+              background: 'var(--card-bg, rgba(128,128,128,0.05))', border: '1px solid var(--card-border)',
+              color: 'var(--text-main)', opacity: scene.target ? 1 : 0.55,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '24px' }}>{scene.icon}</span>
+              <strong style={{ fontSize: '16px' }}>{scene.title}</strong>
+              {!scene.target && <span style={{ fontSize: '10px', color: 'var(--text-muted)', border: '1px solid var(--card-border)', borderRadius: '10px', padding: '2px 6px' }}>建设中</span>}
+            </div>
+            <p style={{ margin: '10px 0 0', fontSize: '12.5px', color: 'var(--text-muted)', lineHeight: 1.6 }}>{scene.desc}</p>
+          </button>
+        ))}
       </section>
 
       <section className="stats-grid" style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>

@@ -13,6 +13,7 @@ export interface World {
   description: string
 
   type: WorldType
+  product_scene?: string | null
 
   background: string
 

@@ -29,6 +29,15 @@ def _now() -> datetime:
 # =====================================================================
 # 世界层
 # =====================================================================
+class AppUser(Base):
+    __tablename__ = "app_users"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    username = Column(String, unique=True, nullable=False)
+    display_name = Column(String, default="")
+    created_at = Column(DateTime, default=_now)
+
+
 class World(Base):
     __tablename__ = "worlds"
 
@@ -37,6 +46,8 @@ class World(Base):
     description = Column(String, default="")
     # 世界类型：reality / fiction / historical / experimental
     type = Column(String, default="custom")
+    owner_id = Column(String, index=True)
+    product_scene = Column(String, index=True)  # game / literature / companion / diary
     background = Column(String, default="")
     createdAt = Column(String)
     updatedAt = Column(String)

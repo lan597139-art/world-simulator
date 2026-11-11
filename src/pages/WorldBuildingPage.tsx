@@ -558,7 +558,8 @@ export default function WorldBuildingPage({ worldId, onBack, lang }: { worldId: 
           name: worldName,
           description: 'Custom World',
           type: 'fiction',
-          background: backgroundStr
+          background: backgroundStr,
+          product_scene: sessionStorage.getItem('ws.productScene') || undefined
         })
       } else {
         // 如果是编辑现有世界，用 worldId 去更新

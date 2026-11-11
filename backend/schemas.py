@@ -14,6 +14,7 @@ class WorldBase(BaseModel):
     status: Optional[str] = "draft"
     time_status: Optional[str] = "paused"
     settings: Optional[dict] = None
+    product_scene: Optional[str] = None
 
 
 class WorldCreate(WorldBase):
@@ -29,7 +30,9 @@ class WorldUpdate(BaseModel):
     world_scale: Optional[str] = None
     status: Optional[str] = None
     time_status: Optional[str] = None
+    product_scene: Optional[str] = None
     settings: Optional[dict] = None
+    product_scene: Optional[str] = None
 
 
 class WorldResponse(WorldBase):

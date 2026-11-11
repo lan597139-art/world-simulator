@@ -13,6 +13,7 @@ from migrations.runner import run_migrations
 
 # 领域路由
 from nodes import router as nodes_router, seed_world
+from users import router as users_router, ensure_local_user
 from geography import router as geography_router
 from orgs import router as orgs_router
 from events import router as event_router
@@ -80,6 +81,7 @@ for router in (
     event_router,
     event_links_router,
     simulation_router,
+    users_router,
     writing_router,
     nodes_router,
     geography_router,
@@ -119,13 +121,13 @@ def health_check():
 
 
 @app.get("/api/worlds", response_model=List[schemas.WorldResponse])
-def get_worlds(db: Session = Depends(get_db)):
-    return (
-        db.query(models.World)
-        .filter(models.World.deleted_at.is_(None), models.World.archived_at.is_(None))
-        .order_by(models.World.updatedAt.desc())
-        .all()
+def get_worlds(product_scene: Optional[str] = None, db: Session = Depends(get_db)):
+    query = db.query(models.World).filter(
+        models.World.deleted_at.is_(None), models.World.archived_at.is_(None)
     )
+    if product_scene:
+        query = query.filter(models.World.product_scene == product_scene)
+    return query.order_by(models.World.updatedAt.desc()).all()
 
 
 @app.get("/api/worlds/{world_id}", response_model=schemas.WorldResponse)
@@ -138,6 +140,8 @@ def get_world(world_id: str, db: Session = Depends(get_db)):
 
 @app.post("/api/worlds", response_model=schemas.WorldResponse)
 def create_world(world: schemas.WorldCreate, db: Session = Depends(get_db)):
+    if world.product_scene and world.product_scene not in {"game", "literature", "companion", "diary"}:
+        raise HTTPException(status_code=422, detail="product_scene 只能是 game/literature/companion/diary")
     now = datetime.utcnow().isoformat()
     db_world = models.World(
         name=world.name,
@@ -150,6 +154,8 @@ def create_world(world: schemas.WorldCreate, db: Session = Depends(get_db)):
         status="draft",
         time_status="paused",
         settings={},
+        owner_id="local",
+        product_scene=world.product_scene,
     )
     db.add(db_world)
     db.flush()
