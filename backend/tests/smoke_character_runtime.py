@@ -6,6 +6,8 @@
 import json
 import urllib.error
 import urllib.request
+
+from live_auth import auth_headers
 import uuid
 
 BASE = "http://127.0.0.1:8000/api"
@@ -16,7 +18,7 @@ failed = 0
 def call(method, path, body=None):
     data = json.dumps(body).encode("utf-8") if body is not None else None
     req = urllib.request.Request(
-        BASE + path, data=data, method=method, headers={"Content-Type": "application/json"}
+        BASE + path, data=data, method=method, headers=auth_headers({"Content-Type": "application/json"})
     )
     try:
         with urllib.request.urlopen(req) as res:

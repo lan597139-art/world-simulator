@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
@@ -17,6 +17,7 @@ from users import router as users_router, ensure_local_user
 from event_choices import router as event_choices_router
 from story_threads import router as story_threads_router
 from diary import router as diary_router
+from auth import router as auth_router, auth_middleware
 from geography import router as geography_router
 from orgs import router as orgs_router
 from events import router as event_router
@@ -78,6 +79,9 @@ async def ai_access_context(request, call_next):
         reset_request_ai_config(token)
 
 
+app.middleware("http")(auth_middleware)
+
+
 for router in (
     character_router,
     relationship_router,
@@ -88,6 +92,7 @@ for router in (
     event_choices_router,
     story_threads_router,
     diary_router,
+    auth_router,
     writing_router,
     nodes_router,
     geography_router,
@@ -126,10 +131,22 @@ def health_check():
     return {"status": "ok", "version": "1.1.0"}
 
 
+def _current_user_id(request: Request) -> str:
+    return str(getattr(request.state, "user_id", None) or "local")
+
+
+def _owned(world: models.World, request: Request):
+    if world.owner_id and world.owner_id != _current_user_id(request):
+        raise HTTPException(status_code=404, detail="World not found")
+
+
 @app.get("/api/worlds", response_model=List[schemas.WorldResponse])
-def get_worlds(product_scene: Optional[str] = None, db: Session = Depends(get_db)):
+def get_worlds(request: Request, product_scene: Optional[str] = None, db: Session = Depends(get_db)):
     query = db.query(models.World).filter(
         models.World.deleted_at.is_(None), models.World.archived_at.is_(None)
+    )
+    query = query.filter(
+        (models.World.owner_id == _current_user_id(request)) | (models.World.is_official.is_(True))
     )
     if product_scene:
         query = query.filter(models.World.product_scene == product_scene)
@@ -137,15 +154,16 @@ def get_worlds(product_scene: Optional[str] = None, db: Session = Depends(get_db
 
 
 @app.get("/api/worlds/{world_id}", response_model=schemas.WorldResponse)
-def get_world(world_id: str, db: Session = Depends(get_db)):
+def get_world(world_id: str, request: Request, db: Session = Depends(get_db)):
     world = db.query(models.World).filter(models.World.id == world_id).first()
     if not world or world.deleted_at is not None:
         raise HTTPException(status_code=404, detail="World not found")
+    _owned(world, request)
     return world
 
 
 @app.post("/api/worlds", response_model=schemas.WorldResponse)
-def create_world(world: schemas.WorldCreate, db: Session = Depends(get_db)):
+def create_world(world: schemas.WorldCreate, request: Request, db: Session = Depends(get_db)):
     if world.product_scene and world.product_scene not in {"game", "literature", "companion", "diary"}:
         raise HTTPException(status_code=422, detail="product_scene 只能是 game/literature/companion/diary")
     now = datetime.utcnow().isoformat()
@@ -160,7 +178,7 @@ def create_world(world: schemas.WorldCreate, db: Session = Depends(get_db)):
         status="draft",
         time_status="paused",
         settings={},
-        owner_id="local",
+        owner_id=_current_user_id(request),
         product_scene=world.product_scene,
     )
     db.add(db_world)
@@ -173,10 +191,11 @@ def create_world(world: schemas.WorldCreate, db: Session = Depends(get_db)):
 
 @app.put("/api/worlds/{world_id}")
 @app.patch("/api/worlds/{world_id}")
-def update_world(world_id: str, world: schemas.WorldUpdate, db: Session = Depends(get_db)):
+def update_world(world_id: str, world: schemas.WorldUpdate, request: Request, db: Session = Depends(get_db)):
     db_world = db.query(models.World).filter(models.World.id == world_id).first()
     if not db_world:
         raise HTTPException(status_code=404, detail="World not found")
+    _owned(db_world, request)
 
     for key, value in world.model_dump(exclude_unset=True).items():
         setattr(db_world, key, value)
@@ -187,10 +206,11 @@ def update_world(world_id: str, world: schemas.WorldUpdate, db: Session = Depend
 
 
 @app.delete("/api/worlds/{world_id}")
-def delete_world(world_id: str, db: Session = Depends(get_db)):
+def delete_world(world_id: str, request: Request, db: Session = Depends(get_db)):
     db_world = db.query(models.World).filter(models.World.id == world_id).first()
     if not db_world or db_world.deleted_at is not None:
         raise HTTPException(status_code=404, detail="World not found")
+    _owned(db_world, request)
     if db_world.is_official:
         raise HTTPException(status_code=409, detail="官方演示世界已锁定，不能删除；可使用“重置演示世界”。")
     from trash_service import trash_world

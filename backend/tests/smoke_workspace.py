@@ -4,6 +4,8 @@ import sys
 import urllib.error
 import urllib.request
 
+from live_auth import auth_headers
+
 BASE = "http://127.0.0.1:8000/api"
 
 
@@ -11,6 +13,7 @@ def call(method, path, body=None, headers=None):
     data = json.dumps(body).encode() if body is not None else None
     request_headers = {"Content-Type": "application/json"} if data else {}
     request_headers.update(headers or {})
+    request_headers = auth_headers(request_headers)
     req = urllib.request.Request(BASE + path, data=data, method=method, headers=request_headers)
     try:
         with urllib.request.urlopen(req, timeout=120) as response:

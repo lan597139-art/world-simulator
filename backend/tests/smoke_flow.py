@@ -2,6 +2,8 @@ import json
 import urllib.error
 import urllib.request
 
+from live_auth import auth_headers
+
 BASE = "http://127.0.0.1:8000/api"
 results = []
 
@@ -9,7 +11,7 @@ results = []
 def call(method, path, body=None, expect=200):
     url = BASE + path
     data = json.dumps(body).encode() if body is not None else None
-    req = urllib.request.Request(url, data=data, method=method)
+    req = urllib.request.Request(url, data=data, method=method, headers=auth_headers())
     if data:
         req.add_header("Content-Type", "application/json")
     try:

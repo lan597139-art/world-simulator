@@ -1,6 +1,6 @@
 """本地账号（第一阶段）：无密码登录，仅用于归属与场景隔离的基础设施。"""
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
 import models
@@ -30,8 +30,9 @@ def _row(user: models.AppUser) -> dict:
 
 
 @router.get("/api/users/me")
-def me(db: Session = Depends(get_db)):
-    return _row(ensure_local_user(db))
+def me(request: Request, db: Session = Depends(get_db)):
+    from auth import current_user
+    return _row(current_user(request, db))
 
 
 @router.patch("/api/users/me")

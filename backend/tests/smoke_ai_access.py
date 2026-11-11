@@ -4,12 +4,14 @@ import sys
 import urllib.error
 import urllib.request
 
+from live_auth import auth_headers
+
 BASE = "http://127.0.0.1:8000/api"
 
 
 def call(path, headers=None, body=None, method="GET"):
     data = json.dumps(body).encode("utf-8") if body is not None else None
-    req = urllib.request.Request(BASE + path, headers=headers or {}, data=data, method=method)
+    req = urllib.request.Request(BASE + path, headers=auth_headers(headers), data=data, method=method)
     if body is not None:
         req.add_header("Content-Type", "application/json")
     try:

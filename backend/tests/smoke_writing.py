@@ -7,6 +7,8 @@ import json
 import sys
 import urllib.error
 import urllib.request
+
+from live_auth import auth_headers
 import uuid
 
 BASE = "http://127.0.0.1:8000/api"
@@ -18,6 +20,7 @@ def call(method, path, body=None, headers=None):
     data = json.dumps(body).encode("utf-8") if body is not None else None
     merged = {"Content-Type": "application/json"}
     merged.update(headers or {})
+    merged = auth_headers(merged)
     req = urllib.request.Request(BASE + path, data=data, method=method, headers=merged)
     try:
         with urllib.request.urlopen(req) as res:

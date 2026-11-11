@@ -35,6 +35,21 @@ class AppUser(Base):
     id = Column(String, primary_key=True, default=_uuid)
     username = Column(String, unique=True, nullable=False)
     display_name = Column(String, default="")
+    password_hash = Column(String)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now)
+
+
+class AuthSession(Base):
+    """登录会话：只存 token 的 SHA-256，不存明文。"""
+
+    __tablename__ = "auth_sessions"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    user_id = Column(String, nullable=False, index=True)
+    token_hash = Column(String, unique=True, nullable=False, index=True)
+    expires_at = Column(DateTime, nullable=False)
     created_at = Column(DateTime, default=_now)
 
 

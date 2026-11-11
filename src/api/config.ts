@@ -6,6 +6,7 @@
  *   每次请求通过 X-AI-* 请求头携带，服务端不保存。
  */
 import { loadAiSettings } from './aiSettings'
+import { getAuthToken } from './authToken'
 
 export const LEGACY_API_ORIGIN = 'http://127.0.0.1:8000'
 
@@ -42,17 +43,46 @@ function withAiHeaders(url: string, init?: RequestInit): RequestInit | undefined
   return { ...init, headers }
 }
 
+function withAuthHeader(url: string, init?: RequestInit): RequestInit | undefined {
+  try {
+    const path = new URL(url, window.location.origin).pathname
+    const token = getAuthToken()
+    if (!token || !path.startsWith('/api/') || path === '/api/auth/status' || path === '/api/auth/login' || path === '/api/auth/setup') {
+      return init
+    }
+    const headers = new Headers(init?.headers)
+    headers.set('Authorization', `Bearer ${token}`)
+    return { ...init, headers }
+  } catch {
+    return init
+  }
+}
+
+function withRequestHeaders(url: string, init?: RequestInit): RequestInit | undefined {
+  return withAuthHeader(url, withAiHeaders(url, init))
+}
+
 export function installApiOriginBridge() {
   const nativeFetch = window.fetch.bind(window)
   const rewrite = (url: string) => (configured ? url.replace(/^http:\/\/127\.0\.0\.1:8000/, configured) : url)
   window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
     if (typeof input === 'string') {
       const url = rewrite(input)
-      return nativeFetch(url, withAiHeaders(url, init))
+      return nativeFetch(url, withRequestHeaders(url, init)).then((response) => {
+        if (response.status === 401 && getAuthToken() && !url.includes('/api/auth/')) {
+          window.dispatchEvent(new Event('ws-auth-required'))
+        }
+        return response
+      })
     }
     if (input instanceof URL) {
       const url = rewrite(input.toString())
-      return nativeFetch(url, withAiHeaders(url, init))
+      return nativeFetch(url, withRequestHeaders(url, init)).then((response) => {
+        if (response.status === 401 && getAuthToken() && !url.includes('/api/auth/')) {
+          window.dispatchEvent(new Event('ws-auth-required'))
+        }
+        return response
+      })
     }
     if (input instanceof Request) {
       const nextUrl = rewrite(input.url)

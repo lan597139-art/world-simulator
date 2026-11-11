@@ -21,6 +21,7 @@ import WorldStructurePage from './pages/WorldStructurePage'
 import ArchivePage from './pages/ArchivePage'
 import TrashPage from './pages/TrashPage'
 import DiaryPage from './pages/DiaryPage'
+import { authLogout } from './api/auth'
 import TimeMachinePage from './pages/TimeMachinePage'
 import AIAssistantPanel from './components/AIAssistantPanel'
 import { setAssistantPage } from './api/assistantContext'
@@ -322,8 +323,11 @@ export default function App() {
         </nav>
         
         <div className="sidebar-footer" style={{ padding: '1.5rem', borderTop: '1px solid var(--card-border)' }}>
-          <button onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')} style={{ width: '100%', padding: '10px', background: 'rgba(128, 128, 128, 0.1)', color: 'var(--sidebar-text)', border: '1px solid var(--card-border)', borderRadius: '8px', cursor: 'pointer', marginBottom: '1rem', fontSize: '13px' }}>
+          <button onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')} style={{ width: '100%', padding: '10px', background: 'rgba(128, 128, 128, 0.1)', color: 'var(--sidebar-text)', border: '1px solid var(--card-border)', borderRadius: '8px', cursor: 'pointer', marginBottom: '0.6rem', fontSize: '13px' }}>
             {dict.switchLang}
+          </button>
+          <button onClick={() => { void authLogout().then(() => window.location.reload()) }} style={{ width: '100%', padding: '7px', background: 'transparent', color: 'var(--sidebar-text-muted)', border: '1px solid var(--card-border)', borderRadius: '8px', cursor: 'pointer', marginBottom: '0.8rem', fontSize: '11px' }}>
+            退出登录
           </button>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px', color: 'var(--sidebar-text-muted)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
