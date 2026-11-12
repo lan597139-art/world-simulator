@@ -65,6 +65,33 @@ const MODULE_LABELS: Record<string, string> = {
   diary: '日记与传记',
 }
 
+/**
+ * 云宝工作台导航的唯一分组定义。
+ * 分组与顺序同时用于产品配置、总览卡片和分组上方导航，避免多处漂移。
+ */
+export const YUNBAO_WORKSPACE_NAV_GROUPS = [
+  nav('世界与设定', [
+    ['world-building', '世界建设配置'],
+    ['world-structure', '世界结构'],
+    ['world-data', '世界设定'],
+  ]),
+  nav('人物与关系', [
+    ['character-management', '人物管理'],
+    ['relationships', '关系与组织'],
+    ['chat', 'AI 角色聊天'],
+  ]),
+  nav('历程与记录', [
+    ['events', '事件管理'],
+    ['timeline', '时间线'],
+    ['diary', '日记与传记'],
+  ]),
+  nav('人格与记忆', [
+    ['personas', '云宝人格编辑器'],
+    ['yunbao-seed', '人物种子编辑器'],
+    ['memories', '记忆管理'],
+  ]),
+]
+
 function config(
   key: ProductKey,
   navGroups: ReturnType<typeof nav>[],
@@ -95,6 +122,59 @@ function config(
       personas: allowed.includes('personas'),
       memories: allowed.includes('memories'),
       information_sources: allowed.includes('information-sources'),
+    },
+  }
+}
+
+/**
+ * 云宝工作台导航白名单：只控制导航展示。
+ * 底层页面与功能不删除；未展示的旧入口仍可按既有逻辑访问。
+ */
+export const YUNBAO_VISIBLE_PAGES = new Set<string>([
+  'workspace-home',
+  'world-building',
+  'world-structure',
+  'world-data',
+  'character-management',
+  'relationships',
+  'chat',
+  'events',
+  'timeline',
+  'diary',
+  'personas',
+  'yunbao-seed',
+  'memories',
+])
+
+/** 云宝工作台明确要求隐藏且禁止直达的模块。 */
+export const YUNBAO_HIDDEN_PAGES = new Set<string>([
+  'world-management',
+  'simulation',
+  'storyline',
+  'writing',
+  'multipath',
+  'companion-runtime',
+  'information-sources',
+])
+
+export function navigationConfig(config: ProductConfig): ProductConfig {
+  if (config.key !== 'yunbao') return config
+  const navGroups = config.nav_groups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => YUNBAO_VISIBLE_PAGES.has(item.page)),
+    }))
+    .filter((group) => group.items.length > 0)
+  return {
+    ...config,
+    nav_groups: navGroups,
+    permissions: {
+      ...config.permissions,
+      world_management: false,
+      storyline: false,
+      simulation: false,
+      writing: false,
+      information_sources: false,
     },
   }
 }
@@ -193,44 +273,11 @@ export const FALLBACK_PRODUCTS: ProductConfig[] = [
     simulation: 'hidden', writing: 'biography', chat: 'hidden', relationships: 'life',
     personas: 'hidden',
   }),
-  config('yunbao', [
-    nav('云宝的世界', [
-      ['yunbao', '云宝工作台'],
-      ['overview', MODULE_LABELS.overview],
-      ['world-management', MODULE_LABELS['world-management']],
-      ['world-building', MODULE_LABELS['world-building']],
-      ['world-structure', MODULE_LABELS['world-structure']],
-      ['world-data', MODULE_LABELS['world-data']],
-    ]),
-    nav('人物与关系', [
-      ['character-management', MODULE_LABELS['character-management']],
-      ['relationships', MODULE_LABELS.relationships],
-      ['chat', 'AI 角色聊天'],
-      ['events', MODULE_LABELS.events],
-    ]),
-    nav('创作与叙事', [
-      ['timeline', MODULE_LABELS.timeline],
-      ['simulation', MODULE_LABELS.simulation],
-      ['storyline', MODULE_LABELS.storyline],
-      ['writing', MODULE_LABELS.writing],
-      ['multipath', MODULE_LABELS.multipath],
-      ['diary', MODULE_LABELS.diary],
-    ]),
-    nav('长期与安全', [
-      ['personas', '云宝人格编辑器'],
-      ['yunbao-seed', '人物种子编辑器'],
-      ['memories', MODULE_LABELS.memories],
-      ['companion-runtime', MODULE_LABELS['companion-runtime']],
-      ['information-sources', MODULE_LABELS['information-sources']],
-      ['time-machine', MODULE_LABELS['time-machine']],
-      ['archive', MODULE_LABELS.archive],
-      ['trash', MODULE_LABELS.trash],
-    ]),
-  ], {
+  config('yunbao', YUNBAO_WORKSPACE_NAV_GROUPS, {
     'character-management': 'full', events: 'narrative', timeline: 'world',
     simulation: 'full', writing: 'narrative', chat: 'npc', relationships: 'world',
     personas: 'full',
-  }, ['yunbao']),
+  }, ['yunbao', 'workspace-home']),
 ]
 
 export const FALLBACK_MATRIX: ProductMatrix = {

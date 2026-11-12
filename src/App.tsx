@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react' 
-import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react' 
+import { Cloud, PanelLeftClose, PanelLeftOpen, Sparkles } from 'lucide-react'
 import './App.css'
 import './styles/creation-center.css'
 import WorldsPage from './pages/WorldsPage'
@@ -37,6 +37,8 @@ import InformationSourcesPage from './pages/InformationSourcesPage'
 import CreationCenterPage, { type CreationAssetKey, type CreationToolKey } from './pages/CreationCenterPage'
 import CreationCenterSidebar, { type HomeNavTarget } from './components/creation-center/CreationCenterSidebar'
 import CreationCenterTopbar from './components/creation-center/CreationCenterTopbar'
+import YunbaoOverviewPage from './components/creation-center/YunbaoOverviewPage'
+import YunbaoGroupNav from './components/creation-center/YunbaoGroupNav'
 import ProductWorkspaceNav from './components/workspace/ProductWorkspaceNav'
 import ProductWorkspaceHome from './pages/ProductWorkspaceHome'
 import UserCenterPage, { type UserAssetTarget } from './pages/UserCenterPage'
@@ -50,7 +52,7 @@ import BillingCenterPage from './pages/BillingCenterPage'
 import { getSettings } from './api/settings'
 import { applyExperience } from './utils/experience'
 import { ensureProductWorkspace, fetchProductMatrix } from './api/productConfig'
-import { FALLBACK_MATRIX, getStoredProduct, productByKey, storeProduct } from './product/products'
+import { FALLBACK_MATRIX, getStoredProduct, navigationConfig, productByKey, storeProduct, YUNBAO_HIDDEN_PAGES } from './product/products'
 import type { ProductConfig, ProductKey, ProductMatrix } from './product/types'
 
 type PageKey = 
@@ -201,6 +203,7 @@ export default function App() {
   const [productMatrix, setProductMatrix] = useState<ProductMatrix>(FALLBACK_MATRIX)
   const [productError, setProductError] = useState('')
   const productConfig = productByKey(productMatrix.products, product)
+  const navigationProductConfig = useMemo(() => navigationConfig(productConfig), [productConfig])
   const [selectedWorldId, setSelectedWorldId] = useState<string | null>(null) // 用于建设页
   const [creatingWorld, setCreatingWorld] = useState(false)
   const [lang, setLang] = useState<Language>('zh')
@@ -223,10 +226,46 @@ export default function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     try { return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1' } catch { return false }
   })
+  const [navAutoHidden, setNavAutoHidden] = useState(false)
+  const contentScrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     try { localStorage.setItem(SIDEBAR_COLLAPSED_KEY, sidebarCollapsed ? '1' : '0') } catch { /* ignore */ }
   }, [sidebarCollapsed])
+
+  // 工作区二级导航：下滚隐藏，上滚恢复。
+  useEffect(() => {
+    setNavAutoHidden(false)
+    if (isGlobalPage(activePage) || !usesWorkspaceShell(product)) return
+    const el = contentScrollRef.current
+    if (!el) {
+      setNavAutoHidden(false)
+      return
+    }
+    let lastTop = el.scrollTop
+    let frame = 0
+    const onScroll = () => {
+      if (frame) return
+      frame = requestAnimationFrame(() => {
+        frame = 0
+        const top = el.scrollTop
+        const delta = top - lastTop
+        lastTop = top
+        if (top <= 24) {
+          setNavAutoHidden(false)
+          return
+        }
+        if (delta > 10 && top > 72) setNavAutoHidden(true)
+        else if (delta < -8) setNavAutoHidden(false)
+      })
+    }
+    el.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      el.removeEventListener('scroll', onScroll)
+      if (frame) cancelAnimationFrame(frame)
+    }
+  }, [product, activePage])
+
   const activePageRef = useRef(activePage)
 
   useEffect(() => {
@@ -311,6 +350,7 @@ export default function App() {
 
   const openProductPage = (nextKey: ProductKey, page: PageKey) => {
     const next = productByKey(productMatrix.products, nextKey)
+    const nextNavigation = navigationConfig(next)
     setProductError('')
     storeProduct(nextKey)
     if (nextKey === 'yunbao') sessionStorage.setItem('ws.yunbaoWorkspace', '1')
@@ -323,8 +363,9 @@ export default function App() {
     setWritingSeedEventIds([])
     const current = allWorldsList.find((item) => item.id === currentWorldId)
     if (currentWorldId && (!current || current.product_scene !== nextKey)) clearProductWorld()
+    const blocked = nextKey === 'yunbao' && YUNBAO_HIDDEN_PAGES.has(page)
     if (page === 'workspace-home' && usesWorkspaceShell(nextKey)) setActivePage('workspace-home')
-    else if (next.allowed_modules.includes(page)) setActivePage(page)
+    else if (!blocked && nextNavigation.allowed_modules.includes(page)) setActivePage(page)
   }
 
   const handleHomeNav = (target: HomeNavTarget) => {
@@ -508,14 +549,19 @@ export default function App() {
   useEffect(() => {
     if (isGlobalPage(activePage)) return
     if (activePage === 'workspace-home' && usesWorkspaceShell(product)) return
-    if (!productConfig.allowed_modules.includes(activePage)) {
-      setActivePage(usesWorkspaceShell(product) ? 'workspace-home' : productConfig.home as PageKey)
+    if (product === 'yunbao' && activePage === 'yunbao') {
+      setActivePage('workspace-home')
+      return
+    }
+    const hiddenByProduct = product === 'yunbao' && YUNBAO_HIDDEN_PAGES.has(activePage)
+    if (hiddenByProduct || !navigationProductConfig.allowed_modules.includes(activePage)) {
+      setActivePage(usesWorkspaceShell(product) ? 'workspace-home' : navigationProductConfig.home as PageKey)
       return
     }
     if (!WORLD_FREE_PAGES.includes(activePage) && !currentWorldId) {
-      setActivePage(productConfig.permissions.world_management ? 'world-management' : (usesWorkspaceShell(product) ? 'workspace-home' : productConfig.home as PageKey))
+      setActivePage(navigationProductConfig.permissions.world_management ? 'world-management' : (usesWorkspaceShell(product) ? 'workspace-home' : navigationProductConfig.home as PageKey))
     }
-  }, [product, productConfig, activePage, currentWorldId])
+  }, [product, navigationProductConfig, activePage, currentWorldId])
 
   useEffect(() => {
     if (isGlobalPage(activePage)) return
@@ -634,6 +680,7 @@ export default function App() {
   const isBusiness = activePage === 'business'
   const isGlobalShell = isHome || isUserCenter || isCommunity || isCommunitySocial || isBusiness || isSettings || isAiCenter || isGameCenter || isContentStore
   const isProductWorkspace = !isGlobalShell && usesWorkspaceShell(product)
+  const isYunbaoWorkspace = isProductWorkspace && product === 'yunbao'
 
   return (
     <div className="app-shell" style={{ display: 'flex', height: '100vh', overflow: 'hidden', backgroundColor: 'var(--bg-color)' }}>
@@ -774,7 +821,10 @@ export default function App() {
         <button
           type="button"
           className="sidebar-reveal-tab"
-          onClick={() => setSidebarCollapsed(false)}
+          onClick={() => {
+            setSidebarCollapsed(false)
+            setNavAutoHidden(false)
+          }}
           title={lang === 'zh' ? '展开侧边栏' : 'Expand sidebar'}
           aria-label={lang === 'zh' ? '展开侧边栏' : 'Expand sidebar'}
         >
@@ -783,7 +833,37 @@ export default function App() {
       )}
 
       <main className="main-area" style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-color)', overflow: 'hidden', marginLeft: sidebarCollapsed ? 0 : 260 }}>
-        {(isGlobalShell || isProductWorkspace) ? (
+        {isYunbaoWorkspace ? (
+          <>
+            <header className="yb-pinned-nav">
+              <nav className="yb-pinned-tabs" aria-label="云宝工作台置顶导航">
+                <button
+                  type="button"
+                  className={`yb-pinned-tab${activePage === 'workspace-home' ? ' is-active' : ''}`}
+                  onClick={() => navigate('workspace-home')}
+                >
+                  <Cloud size={14} strokeWidth={1.7} aria-hidden="true" />
+                  云宝领域
+                </button>
+                <button
+                  type="button"
+                  className={`yb-pinned-tab${activePage === 'personas' ? ' is-active' : ''}`}
+                  onClick={() => navigate('personas')}
+                >
+                  <Sparkles size={14} strokeWidth={1.7} aria-hidden="true" />
+                  人格编辑器
+                </button>
+              </nav>
+            </header>
+            <YunbaoGroupNav
+              activePage={activePage}
+              hidden={navAutoHidden}
+              onNavigate={(page) => navigate(page as PageKey)}
+            />
+          </>
+        ) : isProductWorkspace ? (
+          null
+        ) : isGlobalShell ? (
           <CreationCenterTopbar
             lang={lang}
             page={isProductWorkspace ? 'workspace' : isUserCenter ? 'identity' : isCommunity ? 'community' : isCommunitySocial ? 'community-social' : isBusiness ? 'business' : isAiCenter ? 'ai-center' : isGameCenter ? 'game-center' : isContentStore ? 'content-store' : 'home'}
@@ -851,27 +931,31 @@ export default function App() {
         </header>
         )}
 
-        <div
-          className={isGlobalShell || isProductWorkspace ? 'cc-page-scroll' : 'page-content'}
-          style={{
-            flex: 1,
-            overflowY: 'auto',
-            backgroundColor: 'transparent',
-            ...(isGlobalShell || isProductWorkspace ? { padding: 0, maxWidth: 'none' } : {}),
-          }}
-        >
-          {isProductWorkspace && (
-            <ProductWorkspaceNav
-              lang={lang}
-              product={product}
-              productConfig={productConfig}
-              activePage={activePage}
-              currentWorldName={currentWorldName}
-              error={productError}
-              onNavigate={(page) => navigate(page as PageKey)}
-              onNewWorld={() => { setCreatingWorld(true); setSelectedWorldId(''); navigate('world-building') }}
-            />
-          )}
+        <div className="main-area-body">
+          <div className="main-area-body-inner">
+            <div
+              ref={contentScrollRef}
+              className={isGlobalShell || isProductWorkspace ? 'cc-page-scroll' : 'page-content'}
+              style={{
+                flex: 1,
+                overflowY: 'auto',
+                backgroundColor: 'transparent',
+                ...(isGlobalShell || isProductWorkspace ? { padding: 0, maxWidth: 'none' } : {}),
+              }}
+            >
+              {isProductWorkspace && !isYunbaoWorkspace && (
+                <ProductWorkspaceNav
+                  tabsHidden={navAutoHidden}
+                  lang={lang}
+                  product={product}
+                  productConfig={navigationProductConfig}
+                  activePage={activePage}
+                  currentWorldName={currentWorldName}
+                  error={productError}
+                  onNavigate={(page) => navigate(page as PageKey)}
+                  onNewWorld={() => { setCreatingWorld(true); setSelectedWorldId(''); navigate('world-building') }}
+                />
+              )}
           {!isGlobalShell && product === 'yunbao' && authUser && !authUser.is_owner && (
             <div className="pw-access-note">
               云宝工作台当前为只读访问。你可以查看世界、人物、日记与创作数据；所有编辑、删除与状态切换仅限开发者「兰哆哆」。
@@ -959,6 +1043,8 @@ export default function App() {
               onOpenStorylines={() => handleOpenUserAsset('storylines')}
               onOpenWorks={() => handleOpenUserAsset('works')}
             />
+          ) : activePage === 'workspace-home' && isYunbaoWorkspace ? (
+            <YunbaoOverviewPage onNavigate={(page) => navigate(page as PageKey)} />
           ) : activePage === 'workspace-home' && usesWorkspaceShell(product) ? (
             <ProductWorkspaceHome
               product={product}
@@ -978,7 +1064,7 @@ export default function App() {
               product={product} productConfig={productConfig}
             />
           ) : activePage === 'diary' ? (
-            <JournalPage product={product} worldId={currentWorldId} onOpenSources={() => navigate('information-sources')} />
+            <JournalPage product={product} worldId={currentWorldId} />
           ) : activePage === 'world-management' ? (
             <WorldsPage 
               lang={lang} dict={dict} product={product}
@@ -1003,7 +1089,8 @@ export default function App() {
               onBack={() => { setFocusCharacterId(null); setFocusYunbao(false); goBack(); }}
               onNavigate={(page) => navigate(page as PageKey)}
               onOpenYunbaoEditor={() => openProductPage('yunbao', 'personas')}
-              showYunbaoEntry={product === 'yunbao'}
+              showYunbaoEntry={false}
+              hidePageHeader={product === 'yunbao'}
               readOnly={product === 'yunbao' && !!authUser && !authUser.is_owner}
             />
                      ) : activePage === 'world-data' ? (
@@ -1029,7 +1116,7 @@ export default function App() {
           ) : activePage === 'yunbao' ? (
             <YunbaoWorkspacePage onNavigate={(page) => navigate(page as PageKey)} />
           ) : activePage === 'yunbao-seed' ? (
-            <YunbaoSeedPage onBack={() => setActivePage('yunbao')} />
+            <YunbaoSeedPage onBack={() => setActivePage('personas')} />
           ) : activePage === 'personas' ? (
             <PersonaPage onOpenSeedEditor={() => navigate('yunbao-seed')} />
           ) : activePage === 'memories' ? (
@@ -1063,6 +1150,8 @@ export default function App() {
             <div style={{ padding: '2rem', color: 'var(--text-main)' }}><h1>开发中</h1></div>
           )}
           </ErrorBoundary>
+            </div>
+          </div>
         </div>
       </main>
       <AiAccessModal

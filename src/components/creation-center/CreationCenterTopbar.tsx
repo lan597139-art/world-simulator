@@ -15,6 +15,7 @@ export default function CreationCenterTopbar({
   onOpenSettings,
   onOpenIdentity,
   onLogout,
+  autoHidden = false,
 }: {
   lang: Lang
   page: 'home' | 'identity' | 'community' | 'community-social' | 'business' | 'ai-center' | 'game-center' | 'content-store' | 'workspace'
@@ -26,6 +27,7 @@ export default function CreationCenterTopbar({
   onOpenSettings: () => void
   onOpenIdentity: () => void
   onLogout: () => void
+  autoHidden?: boolean
 }) {
   const [panel, setPanel] = useState<'profile' | 'notifications' | null>(null)
   const topRightRef = useRef<HTMLDivElement>(null)
@@ -52,7 +54,7 @@ export default function CreationCenterTopbar({
   const breadcrumbCurrent = productLabel || (page === 'identity' ? (lang === 'zh' ? '个人管理' : 'Profile') : page === 'community' ? (lang === 'zh' ? '发现' : 'Discover') : page === 'community-social' ? (lang === 'zh' ? '讨论与关系' : 'Discussions & Relations') : page === 'business' ? (lang === 'zh' ? '账户与服务' : 'Account & Services') : page === 'ai-center' ? (lang === 'zh' ? '角色与关系' : 'Characters & Relations') : page === 'game-center' ? (lang === 'zh' ? '剧情与探索' : 'Story & Exploration') : page === 'content-store' ? (lang === 'zh' ? '资产与授权' : 'Assets & Licensing') : (lang === 'zh' ? '首页' : 'Home'))
 
   return (
-    <header className="cc-topbar">
+    <header className={`cc-topbar${autoHidden ? ' is-auto-hidden' : ''}`}>
       <div className="cc-breadcrumb">
         <span>{breadcrumbRoot}</span>
         <span className="cc-breadcrumb-sep">/</span>

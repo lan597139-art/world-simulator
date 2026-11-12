@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import CharacterBuildingPage from './CharacterBuildingPage';
 import CharacterBiographyModal from '../components/CharacterBiographyModal'
 import { YunbaoCard, YunbaoProfilePanel } from '../components/YunbaoProfile';
-// Dexie 本地库暂时不再使用，保留 database.ts 文件本身
 
 export default function CharacterListPage({
   worldId,
@@ -13,6 +12,7 @@ export default function CharacterListPage({
   onNavigate,
   onOpenYunbaoEditor,
   showYunbaoEntry = false,
+  hidePageHeader = false,
   readOnly = false,
   productMode = 'full',
 }: {
@@ -24,6 +24,7 @@ export default function CharacterListPage({
   onNavigate?: (page: string) => void,
   onOpenYunbaoEditor?: () => void,
   showYunbaoEntry?: boolean,
+  hidePageHeader?: boolean,
   readOnly?: boolean,
   productMode?: string,
 }) {
@@ -41,7 +42,7 @@ export default function CharacterListPage({
     setView('edit')
   }
 
-    const loadCharacters = async () => {
+  const loadCharacters = async () => {
     try {
       const res = await fetch("http://127.0.0.1:8000/api/characters");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -74,7 +75,6 @@ export default function CharacterListPage({
     loadCharacters();
   }, [worldId]);
 
-  // 从关系网络点击人物进入时，直接打开该人物档案
   useEffect(() => {
     if (focusCharacterId) {
       setEditingCharId(focusCharacterId);
@@ -87,14 +87,14 @@ export default function CharacterListPage({
     if (focusYunbao) setYunbaoOpen(true);
   }, [focusYunbao]);
 
-     const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string) => {
     if (!window.confirm('确定把人物移入回收站吗？\n\n可在「全局回收站」随时恢复。')) return;
     try {
       const res = await fetch(`http://127.0.0.1:8000/api/characters/${id}`, {
         method: 'DELETE'
       });
       if (res.ok) {
-        loadCharacters(); // 删除成功后刷新列表
+        loadCharacters();
       } else {
         alert('删除失败，请检查后端');
       }
@@ -128,47 +128,9 @@ export default function CharacterListPage({
   }
 
   return (
-       <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
-        <div>
-          <button
-            onClick={onBack}
-            style={{
-              marginBottom: '16px', padding: '6px 12px',
-              border: '1px solid var(--card-border)',
-              background: 'var(--card-bg)', color: 'var(--text-main)',
-              borderRadius: '8px', cursor: 'pointer', backdropFilter: 'blur(8px)'
-            }}
-          >
-            ← 返回
-          </button>
-          <h1 style={{ margin: 0, fontSize: '24px', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {worldName ? (
-              <><span style={{ color: 'var(--primary-color)' }}>【{worldName}】</span> 人物管理</>
-            ) : (
-              '人物管理大厅'
-            )}
-          </h1>
-          <p style={{ margin: '8px 0 0', color: 'var(--text-muted)' }}>
-            当前共有 {characters.length} 个人物档案
-            {productMode === 'light' && <span style={{ marginLeft: 8, fontSize: 10, padding: '2px 7px', borderRadius: 9, border: '1px solid var(--card-border)' }}>轻量人物模式：只维护身份、关系与陪伴资料</span>}
-          </p>
-        </div>
-
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-          {!readOnly && <button
-            onClick={() => openEditor(null)}
-            style={{
-              padding: '10px 20px', background: 'var(--primary-color)', color: 'var(--primary-text)',
-              border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600,
-              boxShadow: '0 4px 14px rgba(0, 0, 0, 0.1)'
-            }}
-          >
-            + 创建新人物
-          </button>}
-        </div>
-      </header>
-
+    <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
+      
+      {/* 云宝人格设计入口 */}
       {showYunbaoEntry && (
         <>
           <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -186,6 +148,25 @@ export default function CharacterListPage({
       )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+        
+        {/* 空白创建卡片（已改成和旁边一样的玻璃卡片） */}
+        {!readOnly && (
+          <div
+            className="glass-card"
+            onClick={() => openEditor(null)}
+            style={{
+              padding: '20px', display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center', gap: '12px',
+              cursor: 'pointer', minHeight: '220px',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <div style={{ fontSize: '36px', color: 'var(--text-main)', lineHeight: 1, fontWeight: 300 }}>+</div>
+            <div style={{ fontSize: '15px', color: 'var(--text-main)', fontWeight: 500 }}>创建新人物</div>
+          </div>
+        )}
+
+        {/* 人物列表渲染 */}
         {characters.map(char => (
           <div
             key={char.id}
@@ -197,7 +178,9 @@ export default function CharacterListPage({
               <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--text-main)' }}>{char.name || '未命名人物'}</h3>
               <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>点击卡片编辑</span>
             </div>
+            
             <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)' }}>ID: {char.id}</p>
+            
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
               {char.persona_type === 'self' && (
                 <span style={{ fontSize: '10px', padding: '3px 8px', borderRadius: '12px', border: '1px solid var(--primary-color)', color: 'var(--primary-color)' }}>
@@ -209,11 +192,10 @@ export default function CharacterListPage({
               </span>
             </div>
 
-            {/* ✅ 修复：“已绑定世界”标签的白块问题 */}
             {char.world_id && !worldId && (
               <span style={{
                 fontSize: '12px',
-                background: 'rgba(128, 128, 128, 0.15)', // 半透明灰
+                background: 'rgba(128, 128, 128, 0.15)',
                 color: 'var(--text-main)',
                 border: '1px solid var(--card-border)',
                 padding: '4px 10px', borderRadius: '20px', width: 'fit-content',
@@ -223,7 +205,6 @@ export default function CharacterListPage({
             )}
 
             <div style={{ display: 'flex', gap: '7px', marginTop: 'auto', paddingTop: '16px', flexWrap: 'wrap' }}>
-              {/* ✅ 修复：把原来扎眼的亮蓝色改成了高级的半透明灰底黑字 */}
               {!readOnly && <button
                 onClick={(event) => { event.stopPropagation(); openEditor(char.id); }}
                 style={{
@@ -235,6 +216,7 @@ export default function CharacterListPage({
               >
                 编辑档案
               </button>}
+              
               {!readOnly && productMode !== 'light' && (
                 <button
                   onClick={(event) => { event.stopPropagation(); openEditor(char.id, 'growth'); }}
@@ -243,6 +225,7 @@ export default function CharacterListPage({
                   成长
                 </button>
               )}
+              
               <button
                 onClick={(event) => {
                   event.stopPropagation()
@@ -253,12 +236,14 @@ export default function CharacterListPage({
               >
                 聊天
               </button>
+              
               <button
                 onClick={(event) => { event.stopPropagation(); setBioCharacter({ id: char.id, name: char.name }) }}
                 style={{ padding: '8px 10px', background: 'rgba(128,128,128,0.08)', color: 'var(--text-main)', border: '1px solid var(--card-border)', borderRadius: '8px', cursor: 'pointer' }}
               >
                 传记
               </button>
+              
               {!readOnly && <button
                 onClick={(event) => { event.stopPropagation(); void handleArchive(char.id) }}
                 style={{ padding: '8px 10px', background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--card-border)', borderRadius: '8px', cursor: 'pointer' }}
@@ -286,10 +271,11 @@ export default function CharacterListPage({
             className="glass-card"
             style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '60px', color: 'var(--text-muted)', borderStyle: 'dashed' }}
           >
-            {readOnly ? '暂无可查看的人物档案。' : '暂无人物档案，点击右上角“创建新人物”开始。'}
+            {readOnly ? '暂无可查看的人物档案。' : '暂无人物档案，点击上方卡片“创建新人物”开始。'}
           </div>
         )}
       </div>
+
       {bioCharacter && (
         <CharacterBiographyModal
           characterId={bioCharacter.id}

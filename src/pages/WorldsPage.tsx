@@ -80,28 +80,7 @@ export default function WorldsPage({
 
   return (
     <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
-        <div>
-          <h1 style={{ margin: 0, color: 'var(--text-main)', fontSize: '24px', fontWeight: 500 }}>{dict?.worlds || '世界管理'}</h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '0.5rem' }}>
-            {lang === 'zh' ? `共收录 ${filteredWorlds.length} 个世界` : `Total Worlds: ${filteredWorlds.length}`}
-          </p>
-        </div>
-
-        {!readOnly && (
-          <button
-            onClick={() => onOpenWorldBuilding('')}
-            style={{
-              padding: '10px 20px', background: 'var(--primary-color)', color: 'var(--bg-color)',
-              border: 'none', borderRadius: '8px', cursor: 'pointer', boxShadow: '0 4px 14px rgba(0, 0, 0, 0.1)',
-              fontWeight: 600
-            }}
-          >
-            {lang === 'zh' ? '+ 创建新世界' : '+ New World'}
-          </button>
-        )}
-      </div>
-
+      
       <div style={{ display: 'flex', gap: '7px', marginBottom: '1.25rem', flexWrap: 'wrap', alignItems: 'center' }}>
         <span style={{ padding: '5px 10px', fontSize: '11px', borderRadius: '14px', background: 'var(--text-main)', color: 'var(--bg-color)' }}>
           当前产品：{sceneLabels[product]}
@@ -112,102 +91,122 @@ export default function WorldsPage({
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '24px' }}>
-        {filteredWorlds.length === 0 ? (
-          <div className="glass-card" style={{ padding: '3rem', color: 'var(--text-muted)', gridColumn: '1 / -1', textAlign: 'center', borderStyle: 'dashed' }}>
-            {readOnly ? (lang === 'zh' ? '暂无可查看的世界。' : 'No worlds to view.') : (lang === 'zh' ? '数据库空空如也，请点击右上角“创建新世界”。' : 'No worlds found. Click "New World" to start.')}
+        
+        {/* 👇 第一个空白卡片：新建世界 👇 */}
+        {!readOnly && (
+          <div
+            className="glass-card"
+            onClick={() => onOpenWorldBuilding('')}
+            style={{
+              padding: '24px', display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center', gap: '12px',
+              cursor: 'pointer', minHeight: '200px',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <div style={{ fontSize: '36px', color: 'var(--text-main)', lineHeight: 1, fontWeight: 300 }}>+</div>
+            <div style={{ fontSize: '15px', color: 'var(--text-main)', fontWeight: 500 }}>创建新世界</div>
           </div>
-        ) : (
-          filteredWorlds.map(w => (
-            <div key={w.id} className="glass-card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        )}
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <h3 style={{ margin: 0, fontSize: '20px', color: 'var(--text-main)', fontWeight: 600 }}>{w.name}</h3>
-                {w.is_official && (
-                  <span style={{ padding: '3px 8px', borderRadius: '20px', background: 'rgba(128,128,128,0.14)', border: '1px solid var(--card-border)', color: 'var(--text-muted)', fontSize: '9px', fontWeight: 600 }}>
-                    官方演示 · 锁定
-                  </span>
-                )}
-                {w.product_scene && (
-                  <span style={{ padding: '3px 8px', borderRadius: '20px', background: 'rgba(128,128,128,0.1)', border: '1px solid var(--card-border)', color: 'var(--text-muted)', fontSize: '9px' }}>
-                    {sceneLabels[w.product_scene] || w.product_scene}
-                  </span>
-                )}
-              </div>
-              <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)', flex: 1, lineHeight: 1.6 }}>{w.description || '暂无世界简介。'}</p>
+        {/* 👇 原本的世界列表 👇 */}
+        {filteredWorlds.map(w => (
+          <div key={w.id} className="glass-card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <h3 style={{ margin: 0, fontSize: '20px', color: 'var(--text-main)', fontWeight: 600 }}>{w.name}</h3>
               {w.is_official && (
-                <p style={{ margin: 0, fontSize: '10px', color: 'var(--text-muted)', lineHeight: 1.6 }}>
-                  内置《凡人修仙传》演示世界，不可删除；可随时一键恢复初始状态。
-                </p>
+                <span style={{ padding: '3px 8px', borderRadius: '20px', background: 'rgba(128,128,128,0.14)', border: '1px solid var(--card-border)', color: 'var(--text-muted)', fontSize: '9px', fontWeight: 600 }}>
+                  官方演示 · 锁定
+                </span>
+              )}
+              {w.product_scene && (
+                <span style={{ padding: '3px 8px', borderRadius: '20px', background: 'rgba(128,128,128,0.1)', border: '1px solid var(--card-border)', color: 'var(--text-muted)', fontSize: '9px' }}>
+                  {sceneLabels[w.product_scene] || w.product_scene}
+                </span>
+              )}
+            </div>
+            <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)', flex: 1, lineHeight: 1.6 }}>{w.description || '暂无世界简介。'}</p>
+            {w.is_official && (
+              <p style={{ margin: 0, fontSize: '10px', color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                内置《凡人修仙传》演示世界，不可删除；可随时一键恢复初始状态。
+              </p>
+            )}
+
+            <div style={{ display: 'flex', gap: '8px', marginTop: 'auto', paddingTop: '16px', flexWrap: 'wrap' }}>
+              <button
+                onClick={() => onEnterWorld(w.id)}
+                style={{
+                  flex: 2, padding: '10px',
+                  background: 'var(--primary-color)', color: 'var(--bg-color)',
+                  border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600
+                }}
+              >
+                {lang === 'zh' ? '进入工作台' : 'Enter'}
+              </button>
+
+              {!readOnly && (
+              <button
+                onClick={() => onOpenWorldBuilding(w.id)}
+                style={{
+                  flex: 1, padding: '10px',
+                  background: 'transparent', color: 'var(--text-main)',
+                  border: '1px solid var(--card-border)', borderRadius: '8px', cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.borderColor = 'var(--primary-color)'}
+                onMouseOut={(e) => e.currentTarget.style.borderColor = 'var(--card-border)'}
+              >
+                {lang === 'zh' ? '编辑' : 'Edit'}
+              </button>
               )}
 
-              <div style={{ display: 'flex', gap: '8px', marginTop: 'auto', paddingTop: '16px', flexWrap: 'wrap' }}>
+              {!readOnly && (
+              <button
+                onClick={() => handleArchive(w.id)}
+                disabled={Boolean(w.is_official)}
+                style={{
+                  flex: 1, padding: '10px',
+                  background: 'transparent', color: 'var(--text-muted)',
+                  border: '1px solid var(--card-border)', borderRadius: '8px', cursor: w.is_official ? 'not-allowed' : 'pointer',
+                  opacity: w.is_official ? 0.45 : 1
+                }}
+              >
+                {lang === 'zh' ? '归档' : 'Archive'}
+              </button>
+              )}
+              
+              {!readOnly && (w.is_official ? (
                 <button
-                  onClick={() => onEnterWorld(w.id)}
-                  style={{
-                    flex: 2, padding: '10px',
-                    background: 'var(--primary-color)', color: 'var(--bg-color)',
-                    border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600
-                  }}
-                >
-                  {lang === 'zh' ? '进入工作台' : 'Enter'}
-                </button>
-
-                {!readOnly && (
-                <button
-                  onClick={() => onOpenWorldBuilding(w.id)}
-                  style={{
-                    flex: 1, padding: '10px',
-                    background: 'transparent', color: 'var(--text-main)',
-                    border: '1px solid var(--card-border)', borderRadius: '8px', cursor: 'pointer',
-                    transition: 'all 0.2s'
-                  }}
-                  onMouseOver={(e) => e.currentTarget.style.borderColor = 'var(--primary-color)'}
-                  onMouseOut={(e) => e.currentTarget.style.borderColor = 'var(--card-border)'}
-                >
-                  {lang === 'zh' ? '编辑' : 'Edit'}
-                </button>
-                )}
-
-                {!readOnly && (
-                <button
-                  onClick={() => handleArchive(w.id)}
-                  disabled={Boolean(w.is_official)}
+                  onClick={() => void handleResetOfficial(w.id, w.name)}
                   style={{
                     flex: 1, padding: '10px',
-                    background: 'transparent', color: 'var(--text-muted)',
-                    border: '1px solid var(--card-border)', borderRadius: '8px', cursor: w.is_official ? 'not-allowed' : 'pointer',
-                    opacity: w.is_official ? 0.45 : 1
+                    background: 'rgba(128,128,128,0.08)', color: 'var(--text-main)',
+                    border: '1px solid var(--card-border)', borderRadius: '8px', cursor: 'pointer'
                   }}
                 >
-                  {lang === 'zh' ? '归档' : 'Archive'}
+                  重置演示
                 </button>
-                )}
-                {!readOnly && (w.is_official ? (
-                  <button
-                    onClick={() => void handleResetOfficial(w.id, w.name)}
-                    style={{
-                      flex: 1, padding: '10px',
-                      background: 'rgba(128,128,128,0.08)', color: 'var(--text-main)',
-                      border: '1px solid var(--card-border)', borderRadius: '8px', cursor: 'pointer'
-                    }}
-                  >
-                    重置演示
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => handleDelete(w.id)}
-                    style={{
-                      flex: 1, padding: '10px',
-                      background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger-color)',
-                      border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '8px', cursor: 'pointer'
-                    }}
-                  >
-                    {lang === 'zh' ? '删除' : 'Delete'}
-                  </button>
-                ))}
-              </div>
+              ) : (
+                <button
+                  onClick={() => handleDelete(w.id)}
+                  style={{
+                    flex: 1, padding: '10px',
+                    background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger-color)',
+                    border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '8px', cursor: 'pointer'
+                  }}
+                >
+                  {lang === 'zh' ? '删除' : 'Delete'}
+                </button>
+              ))}
             </div>
-          ))
+          </div>
+        ))}
+
+        {filteredWorlds.length === 0 && readOnly && (
+          <div className="glass-card" style={{ padding: '3rem', color: 'var(--text-muted)', gridColumn: '1 / -1', textAlign: 'center', borderStyle: 'dashed' }}>
+            {lang === 'zh' ? '暂无可查看的世界。' : 'No worlds to view.'}
+          </div>
         )}
       </div>
     </div>

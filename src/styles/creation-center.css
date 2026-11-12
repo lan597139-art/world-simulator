@@ -23,6 +23,12 @@
   transition: transform 220ms ease, visibility 0s linear 220ms;
 }
 
+.cc-sidebar.is-auto-hidden {
+  transform: translateX(-100%);
+  visibility: hidden;
+  transition: transform 220ms ease, visibility 0s linear 220ms;
+}
+
 .cc-brand {
   display: flex;
   align-items: center;
@@ -998,3 +1004,4 @@ button.cc-status-chip:hover {
   font-size: 8.5px;
   line-height: 1.2;
 }
+

@@ -74,6 +74,7 @@ export default function CreationCenterSidebar({
   onToggleLang,
   onCollapse,
   collapsed = false,
+  autoHidden = false,
   canAccessYunbao = false,
 }: {
   lang: Lang
@@ -82,13 +83,14 @@ export default function CreationCenterSidebar({
   onToggleLang: () => void
   onCollapse: () => void
   collapsed?: boolean
+  autoHidden?: boolean
   canAccessYunbao?: boolean
 }) {
   return (
     <aside
-      className={`cc-sidebar${collapsed ? ' is-collapsed' : ''}`}
+      className={`cc-sidebar${collapsed ? ' is-collapsed' : ''}${autoHidden ? ' is-auto-hidden' : ''}`}
       aria-label={lang === 'zh' ? '全局导航' : 'Global navigation'}
-      aria-hidden={collapsed ? true : undefined}
+      aria-hidden={collapsed || autoHidden ? true : undefined}
     >
       <div className="cc-brand">
         <div className="cc-brand-mark" aria-hidden="true">W</div>

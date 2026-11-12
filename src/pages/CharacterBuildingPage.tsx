@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useAutoHideOnScroll } from '../hooks/useAutoHideOnScroll'
 import { getCharacterRuntime, updateCharacterRuntime, type CharacterLayer, type GrowthEntry } from '../api/characterRuntime'
 // ================= 基础表单组件 =================
 function TextField({ label, value, onChange, placeholder }: { label: string, value: string, onChange: (v: string) => void, placeholder?: string }) {
@@ -416,6 +417,7 @@ useEffect(() => {
   }, [characterId]);
   const [activeModule, setActiveModule] = useState(initialModule)
   const [stateLayer, setStateLayer] = useState<'seed' | 'runtime'>('seed')
+  const secondaryNavHidden = useAutoHideOnScroll()
   const [runtimeInfo, setRuntimeInfo] = useState<{
     main_color: string
     version: number
@@ -1113,7 +1115,7 @@ useEffect(() => {
     
  return (
     <div className="character-editor" style={{ backgroundColor: 'transparent', minHeight: '100%', paddingBottom: '2rem' }}>
-           <header className="character-editor-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', padding: '1.2rem 2rem', backgroundColor: 'var(--card-bg)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderBottom: '1px solid var(--card-border)', marginBottom: '1rem', borderRadius: '0 0 16px 16px', position: 'sticky', top: 0, zIndex: 40 }}>
+           <header className="character-editor-header cb-scene-head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', padding: '1.2rem 2rem', backgroundColor: 'var(--card-bg)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderBottom: '1px solid var(--card-border)', marginBottom: '1rem', borderRadius: '0 0 16px 16px', position: 'sticky', top: 0, zIndex: 40 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1.5rem' }}>
           {onBack && (
             <button onClick={onBack} type="button" style={{ padding: '6px 12px', background: 'rgba(128,128,128,0.1)', border: '1px solid var(--card-border)', color: 'var(--text-main)', borderRadius: '6px', cursor: 'pointer' }}>
@@ -1121,6 +1123,7 @@ useEffect(() => {
             </button>
           )}
           <div>
+            <span className="cb-scene-eyebrow">{stateLayer === 'seed' ? 'PERSONA SEED · 种子设定' : 'PERSONA RUNTIME · 成长校准'}</span>
             <h1 style={{ margin: '0 0 4px 0', color: 'var(--text-main)', fontSize: '22px', fontWeight: 600 }}>
               {stateLayer === 'seed' ? '人物种子编辑器' : '人物当前运行态'}
             </h1>
@@ -1162,7 +1165,7 @@ useEffect(() => {
       )}
 
       <main className="character-main-full">
-             <div className="character-stepper" style={{ display: 'flex', gap: '10px', overflowX: 'auto', padding: '10px 2rem 1rem 2rem', position: 'sticky', top: '80px', zIndex: 30, background: 'var(--bg-color)' }}>
+             <div className={`character-stepper${secondaryNavHidden ? ' is-auto-hidden' : ''}`} style={{ display: 'flex', gap: '10px', overflowX: 'auto', padding: '10px 2rem 1rem 2rem', position: 'sticky', top: '80px', zIndex: 30, background: 'var(--bg-color)' }}>
           {CHARACTER_MODULES.map(module => {
             const isActive = activeModule === module.id
             return (

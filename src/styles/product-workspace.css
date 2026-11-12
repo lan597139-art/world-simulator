@@ -6,7 +6,7 @@
   position: sticky;
   top: 0;
   z-index: 14;
-  padding: 20px 32px 0;
+  padding: 22px 32px 18px;
   background: color-mix(in srgb, var(--bg-color) 86%, transparent);
   border-bottom: 1px solid rgba(0, 0, 0, 0.10);
   backdrop-filter: blur(28px) saturate(160%);
@@ -22,60 +22,90 @@
 
 .pw-head {
   display: flex;
-  align-items: center;
-  gap: 14px;
+  align-items: flex-start;
+  gap: 18px;
   flex-wrap: wrap;
+  padding-bottom: 16px;
 }
 
 .pw-identity {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  align-items: flex-start;
+  gap: 14px;
   min-width: 0;
 }
 
 .pw-product-icon {
   display: grid;
   place-items: center;
-  width: 42px;
-  height: 42px;
+  width: 48px;
+  height: 48px;
   flex: none;
   border: 1px solid rgba(0, 0, 0, 0.10);
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--card-bg) 76%, transparent);
+  border-radius: 14px;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--card-bg) 94%, transparent), color-mix(in srgb, var(--text-main) 6%, var(--card-bg)));
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.7);
   color: var(--text-main);
 }
 
+.pw-title-block { min-width: 0; }
+
 .pw-eyebrow {
-  display: block;
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 0.15em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 8.5px;
+  font-weight: 750;
+  letter-spacing: 0.16em;
   color: var(--text-muted);
 }
 
+.pw-index {
+  display: inline-flex;
+  padding: 1px 5px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 4px;
+  font-size: 8px;
+  letter-spacing: 0.08em;
+}
+
 .pw-identity h1 {
-  margin: 3px 0 0;
-  font-size: 22px;
-  line-height: 1.2;
-  font-weight: 650;
-  letter-spacing: -0.03em;
+  margin: 5px 0 0;
+  font-size: 26px;
+  line-height: 1.15;
+  font-weight: 680;
+  letter-spacing: -0.035em;
   color: var(--text-main);
 }
 
-.pw-head-spacer { flex: 1; }
+.pw-scene-desc {
+  margin: 7px 0 0;
+  max-width: 660px;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+
+.pw-head-side {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  padding-top: 5px;
+  flex-wrap: wrap;
+}
 
 .pw-space {
   display: flex;
   align-items: center;
   gap: 7px;
-  min-height: 32px;
-  padding: 0 10px;
-  border: 1px solid rgba(0, 0, 0, 0.15);
-  border-radius: 7px;
-  background: color-mix(in srgb, var(--card-bg) 78%, transparent);
+  min-height: 34px;
+  padding: 0 11px;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--card-bg) 82%, transparent);
   color: var(--text-main);
-  font-size: 9.5px;
+  font-size: 10px;
   cursor: pointer;
   max-width: 280px;
 }
@@ -99,14 +129,14 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  min-height: 32px;
-  padding: 0 12px;
+  min-height: 34px;
+  padding: 0 14px;
   border: 1px solid var(--primary-color);
-  border-radius: 7px;
+  border-radius: 9px;
   background: var(--primary-color);
   color: var(--primary-text);
-  font-size: 9.5px;
-  font-weight: 600;
+  font-size: 10px;
+  font-weight: 650;
   cursor: pointer;
   white-space: nowrap;
 }
@@ -116,8 +146,11 @@
 .pw-tabs {
   display: flex;
   align-items: center;
-  gap: 19px;
-  margin-top: 14px;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.10);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--card-bg) 52%, transparent);
   overflow-x: auto;
   overflow-y: visible;
   scrollbar-width: none;
@@ -128,32 +161,30 @@
 .pw-tab {
   position: relative;
   flex: none;
-  padding: 0 1px 10px;
+  padding: 8px 12px;
   border: 0;
+  border-radius: 8px;
   background: transparent;
   color: var(--text-muted);
-  font-size: 9.5px;
+  font-size: 10px;
   line-height: 1.3;
   white-space: nowrap;
   cursor: pointer;
 }
 
-.pw-tab:hover { color: var(--text-main); }
+.pw-tab:hover {
+  background: color-mix(in srgb, var(--text-main) 5%, transparent);
+  color: var(--text-main);
+}
 
 .pw-tab.active {
+  background: var(--card-bg);
   color: var(--text-main);
   font-weight: 650;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
-.pw-tab.active::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -1px;
-  height: 2px;
-  background: var(--text-main);
-}
+.pw-tab.active::after { display: none; }
 
 .pw-more {
   position: relative;
@@ -1309,7 +1340,7 @@
 /* ============ responsive ============ */
 
 @media (max-width: 1120px) {
-  .pw-shell { padding: 18px 22px 0; }
+  .pw-shell { padding: 20px 22px 16px; }
   .pwh-page { padding: 20px 22px 42px; }
   .pwh-game-hero,
   .pwh-lit-hero { grid-template-columns: minmax(0, 1fr) minmax(300px, 0.72fr); }
@@ -1322,9 +1353,9 @@
 }
 
 @media (max-width: 820px) {
-  .pw-shell { padding: 14px 15px 0; }
-  .pw-head-spacer { display: none; }
-  .pw-space { order: 4; max-width: 100%; }
+  .pw-shell { padding: 16px 15px 14px; }
+  .pw-head-side { width: 100%; margin-left: 0; padding-top: 2px; }
+  .pw-space { max-width: 100%; }
   .pw-primary { margin-left: auto; }
   .pwh-page { padding: 16px 15px 36px; }
   .pwh-game-hero,
@@ -1802,4 +1833,177 @@
   .yb-avatar { width: 56px; height: 56px; }
   .yb-identity { gap: 11px; padding: 14px; }
   .yb-profile-meta { gap: 11px; flex-wrap: wrap; }
+}
+
+/* 二级导航：滚动自动隐藏 */
+.pw-tabs.is-auto-hidden {
+  display: none;
+}
+
+/* ============ 世界建设配置 · 场景页头 ============ */
+
+.wb-scene-head {
+  display: flex;
+  justify-content: space-between;
+  padding: 1.5rem 2rem;
+  align-items: flex-start !important;
+  gap: 18px;
+  border-radius: 18px !important;
+  background:
+    radial-gradient(120% 150% at 0% 0%, color-mix(in srgb, var(--primary-color) 7%, transparent), transparent 48%),
+    color-mix(in srgb, var(--card-bg) 96%, transparent) !important;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.05);
+}
+
+.wb-scene-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  flex: 1;
+  min-width: 0;
+}
+
+.wb-back {
+  padding: 8px 14px;
+  border: 1px solid var(--card-border);
+  border-radius: 9px;
+  background: rgba(128, 128, 128, 0.08);
+  color: var(--text-main);
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.wb-scene-title {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  flex: 1;
+}
+
+.wb-scene-eyebrow {
+  font-size: 8.5px;
+  font-weight: 750;
+  letter-spacing: 0.15em;
+  color: var(--text-muted);
+}
+
+.wb-name-input {
+  width: 100%;
+  max-width: 520px;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text-main);
+  font-size: 25px;
+  font-weight: 680;
+  letter-spacing: -0.035em;
+}
+
+.wb-scene-desc {
+  margin: 1px 0 0;
+  max-width: 640px;
+  color: var(--text-muted);
+  font-size: 11.5px;
+  line-height: 1.55;
+}
+
+.wb-scene-meta {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.wb-scene-meta code {
+  padding: 2px 7px;
+  border: 1px solid var(--card-border);
+  border-radius: 5px;
+  background: rgba(128, 128, 128, 0.08);
+  font-size: 10px;
+}
+
+.wb-scene-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.wb-danger,
+.wb-primary {
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.wb-danger {
+  border: 1px solid color-mix(in srgb, var(--danger-color) 24%, var(--card-border));
+  background: color-mix(in srgb, var(--danger-color) 8%, transparent);
+  color: var(--danger-color);
+}
+
+.wb-primary {
+  border: 1px solid var(--primary-color);
+  background: var(--primary-color);
+  color: var(--primary-text);
+}
+
+.wb-level-nav {
+  position: sticky;
+  top: 0;
+  z-index: 25;
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.09);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--bg-color) 88%, transparent);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.wb-subnav {
+  display: flex;
+  gap: 6px;
+  padding: 2px 0 12px;
+  border-bottom: 1px solid var(--card-border);
+  overflow-x: auto;
+}
+
+.wb-level-nav.is-auto-hidden,
+.wb-subnav.is-auto-hidden {
+  display: none;
+}
+
+/* ============ 人物种子编辑器 · 场景页头 ============ */
+
+.character-editor-header.cb-scene-head {
+  border-radius: 0 0 16px 16px;
+  background:
+    radial-gradient(110% 150% at 0% 0%, color-mix(in srgb, var(--primary-color) 6%, transparent), transparent 50%),
+    color-mix(in srgb, var(--card-bg) 96%, transparent) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+}
+
+.cb-scene-eyebrow {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 8px;
+  font-weight: 750;
+  letter-spacing: 0.15em;
+  color: var(--text-muted);
+}
+
+.character-stepper.is-auto-hidden {
+  display: none !important;
+}
+
+@media (max-width: 820px) {
+  .wb-scene-head { flex-direction: column; }
+  .wb-scene-actions { width: 100%; }
+  .wb-danger, .wb-primary { flex: 1; }
+  .wb-scene-main { width: 100%; }
 }

@@ -3,6 +3,7 @@ import { initializeWorldBuildingConfig, getWorldBuildingConfig } from '../servic
 import { getWorldById } from '../services/worldService'
 import { createWorld, updateWorld, deleteWorld } from '../services/worldService'
 import AxisObjectsPanel from '../components/AxisObjectsPanel'
+import { useAutoHideOnScroll } from '../hooks/useAutoHideOnScroll'
 
 // =========================================================
 // 1. 数据字典 (已按宏观-中观-微观重新梳理，去除了所有序号)
@@ -506,6 +507,7 @@ export default function WorldBuildingPage({ worldId, onBack, lang, product = 'ga
   
   // ✅ 新增：控制当前显示宏观、中观还是微观
   const [activeLevel, setActiveLevel] = useState<'macro' | 'meso' | 'micro'>('macro')
+  const secondaryNavHidden = useAutoHideOnScroll()
 
   useEffect(() => {
     async function init() {
@@ -598,29 +600,31 @@ export default function WorldBuildingPage({ worldId, onBack, lang, product = 'ga
   }
 
     return (
-    <div style={{ padding: '2rem', height: '100%', overflowY: 'auto' }}>
+    <div style={{ padding: '2rem' }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         
         {/* 1. 顶部头部区域 */}
-        <header className="glass-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem 2rem' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1.5rem', flex: 1 }}>
+        <header className="wb-scene-head glass-card">
+          <div className="wb-scene-main">
             {onBack && (
-              <button onClick={onBack} type="button" style={{ padding: '8px 16px', background: 'rgba(128,128,128,0.1)', border: '1px solid var(--card-border)', borderRadius: '8px', cursor: 'pointer', color: 'var(--text-main)', transition: 'all 0.2s', display: 'flex', alignItems: 'center', height: 'fit-content', marginTop: '4px' }}>
+              <button onClick={onBack} type="button" className="wb-back">
                 ← 返回
               </button>
             )}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-             <input value={worldName} onChange={e => setWorldName(e.target.value)} placeholder={lang === 'zh' ? '请输入世界名称' : 'Enter World Name'} style={{ fontSize: '20px', fontWeight: 500, background: 'transparent', border: 'none', outline: 'none', color: 'var(--text-main)', padding: 0, width: '100%', maxWidth: '400px' }} />
-              <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-                {lang === 'zh' ? '世界 ID:' : 'World ID:'} <span style={{ background: 'rgba(128,128,128,0.1)', padding: '2px 8px', borderRadius: '4px' }}>{inputId}</span>
+            <div className="wb-scene-title">
+              <span className="wb-scene-eyebrow">WORLD BUILDING · 世界建设配置</span>
+              <input value={worldName} onChange={e => setWorldName(e.target.value)} placeholder={lang === 'zh' ? '请输入世界名称' : 'Enter World Name'} className="wb-name-input" />
+              <p className="wb-scene-desc">{lang === 'zh' ? '定义世界的基底、社会运转与日常生活规则。' : 'Define the world foundation, social systems and everyday rules.'}</p>
+              <div className="wb-scene-meta">
+                {lang === 'zh' ? '世界 ID' : 'World ID'} · <code>{inputId}</code>
               </div>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '1rem' }}>
-            <button onClick={handleDelete} style={{ padding: '8px 20px', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger-color)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s' }}>
+          <div className="wb-scene-actions">
+            <button onClick={handleDelete} className="wb-danger">
               {lang === 'zh' ? '删除世界' : 'Delete'}
             </button>
-            <button onClick={handleSave} style={{ padding: '8px 24px', background: 'var(--primary-color)', color: 'var(--bg-color)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 500, transition: 'all 0.2s' }}>
+            <button onClick={handleSave} className="wb-primary">
               {lang === 'zh' ? '保存设定' : 'Save'}
             </button>
           </div>
@@ -633,7 +637,7 @@ export default function WorldBuildingPage({ worldId, onBack, lang, product = 'ga
         )}
 
         {/* 2. 母导航 (宏观-中观-微观) */}
-        <div style={{ display: 'flex', gap: '1rem', position: 'sticky', top: 0, zIndex: 25, padding: '10px 0', background: 'var(--bg-color)' }}>
+        <div className={`wb-level-nav${secondaryNavHidden ? ' is-auto-hidden' : ''}`}>
           {[
             { id: 'macro', num: '01', title: '宏观：世界基底' },
             { id: 'meso', num: '02', title: '中观：社会运转' },
@@ -647,7 +651,7 @@ export default function WorldBuildingPage({ worldId, onBack, lang, product = 'ga
         </div>
 
                 {/* 3. 子导航 (具体模块) */}
-        <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid var(--card-border)', paddingBottom: '1rem', overflowX: 'auto' }}>
+        <div className={`wb-subnav${secondaryNavHidden ? ' is-auto-hidden' : ''}`}>
           {activeLevel === 'macro' && [{ id: 'era', label: '时代与思想' }, { id: 'nature', label: '自然与生态' }, { id: 'supernatural', label: '法则与历史' }].map(tab => (
             <button key={tab.id} onClick={() => setActiveSubTab(tab.id)} style={{ padding: '8px 16px', background: activeSubTab === tab.id ? 'var(--text-main)' : 'transparent', borderRadius: '8px', border: 'none', color: activeSubTab === tab.id ? 'var(--bg-color)' : 'var(--text-main)', fontWeight: activeSubTab === tab.id ? 600 : 500, cursor: 'pointer', transition: 'all 0.2s', opacity: activeSubTab === tab.id ? 1 : 0.6 }}>{tab.label}</button>
           ))}

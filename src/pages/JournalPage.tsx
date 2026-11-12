@@ -30,8 +30,8 @@ function emptyDraft() {
 }
 
 export default function JournalPage({
-  product = 'diary', worldId = '', onOpenSources,
-}: { product?: string; worldId?: string; onOpenSources?: () => void }) {
+  product = 'diary', worldId = '',
+}: { product?: string; worldId?: string }) {
   const [tab, setTab] = useState<Tab>('entries')
   const [presets, setPresets] = useState<journal.JournalPresets | null>(null)
   const [entries, setEntries] = useState<journal.JournalEntry[]>([])
@@ -173,13 +173,13 @@ export default function JournalPage({
     if (!personName.trim()) return
     try {
       await journal.createJournalPerson({ name: personName, relation_label: personRelation, summary: personSummary })
-      setPersonName(''); setPersonRelation(''); setPersonSummary(''); setLog('人物已保存')
+      setPersonName(''); setPersonRelation(''); setPersonSummary(''); setLog('关系人物已保存')
       await loadPeople()
     } catch (error: any) { setLog(`❌ ${error.message || error}`) }
   }
 
   const removePerson = async (id: string) => {
-    if (!window.confirm('删除这个个人人物？')) return
+    if (!window.confirm('删除这个关系人物？')) return
     try { await journal.deleteJournalPerson(id); await loadPeople() }
     catch (error: any) { setLog(`❌ ${error.message || error}`) }
   }
@@ -239,19 +239,8 @@ export default function JournalPage({
 
   return (
     <div style={{ padding: '1.5rem', maxWidth: 1180, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: 23, color: 'var(--text-main)' }}>Journal 个人内容</h1>
-          <p style={{ margin: '5px 0 0', fontSize: 12, color: 'var(--text-muted)' }}>
-            私人日记、个人人物与用户传记。公开、AI 授权、私人内容三种权限互相独立。
-          </p>
-        </div>
-        <div style={{ flex: 1 }} />
-        <button style={buttonStyle} onClick={onOpenSources}>信息来源</button>
-      </div>
-
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-        {([['entries', '日记与经历'], ['people', '个人人物'], ['biographies', '我的传记'], ['grants', 'AI 授权'], ['published', '我的发布']] as Array<[Tab, string]>).map(([key, label]) => (
+        {([['entries', '日记与经历'], ['people', '云宝的关系网'], ['biographies', '云宝的传记'], ['grants', 'AI 授权'], ['published', '云宝的发布']] as Array<[Tab, string]>).map(([key, label]) => (
           <button key={key} onClick={() => setTab(key)} style={{
             ...buttonStyle, borderColor: tab === key ? 'var(--primary-color)' : 'var(--card-border)',
             color: tab === key ? 'var(--primary-color)' : 'var(--text-main)',
@@ -309,7 +298,7 @@ export default function JournalPage({
             </div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
               <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>关联人物：</span>
-              {people.length === 0 && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>先在「个人人物」中创建</span>}
+              {people.length === 0 && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>先在「云宝的关系网」中创建</span>}
               {people.map((person) => (
                 <label key={person.id} style={{ fontSize: 11, color: 'var(--text-main)', display: 'flex', gap: 3, alignItems: 'center' }}>
                   <input type="checkbox" checked={draft.person_ids.includes(person.id)} onChange={(e) => {
@@ -359,9 +348,9 @@ export default function JournalPage({
       {tab === 'people' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 320px) 1fr', gap: 12 }}>
           <div className="glass-card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <strong style={{ fontSize: 13 }}>新增个人人物</strong>
+            <strong style={{ fontSize: 13 }}>新增关系人物</strong>
             <input value={personName} onChange={(e) => setPersonName(e.target.value)} placeholder="姓名/称呼" style={fieldStyle} />
-            <input value={personRelation} onChange={(e) => setPersonRelation(e.target.value)} placeholder="与我的关系，如朋友/家人" style={fieldStyle} />
+            <input value={personRelation} onChange={(e) => setPersonRelation(e.target.value)} placeholder="与云宝的关系，如朋友/家人" style={fieldStyle} />
             <textarea value={personSummary} onChange={(e) => setPersonSummary(e.target.value)} placeholder="备注" style={{ ...fieldStyle, minHeight: 90 }} />
             <button style={primaryStyle} onClick={() => void addPerson()}>保存人物</button>
           </div>
@@ -393,7 +382,7 @@ export default function JournalPage({
                 <button style={{ ...buttonStyle, color: 'var(--danger-color)' }} onClick={() => void journal.deleteJournalRelation(relation.id).then(loadPeople)}>删除</button>
               </div>
             ))}
-            {people.length === 0 && <div className="glass-card" style={{ padding: 18, fontSize: 12, color: 'var(--text-muted)' }}>还没有个人人物。他们只属于你，不是世界角色。</div>}
+            {people.length === 0 && <div className="glass-card" style={{ padding: 18, fontSize: 12, color: 'var(--text-muted)' }}>云宝的关系网还没有人物。</div>}
             {people.map((person) => (
               <div key={person.id} className="glass-card" style={{ padding: 12, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                 <div style={{ flex: 1 }}>
@@ -423,7 +412,7 @@ export default function JournalPage({
             ))}
           </div>
           <div className="glass-card" style={{ flex: 1, padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {!selectedBio ? <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>创建或选择一本用户传记。它不是世界人物传记。</div> : (
+            {!selectedBio ? <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>创建或选择一本云宝传记。</div> : (
               <>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                   <h2 style={{ margin: 0, fontSize: 18 }}>{selectedBio.title}</h2>
