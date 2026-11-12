@@ -7,41 +7,54 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 import models
 from ai_engine import ai_config_status, ai_error_message, get_client, get_model
+from auth import current_user
 from common import fail
 from database import get_db
 from axis_objects import effective_objects, aggregate_axis
+from yunbao import active_state, ensure_yunbao, ensure_yunbao_instance, profile_prompt
+from ai_grants import authorized_entries
 
 router = APIRouter()
 
 PAGES = {
-    "overview", "world-management", "world-building", "world-data", "world-structure",
+    "home", "overview", "world-management", "world-building", "world-data", "world-structure",
     "character-management", "relationships", "events", "timeline", "simulation",
-    "multipath", "writing", "archive", "trash", "time-machine",
+    "multipath", "writing", "archive", "trash", "time-machine", "chat", "personas",
+    "yunbao", "yunbao-seed", "memories", "companion-runtime", "information-sources", "diary", "storyline",
 }
 
 PAGE_LABELS = {
+    "home": "选择产品",
     "overview": "世界总览",
     "world-management": "世界管理",
     "world-building": "世界建设配置",
     "world-data": "世界设定",
     "world-structure": "世界结构",
     "character-management": "人物管理",
+    "chat": "AI 角色聊天",
     "relationships": "关系与组织",
     "events": "事件管理",
     "timeline": "时间线",
     "simulation": "模拟运行",
+    "storyline": "故事线管理",
     "multipath": "多路径推演",
     "writing": "写作辅助",
     "archive": "归档库",
     "trash": "回收站",
     "time-machine": "时光机",
+    "personas": "云宝人格",
+    "memories": "记忆管理",
+    "companion-runtime": "人格运行",
+    "information-sources": "信息来源管理",
+    "diary": "日记与传记",
 }
 
 ENTITY_TYPES = {"world", "character", "event", "story", "location", "organization"}
@@ -218,8 +231,12 @@ def _clean_targets(context: dict) -> list:
     return targets
 
 
-def _context_label(context: dict, world: Optional[dict], entity: Optional[dict]) -> str:
+def _context_label(
+    context: dict, world: Optional[dict], entity: Optional[dict], yunbao_state: Optional[dict] = None
+) -> str:
     parts = []
+    if yunbao_state:
+        parts.append(f"云宝 · {yunbao_state['label']}")
     if world:
         parts.append(f"世界：{world['name']}")
     page_label = str(context.get("page_label") or PAGE_LABELS.get(str(context.get("page") or ""), "当前页面"))
@@ -237,13 +254,22 @@ def _prompt(
     selection: str,
     targets: Optional[list] = None,
     demo: bool = False,
+    persona_prompt: str = "",
 ) -> str:
-    prompt = "你是「世界模拟器」内置的全局操作助手。\n"
+    if persona_prompt:
+        prompt = persona_prompt + "\n\n"
+        prompt += "你同时是「世界模拟器」的全局 AI 助手，可以结合当前页面上下文对话并给出可确认操作。\n"
+    else:
+        prompt = "你是「世界模拟器」内置的全局操作助手。\n"
     prompt += "规则：\n"
     prompt += "1. 只能使用下方【上下文】里的信息，不得编造人物、事件、ID 或字段值；信息不足时明确说缺什么。\n"
     prompt += "2. 中文简体；先给可执行结论，再给 1-2 句依据；总长不超过 220 字；不要 Markdown 标题与代码块。\n"
     prompt += "3. 如果用户想修改内容，把修改放进 actions，由用户确认后前端执行；不要声称已经改好。\n"
-    prompt += "4. 不要提供删除、清空、归档、覆盖主时间线等不可逆操作。\n\n"
+    prompt += "4. 不要提供删除、清空、归档、覆盖主时间线等不可逆操作。\n"
+    if persona_prompt:
+        prompt += "5. 保持云宝的当前常态与表达特征，但不得因为角色扮演而隐瞒事实或拒绝协助。\n\n"
+    else:
+        prompt += "\n"
     prompt += "【上下文】\n"
     prompt += "页面：" + str(context.get("page_label") or PAGE_LABELS.get(str(context.get("page") or ""), "未知")) + "\n"
     if world:
@@ -400,11 +426,12 @@ def assistant_health():
 
 
 @router.post("/api/assistant/chat")
-def assistant_chat(payload: dict, db: Session = Depends(get_db)):
+def assistant_chat(payload: dict, request: Request, db: Session = Depends(get_db)):
     messages = payload.get("messages")
     if not isinstance(messages, list) or not messages:
         fail(422, "VALIDATION_ERROR", "缺少对话内容")
     context = payload.get("context") if isinstance(payload.get("context"), dict) else {}
+    yunbao_request = payload.get("yunbao") if isinstance(payload.get("yunbao"), dict) else None
 
     history = []
     for item in messages[-18:]:
@@ -426,10 +453,60 @@ def assistant_chat(payload: dict, db: Session = Depends(get_db)):
     targets = _clean_targets(context)
     demo = bool(context.get("demo"))
 
+    cloud = None
+    cloud_user = None
+    cloud_instance = None
+    cloud_thread = None
+    cloud_state = None
+    cloud_memories = []
+    authorized_context = []
+    if yunbao_request:
+        cloud_user = current_user(request, db)
+        cloud = ensure_yunbao(db)
+        cloud_instance = ensure_yunbao_instance(db, cloud_user)
+        cloud_state = active_state(cloud)
+        authorized_context = authorized_entries(
+            db, cloud_user.id, cloud_instance.id, purpose="chat_context", limit=3,
+        )
+        thread_id = str(yunbao_request.get("thread_id") or "").strip()
+        if thread_id:
+            cloud_thread = db.query(models.PersonaThread).filter(
+                models.PersonaThread.id == thread_id,
+                models.PersonaThread.persona_id == cloud.id,
+                models.PersonaThread.instance_id == cloud_instance.id,
+                models.PersonaThread.owner_user_id == cloud_user.id,
+                models.PersonaThread.status != "archived",
+            ).first()
+        if not cloud_thread:
+            title = next((item["content"] for item in reversed(history) if item["role"] == "user"), "与云宝的对话")
+            cloud_thread = models.PersonaThread(
+                persona_id=cloud.id, owner_user_id=cloud_user.id,
+                instance_id=cloud_instance.id, title=title[:40] or "与云宝的对话",
+            )
+            db.add(cloud_thread)
+            db.flush()
+        cloud_memories = db.query(models.PersonaMemory).filter(
+            models.PersonaMemory.persona_id == cloud.id,
+            models.PersonaMemory.owner_user_id == cloud_user.id,
+            models.PersonaMemory.persona_instance_id == cloud_instance.id,
+            models.PersonaMemory.status == "active",
+        ).order_by(
+            models.PersonaMemory.importance.desc(), models.PersonaMemory.created_at.desc()
+        ).limit(8).all()
+
     if not ai_config_status()["configured"]:
         raise HTTPException(status_code=503, detail=ai_config_status()["message"])
 
-    system = _prompt(context, world, entity, fields, selection, targets, demo)
+    persona_prompt = profile_prompt(cloud, cloud_memories, db, include_private=bool(cloud_user and cloud_user.is_owner)) if cloud else ""
+    if authorized_context:
+        lines = [
+            f"- {item['entry_date']} {item['title']}：{item['content'][:500]}"
+            for item in authorized_context
+        ]
+        persona_prompt += "\n\n【用户明确授权的私人背景】\n" + "\n".join(lines)
+    system = _prompt(
+        context, world, entity, fields, selection, targets, demo, persona_prompt=persona_prompt,
+    )
     try:
         response = get_client().chat.completions.create(
             model=get_model(),
@@ -446,11 +523,35 @@ def assistant_chat(payload: dict, db: Session = Depends(get_db)):
         data = {}
     reply = str(data.get("reply") or "").strip()
     if not reply:
-        reply = "我看到了当前页面，但没有拿到足够信息来回答。可以补充具体对象或问题吗？"
+        if cloud:
+            reply = "我在。可以再说具体一点吗？"
+        else:
+            reply = "我看到了当前页面，但没有拿到足够信息来回答。可以补充具体对象或问题吗？"
     actions = _sanitize_actions(data.get("actions"), context, entity, fields, targets)
+
+    if cloud and cloud_thread and cloud_user and cloud_state:
+        last_user = next((item["content"] for item in reversed(history) if item["role"] == "user"), "")
+        db.add(models.PersonaMessage(
+            thread_id=cloud_thread.id, persona_id=cloud.id, role="user",
+            content=last_user[:4000], meta={"state": cloud_state["key"], "page": context.get("page")},
+        ))
+        db.add(models.PersonaMessage(
+            thread_id=cloud_thread.id, persona_id=cloud.id, role="persona",
+            content=reply[:8000], meta={"state": cloud_state["key"], "source": "assistant"},
+        ))
+        cloud_thread.updated_at = datetime.utcnow()
+        cloud_thread.summary = reply[:500]
+        db.commit()
 
     return {
         "reply": reply[:4000],
         "actions": actions,
-        "context_label": _context_label(context, world, entity),
+        "context_label": _context_label(context, world, entity, cloud_state if cloud else None),
+        "thread_id": cloud_thread.id if cloud_thread else None,
+        "yunbao": {
+            "id": cloud.id,
+            "name": cloud.name,
+            "instance_id": cloud_instance.id if cloud_instance else None,
+            "state": cloud_state,
+        } if cloud and cloud_state else None,
     }

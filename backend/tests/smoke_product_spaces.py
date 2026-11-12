@@ -32,7 +32,7 @@ def run():
     check("产品配置矩阵可读", matrix.status_code == 200, matrix.text)
     body = matrix.json()
     keys = [p["key"] for p in body["products"]]
-    check("四种产品齐全", keys == ["game", "literature", "companion", "diary"], keys)
+    check("四大创作产品与云宝齐全", keys == ["game", "literature", "companion", "diary", "yunbao"], keys)
     by_key = {p["key"]: p for p in body["products"]}
     check("游戏开放完整世界与故事线",
           all(m in by_key["game"]["allowed_modules"] for m in (
@@ -47,9 +47,16 @@ def run():
     for forbidden in ("world-management", "world-structure", "world-data", "simulation", "storyline"):
         check(f"日记不开放 {forbidden}", forbidden not in by_key["diary"]["allowed_modules"],
               by_key["diary"]["allowed_modules"])
-    check("伴侣开放人格/记忆/人格运行",
+    check("伴侣保留历史人格/记忆/人格运行读取",
           all(m in by_key["companion"]["allowed_modules"] for m in (
               "personas", "memories", "companion-runtime", "chat")), by_key["companion"])
+    check("云宝工作台公开完整专业能力",
+          all(m in by_key["yunbao"]["allowed_modules"] for m in (
+              "world-management", "character-management", "writing", "diary",
+              "storyline", "simulation", "personas", "memories")), by_key["yunbao"])
+    check("云宝工作台自动准备共享领域",
+          by_key["yunbao"]["auto_workspace"] is True
+          and by_key["yunbao"]["workspace_name"] == "云宝领域", by_key["yunbao"])
     check("日记开放信息来源管理",
           "information-sources" in by_key["diary"]["allowed_modules"], by_key["diary"])
 

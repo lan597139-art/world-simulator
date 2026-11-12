@@ -8,13 +8,14 @@ from __future__ import annotations
 
 from typing import Optional
 
-PRODUCT_KEYS = ("game", "literature", "companion", "diary")
+PRODUCT_KEYS = ("game", "literature", "companion", "diary", "yunbao")
 
 PRODUCT_LABELS = {
     "game": "游戏创作",
     "literature": "文学创作",
     "companion": "AI 伴侣",
     "diary": "日记与传记",
+    "yunbao": "云宝工作台",
 }
 
 PRODUCT_SHORT = {
@@ -22,6 +23,7 @@ PRODUCT_SHORT = {
     "literature": "文学",
     "companion": "伴侣",
     "diary": "日记",
+    "yunbao": "云宝",
 }
 
 PRODUCT_ICONS = {
@@ -29,21 +31,23 @@ PRODUCT_ICONS = {
     "literature": "📖",
     "companion": "💬",
     "diary": "📔",
+    "yunbao": "☁",
 }
 
 PRODUCT_DESCRIPTIONS = {
-    "game": "开放完整世界模拟：世界、NPC、规则、事件、时间线、多路径推演与写作。",
-    "literature": "以人物、关系和叙事为中心，保留模拟作为辅助推演，不改变完整写作能力。",
-    "companion": "只开放个人 AI 人格、AI 伴侣角色、长期会话、独立记忆与互动事件，不开放世界构建。",
-    "diary": "记录本人及他人的人生、关系、经历与来源证据，生成时间线与传记，不开放推演。",
+    "game": "人物、NPC、世界规则、任务事件与多结局。",
+    "literature": "人物关系、事件、故事线、平行空间与写作。",
+    "companion": "私人角色、长期记忆、私聊与群聊。",
+    "diary": "独立日记、人生经历、来源标签与传记。",
+    "yunbao": "云宝的完整专业工作台：游戏、文学、日记与传记的全部能力。",
 }
 
 # 模块是底层能力的稳定标识；page 是前端现有页面键。
 MODULES = {
-    "overview": {"label": "01 世界总览", "page": "overview", "description": "产品工作台与统计入口"},
+    "overview": {"label": "01 世界总览", "page": "overview", "description": "游戏创作工作台内的世界统计、工作区与最近事件"},
     "world-management": {"label": "02 世界管理", "page": "world-management", "description": "进入或创建本产品世界"},
     "world-building": {"label": "世界建设配置", "page": "world-building", "description": "世界初始配置；仅作为创建世界的子页面"},
-    "character-management": {"label": "03 人物管理", "page": "character-management", "description": "人物档案；不同产品使用完整/轻量模式"},
+    "character-management": {"label": "03 人物管理", "page": "character-management", "description": "人物档案与云宝卡片；不同产品使用完整/轻量模式"},
     "chat": {"label": "AI 角色聊天", "page": "chat", "description": "NPC 或 AI 伴侣角色会话"},
     "world-structure": {"label": "世界结构", "page": "world-structure", "description": "地点、组织、资源等世界结构"},
     "world-data": {"label": "世界设定", "page": "world-data", "description": "世界规则、背景与设定"},
@@ -57,7 +61,9 @@ MODULES = {
     "time-machine": {"label": "时光机", "page": "time-machine", "description": "快照与回溯"},
     "archive": {"label": "归档库", "page": "archive", "description": "已归档内容"},
     "trash": {"label": "回收站", "page": "trash", "description": "可恢复的删除内容"},
-    "personas": {"label": "个人 AI 人格", "page": "personas", "description": "独立身份、ESA、会话与记忆"},
+    "yunbao": {"label": "云宝工作台", "page": "yunbao", "description": "云宝的完整专业工作台"},
+    "yunbao-seed": {"label": "云宝人物种子", "page": "yunbao-seed", "description": "人格动力、防御、承载条件、思想钢印、生命经历与运行态"},
+    "personas": {"label": "云宝 · 个人 AI 人格", "page": "personas", "description": "唯一全局 AI 身份、三种常态、独立会话与记忆"},
     "memories": {"label": "记忆管理", "page": "memories", "description": "按人格隔离的长期记忆"},
     "companion-runtime": {"label": "07 人格运行", "page": "companion-runtime", "description": "人格后台运行状态与互动入口；不开放完整模拟台"},
     "information-sources": {"label": "信息来源管理", "page": "information-sources", "description": "本人回忆、他人叙述、资料证据与 AI 推断"},
@@ -94,7 +100,7 @@ MODES = {
         "writing": "hidden",
         "chat": "companion",
         "relationships": "relationship",
-        "personas": "full",
+        "personas": "hidden",
     },
     "diary": {
         "character-management": "light",
@@ -105,6 +111,30 @@ MODES = {
         "chat": "hidden",
         "relationships": "life",
         "personas": "hidden",
+    },
+    "yunbao": {
+        "overview": "full",
+        "world-management": "full",
+        "world-building": "full",
+        "world-structure": "full",
+        "world-data": "full",
+        "character-management": "full",
+        "events": "narrative",
+        "timeline": "world",
+        "simulation": "full",
+        "storyline": "full",
+        "multipath": "full",
+        "writing": "narrative",
+        "chat": "npc",
+        "relationships": "world",
+        "personas": "full",
+        "yunbao-seed": "full",
+        "memories": "full",
+        "companion-runtime": "full",
+        "information-sources": "full",
+        "time-machine": "full",
+        "archive": "full",
+        "trash": "full",
     },
 }
 
@@ -118,26 +148,30 @@ def _nav(title: str, modules: list[str]) -> dict:
 
 NAV_GROUPS = {
     "game": [
-        _nav("工作台", ["overview"]),
-        _nav("世界与人物", ["world-management", "character-management", "chat", "world-structure", "world-data", "relationships", "events"]),
-        _nav("模拟与叙事", ["timeline", "simulation", "storyline", "writing"]),
+        _nav("世界构建", ["overview", "world-management", "character-management", "chat", "world-structure", "world-data", "relationships", "events"]),
+        _nav("模拟与推演", ["timeline", "simulation", "storyline", "writing"]),
         _nav("数据安全", ["time-machine", "archive", "trash"]),
     ],
     "literature": [
-        _nav("工作台", ["overview"]),
-        _nav("世界与人物", ["world-management", "character-management", "chat", "world-structure", "world-data", "relationships", "events"]),
-        _nav("人物与叙事", ["timeline", "storyline", "writing", "simulation"]),
+        _nav("世界构建", ["world-management", "character-management", "chat", "world-structure", "world-data", "relationships", "events"]),
+        _nav("故事创作", ["timeline", "storyline", "writing", "simulation"]),
         _nav("数据安全", ["time-machine", "archive", "trash"]),
     ],
     "companion": [
-        _nav("伴侣空间", ["character-management", "personas", "chat"]),
-        _nav("长期互动", ["relationships", "events", "timeline", "companion-runtime", "memories"]),
+        _nav("伴侣空间", ["character-management", "chat"]),
+        _nav("长期互动", ["relationships", "events", "timeline"]),
         _nav("数据安全", ["time-machine", "archive", "trash"]),
     ],
     "diary": [
         _nav("人生记录", ["diary", "character-management"]),
         _nav("经历与来源", ["relationships", "events", "timeline", "writing", "information-sources"]),
         _nav("数据安全", ["time-machine", "archive", "trash"]),
+    ],
+    "yunbao": [
+        _nav("云宝的世界", ["yunbao", "overview", "world-management", "world-building", "world-structure", "world-data"]),
+        _nav("人物与关系", ["character-management", "relationships", "chat", "events"]),
+        _nav("创作与叙事", ["timeline", "simulation", "storyline", "writing", "multipath", "diary"]),
+        _nav("长期与安全", ["personas", "yunbao-seed", "memories", "companion-runtime", "information-sources", "time-machine", "archive", "trash"]),
     ],
 }
 
@@ -160,14 +194,22 @@ NAV_LABEL_OVERRIDES = {
         "timeline": "06 人生时间线",
         "writing": "08 传记写作",
     },
+    "yunbao": {
+        "personas": "云宝人格编辑器",
+        "yunbao-seed": "人物种子编辑器",
+        "yunbao": "云宝工作台",
+        "world-management": "世界管理",
+        "character-management": "人物管理",
+    },
 }
 
 # 导航之外的合法子页面权限。
 EXTRA_ALLOWED = {
     "game": {"world-building", "multipath"},
     "literature": {"world-building", "multipath"},
-    "companion": set(),
+    "companion": {"personas", "memories", "companion-runtime"},
     "diary": set(),
+    "yunbao": {"yunbao"},
 }
 
 AUTO_WORKSPACE = {
@@ -175,25 +217,28 @@ AUTO_WORKSPACE = {
     "literature": False,
     "companion": True,
     "diary": True,
+    "yunbao": True,
 }
 
 WORKSPACE_NAME = {
     "companion": "AI 伴侣空间",
     "diary": "人生记录空间",
+    "yunbao": "云宝领域",
 }
 
 HOME_PAGE = {
     "game": "overview",
-    "literature": "overview",
-    "companion": "personas",
+    "literature": "world-management",
+    "companion": "character-management",
     "diary": "diary",
+    "yunbao": "yunbao",
 }
 
 
 def normalize_product(product: Optional[str]) -> str:
     value = str(product or "game").strip().lower()
     if value not in PRODUCT_KEYS:
-        raise ValueError("product 只能是 game/literature/companion/diary")
+        raise ValueError("product 只能是 game/literature/companion/diary/yunbao")
     return value
 
 

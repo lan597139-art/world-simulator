@@ -40,6 +40,60 @@ button {
   padding: 25px 17px 18px;
   background: #171d29;
   color: #f1f3f7;
+  transition: width 220ms ease, padding 220ms ease, visibility 0s linear 0s;
+}
+
+.sidebar.is-collapsed {
+  visibility: hidden;
+  transition: width 220ms ease, padding 220ms ease, visibility 0s linear 220ms;
+}
+
+.sidebar-collapse {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  margin-left: auto;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.035);
+  color: #aeb8c8;
+  cursor: pointer;
+  transition: color 160ms ease, background 160ms ease, border-color 160ms ease;
+}
+
+.sidebar-collapse:hover {
+  color: #f1f3f7;
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.sidebar-reveal-tab {
+  position: fixed;
+  top: 50%;
+  left: 0;
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  width: 27px;
+  height: 58px;
+  padding: 0;
+  border: 1px solid var(--card-border);
+  border-left: 0;
+  border-radius: 0 9px 9px 0;
+  background: var(--sidebar-bg);
+  color: var(--sidebar-text);
+  box-shadow: 4px 0 18px rgba(0, 0, 0, 0.14);
+  cursor: pointer;
+  transform: translateY(-50%);
+  transition: width 160ms ease, box-shadow 160ms ease;
+}
+
+.sidebar-reveal-tab:hover {
+  width: 31px;
+  box-shadow: 6px 0 22px rgba(0, 0, 0, 0.2);
 }
 
 .brand {
@@ -173,6 +227,7 @@ button {
   flex: 1;
   min-width: 0;
   margin-left: 248px;
+  transition: margin-left 220ms ease;
 }
 
 .topbar {
@@ -929,4 +984,20 @@ button {
   background: var(--card-bg) !important; 
   border: 1px solid var(--card-border) !important;
   box-shadow: 0 2px 8px rgba(0,0,0,0.05) !important;
+}
+/* 四产品主页 */
+.product-home-card {
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+.product-home-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 20px 55px rgba(0,0,0,0.12) !important;
+}
+.product-home-card:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 3px;
+}
+.home-product-link:hover {
+  background: rgba(128,128,128,0.13) !important;
 }

@@ -1,25 +1,31 @@
 import { useState, useEffect } from 'react';
 import CharacterBuildingPage from './CharacterBuildingPage';
 import CharacterBiographyModal from '../components/CharacterBiographyModal'
-import PersonaManager from '../components/PersonaManager';
+import { YunbaoCard, YunbaoProfilePanel } from '../components/YunbaoProfile';
 // Dexie 本地库暂时不再使用，保留 database.ts 文件本身
 
 export default function CharacterListPage({
   worldId,
   worldName = '',
   focusCharacterId,
+  focusYunbao = false,
   onBack,
   onNavigate,
+  onOpenYunbaoEditor,
+  showYunbaoEntry = false,
+  readOnly = false,
   productMode = 'full',
-  showPersonas = false,
 }: {
   worldId?: string,
   worldName?: string,
   focusCharacterId?: string | null,
+  focusYunbao?: boolean,
   onBack: () => void,
   onNavigate?: (page: string) => void,
+  onOpenYunbaoEditor?: () => void,
+  showYunbaoEntry?: boolean,
+  readOnly?: boolean,
   productMode?: string,
-  showPersonas?: boolean,
 }) {
   const [characters, setCharacters] = useState<any[]>([]);
   const [runtimeMeta, setRuntimeMeta] = useState<Record<string, { version: number; main_color: string }>>({});
@@ -27,7 +33,7 @@ export default function CharacterListPage({
   const [editingCharId, setEditingCharId] = useState<string | null>(null);
   const [editingModule, setEditingModule] = useState('basic');
   const [bioCharacter, setBioCharacter] = useState<{ id: string; name: string } | null>(null);
-  const [personaOpen, setPersonaOpen] = useState(false);
+  const [yunbaoOpen, setYunbaoOpen] = useState(false);
 
   const openEditor = (id: string | null, module = 'basic') => {
     setEditingCharId(id)
@@ -76,6 +82,10 @@ export default function CharacterListPage({
       setView('edit');
     }
   }, [focusCharacterId]);
+
+  useEffect(() => {
+    if (focusYunbao) setYunbaoOpen(true);
+  }, [focusYunbao]);
 
      const handleDelete = async (id: string) => {
     if (!window.confirm('确定把人物移入回收站吗？\n\n可在「全局回收站」随时恢复。')) return;
@@ -146,19 +156,7 @@ export default function CharacterListPage({
         </div>
 
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-          {showPersonas && (
-            <button
-              onClick={() => setPersonaOpen(true)}
-              title="管理个人 AI 人格：独立 ESA、会话与记忆"
-              style={{
-                padding: '10px 16px', background: 'var(--card-bg)', color: 'var(--text-main)',
-                border: '1px solid var(--primary-color)', borderRadius: '8px', cursor: 'pointer', fontWeight: 600,
-              }}
-            >
-              AI 伴侣 · 个人人格
-            </button>
-          )}
-          <button
+          {!readOnly && <button
             onClick={() => openEditor(null)}
             style={{
               padding: '10px 20px', background: 'var(--primary-color)', color: 'var(--primary-text)',
@@ -167,16 +165,32 @@ export default function CharacterListPage({
             }}
           >
             + 创建新人物
-          </button>
+          </button>}
         </div>
       </header>
+
+      {showYunbaoEntry && (
+        <>
+          <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: 'var(--text-muted)' }}>云宝人格设计</span>
+            <span style={{ flex: 1, height: 1, background: 'var(--card-border)' }} />
+            <span style={{ fontSize: 9.5, color: 'var(--text-muted)' }}>独立于世界人物与 NPC · {readOnly ? '当前只读' : '开发者可编辑'}</span>
+          </div>
+          <div style={{ marginBottom: 24 }}>
+            <YunbaoCard
+              actionLabel="进入人格编辑器"
+              onOpen={() => { if (onOpenYunbaoEditor) onOpenYunbaoEditor(); else setYunbaoOpen(true) }}
+            />
+          </div>
+        </>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
         {characters.map(char => (
           <div
             key={char.id}
             className="glass-card"
-            onClick={() => openEditor(char.id)}
+            onClick={() => { if (!readOnly) openEditor(char.id) }}
             style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', cursor: 'pointer' }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
@@ -210,7 +224,7 @@ export default function CharacterListPage({
 
             <div style={{ display: 'flex', gap: '7px', marginTop: 'auto', paddingTop: '16px', flexWrap: 'wrap' }}>
               {/* ✅ 修复：把原来扎眼的亮蓝色改成了高级的半透明灰底黑字 */}
-              <button
+              {!readOnly && <button
                 onClick={(event) => { event.stopPropagation(); openEditor(char.id); }}
                 style={{
                   flex: 1, padding: '8px',
@@ -220,8 +234,8 @@ export default function CharacterListPage({
                 }}
               >
                 编辑档案
-              </button>
-              {productMode !== 'light' && (
+              </button>}
+              {!readOnly && productMode !== 'light' && (
                 <button
                   onClick={(event) => { event.stopPropagation(); openEditor(char.id, 'growth'); }}
                   style={{ padding: '8px 10px', background: 'transparent', color: 'var(--text-main)', border: '1px solid var(--card-border)', borderRadius: '8px', cursor: 'pointer' }}
@@ -245,14 +259,14 @@ export default function CharacterListPage({
               >
                 传记
               </button>
-              <button
+              {!readOnly && <button
                 onClick={(event) => { event.stopPropagation(); void handleArchive(char.id) }}
                 style={{ padding: '8px 10px', background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--card-border)', borderRadius: '8px', cursor: 'pointer' }}
               >
                 归档
-              </button>
+              </button>}
 
-              <button
+              {!readOnly && <button
                 onClick={(event) => { event.stopPropagation(); void handleDelete(char.id); }}
                 style={{
                   padding: '8px 16px',
@@ -262,7 +276,7 @@ export default function CharacterListPage({
                 }}
               >
                 删除
-              </button>
+              </button>}
             </div>
           </div>
         ))}
@@ -272,7 +286,7 @@ export default function CharacterListPage({
             className="glass-card"
             style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '60px', color: 'var(--text-muted)', borderStyle: 'dashed' }}
           >
-            暂无人物档案，点击右上角“创建新人物”开始。
+            {readOnly ? '暂无可查看的人物档案。' : '暂无人物档案，点击右上角“创建新人物”开始。'}
           </div>
         )}
       </div>
@@ -283,7 +297,7 @@ export default function CharacterListPage({
           onClose={() => setBioCharacter(null)}
         />
       )}
-      {showPersonas && <PersonaManager open={personaOpen} onClose={() => setPersonaOpen(false)} />}
+      {yunbaoOpen && <YunbaoProfilePanel onClose={() => setYunbaoOpen(false)} />}
     </div>
   );
 }

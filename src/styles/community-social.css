@@ -1,0 +1,106 @@
+.cs-page { max-width: 1240px; margin: 0 auto; padding: 28px 28px 58px; color: var(--text-main); }
+.cs-hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap; margin-bottom: 20px; }
+.cs-kicker { display: block; margin-top: 12px; font-size: 9.5px; letter-spacing: .17em; font-weight: 700; color: var(--primary-color); }
+.cs-hero h1 { margin: 7px 0 0; font-size: clamp(26px, 3vw, 38px); letter-spacing: -.04em; }
+.cs-hero p { margin: 9px 0 0; max-width: 640px; font-size: 12px; line-height: 1.8; color: var(--text-muted); }
+.cs-hero-side { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.cs-stat-row { display: flex; gap: 1px; overflow: hidden; border: 1px solid var(--card-border); border-radius: 11px; background: var(--card-border); }
+.cs-stat-row > div, .cs-stat-row > button { min-width: 64px; padding: 9px 11px; background: var(--card-bg); border: 0; color: var(--text-main); text-align: left; cursor: pointer; }
+.cs-stat-row strong { display: block; font-size: 17px; letter-spacing: -.03em; }
+.cs-stat-row span { display: block; margin-top: 2px; font-size: 9px; color: var(--text-muted); }
+.cs-bell { background: var(--card-bg) !important; }
+.cs-tabs { display: flex; gap: 6px; padding: 6px; margin-bottom: 18px; overflow-x: auto; border: 1px solid var(--card-border); border-radius: 12px; background: var(--card-bg); }
+.cs-tab { display: inline-flex; align-items: center; gap: 6px; padding: 9px 13px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--text-muted); font-size: 11px; white-space: nowrap; cursor: pointer; }
+.cs-tab.is-active { color: var(--text-main); border-color: color-mix(in srgb, var(--primary-color) 22%, var(--card-border)); background: color-mix(in srgb, var(--primary-color) 8%, transparent); }
+.cs-message { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 12px; margin-bottom: 13px; border: 1px solid var(--card-border); border-radius: 9px; font-size: 11px; }
+.cs-message.is-error { color: var(--danger-color); border-color: color-mix(in srgb, var(--danger-color) 34%, var(--card-border)); }
+.cs-message.is-ok { color: #0f9d72; border-color: color-mix(in srgb, #0f9d72 28%, var(--card-border)); }
+.cs-layout, .cs-friends-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 18px; align-items: start; }
+.cs-main { min-width: 0; }
+.cs-side { display: grid; gap: 13px; position: sticky; top: 16px; }
+.cs-section-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 13px; flex-wrap: wrap; }
+.cs-section-head h2 { margin: 5px 0 0; font-size: 17px; letter-spacing: -.02em; }
+.cs-section-head .cs-kicker { margin-top: 0; }
+.cs-feed-list { display: grid; gap: 10px; }
+.cs-feed-card, .cs-topic-card, .cs-group-card, .cs-side-card, .cs-person-card { border: 1px solid var(--card-border); border-radius: 12px; background: var(--card-bg); }
+.cs-feed-card { padding: 15px; }
+.cs-feed-top { display: flex; align-items: center; gap: 8px; font-size: 10.5px; color: var(--text-muted); }
+.cs-feed-top time { margin-left: auto; font-size: 9px; }
+.cs-avatar { display: inline-grid; place-items: center; flex: none; border-radius: 10px; background: color-mix(in srgb, var(--primary-color) 11%, transparent); border: 1px solid color-mix(in srgb, var(--primary-color) 20%, var(--card-border)); color: var(--text-main); font-weight: 650; }
+.cs-feed-card h3 { margin: 11px 0 6px; font-size: 15px; line-height: 1.45; }
+.cs-feed-card p { margin: 0; font-size: 11px; line-height: 1.8; color: var(--text-muted); }
+.cs-feed-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 11px; font-size: 9.5px; color: var(--text-muted); }
+.cs-side-card { padding: 14px; }
+.cs-user-line { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--card-border); }
+.cs-user-line:last-child { border-bottom: 0; }
+.cs-user-line strong { display: block; font-size: 10.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cs-user-line span { display: block; margin-top: 2px; font-size: 9px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cs-mini-group { display: block; width: 100%; padding: 9px 0; border: 0; border-bottom: 1px solid var(--card-border); background: transparent; color: var(--text-main); text-align: left; cursor: pointer; }
+.cs-mini-group:last-child { border-bottom: 0; }
+.cs-mini-group strong { display: block; font-size: 11px; }
+.cs-mini-group span { display: block; margin-top: 3px; font-size: 9px; color: var(--text-muted); }
+.cs-filter-row { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-bottom: 14px; }
+.cs-inline-search { display: flex; align-items: center; gap: 6px; margin-left: auto; padding: 5px 8px; border: 1px solid var(--card-border); border-radius: 8px; background: var(--card-bg); }
+.cs-inline-search input { border: 0; outline: 0; background: transparent; color: var(--text-main); font-size: 10.5px; width: 130px; }
+.cs-topic-grid, .cs-group-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.cs-topic-card, .cs-group-card { padding: 14px; cursor: pointer; }
+.cs-topic-meta { display: flex; align-items: center; justify-content: space-between; gap: 7px; font-size: 9px; color: var(--text-muted); }
+.cs-topic-meta > span:first-child { padding: 3px 7px; border-radius: 999px; border: 1px solid var(--card-border); }
+.cs-topic-card h3, .cs-group-card h3 { margin: 10px 0 6px; font-size: 14px; }
+.cs-topic-card p, .cs-group-card p { margin: 0; font-size: 10.5px; line-height: 1.75; color: var(--text-muted); min-height: 36px; }
+.cs-topic-foot, .cs-group-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px; font-size: 9px; color: var(--text-muted); }
+.cs-group-foot { justify-content: flex-end; }
+.cs-search-bar { display: flex; gap: 7px; align-items: center; padding: 8px 10px; margin-bottom: 14px; border: 1px solid var(--card-border); border-radius: 10px; background: var(--card-bg); }
+.cs-search-bar input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--text-main); font-size: 11px; }
+.cs-search-extra { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.cs-people-list { display: grid; gap: 8px; }
+.cs-person-card { display: flex; align-items: center; gap: 10px; padding: 12px; }
+.cs-person-card > div > span { display: block; margin-top: 3px; font-size: 9.5px; color: var(--text-muted); line-height: 1.55; }
+.cs-person-name { padding: 0; border: 0; background: transparent; color: var(--text-main); font-size: 11.5px; font-weight: 650; cursor: pointer; text-align: left; }
+.cs-person-name small { margin-left: 6px; padding: 2px 5px; border: 1px solid var(--card-border); border-radius: 999px; font-size: 8px; font-weight: 400; color: var(--text-muted); }
+.cs-person-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.cs-inline-note { display: flex; align-items: flex-start; gap: 7px; margin-top: 13px; padding: 9px 11px; border-radius: 8px; background: color-mix(in srgb, var(--primary-color) 5%, transparent); color: var(--text-muted); font-size: 10px; line-height: 1.7; }
+.cs-request { padding: 9px 0; border-bottom: 1px solid var(--card-border); }
+.cs-request:last-child { border-bottom: 0; }
+.cs-request p { margin: 7px 0; padding: 7px 8px; border-radius: 7px; background: color-mix(in srgb, var(--primary-color) 5%, transparent); font-size: 10px; line-height: 1.7; color: var(--text-muted); }
+.cs-empty { display: grid; place-items: center; gap: 5px; min-height: 110px; padding: 20px; text-align: center; border: 1px dashed var(--card-border); border-radius: 11px; color: var(--text-muted); }
+.cs-empty strong { font-size: 11px; color: var(--text-main); }
+.cs-empty span { font-size: 9.5px; line-height: 1.6; }
+.cs-modal-backdrop { position: fixed; inset: 0; z-index: 120; display: grid; place-items: center; padding: 20px; background: rgba(0,0,0,.48); backdrop-filter: blur(5px); }
+.cs-modal { width: 100%; max-height: 88vh; display: flex; flex-direction: column; border: 1px solid var(--card-border); border-radius: 15px; background: var(--bg-color); box-shadow: 0 30px 90px rgba(0,0,0,.35); overflow: hidden; }
+.cs-modal > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 16px 18px; border-bottom: 1px solid var(--card-border); }
+.cs-modal h2 { margin: 0; font-size: 17px; letter-spacing: -.02em; }
+.cs-modal header p { margin: 5px 0 0; font-size: 10px; color: var(--text-muted); line-height: 1.6; }
+.cs-modal-body { padding: 18px; overflow-y: auto; }
+.cs-detail-body { margin: 0 0 10px; font-size: 12px; line-height: 1.95; white-space: pre-wrap; }
+.cs-detail-meta { font-size: 9.5px; color: var(--text-muted); padding-bottom: 13px; border-bottom: 1px solid var(--card-border); }
+.cs-reply-list { display: grid; gap: 9px; padding: 14px 0; }
+.cs-reply { display: flex; align-items: flex-start; gap: 8px; }
+.cs-reply strong { display: block; font-size: 10px; }
+.cs-reply p { margin: 4px 0 3px; font-size: 11px; line-height: 1.75; white-space: pre-wrap; }
+.cs-reply time { font-size: 8.5px; color: var(--text-muted); }
+.cs-reply-form { display: flex; align-items: flex-end; gap: 8px; margin-top: 12px; }
+.cs-reply-form textarea { flex: 1; }
+.cs-detail-section-title { margin: 17px 0 9px; font-size: 12px; font-weight: 700; }
+.cs-group-compose { display: grid; gap: 8px; padding: 12px; margin-bottom: 13px; border: 1px solid var(--card-border); border-radius: 9px; background: color-mix(in srgb, var(--primary-color) 4%, transparent); }
+.cs-group-compose button { justify-self: flex-end; }
+.cs-group-post { padding: 13px 0; border-top: 1px solid var(--card-border); }
+.cs-group-post h3 { margin: 9px 0 5px; font-size: 13px; }
+.cs-group-post > p { margin: 0; font-size: 11px; line-height: 1.8; white-space: pre-wrap; }
+.cs-pending-members { padding: 11px; margin-bottom: 13px; border: 1px solid var(--card-border); border-radius: 9px; background: color-mix(in srgb, var(--primary-color) 4%, transparent); }
+.cs-pending-members > strong { display: block; margin-bottom: 4px; font-size: 10.5px; }
+.cs-pending-members > div { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+.cs-pending-members > div > .cs-user-line { flex: 1; border-bottom: 0; }
+.cs-notification-list { display: grid; gap: 6px; }
+.cs-notification { display: flex; align-items: flex-start; gap: 8px; padding: 10px; border: 1px solid var(--card-border); border-radius: 9px; }
+.cs-notification.is-unread { background: color-mix(in srgb, var(--primary-color) 6%, transparent); }
+.cs-notification strong { display: block; font-size: 10.5px; }
+.cs-notification span { display: block; margin-top: 3px; font-size: 9.5px; line-height: 1.6; color: var(--text-muted); }
+.cs-notification time { display: block; margin-top: 4px; font-size: 8.5px; color: var(--text-muted); }
+.cs-unread-dot { width: 6px; height: 6px; flex: none; margin-top: 5px; border-radius: 50%; background: var(--primary-color); }
+.cs-field { display: block; margin-bottom: 12px; }
+.cs-field > span { display: block; margin-bottom: 5px; font-size: 10px; font-weight: 650; color: var(--text-main); }
+.cs-field input, .cs-field textarea, .cs-field select { width: 100%; box-sizing: border-box; padding: 9px 11px; border: 1px solid var(--card-border); border-radius: 8px; background: var(--bg-color); color: var(--text-main); font-size: 11.5px; }
+.cs-field textarea { min-height: 96px; resize: vertical; }
+@media (max-width: 980px) { .cs-layout, .cs-friends-layout { grid-template-columns: 1fr; } .cs-side { position: static; grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 680px) { .cs-page { padding: 20px 15px 44px; } .cs-topic-grid, .cs-group-grid { grid-template-columns: 1fr; } .cs-side { grid-template-columns: 1fr; } .cs-hero-side { width: 100%; justify-content: space-between; } .cs-inline-search { margin-left: 0; width: 100%; } .cs-inline-search input { flex: 1; width: auto; } }

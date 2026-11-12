@@ -2,7 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import type { CSSProperties, ReactNode } from 'react'
 import { API_ORIGIN } from '../api/config'
 import { loadAiSettings } from '../api/aiSettings'
-import { listPersonas, listPersonaThreads, listPersonaMessages, chatWithPersona, type Persona } from '../api/personas'
+import {
+  getYunbao, listYunbaoMessages, listYunbaoThreads, switchYunbaoState,
+  type YunbaoProfile, type YunbaoState,
+} from '../api/yunbao'
 import { getAssistantState, subscribeAssistant } from '../api/assistantContext'
 import {
   applyDomFormPatch,
@@ -39,6 +42,7 @@ type ChatMessage = {
 const STORAGE_PREFIX = 'ws.assistant.chat.v2'
 
 const PAGE_LABELS: Record<string, string> = {
+  home: '选择产品',
   overview: '世界总览',
   'world-management': '世界管理',
   'world-building': '世界建设配置',
@@ -53,7 +57,7 @@ const PAGE_LABELS: Record<string, string> = {
   archive: '归档库',
   trash: '回收站',
   'time-machine': '时光机',
-  personas: '个人 AI 人格',
+  personas: '云宝工作台',
   memories: '记忆管理',
   'companion-runtime': '人格运行',
   'information-sources': '信息来源管理',
@@ -210,10 +214,18 @@ function actionTone(type: string) {
   return '打开页面'
 }
 
-export default function AIAssistantPanel({ onNavigate, product = 'game' }: { onNavigate?: (page: string) => void; product?: string }) {
+export default function AIAssistantPanel({
+  onNavigate,
+  onOpenYunbao,
+  product = 'game',
+}: {
+  onNavigate?: (page: string) => void
+  onOpenYunbao?: () => void
+  product?: string
+}) {
   const state = useSyncExternalStore(subscribeAssistant, getAssistantState, getAssistantState)
   const [open, setOpen] = useState(false)
-  const [messages, setMessages] = useState<ChatMessage[]>(() => loadMessages(product))
+  const [messages, setMessages] = useState<ChatMessage[]>(() => loadMessages('yunbao'))
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
   const [backendState, setBackendState] = useState<'unknown' | 'ok' | 'missing' | 'offline'>('unknown')
@@ -223,21 +235,14 @@ export default function AIAssistantPanel({ onNavigate, product = 'game' }: { onN
   const [isNarrow, setIsNarrow] = useState(
     () => typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches
   )
-  const [personas, setPersonas] = useState<Persona[]>([])
-  const [personaId, setPersonaId] = useState('')
-  const [personaThreadId, setPersonaThreadId] = useState('')
+  const [yunbao, setYunbao] = useState<YunbaoProfile | null>(null)
+  const [threadId, setThreadId] = useState('')
+  const [stateBusy, setStateBusy] = useState('')
   const listRef = useRef<HTMLDivElement | null>(null)
   const inputRef = useRef<HTMLTextAreaElement | null>(null)
   const panelRef = useRef<HTMLDivElement | null>(null)
 
-  useEffect(() => { if (!personaId) saveMessages(messages, product) }, [messages, personaId, product])
-
-  useEffect(() => {
-    setMessages(loadMessages(product))
-    setPersonaId('')
-    setPersonaThreadId('')
-    if (product !== 'companion') setPersonas([])
-  }, [product])
+  useEffect(() => { saveMessages(messages, 'yunbao') }, [messages])
 
   useEffect(() => {
     const handler = () => {
@@ -253,31 +258,27 @@ export default function AIAssistantPanel({ onNavigate, product = 'game' }: { onN
   }, [])
 
   useEffect(() => {
-    if (!open || product !== 'companion') return
-    void listPersonas('companion').then(setPersonas).catch(() => setPersonas([]))
-  }, [open, product])
-
-  useEffect(() => {
     if (!open) return
-    if (!personaId) {
-      setMessages(loadMessages(product))
-      setPersonaThreadId('')
-      return
-    }
     let alive = true
-    void listPersonaThreads(personaId).then(async (threads) => {
+    void getYunbao().then(async (profile) => {
       if (!alive) return
-      if (!threads.length) { setPersonaThreadId(''); setMessages([]); return }
-      setPersonaThreadId(threads[0].id)
-      const rows = await listPersonaMessages(personaId, threads[0].id)
+      setYunbao(profile)
+      const threads = await listYunbaoThreads()
       if (!alive) return
-      setMessages(rows.map((row) => ({
-        id: row.id, role: row.role === 'user' ? 'user' : 'assistant', content: row.content,
-        contextLabel: `人格：${personas.find((p) => p.id === personaId)?.name || ''}`,
-      })))
-    }).catch(() => { if (alive) { setMessages([]); setPersonaThreadId('') } })
+      if (!threads.length) { setThreadId(''); setMessages([]); return }
+      setThreadId(threads[0].id)
+      const rows = await listYunbaoMessages(threads[0].id)
+      if (!alive) return
+      setMessages(rows.map((row) => {
+        const stateLabel = profile.states?.find((item) => item.key === row.meta?.state)?.label
+        return {
+          id: row.id, role: row.role === 'user' ? 'user' : 'assistant', content: row.content,
+          contextLabel: `云宝 · ${stateLabel || profile.current_state?.label || '当前常态'}`,
+        }
+      }))
+    }).catch(() => { if (alive) { setThreadId('') } })
     return () => { alive = false }
-  }, [open, personaId])
+  }, [open])
 
   useEffect(() => {
     if (!open) return
@@ -328,12 +329,22 @@ export default function AIAssistantPanel({ onNavigate, product = 'game' }: { onN
   const entity = state.entity
   const fieldCount = state.form?.fields.length || 0
 
+  const chooseState = async (next: YunbaoState) => {
+    if (!yunbao || next.key === yunbao.active_state || stateBusy) return
+    setStateBusy(next.key)
+    try {
+      const result = await switchYunbaoState(next.key)
+      setYunbao((prev) => prev ? { ...prev, current_state: result.state, active_state: result.active_state } : prev)
+    } catch (error: any) {
+      setMessages((prev) => [...prev, {
+        id: uid(), role: 'assistant', content: String(error?.message || '状态切换失败'), error: true,
+      }])
+    } finally { setStateBusy('') }
+  }
+
   const contextText = useMemo(() => {
-    if (personaId) {
-      const persona = personas.find((p) => p.id === personaId)
-      return `独立人格「${persona?.name || '个人 AI'}」 · 独立会话与记忆`
-    }
-    const bits = [pageLabel]
+    const bits = [`云宝${yunbao?.current_state ? ` · ${yunbao.current_state.label}` : ''}`]
+    bits.push(pageLabel)
     if (state.page.worldName) bits.push(state.page.worldName)
     if (entity?.name) {
       const typeLabel = ENTITY_LABELS[entity.type] || entity.type
@@ -341,22 +352,18 @@ export default function AIAssistantPanel({ onNavigate, product = 'game' }: { onN
     }
     if (fieldCount) bits.push(`${fieldCount} 个表单字段`)
     return bits.join(' · ')
-  }, [pageLabel, state.page.worldName, entity, fieldCount, personaId, personas])
+  }, [pageLabel, state.page.worldName, entity, fieldCount, yunbao?.current_state])
 
   const quickPrompts = useMemo(() => {
-    const prompts: string[] = []
-    if (personaId) {
-      return ['帮我整理一下今天的任务和优先级', '陪我梳理一下现在的状态', '用你的方式回答：我接下来该做什么？']
-    }
+    const prompts: string[] = ['帮我整理一下今天的任务和优先级', '陪我梳理一下现在的状态', `用「${yunbao?.current_state?.label || '云宝'}」的方式回答：我接下来该做什么？`]
     if (entity?.type === 'character') prompts.push('概括当前人物，并指出设定上的冲突')
     else if (entity?.type === 'story') prompts.push('分析当前章节的节奏，给我下一步建议')
     else if (entity?.type === 'event') prompts.push('帮我补全当前事件的因果与影响')
     else if (entity?.type === 'world') prompts.push('这个世界下一步可以发生什么')
     if (fieldCount) prompts.push('帮我根据当前页面设定补全这个表单')
     prompts.push('解释当前页面，告诉我下一步能做什么')
-    prompts.push('你能帮我做什么？')
     return Array.from(new Set(prompts)).slice(0, 3)
-  }, [entity, fieldCount, personaId])
+  }, [entity, fieldCount, yunbao?.current_state])
 
   const send = useCallback(
     async (preset?: string, options?: { hidden?: boolean; autoRun?: boolean; demo?: boolean }) => {
@@ -384,21 +391,6 @@ export default function AIAssistantPanel({ onNavigate, product = 'game' }: { onN
       setInput('')
       setSending(true)
       setUnread(false)
-      if (personaId) {
-        try {
-          const result = await chatWithPersona(personaId, text, personaThreadId || undefined)
-          setPersonaThreadId(result.thread_id)
-          setMessages((prev) => [...prev, {
-            id: uid(), role: 'assistant', content: result.reply,
-            contextLabel: `人格：${result.persona.name}`,
-          }])
-        } catch (error: any) {
-          setMessages((prev) => [...prev, {
-            id: uid(), role: 'assistant', content: String(error?.message || '人格对话失败'), error: true,
-          }])
-        } finally { setSending(false) }
-        return
-      }
       try {
         const settings = loadAiSettings()
         const headers: Record<string, string> = { 'Content-Type': 'application/json' }
@@ -428,11 +420,16 @@ export default function AIAssistantPanel({ onNavigate, product = 'game' }: { onN
               demo: Boolean(options?.demo),
               dom_targets: collectDemoTargets(),
             },
+            yunbao: { thread_id: threadId || null },
           }),
         })
         const data = await response.json().catch(() => ({}))
         if (!response.ok) {
           throw new Error(String(data?.detail || `请求失败（HTTP ${response.status}）`))
+        }
+        if (data.thread_id) setThreadId(String(data.thread_id))
+        if (data.yunbao?.state) {
+          setYunbao((prev) => prev ? { ...prev, current_state: data.yunbao.state, active_state: data.yunbao.state.key } : prev)
         }
         const reply = String(data.reply || '').trim()
         const actions = Array.isArray(data.actions) ? (data.actions as Action[]) : []
@@ -491,7 +488,7 @@ export default function AIAssistantPanel({ onNavigate, product = 'game' }: { onN
         setSending(false)
       }
     },
-    [input, lastSelection, messages, open, sending, personaId, personaThreadId]
+    [input, lastSelection, messages, open, sending, threadId]
   )
 
   const sendRef = useRef(send)
@@ -589,8 +586,9 @@ export default function AIAssistantPanel({ onNavigate, product = 'game' }: { onN
   const clearChat = () => {
     setMessages([])
     setApplied({})
+    setThreadId('')
     try {
-      sessionStorage.removeItem(storageKey(product))
+      sessionStorage.removeItem(storageKey('yunbao'))
     } catch {
       // ignore
     }
@@ -645,7 +643,7 @@ export default function AIAssistantPanel({ onNavigate, product = 'game' }: { onN
             setOpen(true)
             setUnread(false)
           }}
-          title="打开全局 AI 助手"
+          title="打开云宝"
           style={{
             ...shell,
             width: '56px',
@@ -663,7 +661,7 @@ export default function AIAssistantPanel({ onNavigate, product = 'game' }: { onN
             fontWeight: 700,
           }}
         >
-          ✦
+          ☁
           {unread && (
             <span
               style={{
@@ -699,40 +697,61 @@ export default function AIAssistantPanel({ onNavigate, product = 'game' }: { onN
           }}
         >
           <header style={{ padding: '14px 15px 12px', borderBottom: '1px solid var(--card-border)', display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-            <div style={{ width: '34px', height: '34px', borderRadius: '11px', background: 'var(--primary-color)', color: 'var(--primary-text)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '17px', flex: '0 0 auto' }}>
-              ✦
+            <div style={{ width: '34px', height: '34px', borderRadius: '11px', background: 'var(--primary-color)', color: 'var(--primary-text)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flex: '0 0 auto' }}>
+              {yunbao?.avatar || '☁'}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <strong style={{ fontSize: '14px', color: 'var(--text-main)' }}>{personaId ? (personas.find((p) => p.id === personaId)?.name || '个人 AI 人格') : '全局 AI 助手'}</strong>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <strong style={{ fontSize: '14px', color: 'var(--text-main)' }}>{yunbao?.name || '云宝'}</strong>
                 <span style={{ fontSize: '10px', color: 'var(--text-muted)', border: '1px solid var(--card-border)', borderRadius: '20px', padding: '1px 6px' }}>
-                  {personaId ? '独立人格 · 独立记忆' : '上下文已接入'}
+                  全局 AI · 三种常态
                 </span>
               </div>
-              {product === 'companion' && (
-                <select
-                  value={personaId}
-                  onChange={(event) => setPersonaId(event.target.value)}
-                  title="选择通用助手或某个个人 AI 人格"
-                  style={{ marginTop: 4, maxWidth: '100%', padding: '3px 5px', borderRadius: 6, border: '1px solid var(--card-border)', background: 'var(--bg-color)', color: 'var(--text-main)', fontSize: 10 }}
-                >
-                  <option value="">通用助手（页面上下文 / 工具）</option>
-                  {personas.map((persona) => (
-                    <option key={persona.id} value={persona.id}>人格：{persona.name}</option>
-                  ))}
-                </select>
-              )}
               <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '3px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={contextText}>
                 {contextText}
               </div>
             </div>
-            <button type="button" onClick={clearChat} title="清空对话" style={{ border: 'none', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '11px', padding: '4px' }}>
-              清空
+            <button
+              type="button"
+              onClick={() => { setOpen(false); onOpenYunbao?.() }}
+              title="在 03 人物管理中查看云宝人格"
+              style={{ border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-muted)', cursor: onOpenYunbao ? 'pointer' : 'default', fontSize: '10px', padding: '3px 6px', borderRadius: 6, whiteSpace: 'nowrap' }}
+            >
+              查看 AI 人格
+            </button>
+            <button type="button" onClick={clearChat} title="新对话（保留旧会话）" style={{ border: 'none', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '11px', padding: '4px' }}>
+              新对话
             </button>
             <button type="button" onClick={() => setOpen(false)} title="收起" style={{ border: 'none', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '20px', lineHeight: 1, padding: '0 2px' }}>
               ×
             </button>
           </header>
+
+          <div style={{ padding: '8px 14px', borderBottom: '1px solid var(--card-border)', display: 'flex', gap: 5, flexWrap: 'wrap', alignItems: 'center' }}>
+            <span style={{ fontSize: 9, color: 'var(--text-muted)', marginRight: 2 }}>当前常态</span>
+            {(yunbao?.states || []).map((item) => {
+              const active = item.key === yunbao?.active_state
+              return (
+                <button
+                  key={item.key}
+                  type="button"
+                  disabled={!yunbao || Boolean(stateBusy)}
+                  onClick={() => void chooseState(item)}
+                  title={item.description}
+                  style={{
+                    padding: '4px 7px', borderRadius: 12, cursor: yunbao ? 'pointer' : 'default',
+                    border: `1px solid ${active ? 'var(--primary-color)' : 'var(--card-border)'}`,
+                    background: active ? 'color-mix(in srgb, var(--primary-color) 12%, transparent)' : 'transparent',
+                    color: active ? 'var(--primary-color)' : 'var(--text-muted)', fontSize: 9.5,
+                    fontWeight: active ? 700 : 400,
+                  }}
+                >
+                  {stateBusy === item.key ? '切换中…' : item.label}
+                </button>
+              )
+            })}
+            {!yunbao && <span style={{ fontSize: 9.5, color: 'var(--text-muted)' }}>正在读取常态…</span>}
+          </div>
 
           {backendState === 'missing' && (
             <div style={{ margin: '10px 14px 0', padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--danger-color)', color: 'var(--danger-color)', fontSize: '11px', lineHeight: 1.6 }}>
@@ -749,7 +768,7 @@ export default function AIAssistantPanel({ onNavigate, product = 'game' }: { onN
             {messages.length === 0 && (
               <div style={{ padding: '4px 2px' }}>
                 <div style={{ fontSize: '13px', lineHeight: 1.7, color: 'var(--text-main)' }}>
-                  我在。当前是 <strong>{pageLabel}</strong>
+                  我是云宝。当前是 <strong>{pageLabel}</strong>
                   {state.page.worldName ? ` · ${state.page.worldName}` : ''}。可以正常聊天，也可以让我：
                 </div>
                 <div style={{ marginTop: '8px', fontSize: '12px', lineHeight: 1.8, color: 'var(--text-muted)' }}>

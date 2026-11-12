@@ -7,7 +7,7 @@ export async function fetchProductMatrix(): Promise<ProductMatrix> {
     const res = await fetch(`${API_ORIGIN}/api/products/config`)
     if (!res.ok) return FALLBACK_MATRIX
     const data = await res.json()
-    if (!Array.isArray(data?.products) || data.products.length !== 4) return FALLBACK_MATRIX
+    if (!Array.isArray(data?.products) || data.products.length !== 5) return FALLBACK_MATRIX
     return data as ProductMatrix
   } catch {
     return FALLBACK_MATRIX
@@ -15,6 +15,11 @@ export async function fetchProductMatrix(): Promise<ProductMatrix> {
 }
 
 export async function ensureProductWorkspace(product: ProductKey): Promise<any> {
+  // 云宝领域是全局共享空间：只读访客先读取，不重复创建。
+  if (product === 'yunbao') {
+    const existing = await fetchProductWorkspace(product)
+    if (existing) return existing
+  }
   const res = await fetch(`${API_ORIGIN}/api/products/${product}/workspace`, { method: 'POST' })
   const body = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(body.detail || `工作空间创建失败（HTTP ${res.status}）`)

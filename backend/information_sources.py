@@ -8,15 +8,15 @@ from __future__ import annotations
 
 from datetime import datetime, date
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 import models
 import product_config as pc
+from auth import current_user
 from database import get_db
 
 router = APIRouter(tags=["information-sources"])
-OWNER = "local"
 
 SOURCE_TYPES = {
     "self_memory": "本人回忆",
@@ -98,6 +98,7 @@ def presets():
 
 @router.get("/api/information-sources")
 def list_sources(
+    request: Request,
     product: str = "diary",
     character_id: str = "",
     event_id: str = "",
@@ -105,9 +106,10 @@ def list_sources(
     status: str = "",
     db: Session = Depends(get_db),
 ):
+    user = current_user(request, db)
     product = _check_product(product)
     query = db.query(models.InformationSource).filter(
-        models.InformationSource.owner_user_id == OWNER,
+        models.InformationSource.owner_user_id == user.id,
         models.InformationSource.product_key == product,
     )
     if character_id:
@@ -123,7 +125,8 @@ def list_sources(
 
 
 @router.post("/api/information-sources")
-def create_source(payload: dict, db: Session = Depends(get_db)):
+def create_source(payload: dict, request: Request, db: Session = Depends(get_db)):
+    user = current_user(request, db)
     product = _check_product(str(payload.get("product_key") or "diary").strip().lower())
     source_type = str(payload.get("source_type") or "self_memory")
     if source_type not in SOURCE_TYPES:
@@ -156,7 +159,7 @@ def create_source(payload: dict, db: Session = Depends(get_db)):
     except (TypeError, ValueError):
         confidence = 0.5
     row = models.InformationSource(
-        owner_user_id=OWNER,
+        owner_user_id=user.id,
         product_key=product,
         world_id=world_id,
         character_id=character_id,
@@ -177,10 +180,11 @@ def create_source(payload: dict, db: Session = Depends(get_db)):
 
 
 @router.patch("/api/information-sources/{source_id}")
-def update_source(source_id: str, payload: dict, db: Session = Depends(get_db)):
+def update_source(source_id: str, payload: dict, request: Request, db: Session = Depends(get_db)):
+    user = current_user(request, db)
     row = db.query(models.InformationSource).filter(
         models.InformationSource.id == source_id,
-        models.InformationSource.owner_user_id == OWNER,
+        models.InformationSource.owner_user_id == user.id,
     ).first()
     if not row:
         _fail(404, "信息来源不存在")
@@ -224,11 +228,12 @@ def update_source(source_id: str, payload: dict, db: Session = Depends(get_db)):
 
 
 @router.post("/api/information-sources/{source_id}/confirm")
-def confirm_source(source_id: str, db: Session = Depends(get_db)):
+def confirm_source(source_id: str, request: Request, db: Session = Depends(get_db)):
     """用户显式确认 AI 推断（唯一允许把推断转为事实的入口）。"""
+    user = current_user(request, db)
     row = db.query(models.InformationSource).filter(
         models.InformationSource.id == source_id,
-        models.InformationSource.owner_user_id == OWNER,
+        models.InformationSource.owner_user_id == user.id,
     ).first()
     if not row:
         _fail(404, "信息来源不存在")
@@ -241,10 +246,11 @@ def confirm_source(source_id: str, db: Session = Depends(get_db)):
 
 
 @router.delete("/api/information-sources/{source_id}")
-def delete_source(source_id: str, db: Session = Depends(get_db)):
+def delete_source(source_id: str, request: Request, db: Session = Depends(get_db)):
+    user = current_user(request, db)
     row = db.query(models.InformationSource).filter(
         models.InformationSource.id == source_id,
-        models.InformationSource.owner_user_id == OWNER,
+        models.InformationSource.owner_user_id == user.id,
     ).first()
     if not row:
         _fail(404, "信息来源不存在")

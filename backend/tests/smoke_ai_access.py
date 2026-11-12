@@ -59,9 +59,18 @@ def main():
 
     bogus = {"X-AI-API-Key": "sk-invalid-for-smoke", "X-AI-Base-URL": "https://api.siliconflow.cn/v1"}
     code, worlds = call("/worlds")
-    world_id = next((w["id"] for w in worlds if not w.get("archived_at")), None) if isinstance(worlds, list) else None
-    code, events = call(f"/events?world_id={world_id}") if world_id else (0, [])
-    event_id = next((e["id"] for e in events if not e.get("branch_id")), None) if isinstance(events, list) else None
+    world_id = None
+    event_id = None
+    if isinstance(worlds, list):
+        # 云宝工作空间可能排在列表前面且没有事件；选择第一个有事件的世界。
+        for world in worlds:
+            if world.get("archived_at"):
+                continue
+            _, events = call(f"/events?world_id={world['id']}")
+            candidate = next((e["id"] for e in events if not e.get("branch_id")), None) if isinstance(events, list) else None
+            if candidate:
+                world_id, event_id = world["id"], candidate
+                break
     if event_id:
         code, body = call("/simulate", bogus, {"event_id": event_id}, "POST")
         check("07 AI 失败统一返回 502", code == 502, str(body))

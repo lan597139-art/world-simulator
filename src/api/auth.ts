@@ -1,7 +1,7 @@
 import { API_ORIGIN } from './config'
 import { AUTH_TOKEN_KEY, AUTH_USER_KEY } from './authToken'
 
-export type AuthUser = { id: string; username: string; display_name: string; created_at?: string | null }
+export type AuthUser = { id: string; username: string; display_name: string; is_owner?: boolean; bio?: string; avatar?: string; created_at?: string | null }
 export type AuthStatus = { setup_required: boolean; authenticated: boolean; user: AuthUser | null; auth_disabled: boolean; setup_token_required?: boolean }
 
 const BASE = `${API_ORIGIN}/api`

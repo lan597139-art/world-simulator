@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react' 
+import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import './App.css'
+import './styles/creation-center.css'
 import WorldsPage from './pages/WorldsPage'
 import WorldBuildingPage from './pages/WorldBuildingPage'
 import CharacterListPage from './pages/CharacterListPage' 
@@ -20,21 +22,49 @@ import WorldDataPage from './pages/WorldDataPage'
 import WorldStructurePage from './pages/WorldStructurePage'
 import ArchivePage from './pages/ArchivePage'
 import TrashPage from './pages/TrashPage'
-import DiaryPage from './pages/DiaryPage'
-import { authLogout } from './api/auth'
+import JournalPage from './pages/JournalPage'
+import { authLogout, type AuthUser } from './api/auth'
+import { AUTH_USER_KEY } from './api/authToken'
 import TimeMachinePage from './pages/TimeMachinePage'
 import AIAssistantPanel from './components/AIAssistantPanel'
 import { setAssistantPage } from './api/assistantContext'
-import ProductSwitcher from './components/ProductSwitcher'
 import PersonaPage from './pages/PersonaPage'
+import YunbaoWorkspacePage from './pages/YunbaoWorkspacePage'
+import YunbaoSeedPage from './pages/YunbaoSeedPage'
 import MemoryPage from './pages/MemoryPage'
 import CompanionRuntimePage from './pages/CompanionRuntimePage'
 import InformationSourcesPage from './pages/InformationSourcesPage'
+import CreationCenterPage, { type CreationAssetKey, type CreationToolKey } from './pages/CreationCenterPage'
+import CreationCenterSidebar, { type HomeNavTarget } from './components/creation-center/CreationCenterSidebar'
+import CreationCenterTopbar from './components/creation-center/CreationCenterTopbar'
+import ProductWorkspaceNav from './components/workspace/ProductWorkspaceNav'
+import ProductWorkspaceHome from './pages/ProductWorkspaceHome'
+import UserCenterPage, { type UserAssetTarget } from './pages/UserCenterPage'
+import CommunityPage from './pages/CommunityPage'
+import CommunitySocialPage from './pages/CommunitySocialPage'
+import AICenterPage from './pages/AICenterPage'
+import GameCenterPage from './pages/GameCenterPage'
+import ContentStorePage from './pages/ContentStorePage'
+import SettingsPage from './pages/SettingsPage'
+import BillingCenterPage from './pages/BillingCenterPage'
+import { getSettings } from './api/settings'
+import { applyExperience } from './utils/experience'
 import { ensureProductWorkspace, fetchProductMatrix } from './api/productConfig'
 import { FALLBACK_MATRIX, getStoredProduct, productByKey, storeProduct } from './product/products'
 import type { ProductConfig, ProductKey, ProductMatrix } from './product/types'
 
 type PageKey = 
+  | 'home'
+  | 'user-center'
+  | 'community'
+  | 'settings'
+  | 'community-social'
+  | 'business'
+  | 'ai-center'
+  | 'game-center'
+  | 'content-store'
+  | 'yunbao'
+  | 'workspace-home'
   | 'overview' 
   | 'world-management' 
   | 'character-management' 
@@ -54,6 +84,7 @@ type PageKey =
   | 'time-machine'
   | 'diary'
   | 'personas'
+  | 'yunbao-seed'
   | 'memories'
   | 'companion-runtime'
   | 'information-sources'
@@ -91,6 +122,11 @@ export const t = {
 
 function pageLabel(key: PageKey, dict: Record<string, string>): string {
   const map: Partial<Record<PageKey, string>> = {
+    'user-center': '用户与身份中心 / 个人管理',
+    community: '内容社区 / 发现',
+    'ai-center': 'AI 互动中心 / 角色与关系',
+    'game-center': '游戏体验中心 / 剧情与探索',
+    'content-store': '内容商城 / 资产与授权',
     overview: dict.overview,
     'world-building': dict.worldBuilding,
     'world-structure': dict.worldStructure || '世界结构',
@@ -107,39 +143,73 @@ function pageLabel(key: PageKey, dict: Record<string, string>): string {
     'archive': '归档库',
     'trash': '回收站',
     'time-machine': '时光机',
-    personas: '个人 AI 人格',
+    personas: '云宝人格',
+    'yunbao-seed': '人物种子编辑器',
+    settings: '设置中心',
+    'community-social': '社区社交',
+    business: '商业与服务中心',
+    yunbao: '云宝工作台',
     memories: '记忆管理',
     'companion-runtime': '人格运行',
     'information-sources': '信息来源管理',
     diary: '日记与传记',
+    'workspace-home': '工作区总览',
   }
   return map[key] || dict[key] || key
 }
 
 const initialParams = new URLSearchParams(window.location.search)
 const initialWorldId = initialParams.get('world') || sessionStorage.getItem('ws.worldId') || ''
-const initialPage = (initialParams.get('page') as PageKey) || 'overview'
 const initialProduct = getStoredProduct()
+const hasWorkbenchLink = ['product', 'page', 'world'].some((key) => initialParams.has(key))
+const WORKSPACE_PRODUCTS: ProductKey[] = ['game', 'literature', 'companion', 'diary', 'yunbao']
+const usesWorkspaceShell = (key: ProductKey) => WORKSPACE_PRODUCTS.includes(key)
+const fallbackProductConfig = productByKey(FALLBACK_MATRIX.products, initialProduct)
+const fallbackHome = (usesWorkspaceShell(initialProduct) ? 'workspace-home' : fallbackProductConfig.home) as PageKey
+const SIDEBAR_COLLAPSED_KEY = 'ws.sidebarCollapsed'
+
+const initialPage: PageKey = hasWorkbenchLink
+  ? ((initialParams.get('page') as PageKey) || fallbackHome)
+  : 'home'
 const WORLD_FREE_PAGES: PageKey[] = [
-  'overview', 'world-management', 'world-building', 'diary', 'archive', 'trash',
-  'information-sources', 'personas', 'memories', 'companion-runtime',
+  'home', 'user-center', 'community', 'community-social', 'business', 'settings', 'ai-center', 'game-center', 'content-store', 'workspace-home', 'overview', 'world-management', 'world-building', 'diary', 'archive', 'trash',
+  'information-sources', 'personas', 'yunbao-seed', 'memories', 'companion-runtime', 'yunbao',
 ]
+
+function isGlobalPage(page: PageKey): boolean {
+  return page === 'home' || page === 'user-center' || page === 'community' || page === 'community-social' || page === 'business' || page === 'settings' || page === 'ai-center' || page === 'game-center' || page === 'content-store'
+}
+
+function readStoredAuthUser(): AuthUser | null {
+  try {
+    const raw = localStorage.getItem(AUTH_USER_KEY)
+    return raw ? JSON.parse(raw) as AuthUser : null
+  } catch {
+    return null
+  }
+}
 
 export default function App() {
   const [activePage, setActivePage] = useState<PageKey>(
-    !initialWorldId && !WORLD_FREE_PAGES.includes(initialPage) ? 'overview' : initialPage
+    !initialWorldId && !WORLD_FREE_PAGES.includes(initialPage) ? fallbackHome : initialPage
   )
   const [product, setProduct] = useState<ProductKey>(initialProduct)
+  useEffect(() => {
+    if (product === 'yunbao') sessionStorage.setItem('ws.yunbaoWorkspace', '1')
+    else sessionStorage.removeItem('ws.yunbaoWorkspace')
+  }, [product])
   const [productMatrix, setProductMatrix] = useState<ProductMatrix>(FALLBACK_MATRIX)
   const [productError, setProductError] = useState('')
   const productConfig = productByKey(productMatrix.products, product)
   const [selectedWorldId, setSelectedWorldId] = useState<string | null>(null) // 用于建设页
+  const [creatingWorld, setCreatingWorld] = useState(false)
   const [lang, setLang] = useState<Language>('zh')
   const dict = t[lang]
 
   // ✅ 核心状态：当前所在的世界
   const [currentWorldId, setCurrentWorldId] = useState<string>(initialWorldId)
   const [focusCharacterId, setFocusCharacterId] = useState<string | null>(null)
+  const [focusYunbao, setFocusYunbao] = useState(false)
   const [writingSeedEventIds, setWritingSeedEventIds] = useState<string[]>([])
   const [currentWorldName, setCurrentWorldName] = useState<string>(
     () => sessionStorage.getItem('ws.worldName') || ""
@@ -149,7 +219,27 @@ export default function App() {
   const [aiAccessOpen, setAiAccessOpen] = useState(false)
   const [hasPersonalAi, setHasPersonalAi] = useState(() => hasPersonalAiKey())
   const [navStack, setNavStack] = useState<PageKey[]>([])
+  const [authUser, setAuthUser] = useState<AuthUser | null>(readStoredAuthUser)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try { return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1' } catch { return false }
+  })
+
+  useEffect(() => {
+    try { localStorage.setItem(SIDEBAR_COLLAPSED_KEY, sidebarCollapsed ? '1' : '0') } catch { /* ignore */ }
+  }, [sidebarCollapsed])
   const activePageRef = useRef(activePage)
+
+  useEffect(() => {
+    let alive = true
+    void getSettings()
+      .then((settings) => {
+        if (!alive) return
+        applyExperience(settings.preferences)
+        if (settings.preferences.language !== lang) setLang(settings.preferences.language)
+      })
+      .catch(() => { /* 设置读取失败不阻塞工作区 */ })
+    return () => { alive = false }
+  }, [authUser?.id])
 
   useEffect(() => {
     activePageRef.current = activePage
@@ -170,7 +260,7 @@ export default function App() {
 
   const goBack = () => {
     if (navStack.length === 0) {
-      setActivePage(currentWorldId ? 'world-management' : 'overview')
+      setActivePage('home')
       return
     }
     const next = navStack[navStack.length - 1]
@@ -202,22 +292,199 @@ export default function App() {
   }
 
   const switchProduct = async (nextKey: ProductKey) => {
-    if (nextKey === product) return
     const next = productByKey(productMatrix.products, nextKey)
     setProductError('')
     storeProduct(nextKey)
+    if (nextKey === 'yunbao') sessionStorage.setItem('ws.yunbaoWorkspace', '1')
+    else sessionStorage.removeItem('ws.yunbaoWorkspace')
     setProduct(nextKey)
     setNavStack([])
+    setCreatingWorld(false)
+    setFocusCharacterId(null)
+    setFocusYunbao(false)
     setWritingSeedEventIds([])
     const current = allWorldsList.find((item) => item.id === currentWorldId)
-    if (current && current.product_scene !== nextKey) clearProductWorld()
-    setActivePage(next.home as PageKey)
+    if (currentWorldId && (!current || current.product_scene !== nextKey)) clearProductWorld()
+    setActivePage(usesWorkspaceShell(nextKey) ? 'workspace-home' : next.home as PageKey)
     // 自动工作空间由下方 effect 统一创建，避免切换时重复 POST。
+  }
+
+  const openProductPage = (nextKey: ProductKey, page: PageKey) => {
+    const next = productByKey(productMatrix.products, nextKey)
+    setProductError('')
+    storeProduct(nextKey)
+    if (nextKey === 'yunbao') sessionStorage.setItem('ws.yunbaoWorkspace', '1')
+    else sessionStorage.removeItem('ws.yunbaoWorkspace')
+    setProduct(nextKey)
+    setNavStack([])
+    setCreatingWorld(false)
+    setFocusCharacterId(null)
+    setFocusYunbao(false)
+    setWritingSeedEventIds([])
+    const current = allWorldsList.find((item) => item.id === currentWorldId)
+    if (currentWorldId && (!current || current.product_scene !== nextKey)) clearProductWorld()
+    if (page === 'workspace-home' && usesWorkspaceShell(nextKey)) setActivePage('workspace-home')
+    else if (next.allowed_modules.includes(page)) setActivePage(page)
+  }
+
+  const handleHomeNav = (target: HomeNavTarget) => {
+    if (target === 'home') {
+      if (activePage !== 'home') {
+        setNavStack([])
+        setActivePage('home')
+        window.setTimeout(() => document.querySelector('.cc-page-scroll')?.scrollTo({ top: 0 }), 0)
+        return
+      }
+      document.querySelector('.cc-page-scroll')?.scrollTo({ top: 0, behavior: 'smooth' })
+      return
+    }
+    if (target === 'settings') {
+      setNavStack([])
+      setActivePage('settings')
+      window.setTimeout(() => document.querySelector('.cc-page-scroll')?.scrollTo({ top: 0 }), 0)
+      return
+    }
+    if (target === 'identity') {
+      setNavStack([])
+      setFocusCharacterId(null)
+      setFocusYunbao(false)
+      setActivePage('user-center')
+      window.setTimeout(() => document.querySelector('.cc-page-scroll')?.scrollTo({ top: 0 }), 0)
+      return
+    }
+    if (target === 'community') {
+      setNavStack([])
+      setFocusCharacterId(null)
+      setFocusYunbao(false)
+      setActivePage('community')
+      window.setTimeout(() => document.querySelector('.cc-page-scroll')?.scrollTo({ top: 0 }), 0)
+      return
+    }
+    if (target === 'community-social') {
+      setNavStack([])
+      setFocusCharacterId(null)
+      setFocusYunbao(false)
+      setActivePage('community-social')
+      window.setTimeout(() => document.querySelector('.cc-page-scroll')?.scrollTo({ top: 0 }), 0)
+      return
+    }
+    if (target === 'business') {
+      setNavStack([])
+      setFocusCharacterId(null)
+      setFocusYunbao(false)
+      setActivePage('business')
+      window.setTimeout(() => document.querySelector('.cc-page-scroll')?.scrollTo({ top: 0 }), 0)
+      return
+    }
+    if (target === 'ai-interaction') {
+      setNavStack([])
+      setFocusCharacterId(null)
+      setFocusYunbao(false)
+      setActivePage('ai-center')
+      window.setTimeout(() => document.querySelector('.cc-page-scroll')?.scrollTo({ top: 0 }), 0)
+      return
+    }
+    if (target === 'game-experience') {
+      setNavStack([])
+      setFocusCharacterId(null)
+      setFocusYunbao(false)
+      setActivePage('game-center')
+      window.setTimeout(() => document.querySelector('.cc-page-scroll')?.scrollTo({ top: 0 }), 0)
+      return
+    }
+    if (target === 'content-store') {
+      setNavStack([])
+      setFocusCharacterId(null)
+      setFocusYunbao(false)
+      setActivePage('content-store')
+      window.setTimeout(() => document.querySelector('.cc-page-scroll')?.scrollTo({ top: 0 }), 0)
+      return
+    }
+    if (target === 'yunbao') {
+      openYunbao()
+      return
+    }
+    openProductPage('game', 'archive')
+  }
+
+  const handleOpenTool = (page: CreationToolKey) => {
+    openProductPage('game', page as PageKey)
+  }
+
+  const handleOpenAsset = (asset: CreationAssetKey) => {
+    if (asset === 'worlds') openProductPage('game', 'world-management')
+    else if (asset === 'characters') openProductPage('game', 'character-management')
+    else openProductPage('game', 'writing')
+  }
+
+  const ensureAssetWorld = (): boolean => {
+    const current = allWorldsList.find((world) => world.id === currentWorldId)
+    if (current && current.product_scene === 'game' && !current.is_product_workspace) return true
+    const firstWorld = allWorldsList.find((world) => world.product_scene === 'game' && !world.is_product_workspace) || allWorldsList.find((world) => !world.is_product_workspace) || allWorldsList[0]
+    if (!firstWorld) return false
+    storeProduct('game')
+    setProduct('game')
+    applyProductWorld(firstWorld)
+    return true
+  }
+
+  const handleOpenUserAsset = (target: UserAssetTarget) => {
+    if (target === 'worlds') {
+      openProductPage('game', 'world-management')
+      return
+    }
+    // 作品、人物与剧情都属于具体工作台；未选世界时先进入首个真实世界，避免被路由守卫打回世界管理。
+    if (!ensureAssetWorld()) {
+      openProductPage('game', 'world-management')
+      return
+    }
+    openProductPage('game', target === 'works' ? 'writing' : target === 'characters' ? 'character-management' : 'storyline')
+  }
+
+  const handleUserUpdated = (nextUser: AuthUser) => {
+    setAuthUser(nextUser)
+    localStorage.setItem(AUTH_USER_KEY, JSON.stringify(nextUser))
+  }
+
+  const openYunbao = () => {
+    // 云宝已从 AI 伴侣产品迁出，是独立的全局专业工作台。
+    setFocusCharacterId(null)
+    setFocusYunbao(false)
+    openProductPage('yunbao', 'workspace-home')
+  }
+
+  const openCenterChat = (worldId: string, characterId?: string) => {
+    if (characterId) sessionStorage.setItem('ws.chatCharacterId', characterId)
+    else sessionStorage.removeItem('ws.chatCharacterId')
+    const world = allWorldsList.find((item) => item.id === worldId) ||
+      allWorldsList.find((item) => item.product_scene === 'game' && !item.is_product_workspace) ||
+      allWorldsList[0]
+    const nextProduct = ((world?.product_scene || 'game') as ProductKey)
+    openProductPage(nextProduct, 'chat')
+    if (world) {
+      storeProduct(nextProduct)
+      setProduct(nextProduct)
+      applyProductWorld(world)
+      setActivePage('chat')
+    }
+  }
+
+  const openCenterGamePage = (page: PageKey) => {
+    const world = allWorldsList.find((item) => item.id === currentWorldId && item.product_scene === 'game' && !item.is_product_workspace) ||
+      allWorldsList.find((item) => item.product_scene === 'game' && !item.is_product_workspace) ||
+      allWorldsList[0]
+    openProductPage('game', page)
+    if (world) {
+      storeProduct('game')
+      setProduct('game')
+      applyProductWorld(world)
+      setActivePage(page)
+    }
   }
 
   // 伴侣/日记产品没有世界管理：首次进入自动准备隐藏工作空间，不让用户配置世界。
   useEffect(() => {
-    if (!productConfig.auto_workspace) return
+    if (isGlobalPage(activePage) || !productConfig.auto_workspace) return
     const current = allWorldsList.find((item) => item.id === currentWorldId)
     if (current && current.product_scene === product) return
     let cancelled = false
@@ -227,25 +494,36 @@ export default function App() {
       if (!cancelled) setProductError(error?.message || `${productConfig.label}工作空间创建失败`)
     })
     return () => { cancelled = true }
-  }, [product, productConfig.auto_workspace, allWorldsList.length])
+  }, [product, productConfig.auto_workspace, allWorldsList.length, activePage])
+
+  // 云宝是开发者私有工作台；非所有者不能通过 URL 进入。
+  useEffect(() => {
+    if (product !== 'yunbao' || !authUser || authUser.is_owner) return
+    setProductError('云宝工作台仅限开发者访问')
+    setProduct('game')
+    setActivePage('home')
+  }, [product, authUser])
 
   // 产品级路由守卫：未开放模块不可通过 URL、快捷键或遗留入口直接进入。
   useEffect(() => {
+    if (isGlobalPage(activePage)) return
+    if (activePage === 'workspace-home' && usesWorkspaceShell(product)) return
     if (!productConfig.allowed_modules.includes(activePage)) {
-      setActivePage(productConfig.home as PageKey)
+      setActivePage(usesWorkspaceShell(product) ? 'workspace-home' : productConfig.home as PageKey)
       return
     }
     if (!WORLD_FREE_PAGES.includes(activePage) && !currentWorldId) {
-      setActivePage(productConfig.permissions.world_management ? 'world-management' : (productConfig.home as PageKey))
+      setActivePage(productConfig.permissions.world_management ? 'world-management' : (usesWorkspaceShell(product) ? 'workspace-home' : productConfig.home as PageKey))
     }
   }, [product, productConfig, activePage, currentWorldId])
 
   useEffect(() => {
+    if (isGlobalPage(activePage)) return
     if (productConfig.auto_workspace && !currentWorldId) {
       // 防止空白：正在创建工作空间时显示产品首页的空状态，而不是通用世界页。
-      if (activePage === 'world-management') setActivePage(productConfig.home as PageKey)
+      if (activePage === 'world-management') setActivePage(usesWorkspaceShell(product) ? 'workspace-home' : productConfig.home as PageKey)
     }
-  }, [productConfig, currentWorldId, activePage])
+  }, [product, productConfig, currentWorldId, activePage])
 
   // 全局 AI 助手：路由切换时同步页面上下文，助手面板统一读取。
   useEffect(() => {
@@ -258,6 +536,14 @@ export default function App() {
   }, [activePage, currentWorldId, currentWorldName, lang])
 
   useEffect(() => {
+    if (activePage === 'home') {
+      window.history.replaceState(null, '', window.location.pathname)
+      return
+    }
+    if (activePage === 'user-center' || activePage === 'community' || activePage === 'community-social' || activePage === 'business' || activePage === 'settings' || activePage === 'ai-center' || activePage === 'game-center' || activePage === 'content-store') {
+      window.history.replaceState(null, '', `${window.location.pathname}?page=${activePage}`)
+      return
+    }
     const params = new URLSearchParams()
     params.set('product', product)
     if (currentWorldId) params.set('world', currentWorldId)
@@ -318,7 +604,7 @@ export default function App() {
     sessionStorage.removeItem('ws.worldName');
     window.history.replaceState(null, '', window.location.pathname);
     setNavStack([]);
-    setActivePage((productConfig.auto_workspace ? productConfig.home : 'world-management') as PageKey);
+    setActivePage(usesWorkspaceShell(product) ? 'workspace-home' : (productConfig.auto_workspace ? productConfig.home : 'world-management') as PageKey);
   }
   const navIcons: Record<string, string> = {
     overview: '◫', 'world-management': '◎', 'character-management': '♙', chat: '✉',
@@ -337,61 +623,136 @@ export default function App() {
       })),
     }))
 
+  const isHome = activePage === 'home'
+  const isUserCenter = activePage === 'user-center'
+  const isCommunity = activePage === 'community'
+  const isAiCenter = activePage === 'ai-center'
+  const isGameCenter = activePage === 'game-center'
+  const isContentStore = activePage === 'content-store'
+  const isSettings = activePage === 'settings'
+  const isCommunitySocial = activePage === 'community-social'
+  const isBusiness = activePage === 'business'
+  const isGlobalShell = isHome || isUserCenter || isCommunity || isCommunitySocial || isBusiness || isSettings || isAiCenter || isGameCenter || isContentStore
+  const isProductWorkspace = !isGlobalShell && usesWorkspaceShell(product)
+
   return (
     <div className="app-shell" style={{ display: 'flex', height: '100vh', overflow: 'hidden', backgroundColor: 'var(--bg-color)' }}>
       
-      <aside className="sidebar" style={{ width: '260px', height: '100%', backgroundColor: 'var(--sidebar-bg)', backdropFilter: 'blur(40px) saturate(180%)', borderRight: '1px solid var(--card-border)', display: 'flex', flexDirection: 'column' }}>
+      {(isGlobalShell || isProductWorkspace) && (
+        <CreationCenterSidebar
+          lang={lang}
+          active={isUserCenter ? 'identity' : isCommunity ? 'community' : isCommunitySocial ? 'community-social' : isBusiness ? 'business' : isAiCenter ? 'ai-interaction' : isGameCenter ? 'game-experience' : isContentStore ? 'content-store' : 'home'}
+          onNavigate={handleHomeNav}
+          onToggleLang={() => setLang(lang === 'zh' ? 'en' : 'zh')}
+          onCollapse={() => setSidebarCollapsed(true)}
+          collapsed={sidebarCollapsed}
+          canAccessYunbao={Boolean(authUser?.is_owner)}
+        />
+      )}
+
+      <aside className={`sidebar${sidebarCollapsed ? ' is-collapsed' : ''}`} style={{ width: sidebarCollapsed ? 0 : 260, height: '100%', padding: sidebarCollapsed ? 0 : undefined, minWidth: 0, overflow: 'hidden', backgroundColor: 'var(--sidebar-bg)', backdropFilter: 'blur(40px) saturate(180%)', borderRight: sidebarCollapsed ? 'none' : '1px solid var(--card-border)', display: isGlobalShell || isProductWorkspace ? 'none' : 'flex', flexDirection: 'column' }}>
         
         <div className="brand" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div className="brand-mark" style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'var(--sidebar-text)', color: 'var(--sidebar-bg)', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 'bold', fontSize: '20px' }}>W</div>
           <div className="brand-text" style={{ display: 'flex', flexDirection: 'column' }}>
             <strong style={{ fontSize: '16px', color: 'var(--sidebar-text)' }}>{lang === 'zh' ? '世界模拟器' : 'World Sim'}</strong>
-            <span style={{ fontSize: '10px', color: 'var(--sidebar-text-muted)', textTransform: 'uppercase' }}>World Simulator</span>
+            <span style={{ fontSize: '10px', color: 'var(--sidebar-text-muted)', textTransform: 'uppercase' }}>{isHome ? 'Choose Product' : 'World Simulator'}</span>
           </div>
+          <button
+            type="button"
+            className="sidebar-collapse"
+            onClick={() => setSidebarCollapsed(true)}
+            title={lang === 'zh' ? '收起侧边栏' : 'Collapse sidebar'}
+            aria-label={lang === 'zh' ? '收起侧边栏' : 'Collapse sidebar'}
+          >
+            <PanelLeftClose size={16} strokeWidth={1.7} aria-hidden="true" />
+          </button>
         </div>
 
-        <div style={{ padding: '0 1rem', marginBottom: '0.8rem' }}>
-          <ProductSwitcher product={productConfig} configs={productMatrix.products} onSelect={(key) => void switchProduct(key)} />
-          {productError && <div style={{ marginTop: 6, fontSize: 9.5, color: 'var(--danger-color)', lineHeight: 1.5 }}>{productError}</div>}
-        </div>
-
-        {/* 隐藏产品工作空间不允许退出；普通世界可返回书架 */}
-        {currentWorldId && !productConfig.auto_workspace && (
-          <div style={{ padding: '0 1rem', marginBottom: '1rem' }}>
-            <button onClick={handleExitWorld} style={{ width: '100%', padding: '10px', background: 'rgba(128,128,128,0.1)', color: 'var(--text-main)', border: '1px solid var(--card-border)', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', textAlign: 'left', display: 'flex', gap: '8px' }}>
-              <span>←</span> 退出当前世界
-            </button>
-          </div>
-        )}
-        
-        <nav className="navigation" style={{ flex: 1, overflowY: 'auto', padding: '0 1rem' }}>
-          {navigation.map((group) => (
-            <div className="nav-group" key={group.title} style={{ marginBottom: '1.5rem' }}>
-              <div className="nav-group-title" style={{ fontSize: '11px', color: 'var(--sidebar-text-muted)', marginBottom: '0.5rem', paddingLeft: '0.5rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{group.title}</div>
-              {group.items.map((item) => (
-              <button 
-                key={item.key} 
-                onClick={() => {
-                  setWritingSeedEventIds([])
-                  navigate(item.key)
-                }}
-                style={{ 
-                  width: '100%', display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', 
-                  background: activePage === item.key ? 'rgba(128, 128, 128, 0.15)' : 'transparent', 
-                  color: activePage === item.key ? 'var(--sidebar-text)' : 'var(--sidebar-text-muted)', 
-                  border: activePage === item.key ? '1px solid rgba(128, 128, 128, 0.2)' : '1px solid transparent', 
-                  borderRadius: '8px', cursor: 'pointer', marginBottom: '4px', textAlign: 'left',
-                  transition: 'all 0.2s ease', fontWeight: activePage === item.key ? 600 : 400
+        {isHome ? (
+          <nav className="navigation" style={{ flex: 1, overflowY: 'auto', padding: '0 1rem' }}>
+            <div style={{ fontSize: 10, letterSpacing: '0.12em', color: 'var(--sidebar-text-muted)', padding: '0 0.5rem 10px' }}>四大创作产品</div>
+            {productMatrix.products.filter((item) => item.key !== 'yunbao').map((item) => (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => void switchProduct(item.key)}
+                className="home-product-link"
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'flex-start', gap: 11,
+                  padding: '12px 11px', marginBottom: 6, borderRadius: 10,
+                  border: '1px solid transparent', background: 'transparent',
+                  color: 'var(--sidebar-text)', textAlign: 'left', cursor: 'pointer',
+                  transition: 'background 160ms ease',
                 }}
               >
-                <span className="nav-icon">{item.icon}</span>
-                <span>{item.label}</span>
+                <span style={{ fontSize: 19, lineHeight: 1.3 }}>{item.icon}</span>
+                <span style={{ minWidth: 0 }}>
+                  <strong style={{ display: 'block', fontSize: 13 }}>{item.label}</strong>
+                  <span style={{ display: 'block', marginTop: 3, fontSize: 9.5, lineHeight: 1.55, color: 'var(--sidebar-text-muted)' }}>{item.description}</span>
+                </span>
               </button>
-              ))}
+            ))}
+          </nav>
+        ) : (
+          <>
+            <div style={{ padding: '0 1rem', marginBottom: '0.75rem' }}>
+              <button
+                type="button"
+                onClick={() => { setNavStack([]); setActivePage('home') }}
+                style={{ width: '100%', padding: '8px 10px', background: 'rgba(128,128,128,0.07)', color: 'var(--text-main)', border: '1px solid var(--card-border)', borderRadius: 8, cursor: 'pointer', fontSize: 11, textAlign: 'left', display: 'flex', gap: 8 }}
+              >
+                <span>←</span> 返回产品主页
+              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 9, padding: '7px 9px', borderRadius: 9, border: '1px solid var(--card-border)', background: 'rgba(128,128,128,0.08)' }}>
+                <span style={{ fontSize: 16 }}>{productConfig.icon}</span>
+                <span style={{ minWidth: 0 }}>
+                  <strong style={{ display: 'block', fontSize: 11.5, color: 'var(--sidebar-text)' }}>{productConfig.label}</strong>
+                  <span style={{ display: 'block', fontSize: 9, color: 'var(--sidebar-text-muted)' }}>当前工作台 · 仅显示本产品功能</span>
+                </span>
+              </div>
+              {productError && <div style={{ marginTop: 6, fontSize: 9.5, color: 'var(--danger-color)', lineHeight: 1.5 }}>{productError}</div>}
             </div>
-          ))}
-        </nav>
-        
+
+            {/* 隐藏产品工作空间不允许退出；普通世界可返回书架 */}
+            {currentWorldId && !productConfig.auto_workspace && (
+              <div style={{ padding: '0 1rem', marginBottom: '1rem' }}>
+                <button onClick={handleExitWorld} style={{ width: '100%', padding: '10px', background: 'rgba(128,128,128,0.1)', color: 'var(--text-main)', border: '1px solid var(--card-border)', borderRadius: '8px', cursor: 'pointer', fontSize: 12, textAlign: 'left', display: 'flex', gap: '8px' }}>
+                  <span>←</span> 退出当前世界
+                </button>
+              </div>
+            )}
+
+            <nav className="navigation" style={{ flex: 1, overflowY: 'auto', padding: '0 1rem' }}>
+              {navigation.map((group) => (
+                <div className="nav-group" key={group.title} style={{ marginBottom: '1.5rem' }}>
+                  <div className="nav-group-title" style={{ fontSize: '11px', color: 'var(--sidebar-text-muted)', marginBottom: '0.5rem', paddingLeft: '0.5rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{group.title}</div>
+                  {group.items.map((item) => (
+                    <button
+                      key={item.key}
+                      onClick={() => {
+                        setWritingSeedEventIds([])
+                        navigate(item.key)
+                      }}
+                      style={{
+                        width: '100%', display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px',
+                        background: activePage === item.key ? 'rgba(128, 128, 128, 0.15)' : 'transparent',
+                        color: activePage === item.key ? 'var(--sidebar-text)' : 'var(--sidebar-text-muted)',
+                        border: activePage === item.key ? '1px solid rgba(128, 128, 128, 0.2)' : '1px solid transparent',
+                        borderRadius: '8px', cursor: 'pointer', marginBottom: '4px', textAlign: 'left',
+                        transition: 'all 0.2s ease', fontWeight: activePage === item.key ? 600 : 400,
+                      }}
+                    >
+                      <span className="nav-icon">{item.icon}</span>
+                      <span>{item.label}</span>
+                    </button>
+                  ))}
+                </div>
+              ))}
+            </nav>
+          </>
+        )}
+
         <div className="sidebar-footer" style={{ padding: '1.5rem', borderTop: '1px solid var(--card-border)' }}>
           <button onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')} style={{ width: '100%', padding: '10px', background: 'rgba(128, 128, 128, 0.1)', color: 'var(--sidebar-text)', border: '1px solid var(--card-border)', borderRadius: '8px', cursor: 'pointer', marginBottom: '0.6rem', fontSize: '13px' }}>
             {dict.switchLang}
@@ -409,38 +770,69 @@ export default function App() {
         </div>
       </aside>
 
-      <main className="main-area" style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-color)', overflow: 'hidden' }}>
+      {sidebarCollapsed && (
+        <button
+          type="button"
+          className="sidebar-reveal-tab"
+          onClick={() => setSidebarCollapsed(false)}
+          title={lang === 'zh' ? '展开侧边栏' : 'Expand sidebar'}
+          aria-label={lang === 'zh' ? '展开侧边栏' : 'Expand sidebar'}
+        >
+          <PanelLeftOpen size={16} strokeWidth={1.7} aria-hidden="true" />
+        </button>
+      )}
+
+      <main className="main-area" style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-color)', overflow: 'hidden', marginLeft: sidebarCollapsed ? 0 : 260 }}>
+        {(isGlobalShell || isProductWorkspace) ? (
+          <CreationCenterTopbar
+            lang={lang}
+            page={isProductWorkspace ? 'workspace' : isUserCenter ? 'identity' : isCommunity ? 'community' : isCommunitySocial ? 'community-social' : isBusiness ? 'business' : isAiCenter ? 'ai-center' : isGameCenter ? 'game-center' : isContentStore ? 'content-store' : 'home'}
+            productLabel={isProductWorkspace ? productConfig.label : undefined}
+            user={authUser}
+            backendStatus={backendStatus}
+            hasPersonalAi={hasPersonalAi}
+            onOpenAi={() => setAiAccessOpen(true)}
+            onOpenSettings={() => handleHomeNav('settings')}
+            onOpenIdentity={() => handleHomeNav('identity')}
+            onLogout={() => { void authLogout().then(() => window.location.reload()) }}
+          />
+        ) : (
         <header className="topbar" style={{ height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2rem', borderBottom: '1px solid var(--card-border)' }}>
           <div className="breadcrumb" style={{ fontSize: '13px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}>
-            <button
-              type="button"
-              onClick={goBack}
-              title="返回上一页"
-              style={{ marginRight: '12px', padding: '5px 10px', borderRadius: '7px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)', cursor: 'pointer', fontSize: '12px' }}
-            >
-              ← 返回
-            </button>
-            {currentWorldId ? (
+            {isHome ? (
               <>
-                <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 8, border: '1px solid var(--card-border)', marginRight: 8 }}>{productConfig.icon} {productConfig.short}</span>
-                <span style={{ color: 'var(--primary-color)', fontWeight: 600 }}>[{currentWorldName}]</span>
+                <strong style={{ color: 'var(--text-main)', fontSize: 14 }}>选择产品</strong>
                 <span style={{ margin: '0 8px' }}>/</span>
-                <strong style={{ color: 'var(--text-main)' }}>
-                  {pageLabel(activePage, dict)}
-                </strong>
+                <span>四大创作产品 · 云宝独立工作台</span>
               </>
             ) : (
               <>
-                <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 8, border: '1px solid var(--card-border)', marginRight: 8 }}>{productConfig.icon} {productConfig.short}</span>
-                <span>{dict.workbench}</span><span style={{ margin: '0 8px' }}>/</span>
-                <strong style={{ color: 'var(--text-main)' }}>
-                  {pageLabel(activePage, dict)}
-                </strong>
+                <button
+                  type="button"
+                  onClick={goBack}
+                  title="返回上一页"
+                  style={{ marginRight: '12px', padding: '5px 10px', borderRadius: '7px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)', cursor: 'pointer', fontSize: '12px' }}
+                >
+                  ← 返回
+                </button>
+                {currentWorldId ? (
+                  <>
+                    <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 8, border: '1px solid var(--card-border)', marginRight: 8 }}>{productConfig.icon} {productConfig.short}</span>
+                    <span style={{ color: 'var(--primary-color)', fontWeight: 600 }}>[{currentWorldName}]</span>
+                    <span style={{ margin: '0 8px' }}>/</span>
+                    <strong style={{ color: 'var(--text-main)' }}>{pageLabel(activePage, dict)}</strong>
+                  </>
+                ) : (
+                  <>
+                    <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 8, border: '1px solid var(--card-border)', marginRight: 8 }}>{productConfig.icon} {productConfig.short}</span>
+                    <span>{dict.workbench}</span><span style={{ margin: '0 8px' }}>/</span>
+                    <strong style={{ color: 'var(--text-main)' }}>{pageLabel(activePage, dict)}</strong>
+                  </>
+                )}
               </>
             )}
           </div>
           <div className="topbar-right" style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '12px', color: 'var(--text-muted)' }}>
-            <ProductSwitcher compact product={productConfig} configs={productMatrix.products} onSelect={(key) => void switchProduct(key)} />
             <button
               type="button"
               onClick={() => setAiAccessOpen(true)}
@@ -457,39 +849,162 @@ export default function App() {
             <div className="avatar" style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--text-main)', color: 'var(--bg-color)', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 'bold' }}>U</div>
           </div>
         </header>
+        )}
 
-        <div className="page-content" style={{ flex: 1, overflowY: 'auto', backgroundColor: 'transparent' }}>
-          <ErrorBoundary onReset={() => setActivePage(productConfig.home as PageKey)}>
-          {activePage === 'overview' ? (
+        <div
+          className={isGlobalShell || isProductWorkspace ? 'cc-page-scroll' : 'page-content'}
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            backgroundColor: 'transparent',
+            ...(isGlobalShell || isProductWorkspace ? { padding: 0, maxWidth: 'none' } : {}),
+          }}
+        >
+          {isProductWorkspace && (
+            <ProductWorkspaceNav
+              lang={lang}
+              product={product}
+              productConfig={productConfig}
+              activePage={activePage}
+              currentWorldName={currentWorldName}
+              error={productError}
+              onNavigate={(page) => navigate(page as PageKey)}
+              onNewWorld={() => { setCreatingWorld(true); setSelectedWorldId(''); navigate('world-building') }}
+            />
+          )}
+          {!isGlobalShell && product === 'yunbao' && authUser && !authUser.is_owner && (
+            <div className="pw-access-note">
+              云宝工作台当前为只读访问。你可以查看世界、人物、日记与创作数据；所有编辑、删除与状态切换仅限开发者「兰哆哆」。
+            </div>
+          )}
+          <ErrorBoundary onReset={() => setActivePage(usesWorkspaceShell(product) ? 'workspace-home' : productConfig.home as PageKey)}>
+          {activePage === 'home' ? (
+            <CreationCenterPage
+              lang={lang}
+              onOpenScene={(key) => void switchProduct(key)}
+              onOpenTool={handleOpenTool}
+              onOpenAsset={handleOpenAsset}
+            />
+          ) : activePage === 'user-center' ? (
+            <UserCenterPage
+              lang={lang}
+              user={authUser}
+              onUserUpdated={handleUserUpdated}
+              onOpenAsset={handleOpenUserAsset}
+              onOpenWorks={() => handleOpenUserAsset('works')}
+              onLogout={() => { void authLogout().then(() => window.location.reload()) }}
+              onOpenSettings={() => setActivePage('settings')}
+              onOpenBusiness={() => setActivePage('business')}
+            />
+          ) : activePage === 'settings' ? (
+            <SettingsPage
+              lang={lang}
+              user={authUser}
+              onUserUpdated={handleUserUpdated}
+              onLangChange={(next) => setLang(next)}
+              onOpenAiSettings={() => setAiAccessOpen(true)}
+              onLogout={() => { void authLogout().then(() => window.location.reload()) }}
+            />
+          ) : activePage === 'business' ? (
+            <BillingCenterPage
+              lang={lang}
+              user={authUser}
+              onOpenAi={() => setAiAccessOpen(true)}
+            />
+          ) : activePage === 'community-social' ? (
+            <CommunitySocialPage
+              lang={lang}
+              currentUserId={authUser?.id}
+              onBack={() => setActivePage('home')}
+            />
+          ) : activePage === 'community' ? (
+            <CommunityPage
+              lang={lang}
+              user={authUser}
+              onOpenWorkbench={() => handleOpenUserAsset('works')}
+              onOpenWorld={() => handleOpenUserAsset('worlds')}
+              onOpenCharacters={() => handleOpenUserAsset('characters')}
+              onOpenStorylines={() => handleOpenUserAsset('storylines')}
+              onOpenIdentity={() => { setNavStack([]); setActivePage('user-center') }}
+            />
+          ) : activePage === 'ai-center' ? (
+            <AICenterPage
+              lang={lang}
+              user={authUser}
+              onOpenChat={openCenterChat}
+              onOpenCharacters={() => handleOpenUserAsset('characters')}
+              onOpenRelationships={() => openCenterGamePage('relationships')}
+              onOpenEvents={() => openCenterGamePage('events')}
+              onOpenMemories={() => openProductPage('yunbao', 'memories')}
+              onOpenSimulation={() => openCenterGamePage('simulation')}
+            />
+          ) : activePage === 'game-center' ? (
+            <GameCenterPage
+              lang={lang}
+              onOpenMultipath={() => openCenterGamePage('multipath')}
+              onOpenSimulation={() => openCenterGamePage('simulation')}
+              onOpenStoryline={() => handleOpenUserAsset('storylines')}
+              onOpenCharacters={() => handleOpenUserAsset('characters')}
+              onOpenWorld={() => handleOpenUserAsset('worlds')}
+              onOpenWorldData={() => openCenterGamePage('world-data')}
+              onOpenWorldStructure={() => openCenterGamePage('world-structure')}
+              onOpenRelationships={() => openCenterGamePage('relationships')}
+            />
+          ) : activePage === 'content-store' ? (
+            <ContentStorePage
+              lang={lang}
+              user={authUser}
+              onOpenWorld={() => handleOpenUserAsset('worlds')}
+              onOpenCharacters={() => handleOpenUserAsset('characters')}
+              onOpenStorylines={() => handleOpenUserAsset('storylines')}
+              onOpenWorks={() => handleOpenUserAsset('works')}
+            />
+          ) : activePage === 'workspace-home' && usesWorkspaceShell(product) ? (
+            <ProductWorkspaceHome
+              product={product}
+              lang={lang}
+              worlds={allWorldsList}
+              currentWorldId={currentWorldId}
+              currentWorldName={currentWorldName}
+              onNavigate={(page) => navigate(page as PageKey)}
+              onSwitchProduct={(next) => void switchProduct(next)}
+              onEnterWorld={handleEnterWorld}
+              onNewWorld={() => { setCreatingWorld(true); setSelectedWorldId(''); navigate('world-building') }}
+              onOpenWorldBuilding={(id) => { setCreatingWorld(false); setSelectedWorldId(id); navigate('world-building') }}
+            />
+          ) : activePage === 'overview' ? (
             <OverviewPage
               onNavigate={navigate} lang={lang} dict={dict}
               product={product} productConfig={productConfig}
-              onSelectProduct={(key) => void switchProduct(key)}
             />
           ) : activePage === 'diary' ? (
-            <DiaryPage product={product} worldId={currentWorldId} onOpenSources={() => navigate('information-sources')} />
+            <JournalPage product={product} worldId={currentWorldId} onOpenSources={() => navigate('information-sources')} />
           ) : activePage === 'world-management' ? (
             <WorldsPage 
               lang={lang} dict={dict} product={product}
+              readOnly={product === 'yunbao' && !!authUser && !authUser.is_owner}
               onEnterWorld={handleEnterWorld}
-              onOpenWorldBuilding={(id) => { setSelectedWorldId(id); navigate('world-building');}} 
+              onOpenWorldBuilding={(id) => { setCreatingWorld(false); setSelectedWorldId(id); navigate('world-building');}} 
             />
           ) : activePage === 'world-building' ? (
             <WorldBuildingPage 
               lang={lang as 'zh' | 'en'} 
-              worldId={selectedWorldId || currentWorldId || ''} 
+              worldId={creatingWorld ? '' : (selectedWorldId || currentWorldId || '')} 
               product={product}
-              onBack={goBack} 
+              onBack={() => { setCreatingWorld(false); goBack() }} 
             />
           ) : activePage === 'character-management' ? (
             <CharacterListPage 
               worldId={currentWorldId || undefined} 
               worldName={currentWorldName || ''}
               focusCharacterId={focusCharacterId}
+              focusYunbao={focusYunbao}
               productMode={productConfig.modes['character-management'] || 'full'}
-              showPersonas={product === 'companion'}
-              onBack={() => { setFocusCharacterId(null); goBack(); }}
+              onBack={() => { setFocusCharacterId(null); setFocusYunbao(false); goBack(); }}
               onNavigate={(page) => navigate(page as PageKey)}
+              onOpenYunbaoEditor={() => openProductPage('yunbao', 'personas')}
+              showYunbaoEntry={product === 'yunbao'}
+              readOnly={product === 'yunbao' && !!authUser && !authUser.is_owner}
             />
                      ) : activePage === 'world-data' ? (
             <WorldDataPage worldId={currentWorldId} />
@@ -511,12 +1026,16 @@ export default function App() {
               }}
               onNavigate={(page) => navigate(page as PageKey)}
             />
+          ) : activePage === 'yunbao' ? (
+            <YunbaoWorkspacePage onNavigate={(page) => navigate(page as PageKey)} />
+          ) : activePage === 'yunbao-seed' ? (
+            <YunbaoSeedPage onBack={() => setActivePage('yunbao')} />
           ) : activePage === 'personas' ? (
-            <PersonaPage />
+            <PersonaPage onOpenSeedEditor={() => navigate('yunbao-seed')} />
           ) : activePage === 'memories' ? (
             <MemoryPage />
           ) : activePage === 'companion-runtime' ? (
-            <CompanionRuntimePage onOpenPersonas={() => navigate('personas')} />
+            <CompanionRuntimePage onOpenPersonas={openYunbao} />
           ) : activePage === 'information-sources' ? (
             <InformationSourcesPage worldId={currentWorldId} />
           ) : activePage === 'events' ? (
@@ -535,7 +1054,7 @@ export default function App() {
           ) : activePage === 'storyline' ? (
             <StorylinePage worldId={currentWorldId} onOpenEvents={() => navigate('events')} />
           ) : activePage === 'chat' ? (
-            <ChatPage worldId={currentWorldId} product={product} onOpenPersonas={() => navigate('personas')} />
+            <ChatPage worldId={currentWorldId} product={product} />
           ) : activePage === 'writing' ? (
             <WritingPage worldId={currentWorldId} seedEventIds={writingSeedEventIds} productMode={productConfig.modes.writing} />
            ) : activePage === 'timeline' ? (
@@ -551,17 +1070,17 @@ export default function App() {
         onClose={() => setAiAccessOpen(false)}
         onSaved={() => setHasPersonalAi(hasPersonalAiKey())}
       />
-      <AIAssistantPanel product={product} onNavigate={(page) => navigate(page as PageKey)} />
+      <AIAssistantPanel product={product} onNavigate={(page) => { if (page === 'personas') openYunbao(); else navigate(page as PageKey) }} onOpenYunbao={openYunbao} />
     </div>
   )
 }
 
 // ================= 01 总览页面组件 =================
 function OverviewPage({
-  onNavigate, lang, dict, product, productConfig, onSelectProduct,
+  onNavigate, lang, dict, product, productConfig,
 }: {
   onNavigate: (page: PageKey) => void; lang: Language; dict: any
-  product: ProductKey; productConfig: ProductConfig; onSelectProduct: (key: ProductKey) => void
+  product: ProductKey; productConfig: ProductConfig
 }) {
   const [worlds, setWorlds] = useState<any[]>([])
   const [charCount, setCharCount] = useState(0)
@@ -584,9 +1103,9 @@ function OverviewPage({
         const rows = data.filter((row: any) => ids.has(row.world_id))
         setEventCount(rows.length); setRecentEvents(rows.slice(0, 3))
       }).catch(console.error)
-    }).catch(console.error)
-    void fetch("http://127.0.0.1:8000/api/simulations").then((res) => res.json()).then((data) => {
-      if (!cancelled && Array.isArray(data)) setSimCount(data.length)
+      void fetch("http://127.0.0.1:8000/api/simulations").then((res) => res.json()).then((data) => {
+        if (!cancelled && Array.isArray(data)) setSimCount(data.filter((row: any) => row.world_id && ids.has(row.world_id)).length)
+      }).catch(console.error)
     }).catch(console.error)
     return () => { cancelled = true }
   }, [product])
@@ -604,32 +1123,6 @@ function OverviewPage({
         <button className="primary-button" type="button" onClick={() => onNavigate('world-management')} style={{ padding: '0.75rem 1.5rem', background: 'var(--text-main)', color: 'var(--bg-color)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>
           {dict.createWorld}
         </button>
-      </section>
-
-      <section style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '1rem', marginTop: '2rem' }}>
-        {FALLBACK_MATRIX.products.map((scene) => (
-          <button
-            key={scene.key}
-            type="button"
-            onClick={() => onSelectProduct(scene.key)}
-            style={{
-              textAlign: 'left', padding: '1.25rem', borderRadius: '12px', cursor: 'pointer',
-              background: scene.key === product ? 'color-mix(in srgb, var(--primary-color) 9%, var(--card-bg))' : 'var(--card-bg, rgba(128,128,128,0.05))',
-              border: `1px solid ${scene.key === product ? 'var(--primary-color)' : 'var(--card-border)'}`,
-              color: 'var(--text-main)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ fontSize: '24px' }}>{scene.icon}</span>
-              <strong style={{ fontSize: '16px' }}>{scene.label}</strong>
-              {scene.key === product && <span style={{ fontSize: '10px', color: 'var(--primary-color)', border: '1px solid var(--primary-color)', borderRadius: '10px', padding: '2px 6px' }}>当前产品</span>}
-            </div>
-            <p style={{ margin: '10px 0 0', fontSize: '12.5px', color: 'var(--text-muted)', lineHeight: 1.6 }}>{scene.description}</p>
-            <div style={{ marginTop: 10, fontSize: 10, color: 'var(--text-muted)' }}>
-              {scene.nav_groups.flatMap((group) => group.items).length} 个功能入口 · 点击切换产品
-            </div>
-          </button>
-        ))}
       </section>
 
       <section className="stats-grid" style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>

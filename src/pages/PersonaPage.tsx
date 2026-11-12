@@ -1,9 +1,5 @@
-import PersonaManager from '../components/PersonaManager'
+import { YunbaoProfilePanel } from '../components/YunbaoProfile'
 
-export default function PersonaPage() {
-  return (
-    <div style={{ height: '100%', padding: '0.75rem 0.9rem', boxSizing: 'border-box', overflow: 'hidden' }}>
-      <PersonaManager open embedded onClose={() => undefined} />
-    </div>
-  )
+export default function PersonaPage({ onOpenSeedEditor }: { onOpenSeedEditor?: () => void }) {
+  return <YunbaoProfilePanel embedded onOpenSeedEditor={onOpenSeedEditor} />
 }

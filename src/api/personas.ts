@@ -8,7 +8,7 @@ export type Persona = {
   tools: string[]; status: string; created_at?: string
 }
 export type PersonaThread = { id: string; title: string; summary?: string; message_count?: number; updated_at?: string }
-export type PersonaMessage = { id: string; thread_id: string; role: 'user' | 'persona' | 'system'; content: string; created_at?: string }
+export type PersonaMessage = { id: string; thread_id: string; role: 'user' | 'persona' | 'system'; content: string; meta?: { state?: string; [key: string]: any }; created_at?: string }
 export type PersonaMemory = { id: string; content: string; importance: number; kind?: string; thread_id?: string | null; source?: string }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {

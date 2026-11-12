@@ -19,11 +19,18 @@ from story_threads import router as story_threads_router
 from story_tree import router as story_tree_router
 from axis_objects import router as axis_objects_router, seed_official_axis_objects
 from personas import router as personas_router
+from yunbao import router as yunbao_router, ensure_yunbao
 from event_sandbox import router as event_sandbox_router
 from diary import router as diary_router
+from journal import router as journal_router
+from ai_grants import router as ai_grants_router
+from community import router as community_router
+from community_social import router as community_social_router
 from products import router as products_router
+from settings import router as settings_router
+from billing import router as billing_router, record_ai_usage
 from information_sources import router as information_sources_router
-from auth import router as auth_router, auth_middleware
+from auth import auth_disabled, router as auth_router, auth_middleware
 from geography import router as geography_router
 from orgs import router as orgs_router
 from events import router as event_router
@@ -82,7 +89,18 @@ async def ai_access_context(request, call_next):
         request.headers.get("x-ai-model", ""),
     )
     try:
-        return await call_next(request)
+        response = await call_next(request)
+        user_id = getattr(request.state, "user_id", None)
+        if user_id and not auth_disabled():
+            record_ai_usage(
+                user_id,
+                request.url.path,
+                bool(request.headers.get("x-ai-api-key")),
+                response.status_code,
+                request.headers.get("x-ai-model", ""),
+                request.method,
+            )
+        return response
     finally:
         reset_request_ai_config(token)
 
@@ -102,8 +120,12 @@ for router in (
     story_tree_router,
     axis_objects_router,
     personas_router,
+    yunbao_router,
     event_sandbox_router,
     diary_router,
+    journal_router,
+    ai_grants_router,
+    community_router,
     products_router,
     information_sources_router,
     auth_router,
@@ -128,6 +150,9 @@ for router in (
     assistant_router,
     storyline_router,
     chat_router,
+    settings_router,
+    billing_router,
+    community_social_router,
 ):
     app.include_router(router)
 
@@ -141,6 +166,14 @@ try:
         seed_supplement_demo(db)
 except Exception as exc:  # 数据缺失不应阻止后端启动
     print(f"官方演示世界初始化跳过: {exc}")
+
+# 云宝：全局单一人格；旧人格数据原样保留。
+try:
+    with SessionLocal() as db:
+        ensure_local_user(db)
+        ensure_yunbao(db)
+except Exception as exc:
+    print(f"云宝初始化跳过: {exc}")
 
 
 @app.get("/api/health")
@@ -185,8 +218,8 @@ def get_world(world_id: str, request: Request, db: Session = Depends(get_db)):
 @app.post("/api/worlds", response_model=schemas.WorldResponse)
 def create_world(world: schemas.WorldCreate, request: Request, db: Session = Depends(get_db)):
     product_scene = world.product_scene or "game"
-    if product_scene not in {"game", "literature", "companion", "diary"}:
-        raise HTTPException(status_code=422, detail="product_scene 只能是 game/literature/companion/diary")
+    if product_scene not in {"game", "literature", "companion", "diary", "yunbao"}:
+        raise HTTPException(status_code=422, detail="product_scene 只能是 game/literature/companion/diary/yunbao")
     if product_scene in {"companion", "diary"}:
         raise HTTPException(status_code=403, detail="AI 伴侣/日记与传记不开放世界管理，不能创建普通世界")
     now = datetime.utcnow().isoformat()
@@ -223,7 +256,7 @@ def update_world(world_id: str, world: schemas.WorldUpdate, request: Request, db
     changes = world.model_dump(exclude_unset=True)
     new_scene = changes.get("product_scene")
     if new_scene and new_scene not in {"game", "literature", "companion", "diary"}:
-        raise HTTPException(status_code=422, detail="product_scene 只能是 game/literature/companion/diary")
+        raise HTTPException(status_code=422, detail="product_scene 只能是 game/literature/companion/diary/yunbao")
     if new_scene in {"companion", "diary"} and not db_world.is_product_workspace:
         raise HTTPException(status_code=403, detail="AI 伴侣/日记与传记不开放世界管理，不能把普通世界改为该产品")
     if db_world.is_product_workspace and new_scene and new_scene != db_world.product_scene:

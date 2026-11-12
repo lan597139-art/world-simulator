@@ -1,4 +1,4 @@
-export type ProductKey = 'game' | 'literature' | 'companion' | 'diary'
+export type ProductKey = 'game' | 'literature' | 'companion' | 'diary' | 'yunbao'
 
 export type ProductMode = string
 

@@ -8,12 +8,13 @@ import re
 from datetime import datetime
 from typing import Iterable
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
 
 import models
+from auth import current_user
 from ai_engine import ai_config_status, ai_error_message, get_client, get_model
 from common import fail, get_world, world_now
 from database import get_db
@@ -95,11 +96,26 @@ def _as_list(value) -> list:
     return []
 
 
-def _story_or_404(db: Session, story_id: str) -> models.Story:
-    story = db.query(models.Story).filter(models.Story.id == story_id).first()
+def _story_or_404(db: Session, story_id: str, owner: str | None = None) -> models.Story:
+    query = db.query(models.Story).filter(models.Story.id == story_id)
+    if owner:
+        query = query.filter(models.Story.owner_user_id == owner)
+    story = query.first()
     if not story:
         fail(404, "NOT_FOUND", "章节不存在")
     return story
+
+
+def _draft_or_404(db: Session, draft_id: str, owner: str) -> models.EntityDraft:
+    draft = db.query(models.EntityDraft).join(
+        models.Story, models.Story.id == models.EntityDraft.story_id,
+    ).filter(
+        models.EntityDraft.id == draft_id,
+        models.Story.owner_user_id == owner,
+    ).first()
+    if not draft:
+        fail(404, "NOT_FOUND", "草稿不存在")
+    return draft
 
 
 def _draft_dict(db: Session, draft: models.EntityDraft) -> dict:
@@ -149,26 +165,33 @@ def _title_from_text(text: str, prefix: str) -> str:
 
 
 @router.get("/api/writings")
-def list_stories(world_id: str = "", db: Session = Depends(get_db)):
-    query = db.query(models.Story).filter(models.Story.archived_at.is_(None))
+def list_stories(request: Request, world_id: str = "", db: Session = Depends(get_db)):
+    user = current_user(request, db)
+    query = db.query(models.Story).filter(
+        models.Story.archived_at.is_(None),
+        models.Story.owner_user_id == user.id,
+    )
     if world_id:
         query = query.filter(models.Story.world_id == world_id)
     return query.order_by(models.Story.updated_at.desc(), models.Story.created_at.desc()).all()
 
 
 @router.get("/api/writings/{story_id}")
-def get_story(story_id: str, db: Session = Depends(get_db)):
-    return _story_or_404(db, story_id)
+def get_story(story_id: str, request: Request, db: Session = Depends(get_db)):
+    user = current_user(request, db)
+    return _story_or_404(db, story_id, user.id)
 
 
 @router.post("/api/writings")
-def create_story(payload: dict, db: Session = Depends(get_db)):
+def create_story(payload: dict, request: Request, db: Session = Depends(get_db)):
+    user = current_user(request, db)
     world_id = payload.get("world_id") or ""
     if world_id:
         get_world(db, world_id)
     content = payload.get("content") or ""
     plain = _plain(content, payload.get("plain_text"))
     story = models.Story(
+        owner_user_id=user.id,
         world_id=world_id or None,
         title=_clean_title(payload.get("title") or "未命名章节"),
         content=content,
@@ -186,18 +209,19 @@ def create_story(payload: dict, db: Session = Depends(get_db)):
 
 
 @router.post("/api/writings/save")
-def save_story_compat(payload: dict, db: Session = Depends(get_db)):
+def save_story_compat(payload: dict, request: Request, db: Session = Depends(get_db)):
     """兼容旧前端：保存一段正文并返回完整章节。"""
     content = payload.get("content") or ""
     if not content:
         fail(422, "VALIDATION_ERROR", "内容不能为空")
-    return create_story(payload, db)
+    return create_story(payload, request, db)
 
 
 @router.put("/api/writings/{story_id}")
 @router.patch("/api/writings/{story_id}")
-def update_story(story_id: str, payload: dict, db: Session = Depends(get_db)):
-    story = _story_or_404(db, story_id)
+def update_story(story_id: str, payload: dict, request: Request, db: Session = Depends(get_db)):
+    user = current_user(request, db)
+    story = _story_or_404(db, story_id, user.id)
     for key in STORY_FIELDS:
         if key not in payload:
             continue
@@ -616,8 +640,9 @@ def _sanitize_items(items: Iterable[dict], target_types: list[str]) -> list[dict
 
 
 @router.post("/api/writings/{story_id}/analyze")
-def analyze_story(story_id: str, payload: dict | None = None, db: Session = Depends(get_db)):
-    story = _story_or_404(db, story_id)
+def analyze_story(story_id: str, request: Request, payload: dict | None = None, db: Session = Depends(get_db)):
+    user = current_user(request, db)
+    story = _story_or_404(db, story_id, user.id)
     payload = payload or {}
     if not story.world_id:
         fail(422, "NO_WORLD", "章节未绑定世界，无法入库")
@@ -713,8 +738,9 @@ def list_world_drafts(
 
 
 @router.get("/api/writings/{story_id}/drafts")
-def list_story_drafts(story_id: str, status: str = "all", db: Session = Depends(get_db)):
-    story = _story_or_404(db, story_id)
+def list_story_drafts(story_id: str, request: Request, status: str = "all", db: Session = Depends(get_db)):
+    user = current_user(request, db)
+    story = _story_or_404(db, story_id, user.id)
     query = db.query(models.EntityDraft).filter(models.EntityDraft.story_id == story.id)
     if status and status != "all":
         query = query.filter(models.EntityDraft.status == status)
@@ -723,10 +749,9 @@ def list_story_drafts(story_id: str, status: str = "all", db: Session = Depends(
 
 
 @router.patch("/api/drafts/{draft_id}")
-def update_draft(draft_id: str, payload: dict, db: Session = Depends(get_db)):
-    draft = db.query(models.EntityDraft).filter(models.EntityDraft.id == draft_id).first()
-    if not draft:
-        fail(404, "NOT_FOUND", "草稿不存在")
+def update_draft(draft_id: str, payload: dict, request: Request, db: Session = Depends(get_db)):
+    user = current_user(request, db)
+    draft = _draft_or_404(db, draft_id, user.id)
     if "name" in payload:
         name = str(payload.get("name") or "").strip()[:80]
         if name:
@@ -745,10 +770,9 @@ def update_draft(draft_id: str, payload: dict, db: Session = Depends(get_db)):
 
 
 @router.post("/api/drafts/{draft_id}/ignore")
-def ignore_draft(draft_id: str, db: Session = Depends(get_db)):
-    draft = db.query(models.EntityDraft).filter(models.EntityDraft.id == draft_id).first()
-    if not draft:
-        fail(404, "NOT_FOUND", "草稿不存在")
+def ignore_draft(draft_id: str, request: Request, db: Session = Depends(get_db)):
+    user = current_user(request, db)
+    draft = _draft_or_404(db, draft_id, user.id)
     draft.status = "ignored"
     draft.updated_at = _now()
     db.commit()
@@ -756,21 +780,19 @@ def ignore_draft(draft_id: str, db: Session = Depends(get_db)):
 
 
 @router.delete("/api/drafts/{draft_id}")
-def delete_draft(draft_id: str, db: Session = Depends(get_db)):
-    draft = db.query(models.EntityDraft).filter(models.EntityDraft.id == draft_id).first()
-    if not draft:
-        fail(404, "NOT_FOUND", "草稿不存在")
+def delete_draft(draft_id: str, request: Request, db: Session = Depends(get_db)):
+    user = current_user(request, db)
+    draft = _draft_or_404(db, draft_id, user.id)
     db.delete(draft)
     db.commit()
     return {"status": "ok"}
 
 
 @router.post("/api/drafts/{draft_id}/undo")
-def undo_draft(draft_id: str, db: Session = Depends(get_db)):
+def undo_draft(draft_id: str, request: Request, db: Session = Depends(get_db)):
     """撤销一次错误入库：删除刚创建的实体，并把草稿退回待入库。"""
-    draft = db.query(models.EntityDraft).filter(models.EntityDraft.id == draft_id).first()
-    if not draft:
-        fail(404, "NOT_FOUND", "草稿不存在")
+    user = current_user(request, db)
+    draft = _draft_or_404(db, draft_id, user.id)
     if draft.status != "accepted":
         fail(409, "NOT_ACCEPTED", "只有已入库的草稿可以撤销入库")
 
@@ -893,10 +915,9 @@ def _resolve_participants(db: Session, world_id: str, names: Iterable[str], text
 
 
 @router.post("/api/drafts/{draft_id}/approve")
-def approve_draft(draft_id: str, payload: dict | None = None, db: Session = Depends(get_db)):
-    draft = db.query(models.EntityDraft).filter(models.EntityDraft.id == draft_id).first()
-    if not draft:
-        fail(404, "NOT_FOUND", "草稿不存在")
+def approve_draft(draft_id: str, request: Request, payload: dict | None = None, db: Session = Depends(get_db)):
+    user = current_user(request, db)
+    draft = _draft_or_404(db, draft_id, user.id)
     if draft.status == "accepted":
         fail(409, "ALREADY_ACCEPTED", "该草稿已经入库")
     if draft.status == "ignored":

@@ -37,6 +37,9 @@ class AppUser(Base):
     display_name = Column(String, default="")
     password_hash = Column(String)
     is_active = Column(Boolean, default=True)
+    is_owner = Column(Boolean, default=False, nullable=False)
+    bio = Column(Text, default="")
+    avatar = Column(Text, default="")
     created_at = Column(DateTime, default=_now)
     updated_at = Column(DateTime, default=_now)
 
@@ -704,6 +707,8 @@ class Story(Base):
 
     id = Column(String, primary_key=True, index=True, default=_uuid)
     world_id = Column(String, index=True, nullable=True)
+    owner_user_id = Column(String, default="local")  # M1：写作库归属；社区公开层另建
+    community_publication_id = Column(String)  # M6：可选公开作品关联；不自动发布
     title = Column(String, default="未命名章节")
     content = Column(String, default="")
     plain_text = Column(String, default="")
@@ -825,6 +830,7 @@ class CharacterBiography(Base):
     id = Column(String, primary_key=True, default=_uuid, index=True)
     world_id = Column(String, nullable=False, index=True)
     character_id = Column(String, nullable=False, index=True)
+    owner_user_id = Column(String, default="local")  # 世界人物传记的创建者；不是用户传记
     title = Column(String, default="")
     content = Column(Text, default="")
     source_event_ids = Column(JSON, default=list)
@@ -1011,6 +1017,7 @@ class AiRole(Base):
     display_name = Column(String, default="")
     persona = Column(JSON, default=dict)
     source = Column(String, default="auto")  # auto/manual
+    persona_instance_id = Column(String)  # M1：可选投影键；世界 NPC 保持为空
     version = Column(Integer, default=1)
     status = Column(String, default="active")
     created_at = Column(DateTime, default=_now)
@@ -1024,6 +1031,8 @@ class ChatThread(Base):
 
     id = Column(String, primary_key=True, default=_uuid)
     world_id = Column(String, nullable=False, index=True)
+    owner_user_id = Column(String, default="local")  # M1：旧会话归本地用户
+    persona_instance_id = Column(String)  # M1：绑定 AI 实例；旧会话为空
     kind = Column(String, default="private")  # private/group
     title = Column(String, default="")
     status = Column(String, default="active")
@@ -1066,6 +1075,8 @@ class CharacterMemory(Base):
     id = Column(String, primary_key=True, default=_uuid)
     world_id = Column(String, nullable=False, index=True)
     character_id = Column(String, nullable=False, index=True)
+    owner_user_id = Column(String, default="local")  # M1：旧记忆归本地用户
+    persona_instance_id = Column(String)  # M1：实例键；旧记忆为空
     thread_id = Column(String, nullable=True, index=True)
     scope = Column(String, default="private")  # private/group/global
     kind = Column(String, default="episodic")
@@ -1073,6 +1084,7 @@ class CharacterMemory(Base):
     importance = Column(Float, default=0.4)
     source_message_ids = Column(JSON, default=list)
     last_used_at = Column(DateTime, nullable=True)
+    status = Column(String, default="active")  # active/legacy_unscoped/invalidated
     created_at = Column(DateTime, default=_now)
 
 
@@ -1253,10 +1265,16 @@ class PersonalPersona(Base):
     id = Column(String, primary_key=True, default=_uuid)
     owner_user_id = Column(String, nullable=False, index=True, default="local")
     product_key = Column(String, default="companion", index=True)
+    system_key = Column(String, index=True)   # 云宝固定为 yunbao；旧人格为空
     name = Column(String, nullable=False)
     identity = Column(String, default="")
     description = Column(Text, default="")
     avatar = Column(String, default="")
+    maturity = Column(String, default="")
+    biography = Column(Text, default="")
+    growth_experience = Column(JSON, default=list)
+    states = Column(JSON, default=list)
+    active_state = Column(String, default="")
     esa = Column(JSON, default=dict)           # engines V/O/D/E/T + defense/cognition
     traits = Column(JSON, default=list)
     cognition = Column(JSON, default=dict)
@@ -1265,9 +1283,84 @@ class PersonalPersona(Base):
     memory_policy = Column(JSON, default=dict)  # share_public_profile, isolation
     public_profile = Column(JSON, default=dict)
     tools = Column(JSON, default=list)
+    # 云宝专属：承载完整人物种子（01–08）的世界人物 id；不创建第二人格身份。
+    seed_character_id = Column(String, index=True)
     status = Column(String, default="active")
     created_at = Column(DateTime, default=_now)
     updated_at = Column(DateTime, default=_now)
+
+
+class PersonaDefinition(Base):
+    """人格定义：版本与实例的稳定锚点。
+
+    M2 只为云宝建立全局定义；旧 companion 人格不在此阶段迁移。
+    """
+
+    __tablename__ = "persona_definitions"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    owner_user_id = Column(String, index=True)  # 全局人格为系统所有者
+    scope = Column(String, default="private", index=True)  # global/private/public
+    system_key = Column(String)  # 云宝为 yunbao；普通人格为空
+    product_key = Column(String, default="companion", index=True)
+    name = Column(String, nullable=False)
+    status = Column(String, default="active", index=True)
+    legacy_persona_id = Column(String, index=True)  # 兼容 PersonalPersona 的桥
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now)
+
+    __table_args__ = (
+        UniqueConstraint("system_key", name="uq_persona_definitions_system_key"),
+        Index("ix_persona_definitions_owner_scope", "owner_user_id", "scope"),
+    )
+
+
+class PersonaVersion(Base):
+    """不可变人格版本；M2 只用 v1 保存当前人格快照，编辑器在后续阶段接入。"""
+
+    __tablename__ = "persona_versions"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    definition_id = Column(
+        String, ForeignKey("persona_definitions.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+    version_no = Column(Integer, nullable=False, default=1)
+    payload = Column(JSON, default=dict)  # 完整人格配置快照
+    status = Column(String, default="published", index=True)  # draft/published/retired
+    created_by = Column(String)
+    created_at = Column(DateTime, default=_now)
+
+    __table_args__ = (
+        UniqueConstraint("definition_id", "version_no", name="uq_persona_versions_def_no"),
+    )
+
+
+class PersonaInstance(Base):
+    """用户持有的 AI 实例：会话、记忆、关系按实例隔离。"""
+
+    __tablename__ = "persona_instances"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    definition_id = Column(
+        String, ForeignKey("persona_definitions.id", ondelete="RESTRICT"),
+        nullable=False, index=True,
+    )
+    version_id = Column(
+        String, ForeignKey("persona_versions.id", ondelete="RESTRICT"),
+        nullable=False, index=True,
+    )
+    owner_user_id = Column(String, nullable=False, index=True)
+    kind = Column(String, default="yunbao", index=True)  # yunbao/private_companion/public_companion/npc
+    legacy_persona_id = Column(String, index=True)
+    status = Column(String, default="active", index=True)  # active/paused/archived
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now)
+
+    __table_args__ = (
+        UniqueConstraint("owner_user_id", "definition_id", name="uq_persona_instances_owner_def"),
+        Index("ix_persona_instances_owner_kind", "owner_user_id", "kind"),
+    )
 
 
 class PersonaThread(Base):
@@ -1276,6 +1369,9 @@ class PersonaThread(Base):
     id = Column(String, primary_key=True, default=_uuid)
     persona_id = Column(String, ForeignKey("personal_personas.id", ondelete="CASCADE"), nullable=False, index=True)
     owner_user_id = Column(String, nullable=False, default="local", index=True)
+    instance_id = Column(String)  # M1：PersonaInstance 目标键；旧会话为空
+    version_id = Column(String)  # M1：会话绑定的版本快照；旧会话为空
+    kind = Column(String, default="chat")  # chat/test
     title = Column(String, default="")
     summary = Column(Text, default="")
     status = Column(String, default="active")
@@ -1300,11 +1396,21 @@ class PersonaMemory(Base):
 
     id = Column(String, primary_key=True, default=_uuid)
     persona_id = Column(String, ForeignKey("personal_personas.id", ondelete="CASCADE"), nullable=False, index=True)
+    owner_user_id = Column(String, default="local")  # M1：记忆必须按用户隔离
+    persona_instance_id = Column(String)  # M1：记忆必须按 AI 实例隔离
+    source_grant_id = Column(String)  # M4：来源授权；对话记忆可空
+    source_kind = Column(String, default="conversation")  # conversation/journal_entry/biography_chapter/user_note
+    source_refs = Column(JSON, default=list)  # M4：派生记忆的来源元数据
+    status = Column(String, default="active")  # active/legacy_unscoped/invalidated/needs_recompute/deleted
+    invalidated_reason = Column(String, default="")
     thread_id = Column(String, nullable=True, index=True)
     kind = Column(String, default="episodic")
     content = Column(Text, default="")
     importance = Column(Float, default=0.4)
     source = Column(String, default="chat")
+    invalidated_at = Column(DateTime)
+    deleted_at = Column(DateTime)
+    content_hash = Column(String)
     created_at = Column(DateTime, default=_now)
 
 
@@ -1339,6 +1445,11 @@ class DiaryEntry(Base):
     world_id = Column(String, index=True)
     character_id = Column(String)
     entry_date = Column(String, nullable=False, index=True)
+    date_end = Column(String)  # M1：经历/事件的时间范围终值
+    entry_type = Column(String, default="diary")  # diary/life_experience/important_event/relationship_note/reflection/personal_note
+    info_class = Column(String, default="basic")  # basic/experience/relationship/thought/event
+    sensitivity = Column(String, default="normal")  # normal/sensitive/deep
+    status = Column(String, default="active")  # active/archived/deleted
     title = Column(String, default="")
     content = Column(Text, nullable=False)
     mood = Column(String, default="")
@@ -1374,3 +1485,566 @@ class InformationSource(Base):
     visibility = Column(String, default="private")
     created_at = Column(DateTime, default=_now)
     updated_at = Column(DateTime, default=_now)
+
+
+# =====================================================================
+# PHASE-N1 M3：用户 Journal / 个人人物 / 用户传记 / 引用
+# =====================================================================
+class JournalPerson(Base):
+    """用户自己的个人人物档案；不是世界 Character。"""
+
+    __tablename__ = "journal_people"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    owner_user_id = Column(String, nullable=False, index=True)
+    name = Column(String, nullable=False)
+    alias = Column(String, default="")
+    relation_label = Column(String, default="")
+    summary = Column(Text, default="")
+    birthday = Column(String, default="")
+    avatar = Column(String, default="")
+    status = Column(String, default="active", index=True)
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now)
+
+    __table_args__ = (
+        Index("ix_journal_people_owner_status", "owner_user_id", "status"),
+    )
+
+
+class JournalRelation(Base):
+    """个人人物之间的关系；与世界 Relationship 完全分离。"""
+
+    __tablename__ = "journal_relations"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    owner_user_id = Column(String, nullable=False, index=True)
+    person_id = Column(String, ForeignKey("journal_people.id", ondelete="CASCADE"), nullable=False, index=True)
+    related_person_id = Column(String, ForeignKey("journal_people.id", ondelete="CASCADE"), nullable=False, index=True)
+    relation_type = Column(String, default="", index=True)
+    description = Column(Text, default="")
+    start_date = Column(String, default="")
+    end_date = Column(String, default="")
+    status = Column(String, default="active", index=True)
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now)
+
+
+class JournalEntryPerson(Base):
+    """日记/经历条目与个人人物的多对多关联。"""
+
+    __tablename__ = "journal_entry_people"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    owner_user_id = Column(String, nullable=False, index=True)
+    entry_id = Column(String, ForeignKey("diary_entries.id", ondelete="CASCADE"), nullable=False, index=True)
+    person_id = Column(String, ForeignKey("journal_people.id", ondelete="CASCADE"), nullable=False, index=True)
+    role = Column(String, default="mentioned")
+    created_at = Column(DateTime, default=_now)
+
+    __table_args__ = (
+        UniqueConstraint("entry_id", "person_id", name="uq_journal_entry_person"),
+    )
+
+
+class UserBiography(Base):
+    """用户自己的传记，独立于 CharacterBiography。"""
+
+    __tablename__ = "user_biographies"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    owner_user_id = Column(String, nullable=False, index=True)
+    title = Column(String, nullable=False)
+    subtitle = Column(String, default="")
+    summary = Column(Text, default="")
+    cover = Column(String, default="")
+    status = Column(String, default="draft", index=True)  # draft/published/archived
+    visibility = Column(String, default="private")
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now)
+
+
+class UserBiographyChapter(Base):
+    __tablename__ = "user_biography_chapters"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    biography_id = Column(String, ForeignKey("user_biographies.id", ondelete="CASCADE"), nullable=False, index=True)
+    title = Column(String, nullable=False)
+    summary = Column(Text, default="")
+    content = Column(Text, default="")
+    order_index = Column(Integer, default=0)
+    source_entry_ids = Column(JSON, default=list)
+    status = Column(String, default="draft")
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now)
+
+    __table_args__ = (
+        Index("ix_user_biography_chapters_order", "biography_id", "order_index"),
+    )
+
+
+class JournalCitation(Base):
+    """日记/用户传记章节到信息来源的引用映射。"""
+
+    __tablename__ = "journal_citations"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    owner_user_id = Column(String, nullable=False, index=True)
+    target_type = Column(String, nullable=False, index=True)  # journal_entry/user_biography_chapter
+    target_id = Column(String, nullable=False, index=True)
+    source_id = Column(String, ForeignKey("information_sources.id", ondelete="CASCADE"), nullable=False, index=True)
+    excerpt = Column(Text, default="")
+    created_at = Column(DateTime, default=_now)
+
+    __table_args__ = (
+        UniqueConstraint("target_type", "target_id", "source_id", name="uq_journal_citation"),
+    )
+
+
+# =====================================================================
+# PHASE-N1 M4：AI 信息授权 / 访问审计 / 记忆来源
+# =====================================================================
+class AiInfoGrant(Base):
+    __tablename__ = "ai_info_grants"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    owner_user_id = Column(String, nullable=False, index=True)
+    grantee_instance_id = Column(String, nullable=False, index=True)
+    access_level = Column(Integer, default=0)  # 0-4
+    allowed_purposes = Column(JSON, default=list)
+    allow_memory = Column(Boolean, default=False)
+    redaction = Column(String, default="none")  # none/names/dates/sensitive
+    status = Column(String, default="active", index=True)  # pending/active/paused/revoked/expired
+    expires_at = Column(DateTime)
+    request_id = Column(String)
+    consent_version = Column(String, default="n1-1")
+    grant_version = Column(Integer, default=1)
+    created_at = Column(DateTime, default=_now)
+    confirmed_at = Column(DateTime)
+    paused_at = Column(DateTime)
+    revoked_at = Column(DateTime)
+    updated_at = Column(DateTime, default=_now)
+
+    __table_args__ = (
+        Index("ix_ai_info_grants_owner_status", "owner_user_id", "status"),
+        Index("ix_ai_info_grants_instance", "grantee_instance_id", "status"),
+    )
+
+
+class AiInfoGrantScope(Base):
+    __tablename__ = "ai_info_grant_scopes"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    grant_id = Column(String, ForeignKey("ai_info_grants.id", ondelete="CASCADE"), nullable=False, index=True)
+    scope_type = Column(String, nullable=False)  # category/entry/biography/biography_chapter/collection
+    scope_id = Column(String, index=True)
+    scope_key = Column(String, index=True)
+    scope_label = Column(String, default="")
+    created_at = Column(DateTime, default=_now)
+
+
+class AiInfoRequest(Base):
+    __tablename__ = "ai_info_requests"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    owner_user_id = Column(String, nullable=False, index=True)
+    requester_instance_id = Column(String, nullable=False, index=True)
+    requested_scopes = Column(JSON, default=list)
+    requested_level = Column(Integer, default=1)
+    reason = Column(Text, default="")
+    relationship_context = Column(JSON, default=dict)
+    status = Column(String, default="pending", index=True)
+    responded_at = Column(DateTime)
+    created_at = Column(DateTime, default=_now)
+
+
+class AiInfoAccessLog(Base):
+    __tablename__ = "ai_info_access_logs"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    owner_user_id = Column(String, nullable=False, index=True)
+    instance_id = Column(String, nullable=False, index=True)
+    grant_id = Column(String, index=True)
+    request_id = Column(String)
+    scope_type = Column(String, default="")
+    scope_id = Column(String, default="")
+    purpose = Column(String, default="")
+    action = Column(String, default="read")  # read/summarize/memory_write/denied
+    memory_ids = Column(JSON, default=list)
+    allowed = Column(Boolean, default=True)
+    reason = Column(String, default="")
+    created_at = Column(DateTime, default=_now, index=True)
+
+
+class AiMemorySource(Base):
+    __tablename__ = "ai_memory_sources"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    memory_id = Column(String, ForeignKey("persona_memories.id", ondelete="CASCADE"), nullable=False, index=True)
+    source_type = Column(String, nullable=False, index=True)  # journal_entry/biography_chapter/information_source
+    source_id = Column(String, nullable=False, index=True)
+    grant_id = Column(String, index=True)
+    excerpt_hash = Column(String, default="")
+    status = Column(String, default="active", index=True)  # active/revoked
+    created_at = Column(DateTime, default=_now)
+    revoked_at = Column(DateTime)
+
+    __table_args__ = (
+        Index("ix_ai_memory_sources_source", "source_type", "source_id"),
+    )
+
+
+# =====================================================================
+# 设置中心：用户偏好 / 隐私 / 通知
+# =====================================================================
+class UserSettings(Base):
+    __tablename__ = "user_settings"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    user_id = Column(String, nullable=False, unique=True, index=True)
+    preferences = Column(JSON, default=dict)
+    privacy = Column(JSON, default=dict)
+    notifications = Column(JSON, default=dict)
+    updated_at = Column(DateTime, default=_now)
+
+
+# =====================================================================
+# PHASE-N1 M5：社区公开作品 / 版本 / 评论 / 收藏
+# =====================================================================
+class CommunityPublication(Base):
+    __tablename__ = "community_publications"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    owner_user_id = Column(String, nullable=False, index=True)
+    public_id = Column(String, nullable=False, unique=True, index=True)
+    work_type = Column(String, default="diary_essay", index=True)  # diary_essay/biography/biography_serial/story
+    title = Column(String, nullable=False)
+    summary = Column(Text, default="")
+    anonymous = Column(Boolean, default=False)
+    author_display = Column(String, default="")
+    cover = Column(String, default="")
+    status = Column(String, default="published", index=True)  # draft/published/withdrawn/removed
+    current_version_id = Column(String)
+    published_at = Column(DateTime)
+    withdrawn_at = Column(DateTime)
+    view_count = Column(Integer, default=0)
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now)
+
+    __table_args__ = (
+        Index("ix_community_publications_status_time", "status", "published_at"),
+    )
+
+
+class CommunityPublicationVersion(Base):
+    __tablename__ = "community_publication_versions"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    publication_id = Column(
+        String, ForeignKey("community_publications.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+    version_no = Column(Integer, nullable=False, default=1)
+    title = Column(String, nullable=False)
+    summary = Column(Text, default="")
+    content_snapshot = Column(JSON, default=dict)
+    source_refs = Column(JSON, default=list)
+    content_hash = Column(String, default="")
+    change_summary = Column(String, default="")
+    status = Column(String, default="published", index=True)
+    published_at = Column(DateTime, default=_now)
+    created_at = Column(DateTime, default=_now)
+
+    __table_args__ = (
+        UniqueConstraint("publication_id", "version_no", name="uq_community_publication_version"),
+    )
+
+
+class CommunityComment(Base):
+    __tablename__ = "community_comments"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    publication_id = Column(
+        String, ForeignKey("community_publications.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+    version_id = Column(String)
+    owner_user_id = Column(String, nullable=False, index=True)
+    body = Column(Text, default="")
+    reply_to_id = Column(String)
+    status = Column(String, default="visible", index=True)
+    created_at = Column(DateTime, default=_now)
+
+
+class CommunityFavorite(Base):
+    __tablename__ = "community_favorites"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    publication_id = Column(
+        String, ForeignKey("community_publications.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+    owner_user_id = Column(String, nullable=False, index=True)
+    created_at = Column(DateTime, default=_now)
+
+    __table_args__ = (
+        UniqueConstraint("publication_id", "owner_user_id", name="uq_community_favorite"),
+    )
+
+
+# =====================================================================
+# 内容社区社交：讨论 / 小组 / 关注 / 好友 / 动态通知
+# =====================================================================
+class CommunityTopic(Base):
+    __tablename__ = "community_topics"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    owner_user_id = Column(String, nullable=False, index=True)
+    category = Column(String, default="discussion", index=True)
+    title = Column(String, nullable=False)
+    body = Column(Text, default="")
+    tags = Column(JSON, default=list)
+    status = Column(String, default="active", index=True)
+    view_count = Column(Integer, default=0)
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now)
+
+    __table_args__ = (
+        Index("ix_community_topics_status_time", "status", "created_at"),
+    )
+
+
+class CommunityTopicReply(Base):
+    __tablename__ = "community_topic_replies"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    topic_id = Column(String, ForeignKey("community_topics.id", ondelete="CASCADE"), nullable=False, index=True)
+    owner_user_id = Column(String, nullable=False, index=True)
+    body = Column(Text, default="")
+    status = Column(String, default="active", index=True)
+    created_at = Column(DateTime, default=_now)
+
+
+class CommunityGroup(Base):
+    __tablename__ = "community_groups"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    owner_user_id = Column(String, nullable=False, index=True)
+    name = Column(String, nullable=False)
+    description = Column(Text, default="")
+    category = Column(String, default="interest", index=True)
+    visibility = Column(String, default="public", index=True)  # public/private
+    status = Column(String, default="active", index=True)
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now)
+
+    __table_args__ = (
+        Index("ix_community_groups_status_time", "status", "created_at"),
+    )
+
+
+class CommunityGroupMember(Base):
+    __tablename__ = "community_group_members"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    group_id = Column(String, ForeignKey("community_groups.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(String, nullable=False, index=True)
+    role = Column(String, default="member")  # owner/member
+    status = Column(String, default="active", index=True)  # active/pending
+    created_at = Column(DateTime, default=_now)
+
+    __table_args__ = (
+        UniqueConstraint("group_id", "user_id", name="uq_community_group_member"),
+    )
+
+
+class CommunityGroupPost(Base):
+    __tablename__ = "community_group_posts"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    group_id = Column(String, ForeignKey("community_groups.id", ondelete="CASCADE"), nullable=False, index=True)
+    owner_user_id = Column(String, nullable=False, index=True)
+    title = Column(String, nullable=False)
+    body = Column(Text, default="")
+    status = Column(String, default="active", index=True)
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now)
+
+
+class CommunityGroupReply(Base):
+    __tablename__ = "community_group_replies"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    post_id = Column(String, ForeignKey("community_group_posts.id", ondelete="CASCADE"), nullable=False, index=True)
+    owner_user_id = Column(String, nullable=False, index=True)
+    body = Column(Text, default="")
+    status = Column(String, default="active", index=True)
+    created_at = Column(DateTime, default=_now)
+
+
+class CommunityFollow(Base):
+    __tablename__ = "community_follows"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    follower_id = Column(String, nullable=False, index=True)
+    followee_id = Column(String, nullable=False, index=True)
+    created_at = Column(DateTime, default=_now)
+
+    __table_args__ = (
+        UniqueConstraint("follower_id", "followee_id", name="uq_community_follow"),
+    )
+
+
+class CommunityFriendRequest(Base):
+    __tablename__ = "community_friend_requests"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    requester_id = Column(String, nullable=False, index=True)
+    addressee_id = Column(String, nullable=False, index=True)
+    status = Column(String, default="pending", index=True)  # pending/accepted/rejected/cancelled
+    message = Column(Text, default="")
+    created_at = Column(DateTime, default=_now)
+    responded_at = Column(DateTime)
+
+    __table_args__ = (
+        Index("ix_community_friend_requests_pair", "requester_id", "addressee_id"),
+    )
+
+
+class CommunityFriendship(Base):
+    __tablename__ = "community_friendships"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    user_a_id = Column(String, nullable=False, index=True)
+    user_b_id = Column(String, nullable=False, index=True)
+    created_at = Column(DateTime, default=_now)
+
+    __table_args__ = (
+        UniqueConstraint("user_a_id", "user_b_id", name="uq_community_friendship"),
+    )
+
+
+class CommunityNotification(Base):
+    __tablename__ = "community_notifications"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    user_id = Column(String, nullable=False, index=True)
+    type = Column(String, default="system", index=True)
+    actor_id = Column(String)
+    object_type = Column(String)
+    object_id = Column(String)
+    title = Column(String, default="")
+    body = Column(Text, default="")
+    read_at = Column(DateTime)
+    created_at = Column(DateTime, default=_now)
+
+    __table_args__ = (
+        Index("ix_community_notifications_user_time", "user_id", "created_at"),
+    )
+
+
+# =====================================================================
+# 商业与服务中心：账户、会员、订单、流水、AI 用量、创作者结算
+# =====================================================================
+class BillingAccount(Base):
+    __tablename__ = "billing_accounts"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    user_id = Column(String, unique=True, nullable=False, index=True)
+    balance_cents = Column(Integer, default=0, nullable=False)
+    currency = Column(String, default="CNY")
+    ai_monthly_call_limit = Column(Integer, default=0, nullable=False)
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now)
+
+
+class BillingMembership(Base):
+    __tablename__ = "billing_memberships"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    user_id = Column(String, unique=True, nullable=False, index=True)
+    plan = Column(String, default="free", nullable=False, index=True)
+    status = Column(String, default="active", nullable=False)  # active/cancelled/expired
+    cycle = Column(String, default="")
+    started_at = Column(DateTime)
+    expires_at = Column(DateTime)
+    auto_renew = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now)
+
+
+class BillingOrder(Base):
+    __tablename__ = "billing_orders"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    user_id = Column(String, nullable=False, index=True)
+    kind = Column(String, nullable=False, index=True)  # recharge/membership
+    sku = Column(String, default="")
+    title = Column(String, default="")
+    amount_cents = Column(Integer, default=0, nullable=False)
+    currency = Column(String, default="CNY")
+    status = Column(String, default="pending", nullable=False, index=True)
+    payment_method = Column(String, default="")
+    paid_at = Column(DateTime)
+    details = Column(JSON, default=dict)
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now)
+
+    __table_args__ = (
+        Index("ix_billing_orders_user_time", "user_id", "created_at"),
+    )
+
+
+class BillingLedgerEntry(Base):
+    __tablename__ = "billing_ledger_entries"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    user_id = Column(String, nullable=False, index=True)
+    order_id = Column(String, index=True)
+    entry_type = Column(String, nullable=False, index=True)  # topup/membership/service/ai_usage/creator_earning/refund
+    amount_cents = Column(Integer, default=0, nullable=False)  # 正数入账，负数支出
+    balance_after_cents = Column(Integer, default=0, nullable=False)
+    description = Column(String, default="")
+    details = Column(JSON, default=dict)
+    created_at = Column(DateTime, default=_now)
+
+    __table_args__ = (
+        Index("ix_billing_ledger_user_time", "user_id", "created_at"),
+    )
+
+
+class BillingAiUsage(Base):
+    __tablename__ = "billing_ai_usage"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    user_id = Column(String, nullable=False, index=True)
+    route = Column(String, default="")
+    provider = Column(String, default="platform", index=True)  # platform/personal
+    model = Column(String, default="")
+    status_code = Column(Integer, default=200)
+    units = Column(Integer, default=1, nullable=False)
+    created_at = Column(DateTime, default=_now)
+
+    __table_args__ = (
+        Index("ix_billing_ai_usage_user_time", "user_id", "created_at"),
+    )
+
+
+class BillingSettlement(Base):
+    __tablename__ = "billing_settlements"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    creator_id = Column(String, nullable=False, index=True)
+    period_start = Column(DateTime)
+    period_end = Column(DateTime)
+    gross_cents = Column(Integer, default=0, nullable=False)
+    platform_fee_cents = Column(Integer, default=0, nullable=False)
+    net_cents = Column(Integer, default=0, nullable=False)
+    status = Column(String, default="pending", nullable=False, index=True)  # pending/paid
+    details = Column(JSON, default=dict)
+    created_at = Column(DateTime, default=_now)
+    paid_at = Column(DateTime)
+
+    __table_args__ = (
+        Index("ix_billing_settlements_creator_time", "creator_id", "created_at"),
+    )

@@ -10,12 +10,21 @@ import models
 import product_config as pc
 from database import get_db
 from nodes import seed_world
+from users import LOCAL_USER_ID
 
 router = APIRouter(tags=["products"])
 
 
 def _owner(request: Request) -> str:
     return str(getattr(request.state, "user_id", None) or "local")
+
+
+def _require_yunbao_owner(product: str, request: Request, db: Session) -> None:
+    if product != "yunbao":
+        return
+    user = db.query(models.AppUser).filter(models.AppUser.id == _owner(request)).first()
+    if not user or not user.is_owner:
+        raise HTTPException(status_code=403, detail="云宝工作台仅限开发者访问")
 
 
 def _world_row(world: models.World) -> dict:
@@ -64,8 +73,10 @@ def get_product_workspace(product: str, request: Request, db: Session = Depends(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     if not pc.AUTO_WORKSPACE[product]:
         return {"product": product, "world": None, "auto_workspace": False}
+    _require_yunbao_owner(product, request, db)
+    owner = LOCAL_USER_ID if product == "yunbao" else _owner(request)
     world = db.query(models.World).filter(
-        models.World.owner_id == _owner(request),
+        models.World.owner_id == owner,
         models.World.product_scene == product,
         models.World.is_product_workspace.is_(True),
         models.World.deleted_at.is_(None),
@@ -81,7 +92,8 @@ def ensure_product_workspace(product: str, request: Request, db: Session = Depen
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     if not pc.AUTO_WORKSPACE[product]:
         raise HTTPException(status_code=409, detail="该产品使用普通世界，不创建隐藏工作空间")
-    owner = _owner(request)
+    _require_yunbao_owner(product, request, db)
+    owner = LOCAL_USER_ID if product == "yunbao" else _owner(request)
     world = db.query(models.World).filter(
         models.World.owner_id == owner,
         models.World.product_scene == product,
@@ -92,7 +104,7 @@ def ensure_product_workspace(product: str, request: Request, db: Session = Depen
         now = datetime.utcnow().isoformat()
         world = models.World(
             name=pc.WORKSPACE_NAME[product],
-            description="产品自动工作空间，不在世界管理中展示；数据只属于本产品。",
+            description=("云宝的完整工作领域；可在世界管理中查看与维护。" if product == "yunbao" else "产品自动工作空间，不在世界管理中展示；数据只属于本产品。"),
             type="reality" if product == "diary" else "experimental",
             owner_id=owner,
             product_scene=product,

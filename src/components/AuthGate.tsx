@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { authLogin, authSetup, authStatus, type AuthStatus } from '../api/auth'
-import { clearAuthToken } from '../api/authToken'
+import { AUTH_USER_KEY, clearAuthToken } from '../api/authToken'
 
 export default function AuthGate({ children }: { children: React.ReactNode }) {
   const [phase, setPhase] = useState<'loading' | 'login' | 'setup' | 'ready'>('loading')
@@ -16,6 +16,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   const check = async () => {
     try {
       const data = await authStatus()
+      if (data.user) localStorage.setItem(AUTH_USER_KEY, JSON.stringify(data.user))
       setStatus(data)
       if (data.auth_disabled || data.authenticated) setPhase('ready')
       else if (data.setup_required) setPhase('setup')

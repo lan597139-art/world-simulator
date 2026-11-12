@@ -8,19 +8,21 @@ export default function WorldsPage({
   lang,
   dict,
   product = 'game',
+  readOnly = false,
 }: {
   onEnterWorld: (id: string) => void,
   onOpenWorldBuilding: (id: string) => void,
   lang: string,
   dict: any,
-  product?: 'game' | 'literature' | 'companion' | 'diary'
+  product?: string
+  readOnly?: boolean
 }) {
   const [worlds, setWorlds] = useState<World[]>([])
   const [loading, setLoading] = useState(true)
 
   const loadWorlds = async () => {
     try {
-      const data = await getAllWorlds()
+      const data = await getAllWorlds(true)
       setWorlds(data)
     } catch (error) {
       console.error("加载失败:", error)
@@ -71,8 +73,8 @@ export default function WorldsPage({
     }
   }
 
-  const sceneLabels: Record<string, string> = { game: '游戏创作', literature: '文学创作', companion: 'AI 伴侣', diary: '日记与传记' }
-  const filteredWorlds = worlds.filter((w) => w.product_scene === product && !w.is_product_workspace)
+  const sceneLabels: Record<string, string> = { game: '游戏创作', literature: '文学创作', companion: 'AI 伴侣', diary: '日记与传记', yunbao: '云宝工作台' }
+  const filteredWorlds = worlds.filter((w) => w.product_scene === product && (product === 'yunbao' || !w.is_product_workspace))
 
   if (loading) return <div style={{ padding: '2rem', color: 'var(--text-main)' }}>Loading...</div>
 
@@ -86,16 +88,18 @@ export default function WorldsPage({
           </p>
         </div>
 
-        <button
-          onClick={() => onOpenWorldBuilding('')}
-          style={{
-            padding: '10px 20px', background: 'var(--primary-color)', color: 'var(--bg-color)',
-            border: 'none', borderRadius: '8px', cursor: 'pointer', boxShadow: '0 4px 14px rgba(0, 0, 0, 0.1)',
-            fontWeight: 600
-          }}
-        >
-          {lang === 'zh' ? '+ 创建新世界' : '+ New World'}
-        </button>
+        {!readOnly && (
+          <button
+            onClick={() => onOpenWorldBuilding('')}
+            style={{
+              padding: '10px 20px', background: 'var(--primary-color)', color: 'var(--bg-color)',
+              border: 'none', borderRadius: '8px', cursor: 'pointer', boxShadow: '0 4px 14px rgba(0, 0, 0, 0.1)',
+              fontWeight: 600
+            }}
+          >
+            {lang === 'zh' ? '+ 创建新世界' : '+ New World'}
+          </button>
+        )}
       </div>
 
       <div style={{ display: 'flex', gap: '7px', marginBottom: '1.25rem', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -110,7 +114,7 @@ export default function WorldsPage({
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '24px' }}>
         {filteredWorlds.length === 0 ? (
           <div className="glass-card" style={{ padding: '3rem', color: 'var(--text-muted)', gridColumn: '1 / -1', textAlign: 'center', borderStyle: 'dashed' }}>
-            {lang === 'zh' ? '数据库空空如也，请点击右上角“创建新世界”。' : 'No worlds found. Click "New World" to start.'}
+            {readOnly ? (lang === 'zh' ? '暂无可查看的世界。' : 'No worlds to view.') : (lang === 'zh' ? '数据库空空如也，请点击右上角“创建新世界”。' : 'No worlds found. Click "New World" to start.')}
           </div>
         ) : (
           filteredWorlds.map(w => (
@@ -148,7 +152,7 @@ export default function WorldsPage({
                   {lang === 'zh' ? '进入工作台' : 'Enter'}
                 </button>
 
-                {/* ✅ 新增：编辑世界按钮 */}
+                {!readOnly && (
                 <button
                   onClick={() => onOpenWorldBuilding(w.id)}
                   style={{
@@ -162,7 +166,9 @@ export default function WorldsPage({
                 >
                   {lang === 'zh' ? '编辑' : 'Edit'}
                 </button>
+                )}
 
+                {!readOnly && (
                 <button
                   onClick={() => handleArchive(w.id)}
                   disabled={Boolean(w.is_official)}
@@ -175,7 +181,8 @@ export default function WorldsPage({
                 >
                   {lang === 'zh' ? '归档' : 'Archive'}
                 </button>
-                {w.is_official ? (
+                )}
+                {!readOnly && (w.is_official ? (
                   <button
                     onClick={() => void handleResetOfficial(w.id, w.name)}
                     style={{
@@ -197,7 +204,7 @@ export default function WorldsPage({
                   >
                     {lang === 'zh' ? '删除' : 'Delete'}
                   </button>
-                )}
+                ))}
               </div>
             </div>
           ))

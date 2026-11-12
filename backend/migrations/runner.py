@@ -44,6 +44,17 @@ MODULES = [
     "m032_event_sandbox_scenarios",
     "m033_product_spaces",
     "m034_product_workspace_unique",
+    "m035_yunbao_profile",
+    "m036_phase_n1_m1_ownership",
+    "m037_persona_instances",
+    "m038_phase_n1_m3_journal",
+    "m039_phase_n1_m4_grants",
+    "m040_phase_n1_m5_community",
+    "m041_phase_n1_m6_compat",
+    "m042_yunbao_seed_character",
+    "m043_settings_center",
+    "m044_community_social",
+    "m045_commercial_center",
 ]
 
 

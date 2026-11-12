@@ -498,7 +498,7 @@ function TagGroup({ label, selected, options, onChange, lang }: { label: string,
 // =========================================================
 // 3. 页面主体 (宏观 -> 中观 -> 微观 排布)
 // =========================================================
-export default function WorldBuildingPage({ worldId, onBack, lang, product = 'game' }: { worldId: string, onBack?: () => void, lang: string, product?: 'game' | 'literature' | 'companion' | 'diary' }) {
+export default function WorldBuildingPage({ worldId, onBack, lang, product = 'game' }: { worldId: string, onBack?: () => void, lang: string, product?: string }) {
   const [activeSubTab, setActiveSubTab] = useState<string>('era')
   const [config, setConfig] = useState<any>(null)
   const [worldName, setWorldName] = useState('')

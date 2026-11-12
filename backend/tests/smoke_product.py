@@ -25,6 +25,30 @@ def check(name, condition, detail=""):
 
 def main_test():
     global passed, failed
+    cfg = client.get("/api/products/config").json()
+    products = {row["key"]: row for row in cfg.get("products", [])}
+    check("产品矩阵包含四大创作产品与云宝", set(products) == {"game", "literature", "companion", "diary", "yunbao"}, list(products))
+    check("游戏首页保留 01 世界总览", products["game"]["home"] == "overview", products["game"]["home"])
+    check("文学首页为 02 世界管理", products["literature"]["home"] == "world-management", products["literature"]["home"])
+    check("文学移除 01 世界总览", "overview" not in products["literature"]["allowed_modules"], products["literature"]["allowed_modules"])
+    lit_nav = [item["page"] for group in products["literature"]["nav_groups"] for item in group["items"]]
+    check("文学侧栏不出现世界总览", "overview" not in lit_nav, lit_nav)
+    check("四产品描述逐字一致", [products[key]["description"] for key in ("game", "literature", "companion", "diary")] == [
+        "人物、NPC、世界规则、任务事件与多结局。",
+        "人物关系、事件、故事线、平行空间与写作。",
+        "私人角色、长期记忆、私聊与群聊。",
+        "独立日记、人生经历、来源标签与传记。",
+    ], [products[key]["description"] for key in ("game", "literature", "companion", "diary")])
+    companion_nav = [item for group in products["companion"]["nav_groups"] for item in group["items"]]
+    check("AI 伴侣侧栏不再出现云宝人格", not any(item["page"] == "personas" for item in companion_nav), companion_nav)
+    yunbao = products["yunbao"]
+    yunbao_nav = [item["page"] for group in yunbao["nav_groups"] for item in group["items"]]
+    check("云宝工作台为独立首页", yunbao["home"] == "yunbao" and yunbao["auto_workspace"] is True, yunbao)
+    check("云宝拥有游戏文学日记专业能力", all(page in yunbao["allowed_modules"] for page in (
+        "world-management", "character-management", "writing", "diary", "storyline", "simulation",
+        "personas", "memories")), yunbao["allowed_modules"])
+    check("云宝侧栏包含世界与人物管理", "world-management" in yunbao_nav and "character-management" in yunbao_nav, yunbao_nav)
+
     me = client.get("/api/users/me")
     check("本地用户可读取", me.status_code == 200 and me.json()["id"] == "local", me.text)
 

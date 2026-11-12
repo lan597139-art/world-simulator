@@ -58,8 +58,21 @@ function withAuthHeader(url: string, init?: RequestInit): RequestInit | undefine
   }
 }
 
+function withYunbaoHeader(url: string, init?: RequestInit): RequestInit | undefined {
+  try {
+    if (sessionStorage.getItem('ws.yunbaoWorkspace') !== '1') return init
+    const path = new URL(url, window.location.origin).pathname
+    if (!path.startsWith('/api/')) return init
+    const headers = new Headers(init?.headers)
+    headers.set('X-Yunbao-Workspace', '1')
+    return { ...init, headers }
+  } catch {
+    return init
+  }
+}
+
 function withRequestHeaders(url: string, init?: RequestInit): RequestInit | undefined {
-  return withAuthHeader(url, withAiHeaders(url, init))
+  return withAuthHeader(url, withYunbaoHeader(url, withAiHeaders(url, init)))
 }
 
 export function installApiOriginBridge() {

@@ -1,4 +1,6 @@
-"""本地账号（第一阶段）：无密码登录，仅用于归属与场景隔离的基础设施。"""
+"""本地账号（第一阶段）：账号归属、所有者角色与场景隔离基础设施。"""
+
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
@@ -13,8 +15,15 @@ LOCAL_USER_ID = "local"
 def ensure_local_user(db: Session) -> models.AppUser:
     user = db.query(models.AppUser).filter(models.AppUser.id == LOCAL_USER_ID).first()
     if user is None:
-        user = models.AppUser(id=LOCAL_USER_ID, username="local", display_name="本地用户")
+        user = models.AppUser(
+            id=LOCAL_USER_ID, username="local", display_name="本地用户", is_owner=True,
+        )
         db.add(user)
+        db.commit()
+        db.refresh(user)
+    elif not user.is_owner:
+        # 兼容 M035 之前的本地库；普通账号不会被提升。
+        user.is_owner = True
         db.commit()
         db.refresh(user)
     return user
@@ -25,6 +34,7 @@ def _row(user: models.AppUser) -> dict:
         "id": user.id,
         "username": user.username,
         "display_name": user.display_name,
+        "is_owner": bool(user.is_owner),
         "created_at": user.created_at.isoformat() if user.created_at else None,
     }
 
@@ -36,11 +46,13 @@ def me(request: Request, db: Session = Depends(get_db)):
 
 
 @router.patch("/api/users/me")
-def update_me(payload: dict, db: Session = Depends(get_db)):
-    user = ensure_local_user(db)
+def update_me(payload: dict, request: Request, db: Session = Depends(get_db)):
+    from auth import current_user
+    user = current_user(request, db)
     name = str(payload.get("display_name") or "").strip()[:80]
     if name:
         user.display_name = name
+        user.updated_at = datetime.utcnow()
         db.commit()
         db.refresh(user)
     return _row(user)

@@ -1,12 +1,13 @@
 import type { ProductConfig, ProductKey, ProductMatrix } from './types'
 
-export const PRODUCT_KEYS: ProductKey[] = ['game', 'literature', 'companion', 'diary']
+export const PRODUCT_KEYS: ProductKey[] = ['game', 'literature', 'companion', 'diary', 'yunbao']
 
 export const PRODUCT_LABELS: Record<ProductKey, string> = {
   game: '游戏创作',
   literature: '文学创作',
   companion: 'AI 伴侣',
   diary: '日记与传记',
+  yunbao: '云宝工作台',
 }
 
 export const PRODUCT_SHORT: Record<ProductKey, string> = {
@@ -14,6 +15,7 @@ export const PRODUCT_SHORT: Record<ProductKey, string> = {
   literature: '文学',
   companion: '伴侣',
   diary: '日记',
+  yunbao: '云宝',
 }
 
 export const PRODUCT_ICONS: Record<ProductKey, string> = {
@@ -21,13 +23,15 @@ export const PRODUCT_ICONS: Record<ProductKey, string> = {
   literature: '📖',
   companion: '💬',
   diary: '📔',
+  yunbao: '☁',
 }
 
 export const PRODUCT_DESCRIPTIONS: Record<ProductKey, string> = {
-  game: '开放完整世界模拟：世界、NPC、规则、事件、时间线、多路径推演与写作。',
-  literature: '以人物、关系和叙事为中心，保留模拟作为辅助推演，不改变完整写作能力。',
-  companion: '只开放个人 AI 人格、AI 伴侣角色、长期会话、独立记忆与互动事件，不开放世界构建。',
-  diary: '记录本人及他人的人生、关系、经历与来源证据，生成时间线与传记，不开放推演。',
+  game: '人物、NPC、世界规则、任务事件与多结局。',
+  literature: '人物关系、事件、故事线、平行空间与写作。',
+  companion: '私人角色、长期记忆、私聊与群聊。',
+  diary: '独立日记、人生经历、来源标签与传记。',
+  yunbao: '云宝的完整专业工作台：游戏、文学、日记与传记的全部能力。',
 }
 
 const nav = (title: string, items: [string, string][]) => ({
@@ -53,7 +57,8 @@ const MODULE_LABELS: Record<string, string> = {
   'time-machine': '时光机',
   archive: '归档库',
   trash: '回收站',
-  personas: '个人 AI 人格',
+  personas: '云宝 · 个人 AI 人格',
+  'yunbao-seed': '云宝人物种子',
   memories: '记忆管理',
   'companion-runtime': '07 人格运行',
   'information-sources': '信息来源管理',
@@ -74,9 +79,9 @@ function config(
     short: PRODUCT_SHORT[key],
     icon: PRODUCT_ICONS[key],
     description: PRODUCT_DESCRIPTIONS[key],
-    home: key === 'game' || key === 'literature' ? 'overview' : key === 'companion' ? 'personas' : 'diary',
-    auto_workspace: key === 'companion' || key === 'diary',
-    workspace_name: key === 'companion' ? 'AI 伴侣空间' : key === 'diary' ? '人生记录空间' : null,
+    home: key === 'game' ? 'overview' : key === 'literature' ? 'world-management' : key === 'companion' ? 'character-management' : key === 'yunbao' ? 'yunbao' : 'diary',
+    auto_workspace: key === 'companion' || key === 'diary' || key === 'yunbao',
+    workspace_name: key === 'companion' ? 'AI 伴侣空间' : key === 'diary' ? '人生记录空间' : key === 'yunbao' ? '云宝领域' : null,
     allowed_modules: allowed,
     nav_groups: navGroups,
     modes,
@@ -96,8 +101,8 @@ function config(
 
 export const FALLBACK_PRODUCTS: ProductConfig[] = [
   config('game', [
-    nav('工作台', [['overview', MODULE_LABELS.overview]]),
-    nav('世界与人物', [
+    nav('世界构建', [
+      ['overview', MODULE_LABELS.overview],
       ['world-management', MODULE_LABELS['world-management']],
       ['character-management', MODULE_LABELS['character-management']],
       ['chat', 'AI 角色聊天（NPC）'],
@@ -106,7 +111,7 @@ export const FALLBACK_PRODUCTS: ProductConfig[] = [
       ['relationships', MODULE_LABELS.relationships],
       ['events', MODULE_LABELS.events],
     ]),
-    nav('模拟与叙事', [
+    nav('模拟与推演', [
       ['timeline', MODULE_LABELS.timeline],
       ['simulation', MODULE_LABELS.simulation],
       ['storyline', MODULE_LABELS.storyline],
@@ -122,8 +127,7 @@ export const FALLBACK_PRODUCTS: ProductConfig[] = [
     writing: 'narrative', chat: 'npc', relationships: 'world', personas: 'hidden',
   }, ['world-building', 'multipath']),
   config('literature', [
-    nav('工作台', [['overview', MODULE_LABELS.overview]]),
-    nav('世界与人物', [
+    nav('世界构建', [
       ['world-management', MODULE_LABELS['world-management']],
       ['character-management', MODULE_LABELS['character-management']],
       ['chat', 'AI 角色聊天'],
@@ -132,7 +136,7 @@ export const FALLBACK_PRODUCTS: ProductConfig[] = [
       ['relationships', MODULE_LABELS.relationships],
       ['events', MODULE_LABELS.events],
     ]),
-    nav('人物与叙事', [
+    nav('故事创作', [
       ['timeline', MODULE_LABELS.timeline],
       ['storyline', MODULE_LABELS.storyline],
       ['writing', MODULE_LABELS.writing],
@@ -150,15 +154,12 @@ export const FALLBACK_PRODUCTS: ProductConfig[] = [
   config('companion', [
     nav('伴侣空间', [
       ['character-management', '03 人物管理 · 轻量'],
-      ['personas', MODULE_LABELS.personas],
       ['chat', 'AI 伴侣角色'],
     ]),
     nav('长期互动', [
       ['relationships', '04 关系管理'],
       ['events', '05 互动事件'],
       ['timeline', '06 互动时间线'],
-      ['companion-runtime', MODULE_LABELS['companion-runtime']],
-      ['memories', MODULE_LABELS.memories],
     ]),
     nav('数据安全', [
       ['time-machine', MODULE_LABELS['time-machine']],
@@ -168,8 +169,8 @@ export const FALLBACK_PRODUCTS: ProductConfig[] = [
   ], {
     'character-management': 'light', events: 'interaction', timeline: 'interaction',
     simulation: 'persona', writing: 'hidden', chat: 'companion', relationships: 'relationship',
-    personas: 'full',
-  }),
+    personas: 'hidden',
+  }, ['personas', 'memories', 'companion-runtime']),
   config('diary', [
     nav('人生记录', [
       ['diary', '日记与传记'],
@@ -192,6 +193,44 @@ export const FALLBACK_PRODUCTS: ProductConfig[] = [
     simulation: 'hidden', writing: 'biography', chat: 'hidden', relationships: 'life',
     personas: 'hidden',
   }),
+  config('yunbao', [
+    nav('云宝的世界', [
+      ['yunbao', '云宝工作台'],
+      ['overview', MODULE_LABELS.overview],
+      ['world-management', MODULE_LABELS['world-management']],
+      ['world-building', MODULE_LABELS['world-building']],
+      ['world-structure', MODULE_LABELS['world-structure']],
+      ['world-data', MODULE_LABELS['world-data']],
+    ]),
+    nav('人物与关系', [
+      ['character-management', MODULE_LABELS['character-management']],
+      ['relationships', MODULE_LABELS.relationships],
+      ['chat', 'AI 角色聊天'],
+      ['events', MODULE_LABELS.events],
+    ]),
+    nav('创作与叙事', [
+      ['timeline', MODULE_LABELS.timeline],
+      ['simulation', MODULE_LABELS.simulation],
+      ['storyline', MODULE_LABELS.storyline],
+      ['writing', MODULE_LABELS.writing],
+      ['multipath', MODULE_LABELS.multipath],
+      ['diary', MODULE_LABELS.diary],
+    ]),
+    nav('长期与安全', [
+      ['personas', '云宝人格编辑器'],
+      ['yunbao-seed', '人物种子编辑器'],
+      ['memories', MODULE_LABELS.memories],
+      ['companion-runtime', MODULE_LABELS['companion-runtime']],
+      ['information-sources', MODULE_LABELS['information-sources']],
+      ['time-machine', MODULE_LABELS['time-machine']],
+      ['archive', MODULE_LABELS.archive],
+      ['trash', MODULE_LABELS.trash],
+    ]),
+  ], {
+    'character-management': 'full', events: 'narrative', timeline: 'world',
+    simulation: 'full', writing: 'narrative', chat: 'npc', relationships: 'world',
+    personas: 'full',
+  }, ['yunbao']),
 ]
 
 export const FALLBACK_MATRIX: ProductMatrix = {
@@ -203,7 +242,7 @@ export const FALLBACK_MATRIX: ProductMatrix = {
 }
 
 export function normalizeProduct(value: string | null | undefined): ProductKey {
-  return value === 'literature' || value === 'companion' || value === 'diary' ? value : 'game'
+  return value === 'literature' || value === 'companion' || value === 'diary' || value === 'yunbao' ? value : 'game'
 }
 
 export function getStoredProduct(): ProductKey {

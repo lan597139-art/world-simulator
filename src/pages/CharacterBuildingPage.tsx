@@ -343,13 +343,13 @@ useEffect(() => {
         }
 
         // 4. 机制层
-        if (data.defense_mechanisms) setMechanismData(data.defense_mechanisms);
+        if (data.defense_mechanisms) setMechanismData(prev => ({ ...prev, ...data.defense_mechanisms }));
 
         // 5. 沙盒层
-        if (data.reality_conditions) setSandboxData(data.reality_conditions);
+        if (data.reality_conditions) setSandboxData(prev => ({ ...prev, ...data.reality_conditions }));
 
         // 6. 思想钢印
-        if (data.thought_imprints) setIndividualData(data.thought_imprints);
+        if (data.thought_imprints) setIndividualData(prev => ({ ...prev, ...data.thought_imprints }));
 
                 // 7. 生命经历（安全校验，防止格式不全导致白屏）
         if (data.life_history) {

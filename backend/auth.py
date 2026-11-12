@@ -25,7 +25,15 @@ PUBLIC_PATHS = {
     "/api/auth/status",
     "/api/auth/setup",
     "/api/auth/login",
+    "/api/settings/about",
 }
+PUBLIC_READ_PREFIXES = ("/api/community/public",)
+
+
+def public_read(path: str, method: str) -> bool:
+    if method != "GET":
+        return False
+    return any(path == prefix or path.startswith(prefix + "/") for prefix in PUBLIC_READ_PREFIXES)
 
 
 def auth_disabled() -> bool:
@@ -104,7 +112,12 @@ def current_user(request: Request, db: Session = Depends(get_db)) -> models.AppU
 async def auth_middleware(request: Request, call_next):
     """所有 /api/* 默认必须登录；仅健康检查与登录/初始化公开。"""
     path = request.url.path
-    if request.method == "OPTIONS" or not path.startswith("/api/") or path in PUBLIC_PATHS:
+    if (
+        request.method == "OPTIONS"
+        or not path.startswith("/api/")
+        or path in PUBLIC_PATHS
+        or public_read(path, request.method)
+    ):
         return await call_next(request)
     if auth_disabled():
         request.state.user_id = LOCAL_USER_ID
@@ -116,6 +129,13 @@ async def auth_middleware(request: Request, call_next):
         user = user_from_token(db, token)
         if not user:
             return JSONResponse(status_code=401, content={"detail": "登录已失效，请重新登录"})
+        if (
+            request.headers.get("x-yunbao-workspace") == "1"
+            and request.method not in {"GET", "HEAD", "OPTIONS"}
+            and not user.is_owner
+            and not (request.method == "POST" and request.url.path == "/api/products/yunbao/workspace")
+        ):
+            return JSONResponse(status_code=403, content={"detail": "云宝工作台仅开发者可编辑，当前账号为只读"})
         request.state.user_id = user.id
     finally:
         db.close()
@@ -127,6 +147,9 @@ def _row(user: models.AppUser) -> dict:
         "id": user.id,
         "username": user.username,
         "display_name": user.display_name,
+        "is_owner": bool(user.is_owner),
+        "bio": user.bio or "",
+        "avatar": user.avatar or "",
         "created_at": user.created_at.isoformat() if user.created_at else None,
     }
 
@@ -190,6 +213,51 @@ def login(payload: dict, db: Session = Depends(get_db)):
 @router.get("/api/auth/me")
 def me(request: Request, db: Session = Depends(get_db)):
     return _row(current_user(request, db))
+
+
+
+
+@router.patch("/api/auth/profile")
+def update_profile(payload: dict, request: Request, db: Session = Depends(get_db)):
+    user = current_user(request, db)
+    if "display_name" in payload:
+        display_name = str(payload.get("display_name") or "").strip()
+        if not display_name:
+            raise HTTPException(status_code=422, detail="显示名称不能为空")
+        if len(display_name) > 80:
+            raise HTTPException(status_code=422, detail="显示名称最多 80 个字符")
+        user.display_name = display_name
+    if "bio" in payload:
+        user.bio = str(payload.get("bio") or "").strip()[:500]
+    if "avatar" in payload:
+        user.avatar = str(payload.get("avatar") or "").strip()[:16]
+    user.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(user)
+    return _row(user)
+
+
+@router.post("/api/auth/change-password")
+def change_password(payload: dict, request: Request, db: Session = Depends(get_db)):
+    user = current_user(request, db)
+    current = str(payload.get("current_password") or "")
+    new = str(payload.get("new_password") or "")
+    if not verify_password(current, user.password_hash):
+        raise HTTPException(status_code=403, detail="当前密码不正确")
+    if len(new) < 8:
+        raise HTTPException(status_code=422, detail="新密码至少 8 个字符")
+    if current == new:
+        raise HTTPException(status_code=422, detail="新密码不能与当前密码相同")
+    user.password_hash = hash_password(new)
+    user.updated_at = datetime.utcnow()
+    token = _bearer(request)
+    keep = _token_hash(token) if token else ""
+    db.query(models.AuthSession).filter(
+        models.AuthSession.user_id == user.id,
+        models.AuthSession.token_hash != keep,
+    ).delete(synchronize_session=False)
+    db.commit()
+    return {"status": "ok", "message": "密码已更新，其他设备已退出登录"}
 
 
 @router.post("/api/auth/logout")

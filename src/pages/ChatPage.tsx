@@ -35,8 +35,8 @@ const btn: React.CSSProperties = {
 }
 const hint: React.CSSProperties = { fontSize: '10px', color: 'var(--text-muted)', lineHeight: 1.6 }
 
-export default function ChatPage({ worldId, product = 'game', onOpenPersonas }: {
-  worldId?: string; product?: string; onOpenPersonas?: () => void
+export default function ChatPage({ worldId, product = 'game' }: {
+  worldId?: string; product?: string
 }) {
   const companion = product === 'companion'
   const [threads, setThreads] = useState<ChatThread[]>([])
@@ -355,7 +355,6 @@ export default function ChatPage({ worldId, product = 'game', onOpenPersonas }: 
     <div style={{ padding: '1rem', display: 'flex', gap: '12px', height: 'calc(100vh - 60px)', boxSizing: 'border-box' }}>
       <div style={{ ...card, width: '250px' }}>
         <h3 style={{ margin: 0, fontSize: '14px' }}>{companion ? 'AI 伴侣角色' : 'AI 角色聊天'}</h3>
-        {companion && <button type="button" style={btn} onClick={onOpenPersonas}>管理个人 AI 人格</button>}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           <select value={selectedChar} onChange={(e) => setSelectedChar(e.target.value)} style={input}>
             {characters.map((char) => <option key={char.id} value={char.id}>{char.name}</option>)}
