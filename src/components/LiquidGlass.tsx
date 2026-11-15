@@ -22,25 +22,33 @@ export function LiquidGlass({
   useEffect(() => {
     if (!ref.current) return;
     
-    // 强制当作 any 处理，绕过所有类型检查
     const Core: any = LiquidGlassCore;
     
     if (Core.isSupported && Core.isSupported()) {
-      glassRef.current = new Core(ref.current, {
-        tint: 0.2,
-        tintTone: 'light',
-        frost: 0.1,
-        material: {
-          refraction: 90,
-          edgeReach: 0.15,
-          dispersion: 3.0,
-          rim: 0.4,
-        }
-      });
-      
-      // 使用原生 setProperty 移除原本 CSS 里的模糊，避免和 WebGL 效果叠加
-      ref.current.style.setProperty('backdrop-filter', 'none');
-      ref.current.style.setProperty('-webkit-backdrop-filter', 'none');
+      console.log('✅ WebGL2 支持，正在初始化...');
+      try {
+        glassRef.current = new Core(ref.current, {
+          tint: 0.2,
+          tintTone: 'light',
+          frost: 0.1,
+          material: {
+            refraction: 90,
+            edgeReach: 0.15,
+            dispersion: 3.0,
+            rim: 0.4,
+          }
+        });
+        console.log('✅ 液态玻璃初始化成功！');
+        
+        // 强制容器背景透明，防止 CSS 覆盖
+        ref.current.style.setProperty('background', 'transparent', 'important');
+        ref.current.style.setProperty('backdrop-filter', 'none', 'important');
+        ref.current.style.setProperty('-webkit-backdrop-filter', 'none', 'important');
+      } catch (e) {
+        console.error('❌ 液态玻璃初始化失败:', e);
+      }
+    } else {
+      console.warn('❌ 浏览器不支持 WebGL2');
     }
 
     return () => {
