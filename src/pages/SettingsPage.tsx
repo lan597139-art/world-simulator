@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import {
   AlertCircle,
@@ -6,12 +6,14 @@ import {
   Check,
   Database,
   Download,
+  ImagePlus,
   Info,
   KeyRound,
   LockKeyhole,
   LogOut,
   MonitorSmartphone,
   RefreshCw,
+  RotateCcw,
   Save,
   ShieldCheck,
   SlidersHorizontal,
@@ -40,6 +42,7 @@ import InviteCodesPanel from '../components/settings/InviteCodesPanel'
 import LocalWorkspacePanel from '../components/settings/LocalWorkspacePanel'
 import '../styles/settings.css'
 import { applyExperience } from '../utils/experience'
+import { applyAppearance, loadAppearance, saveAppearance, type Appearance } from '../utils/appearance'
 
 type Lang = 'zh' | 'en'
 type Section = 'profile' | 'account' | 'privacy' | 'notifications' | 'experience' | 'data' | 'about'
@@ -157,6 +160,9 @@ export default function SettingsPage({
   const [avatarUploading, setAvatarUploading] = useState(false)
   const [skin, setSkin] = useState(() => localStorage.getItem('ws.ui.skin') || 'default')
   const [glass, setGlass] = useState(() => localStorage.getItem('ws.ui.glass') || 'medium')
+  const [appearance, setAppearance] = useState<Appearance>(() => loadAppearance())
+  const backgroundUpload = useRef<HTMLInputElement>(null)
+  const [backgroundBusy, setBackgroundBusy] = useState(false)
   const [passwords, setPasswords] = useState({ current_password: '', new_password: '', confirm: '' })
   
   // 密码可见性状态
@@ -178,6 +184,45 @@ export default function SettingsPage({
     else document.documentElement.dataset.glass = glass
     localStorage.setItem('ws.ui.glass', glass)
   }, [glass])
+
+  useEffect(() => {
+    applyAppearance(appearance)
+    saveAppearance(appearance)
+  }, [appearance])
+
+  const updateAppearance = (patch: Partial<Appearance>) => {
+    setAppearance((current) => ({ ...current, ...patch }))
+  }
+
+  const chooseGlass = (value: string) => {
+    setGlass(value)
+    const presets: Record<string, Pick<Appearance, 'glass_blur' | 'glass_opacity'>> = {
+      low: { glass_blur: 14, glass_opacity: 100 },
+      medium: { glass_blur: 40, glass_opacity: 100 },
+      high: { glass_blur: 56, glass_opacity: 100 },
+      solid: { glass_blur: 0, glass_opacity: 96 },
+    }
+    const preset = presets[value]
+    if (preset) updateAppearance(preset)
+  }
+
+  const uploadBackground = async (file?: File) => {
+    if (!file) return
+    if (!file.type.startsWith('image/')) { setError('背景图需要图片文件'); return }
+    if (file.size > 12 * 1024 * 1024) { setError('背景图不能超过 12MB'); return }
+    setError('')
+    setBackgroundBusy(true)
+    try {
+      const uploaded = await uploadMedia(file)
+      updateAppearance({ background_url: uploaded.file_url })
+      setFlash('背景图已上传并应用')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '背景图上传失败')
+    } finally {
+      setBackgroundBusy(false)
+      if (backgroundUpload.current) backgroundUpload.current.value = ''
+    }
+  }
 
   const load = async () => {
     setError('')
@@ -583,7 +628,7 @@ export default function SettingsPage({
                     {[
                       ['low', '低'], ['medium', '标准'], ['high', '高'], ['solid', '实色'],
                     ].map(([value, label]) => (
-                      <button key={value} type="button" onClick={() => setGlass(value)}
+                      <button key={value} type="button" onClick={() => chooseGlass(value)}
                         style={{ ...ghost, borderColor: glass === value ? 'var(--text-main)' : 'var(--card-border)', background: glass === value ? 'var(--text-main)' : 'transparent', color: glass === value ? 'var(--bg-color)' : 'var(--text-main)' }}>
                         {label}
                       </button>
@@ -591,7 +636,53 @@ export default function SettingsPage({
                   </div>
                 </Field>
               </div>
-              <div className="settings-inline-note"><SlidersHorizontal size={14} /> 主题、皮肤与玻璃强度会应用到整个工作区；正文大小主要影响阅读型页面。</div>
+              <div className="settings-appearance-heading">
+                <div>
+                  <strong>背景与玻璃细节</strong>
+                  <span>全部即时生效，只保存在当前浏览器；上传图片走创作者媒体库。</span>
+                </div>
+                <button type="button" style={ghost} onClick={() => setAppearance(loadAppearance())}><RotateCcw size={13} /> 恢复默认</button>
+              </div>
+              <div className="settings-appearance-grid">
+                <Field label="背景图" hint="支持图片 URL，或直接上传到当前账号的媒体库。">
+                  <div className="settings-background-row">
+                    <input
+                      style={input}
+                      placeholder="https://… 或 /uploads/…"
+                      value={appearance.background_url}
+                      onChange={(e) => updateAppearance({ background_url: e.target.value })}
+                    />
+                    <button type="button" style={ghost} disabled={backgroundBusy} onClick={() => backgroundUpload.current?.click()}>
+                      <ImagePlus size={14} /> {backgroundBusy ? '上传中…' : '上传'}
+                    </button>
+                    {appearance.background_url && (
+                      <button type="button" style={ghost} onClick={() => updateAppearance({ background_url: '' })}>
+                        <Trash2 size={14} /> 清除
+                      </button>
+                    )}
+                  </div>
+                  <input ref={backgroundUpload} type="file" accept="image/*" hidden onChange={(e) => void uploadBackground(e.target.files?.[0])} />
+                  {appearance.background_url && (
+                    <div className="settings-background-preview" style={{ backgroundImage: `url(${JSON.stringify(resolveMediaUrl(appearance.background_url))})` }} />
+                  )}
+                </Field>
+                <Field label="背景图透明度" hint={`${appearance.background_opacity}%`}>
+                  <input className="settings-range" type="range" min={0} max={100} value={appearance.background_opacity} onChange={(e) => updateAppearance({ background_opacity: Number(e.target.value) })} />
+                </Field>
+                <Field label="背景图模糊度" hint={`${appearance.background_blur}px`}>
+                  <input className="settings-range" type="range" min={0} max={40} value={appearance.background_blur} onChange={(e) => updateAppearance({ background_blur: Number(e.target.value) })} />
+                </Field>
+                <Field label="玻璃模糊度" hint={`${appearance.glass_blur}px`}>
+                  <input className="settings-range" type="range" min={0} max={72} value={appearance.glass_blur} onChange={(e) => updateAppearance({ glass_blur: Number(e.target.value) })} />
+                </Field>
+                <Field label="玻璃透明度" hint={`${appearance.glass_opacity}%`}>
+                  <input className="settings-range" type="range" min={25} max={100} value={appearance.glass_opacity} onChange={(e) => updateAppearance({ glass_opacity: Number(e.target.value) })} />
+                </Field>
+                <Field label="辉光强度" hint={`${appearance.glow}%`}>
+                  <input className="settings-range" type="range" min={0} max={80} value={appearance.glow} onChange={(e) => updateAppearance({ glow: Number(e.target.value) })} />
+                </Field>
+              </div>
+              <div className="settings-inline-note"><SlidersHorizontal size={14} /> 主题、皮肤、背景与玻璃细节会应用到整个工作区；正文大小主要影响阅读型页面。</div>
             </Panel>
           )}
 

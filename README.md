@@ -50,7 +50,7 @@ VITE_API_BASE_URL=https://backend-lingering-moonbeam-4274.fly.dev
 
 3. 重新部署前端。入口的 API 桥接会把代码里默认的
    `http://127.0.0.1:8000` 自动改写为 `VITE_API_BASE_URL`。
-4. 后端 CORS 已允许 `https://world-simulator-elht.vercel.app` 及本项目 Vercel 预览域名；
+4. 后端 CORS 已允许 `https://app.psyengine.top`、`https://world-simulator-elht.vercel.app` 及本项目 Vercel 预览域名；
    额外域名写入 `WS_CORS_ORIGINS`（逗号分隔）。
 5. 首次上线后访问前端，会进入开发者账号初始化；初始化完成后在
    **设置 → 账户与安全 → 邀请码与公开注册** 生成邀请码。注册必须由服务端校验并消耗邀请码。

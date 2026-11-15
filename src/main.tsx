@@ -4,8 +4,10 @@ import './index.css'
 import App from './App.tsx'
 import AuthGate from './components/AuthGate'
 import { installApiOriginBridge } from './api/config'
+import { applyAppearance, loadAppearance } from './utils/appearance'
 
 installApiOriginBridge()
+applyAppearance(loadAppearance())
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
