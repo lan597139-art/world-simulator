@@ -34,6 +34,7 @@
   - 螺旋模式渲染两条螺旋链、时间轴、5 个时间刻度、11 条横档（rungs）；无 JS 异常、无失败网络请求；
   - 骨架图 ↔ 鱼骨 → 事件选择 → 骨架图，选中事件保持；
   - 1440 / 1024 / 768 / 390 宽度无横向溢出，移动端故事线选择器与图谱面板可操作。
+- 生产构建：提交 `d6e1abf` 的 GitHub `Vercel` 状态为 success；`https://app.psyengine.top` 已提供新产物 `index-viL4ynKV.js` / `index-czo-uSbw.css`，产物中包含 `DNA 螺旋`、`鱼骨图`、`ng-time-axis`、`ng-entity-link` 等本轮代码。
 
 ## 数据与限制
 
