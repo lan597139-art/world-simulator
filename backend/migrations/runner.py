@@ -55,6 +55,12 @@ MODULES = [
     "m043_settings_center",
     "m044_community_social",
     "m045_commercial_center",
+    "m046_writing_volumes",
+    "m047_writing_foreshadows",
+    "m048_writing_sensitive_words",
+    "m049_auth_multiuser",
+    "m050_avatar_url",
+    "m051_trash_owner",
 ]
 
 

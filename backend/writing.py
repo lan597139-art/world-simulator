@@ -5,6 +5,7 @@ from __future__ import annotations
 import html as html_lib
 import json
 import re
+import time
 from datetime import datetime
 from typing import Iterable
 
@@ -18,7 +19,10 @@ from auth import current_user
 from ai_engine import ai_config_status, ai_error_message, get_client, get_model
 from common import fail, get_world, world_now
 from database import get_db
+import access
 from reference_guard import delete_entity
+import writing_context
+import writing_prompts
 
 router = APIRouter()
 
@@ -53,6 +57,11 @@ STORY_FIELDS = {
     "status",
     "source_event_ids",
     "source_simulation_ids",
+    "volume_id",
+    "sort_order",
+    "summary",
+    "outline_goal",
+    "target_words",
 }
 
 
@@ -187,9 +196,29 @@ def create_story(payload: dict, request: Request, db: Session = Depends(get_db))
     user = current_user(request, db)
     world_id = payload.get("world_id") or ""
     if world_id:
-        get_world(db, world_id)
+        access.assert_world_access(db, world_id, request, write=True)
     content = payload.get("content") or ""
     plain = _plain(content, payload.get("plain_text"))
+    volume_id = str(payload.get("volume_id") or "").strip() or None
+    if volume_id:
+        volume = db.query(models.StoryVolume).filter(models.StoryVolume.id == volume_id).first()
+        if not volume or (volume.owner_user_id and volume.owner_user_id != user.id):
+            fail(404, "NOT_FOUND", "卷不存在")
+        if volume.world_id != world_id:
+            fail(422, "WORLD_MISMATCH", "卷与章节不属于同一世界")
+    sort_order = payload.get("sort_order")
+    if sort_order is None:
+        max_order = (
+            db.query(models.Story.sort_order)
+            .filter(
+                models.Story.world_id == (world_id or None),
+                models.Story.owner_user_id == user.id,
+                models.Story.volume_id == volume_id,
+            )
+            .order_by(models.Story.sort_order.desc())
+            .first()
+        )
+        sort_order = (max_order[0] + 1) if max_order else 0
     story = models.Story(
         owner_user_id=user.id,
         world_id=world_id or None,
@@ -201,6 +230,11 @@ def create_story(payload: dict, request: Request, db: Session = Depends(get_db))
         status=payload.get("status") if payload.get("status") in VALID_STATUS else "draft",
         source_event_ids=_as_list(payload.get("source_event_ids")),
         source_simulation_ids=_as_list(payload.get("source_simulation_ids")),
+        volume_id=volume_id,
+        sort_order=max(0, int(sort_order or 0)),
+        summary=str(payload.get("summary") or "")[:4000],
+        outline_goal=str(payload.get("outline_goal") or "")[:4000],
+        target_words=max(0, int(payload.get("target_words") or 0)),
     )
     db.add(story)
     db.commit()
@@ -237,6 +271,18 @@ def update_story(story_id: str, payload: dict, request: Request, db: Session = D
             continue
         if key == "title":
             value = _clean_title(value, story.title or "未命名章节")
+        if key in {"summary", "outline_goal"}:
+            value = str(value or "")[:4000]
+        if key == "volume_id":
+            value = str(value or "").strip() or None
+            if value:
+                volume = db.query(models.StoryVolume).filter(models.StoryVolume.id == value).first()
+                if not volume or (volume.owner_user_id and volume.owner_user_id != user.id):
+                    fail(404, "NOT_FOUND", "卷不存在")
+                if volume.world_id != story.world_id:
+                    fail(422, "WORLD_MISMATCH", "卷与章节不属于同一世界")
+        if key in {"sort_order", "target_words"}:
+            value = max(0, int(value or 0))
         if key == "content":
             story.content = value or ""
             plain = _plain(story.content, payload.get("plain_text"))
@@ -303,6 +349,17 @@ def generate_story(payload: dict, db: Session = Depends(get_db)):
     user_direction = (payload.get("user_direction") or "").strip()[:2000]
     perspective = (payload.get("perspective") or "").strip()[:200]
     branch_id = (payload.get("branch_id") or "").strip()[:64] or None
+    story_id = str(payload.get("story_id") or "").strip()
+    context_options = payload.get("context_options")
+    if not isinstance(context_options, dict):
+        context_options = {}
+    story: models.Story | None = None
+    if story_id:
+        story = _story_or_404(db, story_id)
+        if story.world_id:
+            world_id = world_id or story.world_id
+            if world_id != story.world_id:
+                fail(422, "WORLD_MISMATCH", "章节与所选世界不一致")
     if branch_id:
         branch = db.query(models.SimulationBranch).filter(models.SimulationBranch.id == branch_id).first()
         if not branch:
@@ -310,8 +367,9 @@ def generate_story(payload: dict, db: Session = Depends(get_db)):
         if branch.status == "archived":
             fail(409, "BRANCH_ARCHIVED", "该分支已归档，无法作为写作素材")
         world_id = world_id or branch.world_id
+    world = None
     if world_id:
-        get_world(db, world_id)
+        world = get_world(db, world_id)
     if branch_id and world_id and branch.world_id != world_id:
         fail(422, "BRANCH_WORLD_MISMATCH", "分支与所选世界不一致")
 
@@ -345,27 +403,14 @@ def generate_story(payload: dict, db: Session = Depends(get_db)):
         )
     sims = sims.order_by(models.SimulationRun.created_at.asc()).all()
 
-    context = "【世界发生的事件】\n"
-    for e in events:
-        loc_name = ""
-        org_name = ""
-        if e.location_id:
-            loc = db.query(models.Location).filter(models.Location.id == e.location_id).first()
-            if loc:
-                loc_name = f"在{loc.name}"
-        if e.organization_id:
-            org = db.query(models.Organization).filter(models.Organization.id == e.organization_id).first()
-            if org:
-                org_name = f"涉及{org.name}"
-        context += f"- [{e.story_time or '某时'}] {e.name} {loc_name}{org_name}: {e.description}\n"
-
-    context += "\n【人物的反应与行动】\n"
-    if not sims:
-        context += "- 尚无推演记录，请依据事件本身合理呈现人物反应。\n"
-    for simulation in sims:
-        context += f"- 世界变化: {simulation.world_changes}\n"
-        for act in simulation.character_actions or []:
-            context += f"  * {act.get('name')} ({act.get('engine')}): {act.get('action')}；结果：{act.get('status')}\n"
+    context = writing_context.build_generation_context(
+        db,
+        world=world,
+        events=events,
+        sims=sims,
+        story=story,
+        options={**context_options, "direction": user_direction},
+    )
 
     prompt = f"""你是一个文笔极佳的小说家。请根据以下世界事件和人物推演记录，写一段约 900 字的小说正文。
 要求：
@@ -374,6 +419,7 @@ def generate_story(payload: dict, db: Session = Depends(get_db)):
 3. 保持冷峻、克制、有画面感的文学质感。
 4. 不要出现“根据推演记录”“事件描述”等元叙述，直接呈现故事。
 5. 叙事视角：{perspective or "由你选择最适合这段素材的视角，但全篇必须统一"}。视角只决定读者跟随谁、知道多少，不得改变事件事实。
+6. 上下文只包含作者允许注入的设定；不要在正文中解释这些设定，也不要提及“上下文”“设定”。
 {f"【作者预设推演方向：{user_direction}。必须严格沿此走向描写，但不得违背人物既有性格与关系。】" if user_direction else ""}
 {context}
 """
@@ -1124,3 +1170,229 @@ def assist_writing(payload: dict):
             yield f"\n[AI 辅助中断: {_ai_error_message(exc)}]"
 
     return StreamingResponse(stream(), media_type="text/plain; charset=utf-8")
+
+
+# ---------------------------------------------------------------------
+# 写作工具箱：结构化诊断 / 微创 / 排雷 / 分镜 / 读者模拟 / 发布检查
+# ---------------------------------------------------------------------
+
+TOOL_TEXT_LIMIT = 12000
+TOOL_CONTEXT_LIMIT = 6000
+
+
+def _tool_context(db: Session, story: models.Story | None, world_id: str) -> str:
+    """阶段 2 的轻量上下文：世界概览 + 本章关联事件。阶段 3 再扩成可勾选注入。"""
+    parts: list[str] = []
+    world = None
+    if story and story.world_id:
+        world_id = story.world_id
+    if world_id:
+        world = get_world(db, world_id)
+        parts.append(f"【世界】{world.name}\n{(world.description or '')[:600]}")
+        if world.background:
+            parts.append(f"【世界背景】\n{world.background[:800]}")
+
+    if story and story.source_event_ids:
+        events = (
+            db.query(models.Event)
+            .filter(models.Event.id.in_(_as_list(story.source_event_ids)[:6]))
+            .all()
+        )
+        if events:
+            lines = [f"- {e.name}：{(e.description or '')[:180]}" for e in events]
+            parts.append("【本章关联事件】\n" + "\n".join(lines))
+
+    context = "\n\n".join(parts).strip()
+    return context[:TOOL_CONTEXT_LIMIT]
+
+
+def _tool_clean_result(tool_id: str, result: dict) -> dict:
+    """把模型输出收敛到前端可渲染的稳定结构，避免半个 JSON 直接进 UI。"""
+    if not isinstance(result, dict):
+        fail(502, "AI_BAD_JSON", "AI 没有返回结构化结果，请重试")
+
+    if tool_id in {"clinic", "surgery", "crash_check"}:
+        state = str(result.get("state") or "").strip()
+        if state not in writing_prompts.ALLOWED_STATES:
+            result["state"] = "S3"
+        cause = str(result.get("cause") or "").strip()
+        if cause not in writing_prompts.ALLOWED_CAUSES:
+            result["cause"] = "动机断链"
+
+    if tool_id == "surgery":
+        patches = result.get("patches")
+        cleaned: list[dict] = []
+        if isinstance(patches, list):
+            for patch in patches[:3]:
+                if not isinstance(patch, dict):
+                    continue
+                before = str(patch.get("before") or "").strip()[:300]
+                after = str(patch.get("after") or "").strip()[:400]
+                operation = str(patch.get("operation") or "替换").strip()
+                if operation not in writing_prompts.ALLOWED_PATCH_OPERATIONS:
+                    operation = "替换"
+                if not before:
+                    continue
+                cleaned.append(
+                    {
+                        "location": str(patch.get("location") or "本段")[:120],
+                        "operation": operation,
+                        "before": before,
+                        "after": after,
+                    }
+                )
+        result["patches"] = cleaned
+
+    if tool_id == "storyboard":
+        shots = result.get("shots")
+        result["shots"] = [
+            {
+                "action": str(item.get("action") or "")[:200],
+                "camera": str(item.get("camera") or "中景")[:20],
+                "purpose": str(item.get("purpose") or "")[:200],
+            }
+            for item in (shots if isinstance(shots, list) else [])[:8]
+            if isinstance(item, dict) and str(item.get("action") or "").strip()
+        ]
+        lines = result.get("lines")
+        result["lines"] = [
+            {
+                "speaker": str(item.get("speaker") or "")[:40],
+                "line": str(item.get("line") or "")[:300],
+                "force": item.get("force") if item.get("force") in writing_prompts.ALLOWED_FORCES else "中",
+            }
+            for item in (lines if isinstance(lines, list) else [])[:4]
+            if isinstance(item, dict) and str(item.get("line") or "").strip()
+        ]
+        if result.get("hook_type") not in writing_prompts.ALLOWED_HOOK_TYPES:
+            result["hook_type"] = "危机"
+
+    if tool_id == "release_check":
+        checklist = result.get("checklist")
+        cleaned = []
+        for item in checklist if isinstance(checklist, list) else []:
+            if not isinstance(item, dict):
+                continue
+            status = item.get("status") if item.get("status") in writing_prompts.ALLOWED_CHECK_STATUS else "warn"
+            cleaned.append(
+                {
+                    "id": str(item.get("id") or "")[:40],
+                    "label": str(item.get("label") or "")[:60],
+                    "status": status,
+                    "evidence": str(item.get("evidence") or "")[:300],
+                    "fix": str(item.get("fix") or "")[:300],
+                }
+            )
+        result["checklist"] = cleaned[:8]
+
+    return result
+
+
+def _tool_ai_json(
+    client,
+    model: str,
+    messages: list[dict],
+    *,
+    temperature: float,
+    max_tokens: int,
+) -> dict:
+    """调用 JSON 模式；解析失败时只做一次“修复格式”重试。"""
+    def _call(msgs: list[dict]) -> str:
+        response = client.chat.completions.create(
+            model=model,
+            messages=msgs,
+            response_format={"type": "json_object"},
+            temperature=temperature,
+            max_tokens=max_tokens,
+            timeout=60.0,
+        )
+        return (response.choices[0].message.content or "").strip()
+
+    try:
+        raw = _call(messages)
+    except Exception as exc:  # pragma: no cover - network dependent
+        fail(502, "AI_ERROR", _ai_error_message(exc))
+
+    try:
+        return json.loads(raw)
+    except Exception:
+        pass
+
+    repair_messages = [
+        *messages,
+        {"role": "assistant", "content": raw[:4000]},
+        {
+            "role": "user",
+            "content": "上一次输出不是合法 JSON。请只返回一个合法 JSON 对象，不要 Markdown、不要解释，字段必须与刚才的契约一致。",
+        },
+    ]
+    try:
+        repaired = _call(repair_messages)
+        return json.loads(repaired)
+    except Exception:
+        fail(502, "AI_BAD_JSON", "AI 返回格式异常，请重试")
+
+
+@router.post("/api/writing/tool")
+def writing_tool(payload: dict, request: Request, db: Session = Depends(get_db)):
+    tool_id = str(payload.get("tool_id") or "").strip()
+    if tool_id not in writing_prompts.TOOL_IDS:
+        fail(422, "UNSUPPORTED_TOOL", f"不支持的写作工具：{tool_id}")
+
+    user = current_user(request, db)
+    story: models.Story | None = None
+    story_id = str(payload.get("story_id") or "").strip()
+    if story_id:
+        story = _story_or_404(db, story_id)
+        if story.owner_user_id and story.owner_user_id != user.id:
+            fail(404, "NOT_FOUND", "章节不存在")
+
+    world_id = str(payload.get("world_id") or "").strip()
+    if world_id and story and story.world_id and world_id != story.world_id:
+        fail(422, "WORLD_MISMATCH", "章节与所选世界不一致")
+    if not world_id and story:
+        world_id = story.world_id or ""
+
+    text = str(payload.get("text") or "").strip()
+    if not text and story:
+        text = (story.plain_text or _strip_html(story.content) or "").strip()
+    if not text:
+        fail(422, "VALIDATION_ERROR", "请先选中一段文字，或打开一个有正文的章节")
+    text = text[:TOOL_TEXT_LIMIT]
+
+    context = _tool_context(db, story, world_id)
+    user_prompt = writing_prompts.build_user_prompt(
+        tool_id,
+        text=text,
+        goal=str(payload.get("goal") or "").strip()[:1000],
+        constraints=str(payload.get("constraints") or "").strip()[:1000],
+        style_keep=str(payload.get("style_keep") or "").strip()[:500],
+        context=context,
+    )
+
+    client = _require_ai()
+    model = get_model()
+    started = time.perf_counter()
+    result = _tool_ai_json(
+        client,
+        model,
+        [
+            {"role": "system", "content": writing_prompts.ESA_BASE_SYSTEM},
+            {"role": "user", "content": user_prompt},
+        ],
+        temperature=writing_prompts.TOOL_TEMPERATURES[tool_id],
+        max_tokens=writing_prompts.TOOL_MAX_TOKENS[tool_id],
+    )
+    result = _tool_clean_result(tool_id, result)
+
+    return {
+        "ok": True,
+        "tool_id": tool_id,
+        "prompt_version": writing_prompts.PROMPT_VERSION,
+        "result": result,
+        "meta": {
+            "latency_ms": round((time.perf_counter() - started) * 1000),
+            "input_chars": len(text),
+            "model": model,
+        },
+    }

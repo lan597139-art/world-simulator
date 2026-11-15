@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react'
-import { useAutoHideOnScroll } from '../hooks/useAutoHideOnScroll'
 import { getCharacterRuntime, updateCharacterRuntime, type CharacterLayer, type GrowthEntry } from '../api/characterRuntime'
 // ================= 基础表单组件 =================
 function TextField({ label, value, onChange, placeholder }: { label: string, value: string, onChange: (v: string) => void, placeholder?: string }) {
@@ -82,7 +81,7 @@ function RadioGroup({ label, options, value, onChange }: { label: string, option
 // ================= 1. 模块与元数据定义 =================
 const CHARACTER_MODULES = [
   { id: 'basic', number: '01', title: '基础档案', subtitle: 'Basic Profile', description: '人物身份、社会角色、基本背景与外在特征。' },
-  { id: 'engines', number: '02', title: '人格动力结构', subtitle: 'Personality Dynamics', description: 'OVTDE 五大人格动力引擎及其主导关系。' },
+  { id: 'engines', number: '02', title: '人格动力结构', subtitle: 'Personality Dynamics', description: '五种人格动力需求及其主导关系。' },
   { id: 'mechanism', number: '03', title: '人格运行与防御机制', subtitle: 'Personality Mechanism', description: '人格运行结构、认知处理、防御机制与主权边界。' },
   { id: 'sandbox', number: '04', title: '现实承载条件', subtitle: 'Reality Foundation', description: '人物所处的现实环境、能力条件与资源基础。' },
   { id: 'individual', number: '05', title: '个体特征与思想钢印', subtitle: 'Individual Identity', description: '人物独特的生活方式、思想结构、审美与结果评价标准。' },
@@ -417,7 +416,17 @@ useEffect(() => {
   }, [characterId]);
   const [activeModule, setActiveModule] = useState(initialModule)
   const [stateLayer, setStateLayer] = useState<'seed' | 'runtime'>('seed')
-  const secondaryNavHidden = useAutoHideOnScroll()
+  const [showRuntimeInfo, setShowRuntimeInfo] = useState(false)
+  const [moduleNavOpen, setModuleNavOpen] = useState(false)
+
+  useEffect(() => {
+    if (!moduleNavOpen) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setModuleNavOpen(false)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [moduleNavOpen])
   const [runtimeInfo, setRuntimeInfo] = useState<{
     main_color: string
     version: number
@@ -1112,100 +1121,116 @@ useEffect(() => {
   };
   
 
-    
- return (
-    <div className="character-editor" style={{ backgroundColor: 'transparent', minHeight: '100%', paddingBottom: '2rem' }}>
-           <header className="character-editor-header cb-scene-head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', padding: '1.2rem 2rem', backgroundColor: 'var(--card-bg)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderBottom: '1px solid var(--card-border)', marginBottom: '1rem', borderRadius: '0 0 16px 16px', position: 'sticky', top: 0, zIndex: 40 }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1.5rem' }}>
-          {onBack && (
-            <button onClick={onBack} type="button" style={{ padding: '6px 12px', background: 'rgba(128,128,128,0.1)', border: '1px solid var(--card-border)', color: 'var(--text-main)', borderRadius: '6px', cursor: 'pointer' }}>
-              ← 返回
-            </button>
-          )}
-          <div>
-            <span className="cb-scene-eyebrow">{stateLayer === 'seed' ? 'PERSONA SEED · 种子设定' : 'PERSONA RUNTIME · 成长校准'}</span>
-            <h1 style={{ margin: '0 0 4px 0', color: 'var(--text-main)', fontSize: '22px', fontWeight: 600 }}>
-              {stateLayer === 'seed' ? '人物种子编辑器' : '人物当前运行态'}
-            </h1>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-              {stateLayer === 'seed' ? '稳定底色：设定人物的长期倾向与初始条件' : `第 ${runtimeInfo.version} 次成长校准 · 主色调 ${runtimeInfo.main_color}`}
-            </div>
-          </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-          <div style={{ display: 'flex', padding: '3px', borderRadius: '8px', background: 'rgba(128,128,128,0.12)', border: '1px solid var(--card-border)' }}>
-            <button
-              type="button"
-              onClick={() => switchStateLayer('seed')}
-              style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: stateLayer === 'seed' ? 'var(--card-bg)' : 'transparent', color: stateLayer === 'seed' ? 'var(--text-main)' : 'var(--text-muted)', fontWeight: stateLayer === 'seed' ? 600 : 400 }}
-            >
-              种子设定
-            </button>
-            <button
-              type="button"
-              onClick={() => switchStateLayer('runtime')}
-              style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: stateLayer === 'runtime' ? 'var(--card-bg)' : 'transparent', color: stateLayer === 'runtime' ? 'var(--text-main)' : 'var(--text-muted)', fontWeight: stateLayer === 'runtime' ? 600 : 400 }}
-            >
-              当前运行态
-            </button>
-          </div>
-          <button 
-            onClick={handleSave}
-            style={{ padding: '8px 20px', background: 'var(--primary-color)', color: 'var(--primary-text)', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
-          >
-            {stateLayer === 'seed' ? '保存种子' : '保存运行态'}
-          </button>
-        </div>
-      </header>
-
-      {stateLayer === 'runtime' && (
-        <div style={{ margin: '0 2rem 1rem', padding: '12px 16px', borderRadius: '10px', border: '1px solid var(--card-border)', background: 'rgba(128,128,128,0.1)', color: 'var(--text-main)', fontSize: '12px', lineHeight: 1.7 }}>
-          你正在编辑<strong>当前运行态</strong>：02–05 的当前值会随经历、认知与选择变化，但不会覆盖种子底色。保存运行态会同步 06 的生命经历；01 基础档案与 07 初始状态仍属于种子层，请切回“种子设定”保存。事件本身不直接决定变化，先记录人物如何理解、归因和反应，再回到这里确认成长。
-        </div>
-      )}
-
+return (
+    <div className="character-editor" style={{ backgroundColor: 'transparent', minHeight: '100%', paddingBottom: '2rem', position: 'relative' }}>
       <main className="character-main-full">
-             <div className={`character-stepper${secondaryNavHidden ? ' is-auto-hidden' : ''}`} style={{ display: 'flex', gap: '10px', overflowX: 'auto', padding: '10px 2rem 1rem 2rem', position: 'sticky', top: '80px', zIndex: 30, background: 'var(--bg-color)' }}>
-          {CHARACTER_MODULES.map(module => {
-            const isActive = activeModule === module.id
-            return (
-              <button 
-                key={module.id} 
-                type="button" 
-                onClick={() => setActiveModule(module.id)}
+        
+        {/* 👇 全新的顶部导航区域（极简版） 👇 */}
+        <div style={{ padding: '0 2rem', marginBottom: '1rem' }}>
+          
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+            
+            {/* 左侧：胶囊按钮 + 旁边的描述小字 */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <button
+                type="button"
+                onClick={() => setModuleNavOpen(v => !v)}
                 style={{
-                  flex: 1, padding: '12px', borderRadius: '8px', cursor: 'pointer', textAlign: 'left',
-                  background: isActive ? 'rgba(128, 128, 128, 0.15)' : 'transparent',
-                  border: isActive ? '1px solid rgba(128, 128, 128, 0.3)' : '1px solid var(--card-border)',
-                  transition: 'all 0.2s'
+                  display: 'inline-flex', alignItems: 'center', gap: '10px',
+                  padding: '10px 20px', borderRadius: '24px',
+                  background: 'var(--text-main)', color: 'var(--bg-color)',
+                  border: 'none', cursor: 'pointer', fontWeight: 600,
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)', transition: 'all 0.2s',
+                  flexShrink: 0
                 }}
               >
-                <span style={{ display: 'block', color: isActive ? 'var(--text-main)' : 'var(--text-muted)', fontSize: '12px', marginBottom: '4px', fontWeight: 600 }}>
-                  {module.number}
-                </span>
-                <span style={{ display: 'block', color: isActive ? 'var(--text-main)' : 'var(--text-muted)', fontSize: '14px', fontWeight: isActive ? 600 : 400 }}>
-                  {module.title}
-                </span>
+                <span style={{ fontSize: '14px', opacity: 0.8 }}>{currentModule.number}</span>
+                <span style={{ fontSize: '15px' }}>{currentModule.title}</span>
+                <span style={{ fontSize: '12px', marginLeft: '4px', opacity: 0.8 }}>{moduleNavOpen ? '收起导航 ▲' : '展开导航 ▼'}</span>
               </button>
-            )
-          })}
-        </div>
-                <div style={{ padding: '1.5rem 2rem 0 2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <div style={{ color: 'var(--text-muted)', fontSize: '12px', fontWeight: 600, marginBottom: '8px' }}>
-              MODULE {currentModule.number} / 08
+              
+              {/* 👇 你要移动的“小字描述” 👇 */}
+              <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                {currentModule.description}
+              </span>
             </div>
-            <h2 style={{ color: 'var(--text-main)', margin: 0, fontSize: '24px' }}>
-              {currentModule.title} <span style={{ color: 'var(--text-muted)', fontSize: '16px', fontWeight: 400 }}>{currentModule.subtitle}</span>
-            </h2>
-            <p style={{ color: 'var(--text-muted)', marginTop: '8px', fontSize: '14px' }}>
-              {currentModule.description}
-            </p>
+
+            {/* 右侧：状态切换与保存按钮 */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ display: 'flex', padding: '3px', borderRadius: '8px', background: 'rgba(128,128,128,0.12)', border: '1px solid var(--card-border)' }}>
+                <button 
+                  type="button" 
+                  onClick={() => switchStateLayer('seed')} 
+                  style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: stateLayer === 'seed' ? 'var(--card-bg)' : 'transparent', color: stateLayer === 'seed' ? 'var(--text-main)' : 'var(--text-muted)', fontWeight: stateLayer === 'seed' ? 600 : 400 }}
+                >
+                  种子设定
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    switchStateLayer('runtime');
+                    setShowRuntimeInfo(true);
+                  }} 
+                  style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: stateLayer === 'runtime' ? 'var(--card-bg)' : 'transparent', color: stateLayer === 'runtime' ? 'var(--text-main)' : 'var(--text-muted)', fontWeight: stateLayer === 'runtime' ? 600 : 400 }}
+                >
+                  当前运行态
+                </button>
+              </div>
+              <button 
+                onClick={handleSave} 
+                style={{ padding: '8px 20px', background: 'var(--primary-color)', color: 'var(--primary-text)', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
+              >
+                {stateLayer === 'seed' ? '保存种子' : '保存运行态'}
+              </button>
+            </div>
+
           </div>
-          <div style={{ fontSize: '80px', fontWeight: 'bold', color: 'var(--text-main)', opacity: 0.05 }}>
-            {currentModule.number}
-          </div>
+
+          {/* 横向展开的卡片列表 */}
+          {moduleNavOpen && (
+            <div
+              style={{
+                display: 'flex', flexDirection: 'row', alignItems: 'stretch', gap: '12px',
+                marginTop: '16px', overflowX: 'auto', paddingBottom: '8px'
+              }}
+            >
+              {CHARACTER_MODULES.map(module => {
+                const isActive = activeModule === module.id
+                return (
+                  <button
+                    key={module.id}
+                    type="button"
+                    onClick={() => setActiveModule(module.id)}
+                    style={{
+                      display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
+                      padding: '16px', width: '160px',
+                      background: isActive ? 'var(--text-main)' : 'var(--card-bg)',
+                      color: isActive ? 'var(--bg-color)' : 'var(--text-main)',
+                      border: isActive ? '1px solid var(--text-main)' : '1px solid var(--card-border)',
+                      borderRadius: '12px', cursor: 'pointer',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.05)', transition: 'all 0.2s',
+                      textAlign: 'left', flexShrink: 0
+                    }}
+                  >
+                    <span style={{ fontSize: '11px', marginBottom: '6px', opacity: isActive ? 0.8 : 0.5 }}>{module.number}</span>
+                    <span style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <strong style={{ fontSize: '14px', fontWeight: 600 }}>{module.title}</strong>
+                      <small style={{ fontSize: '11px', opacity: isActive ? 0.8 : 0.6, lineHeight: 1.4, whiteSpace: 'normal', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                        {module.description}
+                      </small>
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+
+          {/* 👇 彻底删除了下面这段，页面会立刻往上顶！ 👇 */}
+          {/* <div style={{ marginTop: '1.5rem' }}> ... </div> */}
+
         </div>
+
+        <section className="module-workspace-light"></section>
 
                        <section className="module-workspace-light">
           {/* 模块 01 */}
@@ -2289,7 +2314,7 @@ useEffect(() => {
 
         </section>
       </main>
-                       {/* ✅ 全局事件导入弹窗 */}
+             {/* ✅ 全局事件导入弹窗 */}
       {isEventImportModalOpen && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
           <div className="glass-card" style={{ width: '600px', maxHeight: '80vh', display: 'flex', flexDirection: 'column', background: 'var(--bg-color)', padding: '24px' }}>
@@ -2317,6 +2342,26 @@ useEffect(() => {
                   </div>
                 ))
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 👇 新增：运行态说明弹窗 👇 */}
+      {showRuntimeInfo && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999 }}>
+          <div className="glass-card" style={{ width: '500px', padding: '24px', background: 'var(--bg-color)', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: '0 10px 40px rgba(0,0,0,0.2)' }}>
+            <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--text-main)' }}>运行态编辑说明</h3>
+            <p style={{ margin: 0, fontSize: '13px', lineHeight: 1.7, color: 'var(--text-main)' }}>
+              你正在编辑<strong>当前运行态</strong>：02–05 的当前值会随经历、认知与选择变化，但不会覆盖种子底色。保存运行态会同步 06 的生命经历；01 基础档案与 07 初始状态仍属于种子层，请切回“种子设定”保存。事件本身不直接决定变化，先记录人物如何理解、归因和反应，再回到这里确认成长。
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
+              <button 
+                onClick={() => setShowRuntimeInfo(false)} 
+                style={{ padding: '8px 20px', background: 'var(--primary-color)', color: 'var(--primary-text)', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
+              >
+                我知道了
+              </button>
             </div>
           </div>
         </div>

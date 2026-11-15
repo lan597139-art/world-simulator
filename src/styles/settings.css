@@ -100,8 +100,6 @@
   background: var(--text-main); color: var(--bg-color); font-size: 24px; font-weight: 750;
 }
 .settings-link-list { display: flex; flex-wrap: wrap; gap: 8px; }
-html[data-theme="light"] { color-scheme: light; --bg-color: #e8eaee; --card-bg: rgba(255,255,255,.72); --card-border: rgba(0,0,0,.08); --text-main: #161618; --text-muted: #62626a; --primary-color: #303034; --primary-text: #fff; }
-html[data-theme="dark"] { color-scheme: dark; --bg-color: #121214; --card-bg: rgba(255,255,255,.065); --card-border: rgba(255,255,255,.13); --text-main: #e4e4e8; --text-muted: #a0a0aa; --primary-color: #e4e4e8; --primary-text: #222226; }
 html[data-density="compact"] .settings-page { --settings-density: .82; }
 html[data-density="spacious"] .settings-page { --settings-density: 1.16; }
 html[data-font-size="small"] .settings-page { font-size: 12px; }
@@ -117,4 +115,8 @@ html[data-reduce-motion="true"] *, html[data-reduce-motion="true"] *::before, ht
   .settings-nav { grid-template-columns: 1fr; }
   .settings-two-col, .settings-three-col, .settings-kv-grid { grid-template-columns: 1fr; }
   .settings-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.settings-hero-avatar img, .settings-avatar-preview img {
+  width: 100%; height: 100%; object-fit: cover; border-radius: inherit; display: block;
 }

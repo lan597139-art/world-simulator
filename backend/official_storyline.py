@@ -178,13 +178,13 @@ def ensure_official_storyline(db: Session) -> dict | None:
     db.flush()
 
     # 出逃线：绑定分支，拥有独立后续事件。
-    branch_info = mp.create_branch(
+    branch_info = mp.create_branch_core(
+        db,
         {
             "root_event_id": anchor.id,
             "name": "凡人修仙传 · 出逃线",
             "note": "官方演示：夺舍之夜选择出逃",
         },
-        db,
     )
     escape = models.StorySpace(
         story_id=story.id,

@@ -238,12 +238,12 @@ def make_sandbox(option_id: str, payload: Optional[dict] = None, db: Session = D
         _fail(409, "AI 选项需确认后才能生成沙盒")
     choice = _choice(db, option.choice_id)
     event = _event(db, choice.event_id)
-    from multipath import create_branch
-    branch = create_branch({
+    from multipath import create_branch_core
+    branch = create_branch_core(db, {
         "root_event_id": event.id,
         "name": str((payload or {}).get("name") or f"{event.name} · {option.label}")[:120],
         "note": f"来自事件选择「{choice.title}」的选项：{option.label}",
-    }, db)
+    })
     option.target_branch_id = branch["id"]
     db.commit()
     return {"branch_id": branch["id"], "name": branch["name"], "existing": False}

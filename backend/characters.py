@@ -1,24 +1,35 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from typing import Optional
 from sqlalchemy.orm.attributes import flag_modified # ✅ 核心：强制更新 JSON 字段
+from sqlalchemy import or_, and_
 import models
 from database import get_db
 from reference_guard import assert_not_referenced
+import access
 
 router = APIRouter()
 
 # ✅ 改造：支持按 world_id 过滤
 @router.get("/api/characters")
-def list_characters(world_id: Optional[str] = None, db: Session = Depends(get_db)):
+def list_characters(request: Request, world_id: Optional[str] = None, db: Session = Depends(get_db)):
+    user_id = access.current_user_id(request)
     query = db.query(models.Character).filter(models.Character.archived_at.is_(None))
-    if world_id is not None:
-        # 包含绑定该世界的，以及无世界的自由捏人（world_id 为空字符串或 None）
-        query = query.filter((models.Character.world_id == world_id) | (models.Character.world_id == "") | (models.Character.world_id == None))
+    free_owned = and_(
+        or_(models.Character.world_id == "", models.Character.world_id.is_(None)),
+        models.Character.owner_user_id == user_id,
+    )
+    if world_id:
+        access.assert_world_access(db, world_id, request)
+        query = query.filter(or_(models.Character.world_id == world_id, free_owned))
+    else:
+        world_ids = access.accessible_world_ids(db, request)
+        query = query.filter(or_(models.Character.world_id.in_(world_ids), free_owned))
     return query.order_by(models.Character.created_at.desc()).all()
 
 @router.get("/api/worlds/{world_id}/characters")
-def get_characters(world_id: str, db: Session = Depends(get_db)):
+def get_characters(world_id: str, request: Request, db: Session = Depends(get_db)):
+    access.assert_world_access(db, world_id, request)
     return (
         db.query(models.Character)
         .filter(models.Character.world_id == world_id, models.Character.archived_at.is_(None))
@@ -26,7 +37,13 @@ def get_characters(world_id: str, db: Session = Depends(get_db)):
     )
 
 @router.post("/api/characters")
-def create_character(char_data: dict, db: Session = Depends(get_db)):
+def create_character(char_data: dict, request: Request, db: Session = Depends(get_db)):
+    user_id = access.current_user_id(request)
+    char_data.pop("owner_user_id", None)
+    bound_world = str(char_data.get("world_id") or "")
+    if bound_world:
+        access.assert_world_access(db, bound_world, request, write=True)
+    char_data["owner_user_id"] = user_id
     persona_type = str(char_data.get("persona_type") or "npc")
     if persona_type not in {"npc", "self"}:
         raise HTTPException(status_code=422, detail="persona_type 只能是 npc/self")
@@ -42,7 +59,7 @@ def create_character(char_data: dict, db: Session = Depends(get_db)):
         ).first()
         if exists:
             raise HTTPException(status_code=409, detail="该世界已存在自我人物")
-        char_data["owner_user_id"] = "local"
+        char_data["owner_user_id"] = user_id
     new_char = models.Character(**char_data)
     db.add(new_char)
     db.commit()
@@ -50,17 +67,20 @@ def create_character(char_data: dict, db: Session = Depends(get_db)):
     return new_char
 
 @router.get("/api/characters/{character_id}")
-def get_character(character_id: str, db: Session = Depends(get_db)):
+def get_character(character_id: str, request: Request, db: Session = Depends(get_db)):
     character = db.query(models.Character).filter(models.Character.id == character_id).first()
     if not character:
         raise HTTPException(status_code=404, detail="Character not found")
+    access.assert_entity_access(db, character, request, allow_free=True)
     return character
 
 @router.put("/api/characters/{character_id}")
-def update_character(character_id: str, char_data: dict, db: Session = Depends(get_db)):
+def update_character(character_id: str, char_data: dict, request: Request, db: Session = Depends(get_db)):
     character = db.query(models.Character).filter(models.Character.id == character_id).first()
     if not character:
         raise HTTPException(status_code=404, detail="Character not found")
+    access.assert_entity_access(db, character, request, write=True, allow_free=True)
+    char_data.pop("owner_user_id", None)
 
     if "persona_type" in char_data:
         persona_type = str(char_data.get("persona_type") or "npc")
@@ -75,7 +95,7 @@ def update_character(character_id: str, char_data: dict, db: Session = Depends(g
             ).first()
             if exists:
                 raise HTTPException(status_code=409, detail="该世界已存在自我人物")
-            char_data["owner_user_id"] = "local"
+            char_data["owner_user_id"] = access.current_user_id(request)
 
     for key, value in char_data.items():
         if hasattr(character, key):
@@ -90,10 +110,11 @@ def update_character(character_id: str, char_data: dict, db: Session = Depends(g
     return character
 
 @router.delete("/api/characters/{character_id}")
-def delete_character(character_id: str, db: Session = Depends(get_db)):
+def delete_character(character_id: str, request: Request, db: Session = Depends(get_db)):
     character = db.query(models.Character).filter(models.Character.id == character_id).first()
     if not character:
         raise HTTPException(status_code=404, detail="Character not found")
+    access.assert_entity_access(db, character, request, write=True, allow_free=True)
     # 人物移入全局回收站；目录挂载节点一并快照，恢复时自动重建。
     from trash_service import trash_entity
 
@@ -168,18 +189,20 @@ def _engine_values(engines: dict) -> dict:
 
 
 @router.get("/api/characters/{character_id}/runtime")
-def get_character_runtime(character_id: str, db: Session = Depends(get_db)):
+def get_character_runtime(character_id: str, request: Request, db: Session = Depends(get_db)):
     character = db.query(models.Character).filter(models.Character.id == character_id).first()
     if not character:
         raise HTTPException(status_code=404, detail="Character not found")
+    access.assert_entity_access(db, character, request, allow_free=True)
     return _runtime_view(character)
 
 
 @router.put("/api/characters/{character_id}/runtime")
-def update_character_runtime(character_id: str, payload: dict, db: Session = Depends(get_db)):
+def update_character_runtime(character_id: str, payload: dict, request: Request, db: Session = Depends(get_db)):
     character = db.query(models.Character).filter(models.Character.id == character_id).first()
     if not character:
         raise HTTPException(status_code=404, detail="Character not found")
+    access.assert_entity_access(db, character, request, write=True, allow_free=True)
 
     current_view = _runtime_view(character)
     before = copy.deepcopy(current_view["runtime"])

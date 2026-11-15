@@ -1,15 +1,14 @@
 import { useState, useEffect } from 'react';
 import { API_ORIGIN } from '../api/config';
-import { createBranch, listBranches, listDirections, simulateBranch } from '../api/multipath';
-import type { Branch, Direction } from '../api/multipath';
 
 type Props = {
   onWriteChapter?: (eventId: string) => void
   auxiliary?: boolean
   worldId?: string
+  embedded?: boolean
 }
 
-export default function SimulationPage({ onWriteChapter, auxiliary = false, worldId = '' }: Props) {
+export default function SimulationPage({ onWriteChapter, auxiliary = false, worldId = '', embedded = false }: Props) {
   const [events, setEvents] = useState<any[]>([]);
   const [simulations, setSimulations] = useState<any[]>([]); // ✅ 记录已推演的数据
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
@@ -19,18 +18,30 @@ export default function SimulationPage({ onWriteChapter, auxiliary = false, worl
   const [simulationResult, setSimulationResult] = useState<any>(null);
   const [aiStatus, setAiStatus] = useState<any>(null);
   const [aiProbing, setAiProbing] = useState(false);
+  
+  // 作者方向 & 视角状态
   const [direction, setDirection] = useState<string>(() => localStorage.getItem('ws.sim.direction') || '');
-  const [perspective, setPerspective] = useState<string>(() => localStorage.getItem('ws.sim.perspective') || '第三人称限知 · 跟随主导人物');
+  
+  // 视角改为：模式 + 角色
+  const [perspectiveMode, setPerspectiveMode] = useState<string>(() => localStorage.getItem('ws.sim.perspectiveMode') || 'third_limited');
+  const [perspectiveChar, setPerspectiveChar] = useState<string>(() => localStorage.getItem('ws.sim.perspectiveChar') || '');
+  const [characters, setCharacters] = useState<any[]>([]);
 
-  // 可选多路径：默认关闭，关闭时流程与原来完全一致。
-  const [multiPathEnabled, setMultiPathEnabled] = useState(false);
-  const [mpDirections, setMpDirections] = useState<Direction[]>([]);
-  const [mpBranches, setMpBranches] = useState<Branch[]>([]);
-  const [mpBusy, setMpBusy] = useState(false);
-  const [mpNote, setMpNote] = useState('');
+  const [leftOpen, setLeftOpen] = useState(true);
+  const [rightOpen, setRightOpen] = useState(true);
 
   useEffect(() => { localStorage.setItem('ws.sim.direction', direction); }, [direction]);
-  useEffect(() => { localStorage.setItem('ws.sim.perspective', perspective); }, [perspective]);
+  useEffect(() => { localStorage.setItem('ws.sim.perspectiveMode', perspectiveMode); }, [perspectiveMode]);
+  useEffect(() => { localStorage.setItem('ws.sim.perspectiveChar', perspectiveChar); }, [perspectiveChar]);
+
+  // 根据模式和角色拼装最终要发送的视角字符串
+  const buildPerspectiveString = () => {
+    if (perspectiveMode === 'third_omniscient') return '第三人称全知（上帝视角）';
+    if (perspectiveMode === 'ensemble') return '群像多视角（多角色切换）';
+    const charName = perspectiveChar || '主导人物';
+    if (perspectiveMode === 'first_person') return `第一人称（代入 ${charName}）`;
+    return `第三人称限知（跟随 ${charName}）`;
+  };
 
   useEffect(() => {
     // 拉取事件和推演记录
@@ -41,10 +52,19 @@ export default function SimulationPage({ onWriteChapter, auxiliary = false, worl
       setEvents(eventsData);
       setSimulations(simsData);
     }).catch(err => console.error("加载数据失败", err));
+    
     fetch(`${API_ORIGIN}/api/ai/status`)
       .then(res => res.json())
       .then(setAiStatus)
       .catch(() => setAiStatus(null));
+
+    // 拉取人物列表用于视角选择
+    if (worldId) {
+      fetch(`${API_ORIGIN}/api/characters?world_id=${worldId}`)
+        .then(res => res.json())
+        .then(data => setCharacters(Array.isArray(data) ? data : []))
+        .catch(console.error);
+    }
   }, [worldId]);
 
   const probeAi = async () => {
@@ -86,10 +106,11 @@ export default function SimulationPage({ onWriteChapter, auxiliary = false, worl
   // ✅ 自动连续推演逻辑
   const handleContinuousSimulate = async () => {
     setIsSimulating(true);
+    const finalPerspective = buildPerspectiveString();
     setLogs([
       "⏳ 正在寻找未推演的事件...",
       `作者方向：${direction.trim() || '未预设（按人物引擎自然推演）'}`,
-      `推演视角：${perspective.trim() || '全局客观视角'}`,
+      `推演视角：${finalPerspective}`,
     ]);
     
     // 找出还没推演过的事件
@@ -115,7 +136,7 @@ export default function SimulationPage({ onWriteChapter, auxiliary = false, worl
         const res = await fetch(`${API_ORIGIN}/api/simulate`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ event_id: ev.id, direction, perspective })
+          body: JSON.stringify({ event_id: ev.id, direction, perspective: finalPerspective })
         });
 
         if (res.ok) {
@@ -124,7 +145,7 @@ export default function SimulationPage({ onWriteChapter, auxiliary = false, worl
             changes: data.world_changes,
             characterActions: data.actions,
             direction,
-            perspective,
+            perspective: finalPerspective,
           });
           setLogs(prev => [...prev, `✅ [${ev.name}] 推演完成。`]);
         } else {
@@ -150,10 +171,11 @@ export default function SimulationPage({ onWriteChapter, auxiliary = false, worl
     if (!selectedEvent) return alert("请先在左侧选择一个事件");
     
     setIsSimulating(true);
+    const finalPerspective = buildPerspectiveString();
     setLogs([
       `⏳ 正在推演：${selectedEvent.name}...`,
       `作者方向：${direction.trim() || '未预设（按人物引擎自然推演）'}`,
-      `推演视角：${perspective.trim() || '全局客观视角'}`,
+      `推演视角：${finalPerspective}`,
     ]);
     setSimulationResult(null);
 
@@ -161,7 +183,7 @@ export default function SimulationPage({ onWriteChapter, auxiliary = false, worl
       const res = await fetch(`${API_ORIGIN}/api/simulate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ event_id: selectedEvent.id, direction, perspective })
+        body: JSON.stringify({ event_id: selectedEvent.id, direction, perspective: finalPerspective })
       });
 
       if (!res.ok) {
@@ -175,7 +197,7 @@ export default function SimulationPage({ onWriteChapter, auxiliary = false, worl
         changes: data.world_changes,
         characterActions: data.actions,
         direction,
-        perspective,
+        perspective: finalPerspective,
       });
       
       // 刷新推演记录
@@ -188,64 +210,11 @@ export default function SimulationPage({ onWriteChapter, auxiliary = false, worl
     }
   };
 
-  useEffect(() => {
-    if (!multiPathEnabled || !selectedEvent) {
-      setMpDirections([]);
-      setMpBranches([]);
-      return;
-    }
-    let alive = true;
-    Promise.all([
-      listDirections(selectedEvent.id).catch(() => [] as Direction[]),
-      (selectedEvent.world_id ? listBranches(selectedEvent.world_id) : Promise.resolve([] as Branch[])),
-    ]).then(([dirs, branches]) => {
-      if (!alive) return;
-      setMpDirections(dirs as Direction[]);
-      setMpBranches((branches as Branch[]).filter((b) => b.root_event_id === selectedEvent.id && b.status !== 'archived'));
-    });
-    return () => { alive = false; };
-  }, [multiPathEnabled, selectedEvent]);
-
-  const handleCreateBranch = async (dir?: Direction) => {
-    if (!selectedEvent) return;
-    setMpBusy(true);
-    try {
-      const fallback = dir ? `方向：${dir.name}` : `分支：${selectedEvent.name}`;
-      const name = (mpNote.trim() || fallback).slice(0, 40);
-      const branch = await createBranch({
-        root_event_id: selectedEvent.id,
-        source_direction_id: dir?.id,
-        name,
-      });
-      setMpBranches((prev) => [branch, ...prev]);
-      setMpNote('');
-      setLogs((prev) => [...prev, `⑂ 已创建分支「${branch.name}」（沙盒，不影响主时间线）`]);
-    } catch (error: any) {
-      setLogs((prev) => [...prev, `❌ 创建分支失败：${error.message || error}`]);
-    } finally {
-      setMpBusy(false);
-    }
-  };
-
-  const handleSimulateBranch = async (branch: Branch) => {
-    if (!selectedEvent) return;
-    setMpBusy(true);
-    try {
-      const result = await simulateBranch(branch.id, { event_id: selectedEvent.id, perspective });
-      setMpBranches((prev) => prev.map((b) => (b.id === branch.id ? { ...b, node_count: (b.node_count || 0) + 1 } : b)));
-      setLogs((prev) => [...prev, `⑂ 分支「${branch.name}」推演完成：${result.state_hint || '已写入分支快照'}`]);
-    } catch (error: any) {
-      setLogs((prev) => [...prev, `❌ 分支推演失败：${error.message || error}`]);
-    } finally {
-      setMpBusy(false);
-    }
-  };
-
   return (
-    <div style={{ display: 'flex', height: 'calc(100vh - 60px)', gap: '16px', padding: '1rem', boxSizing: 'border-box' }}>
+    <div className={`sim-page${embedded ? ' is-embedded' : ''}`}>
       
       {/* 1. 左侧：事件库 */}
-      <div className="glass-card" style={{ width: '300px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div className={`sim-panel sim-left${leftOpen ? '' : ' is-hidden'}`}>
         <div style={{ padding: '16px', borderBottom: '1px solid var(--card-border)' }}>
           <h3 style={{ margin: 0, fontSize: '16px', color: 'var(--text-main)' }}>{auxiliary ? '辅助推演 · 事件注入' : '事件注入台'}</h3>
           <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>{auxiliary ? '文学创作以人物与叙事为主，这里只辅助检查事件可能走向' : '选择事件或开启自动推演'}</p>
@@ -304,29 +273,40 @@ export default function SimulationPage({ onWriteChapter, auxiliary = false, worl
       </div>
 
       {/* 2. 中间：推演控制 */}
-      <div className="glass-card" style={{ flex: 1, minWidth: '400px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <div style={{ padding: '16px', borderBottom: '1px solid var(--card-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="sim-console">
+        <div className="sim-control-head">
           <h3 style={{ margin: 0, fontSize: '16px', color: 'var(--text-main)' }}>推演引擎控制</h3>
           
-          <div style={{ display: 'flex', gap: '12px' }}>
-            {/* ✅ 新增：连续推演按钮 */}
+          <div className="sim-run-actions">
+            <span className="sim-run-label">面板</span>
+            <button
+              type="button"
+              className={`sim-view-btn${leftOpen ? ' is-on' : ''}`}
+              onClick={() => setLeftOpen((prev) => !prev)}
+            >事件</button>
+            <button
+              type="button"
+              className={`sim-view-btn${rightOpen ? ' is-on' : ''}`}
+              onClick={() => setRightOpen((prev) => !prev)}
+            >结果</button>
+            <span className="sim-run-label">运行操作</span>
             <button 
               onClick={handleContinuousSimulate}
               disabled={isSimulating}
               style={{ 
-                padding: '8px 20px', background: 'transparent', border: '1px solid var(--primary-color)', color: 'var(--primary-color)', 
-                borderRadius: '6px', cursor: isSimulating ? 'not-allowed' : 'pointer', fontWeight: 600
+                padding: '8px 16px', background: 'transparent', border: '1px solid var(--primary-color)', color: 'var(--primary-color)', 
+                borderRadius: '6px', cursor: isSimulating ? 'not-allowed' : 'pointer', fontWeight: 600, whiteSpace: 'nowrap'
               }}
             >
-              ⏩ 自动连续推演
+              ⏩ 连续推演
             </button>
             <button 
               onClick={handleSimulate}
               disabled={isSimulating || !selectedEvent}
               style={{ 
-                padding: '8px 24px', background: isSimulating ? 'var(--card-border)' : 'var(--primary-color)', 
+                padding: '8px 20px', background: isSimulating ? 'var(--card-border)' : 'var(--primary-color)', 
                 color: isSimulating ? 'var(--text-muted)' : 'var(--primary-text)', 
-                border: 'none', borderRadius: '6px', cursor: isSimulating ? 'not-allowed' : 'pointer', fontWeight: 600
+                border: 'none', borderRadius: '6px', cursor: isSimulating ? 'not-allowed' : 'pointer', fontWeight: 600, whiteSpace: 'nowrap'
               }}
             >
               {isSimulating ? '推演中...' : '▶ 单步推演'}
@@ -347,89 +327,33 @@ export default function SimulationPage({ onWriteChapter, auxiliary = false, worl
           </label>
           <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '11px', color: 'var(--text-muted)' }}>
             推演视角
-            <input
-              value={perspective}
-              onChange={(event) => setPerspective(event.target.value)}
-              placeholder="例如：第三人称限知 · 跟随韩立"
-              style={{ width: '100%', padding: '8px 10px', borderRadius: '7px', border: '1px solid var(--card-border)', background: 'var(--card-bg)', color: 'var(--text-main)', fontSize: '12px' }}
-            />
-            <span style={{ fontSize: '10px', lineHeight: 1.5 }}>视角决定重点观察谁，不改变世界客观变化。设置会自动记住。</span>
-          </label>
-        </div>
-
-        <div style={{ padding: '10px 18px', borderBottom: '1px solid var(--card-border)', background: 'rgba(128,128,128,0.03)' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'var(--text-main)', fontWeight: 600, cursor: 'pointer' }}>
-            <input
-              type="checkbox"
-              checked={multiPathEnabled}
-              onChange={(event) => setMultiPathEnabled(event.target.checked)}
-            />
-            启用多路径（可选）
-            <span style={{ fontSize: '10px', fontWeight: 400, color: 'var(--text-muted)' }}>
-              关闭时保持原有单线推演；开启后可从同一事件分出不同走向，结果存入沙盒。
-            </span>
-          </label>
-          {multiPathEnabled && (
-            <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '7px' }}>
-              {!selectedEvent && (
-                <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>先在左侧选择一个事件，再建分支。</div>
-              )}
-              {selectedEvent && (
-                <>
-                  <div style={{ display: 'flex', gap: '6px' }}>
-                    <input
-                      value={mpNote}
-                      onChange={(event) => setMpNote(event.target.value)}
-                      placeholder="分支名称（可选，留空自动命名）"
-                      style={{ flex: 1, padding: '5px 8px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'var(--card-bg)', color: 'var(--text-main)', fontSize: '11px' }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => void handleCreateBranch()}
-                      disabled={mpBusy}
-                      style={{ padding: '5px 10px', borderRadius: '6px', border: '1px solid var(--primary-color)', background: 'transparent', color: 'var(--primary-color)', fontSize: '10px', cursor: mpBusy ? 'not-allowed' : 'pointer' }}
-                    >
-                      从此事件建分支
-                    </button>
-                  </div>
-                  {mpDirections.length > 0 && (
-                    <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', alignItems: 'center', fontSize: '10px', color: 'var(--text-muted)' }}>
-                      按方向建分支：
-                      {mpDirections.slice(0, 4).map((dir) => (
-                        <button
-                          key={dir.id}
-                          type="button"
-                          onClick={() => void handleCreateBranch(dir)}
-                          disabled={mpBusy}
-                          style={{ padding: '3px 7px', borderRadius: '999px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)', fontSize: '10px', cursor: mpBusy ? 'not-allowed' : 'pointer' }}
-                        >
-                          {dir.name}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  {mpBranches.length > 0 && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      {mpBranches.slice(0, 4).map((branch) => (
-                        <div key={branch.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10px', color: 'var(--text-muted)' }}>
-                          <span style={{ color: 'var(--text-main)' }}>⑂ {branch.name}</span>
-                          <span>{branch.node_count} 个节点</span>
-                          <button
-                            type="button"
-                            onClick={() => void handleSimulateBranch(branch)}
-                            disabled={mpBusy}
-                            style={{ padding: '2px 6px', borderRadius: '5px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)', fontSize: '10px', cursor: mpBusy ? 'not-allowed' : 'pointer' }}
-                          >
-                            在分支中推演
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <select
+                value={perspectiveMode}
+                onChange={(event) => setPerspectiveMode(event.target.value)}
+                style={{ flex: 1, padding: '8px 10px', borderRadius: '7px', border: '1px solid var(--card-border)', background: 'var(--card-bg)', color: 'var(--text-main)', fontSize: '12px', outline: 'none' }}
+              >
+                <option value="third_limited">第三人称限知（跟随角色）</option>
+                <option value="first_person">第一人称（代入角色）</option>
+                <option value="third_omniscient">第三人称全知（上帝视角）</option>
+                <option value="ensemble">群像多视角</option>
+              </select>
+              
+              {(perspectiveMode === 'third_limited' || perspectiveMode === 'first_person') && (
+                <select
+                  value={perspectiveChar}
+                  onChange={(event) => setPerspectiveChar(event.target.value)}
+                  style={{ flex: 1, padding: '8px 10px', borderRadius: '7px', border: '1px solid var(--card-border)', background: 'var(--card-bg)', color: 'var(--text-main)', fontSize: '12px', outline: 'none' }}
+                >
+                  <option value="">自动跟随主导人物</option>
+                  {characters.map((c: any) => (
+                    <option key={c.id} value={c.name}>{c.name}</option>
+                  ))}
+                </select>
               )}
             </div>
-          )}
+            <span style={{ fontSize: '10px', lineHeight: 1.5 }}>视角决定重点观察谁，不改变世界客观变化。设置会自动记住。</span>
+          </label>
         </div>
 
         <div style={{ flex: 1, padding: '24px', overflowY: 'auto', fontFamily: 'monospace', fontSize: '13px', lineHeight: 1.8, color: 'var(--text-main)' }}>
@@ -445,14 +369,14 @@ export default function SimulationPage({ onWriteChapter, auxiliary = false, worl
       </div>
 
       {/* 3. 右侧：推演结果 */}
-      <div className="glass-card" style={{ width: '350px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div className={`sim-panel sim-right${rightOpen ? '' : ' is-hidden'}`}>
         <div style={{ padding: '16px', borderBottom: '1px solid var(--card-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
           <h3 style={{ margin: 0, fontSize: '16px', color: 'var(--text-main)' }}>推演结果观察</h3>
           <button
             onClick={() => {
               if (!selectedEvent) return
               if (direction.trim()) localStorage.setItem('ws.write.direction', direction)
-              if (perspective.trim()) localStorage.setItem('ws.write.perspective', perspective)
+              localStorage.setItem('ws.write.perspective', buildPerspectiveString())
               onWriteChapter?.(selectedEvent.id)
             }}
             disabled={!selectedEvent || !simulationResult}

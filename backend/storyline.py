@@ -11,13 +11,14 @@ from __future__ import annotations
 
 from typing import Optional
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
 import models
 import multipath as mp
 from common import fail, get_or_404, utcnow
 from database import get_db
+import access
 
 router = APIRouter()
 
@@ -231,10 +232,11 @@ def _require(condition, code: str, message: str):
 # 故事
 # ---------------------------------------------------------------------
 @router.post("/api/stories")
-def create_story(payload: dict, db: Session = Depends(get_db)):
+def create_story(payload: dict, request: Request, db: Session = Depends(get_db)):
     world_id = str(payload.get("world_id") or "").strip()
     if not world_id:
         fail(422, "VALIDATION_ERROR", "缺少 world_id")
+    access.assert_world_access(db, world_id, request, write=True)
     world = _world(db, world_id)
     title = str(payload.get("title") or "").strip()[:200] or "未命名故事"
     status = str(payload.get("status") or "planning")
@@ -334,12 +336,13 @@ def _create_space_branch(db: Session, story: models.StoryProject, name: str, anc
         branch_payload["parent_branch_id"] = parent_space.branch_id
         if base_node_id:
             branch_payload["parent_node_id"] = base_node_id
-    return mp.create_branch(branch_payload, db)
+    return mp.create_branch_core(db, branch_payload)
 
 
 @router.post("/api/stories/{story_id}/spaces")
-def create_space(story_id: str, payload: dict, db: Session = Depends(get_db)):
+def create_space(story_id: str, payload: dict, request: Request, db: Session = Depends(get_db)):
     story = _project(db, story_id)
+    access.assert_world_access(db, story.world_id, request, write=True)
     name = str(payload.get("name") or "").strip()[:120]
     _require(name, "VALIDATION_ERROR", "缺少空间名称")
     is_original = bool(payload.get("is_original"))

@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>四个页面导航优化 · 视觉预览</title>
+<style>
+  :root{
+    --bg:#c3c8d0; --sidebar:#303038; --text:#111; --muted:#74777c;
+    --card:rgba(255,255,255,.62); --card2:rgba(255,255,255,.44); --line:rgba(0,0,0,.09);
+    --dark:#222; --soft:#eceef1; --accent:#4a4a4f;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#e8e9eb;color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+  .board{width:1700px;margin:0 auto;padding:34px 38px 60px}
+  .board-head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:22px}
+  .board-head h1{margin:0;font-size:25px;letter-spacing:-.03em}
+  .board-head p{margin:7px 0 0;color:#666;font-size:12px}
+  .legend{display:flex;gap:8px;align-items:center}
+  .legend span{font-size:10px;padding:5px 9px;border-radius:999px;background:#fff;border:1px solid rgba(0,0,0,.08);color:#555}
+  .legend b{font-weight:650;color:#222}
+  .panel{margin:0 0 26px;background:#f4f4f3;border:1px solid rgba(0,0,0,.08);border-radius:18px;overflow:hidden;box-shadow:0 18px 45px rgba(0,0,0,.08)}
+  .panel-title{height:44px;display:flex;align-items:center;gap:12px;padding:0 18px;border-bottom:1px solid rgba(0,0,0,.08);background:#fbfbfa}
+  .panel-title strong{font-size:13px}
+  .panel-title em{font-style:normal;font-size:10px;color:#777}
+  .panel-title .tag{margin-left:auto;font-size:9px;letter-spacing:.1em;color:#777;border:1px solid rgba(0,0,0,.10);padding:4px 7px;border-radius:5px}
+  .frame{display:flex;height:600px;background:var(--bg)}
+  .side{width:172px;flex:0 0 172px;background:var(--sidebar);color:#d7d7dc;padding:16px 12px}
+  .brand{display:flex;align-items:center;gap:9px;padding:2px 6px 16px}
+  .brand i{display:grid;place-items:center;width:28px;height:28px;border-radius:7px;background:#f0eee8;color:#222;font-style:normal;font-weight:700;font-size:14px}
+  .brand b{font-size:12px}.brand small{display:block;font-size:7px;letter-spacing:.12em;color:#8c8c95;margin-top:2px}
+  .slabel{font-size:7.5px;letter-spacing:.12em;color:#85858e;margin:12px 7px 5px}
+  .snav{height:26px;border-radius:6px;display:flex;align-items:center;padding:0 8px;font-size:9px;color:#a9a9b2;margin:2px 0}
+  .snav.on{background:rgba(255,255,255,.11);color:#fff;border:1px solid rgba(255,255,255,.10)}
+  .main{flex:1;min-width:0;display:flex;flex-direction:column}
+  .topbar{height:54px;flex:0 0 54px;display:flex;align-items:center;gap:10px;padding:0 18px;background:rgba(255,255,255,.58);border-bottom:1px solid rgba(0,0,0,.08)}
+  .back{height:26px;padding:0 9px;border:1px solid rgba(0,0,0,.12);border-radius:6px;background:rgba(255,255,255,.32);font-size:8.5px;display:flex;align-items:center;gap:4px}
+  .picon{width:27px;height:27px;border-radius:7px;display:grid;place-items:center;background:rgba(255,255,255,.72);border:1px solid rgba(0,0,0,.09);font-size:12px}
+  .ptitle small{display:block;font-size:6.5px;letter-spacing:.08em;color:#85888d}
+  .ptitle b{font-size:10.5px}
+  .world{height:31px;min-width:126px;padding:0 9px;border:1px solid rgba(0,0,0,.11);border-radius:7px;background:rgba(255,255,255,.26);display:flex;align-items:center;gap:7px;margin-left:4px}
+  .world small{display:block;font-size:6.5px;color:#85888d}.world b{font-size:8.5px}
+  .search{margin-left:auto;width:190px;height:30px;border:1px solid rgba(0,0,0,.08);border-radius:7px;background:rgba(255,255,255,.32);display:flex;align-items:center;padding:0 10px;color:#92959a;font-size:8px}
+  .chip{height:25px;padding:0 8px;border:1px solid rgba(0,0,0,.08);border-radius:6px;display:flex;align-items:center;gap:5px;font-size:7.5px;color:#666;background:rgba(255,255,255,.17);white-space:nowrap}
+  .dot{width:4px;height:4px;border-radius:50%;background:#10b981}
+  .avatar{width:25px;height:25px;border-radius:50%;background:#222;color:#fff;display:grid;place-items:center;font-size:9px;font-weight:700}
+  .biz{height:43px;flex:0 0 43px;display:flex;align-items:center;gap:3px;padding:0 18px;background:rgba(246,246,245,.82);border-bottom:1px solid rgba(0,0,0,.08)}
+  .biz .btab{height:27px;padding:0 10px;border-radius:6px;font-size:8.5px;color:#74777c;display:flex;align-items:center;white-space:nowrap}
+  .biz .btab.on{background:#222;color:#fff;font-weight:650}
+  .biz .more{font-size:8px;color:#888;margin-left:3px}
+  .stage{height:38px;flex:0 0 38px;display:flex;align-items:center;gap:9px;padding:0 18px;background:rgba(255,255,255,.20);border-bottom:1px solid rgba(0,0,0,.06)}
+  .stage .st{height:24px;padding:0 9px;border-radius:6px;font-size:8px;color:#777;display:flex;align-items:center;gap:5px}
+  .stage .st.on{background:#222;color:#fff;font-weight:650}
+  .stage .note{font-size:7.5px;color:#7d8085;margin-left:auto}
+  .body{flex:1;min-height:0;padding:14px 18px 18px;overflow:hidden}
+  .pagehead{height:48px;display:flex;align-items:center;gap:10px;margin-bottom:11px}
+  .pagehead .back2{height:25px;padding:0 8px;border:1px solid rgba(0,0,0,.11);border-radius:6px;background:rgba(255,255,255,.32);font-size:8px;display:flex;align-items:center}
+  .pagehead h2{margin:0;font-size:14px;letter-spacing:-.02em}
+  .pagehead p{margin:3px 0 0;font-size:7.5px;color:#777}
+  .pagehead .ops{margin-left:auto;display:flex;gap:6px;align-items:center}
+  .seg{display:flex;padding:2px;border-radius:6px;background:rgba(0,0,0,.07);border:1px solid rgba(0,0,0,.07)}
+  .seg span{height:22px;padding:0 8px;border-radius:5px;font-size:7.5px;color:#777;display:flex;align-items:center}
+  .seg span.on{background:#fff;color:#222;font-weight:650;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+  .btn{height:27px;padding:0 11px;border-radius:6px;background:#222;color:#fff;font-size:8px;display:flex;align-items:center}
+  .btn.ghost{background:transparent;color:#333;border:1px solid rgba(0,0,0,.12)}
+  .split{display:flex;gap:12px;height:calc(100% - 59px)}
+  .rail{width:208px;flex:0 0 208px;background:rgba(255,255,255,.27);border:1px solid rgba(0,0,0,.08);border-radius:10px;padding:7px;overflow:hidden}
+  .railhead{font-size:7px;letter-spacing:.1em;color:#7d8085;padding:4px 7px 6px}
+  .railitem{min-height:35px;padding:6px 8px;border-radius:7px;border:1px solid transparent;margin-bottom:2px;display:flex;gap:7px;align-items:flex-start}
+  .railitem .n{font-family:Georgia,serif;font-size:8px;color:#8a8d92;min-width:16px;padding-top:1px}
+  .railitem b{display:block;font-size:8px;line-height:1.25;color:#3e4146;font-weight:600}
+  .railitem small{display:block;font-size:6.5px;color:#8a8d92;line-height:1.3;margin-top:2px}
+  .railitem.on{background:#222;border-color:#222}
+  .railitem.on b,.railitem.on small,.railitem.on .n{color:#fff}
+  .content{flex:1;min-width:0;display:flex;flex-direction:column;gap:9px}
+  .modulehead{display:flex;align-items:flex-end;justify-content:space-between}
+  .modulehead .k{font-size:7px;letter-spacing:.12em;color:#7d8085}
+  .modulehead h3{margin:4px 0 0;font-size:13px}
+  .modulehead h3 span{font-size:8px;color:#85888d;font-weight:400}
+  .modulehead p{margin:4px 0 0;font-size:7.5px;color:#777}
+  .big{font-family:Georgia,serif;font-size:42px;color:rgba(0,0,0,.05);line-height:1}
+  .cards{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  .card{background:var(--card);border:1px solid rgba(0,0,0,.06);border-radius:10px;padding:11px 12px;box-shadow:0 5px 16px rgba(0,0,0,.025)}
+  .card.wide{grid-column:1/-1}
+  .card h4{margin:0 0 8px;font-size:8.5px;color:#2c2f33}
+  .row{display:flex;gap:7px;margin-bottom:6px}
+  .field{flex:1;height:26px;border:1px solid rgba(0,0,0,.07);border-radius:5px;background:rgba(0,0,0,.035);padding:5px 7px;font-size:6.5px;color:#888}
+  .field.tall{height:42px}
+  .mini{height:22px;border-radius:5px;border:1px solid rgba(0,0,0,.08);padding:0 8px;display:inline-flex;align-items:center;font-size:7px;color:#666;margin:2px 3px 2px 0;background:rgba(255,255,255,.25)}
+  .mini.on{background:#222;color:#fff;border-color:#222}
+  .cols3{display:flex;gap:10px;height:calc(100% - 38px)}
+  .pane{background:var(--card);border:1px solid rgba(0,0,0,.06);border-radius:10px;padding:10px;box-shadow:0 5px 16px rgba(0,0,0,.025);display:flex;flex-direction:column;min-width:0}
+  .pane h4{margin:0 0 3px;font-size:9px}.pane p{margin:0 0 8px;font-size:6.5px;color:#85888d;line-height:1.4}
+  .pane .list{overflow:hidden}
+  .story{height:31px;border:1px solid rgba(0,0,0,.07);border-radius:6px;margin-bottom:5px;padding:5px 7px;background:rgba(255,255,255,.22)}
+  .story b{display:block;font-size:7.5px}.story small{font-size:6px;color:#888}
+  .toolrow{height:27px;display:flex;align-items:center;gap:5px;border-bottom:1px solid rgba(0,0,0,.07);padding-bottom:7px;margin-bottom:7px}
+  .toolrow span{width:20px;height:20px;border:1px solid rgba(0,0,0,.07);border-radius:4px;display:grid;place-items:center;font-size:7px;color:#555;background:rgba(255,255,255,.25)}
+  .editorspace{flex:1;border:1px solid rgba(0,0,0,.05);border-radius:6px;background:rgba(255,255,255,.30);padding:12px;font-family:Georgia,"Songti SC",serif;font-size:8px;line-height:1.9;color:#3d3d3d}
+  .editorspace .h{font-family:-apple-system,sans-serif;font-size:7px;letter-spacing:.10em;color:#999;margin-bottom:8px}
+  .righttabs{display:flex;gap:10px;border-bottom:1px solid rgba(0,0,0,.08);padding-bottom:7px;margin-bottom:8px}
+  .righttabs span{font-size:7.5px;color:#888}.righttabs span.on{color:#222;font-weight:700;border-bottom:1px solid #222;padding-bottom:6px}
+  .notecard{border:1px dashed rgba(0,0,0,.12);border-radius:6px;padding:8px;font-size:7px;color:#777;line-height:1.5;background:rgba(255,255,255,.2)}
+  .stagehead{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:8px}
+  .stagehead h3{margin:2px 0 0;font-size:13px}.stagehead p{margin:4px 0 0;font-size:7.5px;color:#777}
+  .subnav{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:9px}
+  .subnav span{height:24px;padding:0 9px;border-radius:6px;background:rgba(255,255,255,.24);border:1px solid rgba(0,0,0,.06);font-size:7.5px;color:#666;display:flex;align-items:center}
+  .subnav span.on{background:#222;color:#fff;border-color:#222;font-weight:650}
+  .worldgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px;flex:1;min-height:0}
+  .simcols{display:flex;gap:10px;height:calc(100% - 38px)}
+  .simleft{width:230px;flex:0 0 230px}.simright{width:250px;flex:0 0 250px}
+  .control{display:flex;flex-direction:column;gap:8px}
+  .control .head{display:flex;align-items:center;justify-content:space-between}
+  .control h4{margin:0;font-size:9px}
+  .control .run{display:flex;gap:4px}
+  .control .run span{height:21px;padding:0 7px;border:1px solid rgba(0,0,0,.08);border-radius:5px;font-size:6.5px;color:#777;background:rgba(255,255,255,.25);display:flex;align-items:center}
+  .control .run span.on{background:#222;color:#fff;border-color:#222}
+  .codearea{flex:1;border-radius:7px;background:rgba(0,0,0,.035);border:1px solid rgba(0,0,0,.05);padding:9px;font-family:monospace;font-size:6.5px;line-height:1.6;color:#555;overflow:hidden}
+  .resultbox{border:1px solid rgba(0,0,0,.06);border-radius:7px;padding:8px;margin-bottom:6px;background:rgba(255,255,255,.22)}
+  .resultbox b{display:block;font-size:7px;color:#333;margin-bottom:3px}.resultbox p{margin:0;font-size:6.5px;color:#777;line-height:1.45}
+  .footer{margin-top:12px;display:flex;justify-content:space-between;color:#777;font-size:10px}
+  @media print{body{background:#fff}.board{padding:0}}
+</style>
+</head>
+<body>
+<div class="board">
+  <div class="board-head">
+    <div>
+      <h1>四个指定页面 · 导航结构优化预览</h1>
+      <p>统一保留全局顶栏与产品业务导航；仅重排页面内部导航。业务表单、编辑器、三栏工作区均不改变。</p>
+    </div>
+    <div class="legend">
+      <span><b>GLOBAL</b> 全局顶栏</span>
+      <span><b>BUSINESS</b> 产品导航</span>
+      <span><b>PAGE</b> 页面内部导航</span>
+    </div>
+  </div>
+
+  <!-- 01 Character -->
+  <section class="panel">
+    <div class="panel-title"><strong>01 · 人物种子编辑器</strong><em>character-management</em><span class="tag">PAGE NAV → LEFT RAIL</span></div>
+    <div class="frame">
+      <aside class="side">
+        <div class="brand"><i>W</i><div><b>世界模拟器</b><small>WORLD SIMULATOR</small></div></div>
+        <div class="slabel">创作与体验</div>
+        <div class="snav">创作中心</div><div class="snav">内容社区</div><div class="snav">AI 互动中心</div>
+        <div class="slabel">当前工作台</div>
+        <div class="snav on">游戏创作</div><div class="snav">文学创作</div><div class="snav">虚拟角色</div>
+        <div class="slabel">账户服务</div><div class="snav">商业与服务中心</div><div class="snav">用户与身份中心</div>
+      </aside>
+      <div class="main">
+        <div class="topbar">
+          <div class="back">← 创作中心</div><div class="picon">🎮</div>
+          <div class="ptitle"><small>当前工作台</small><b>游戏创作</b></div>
+          <div class="world"><div><small>选择世界</small><b>凡人修仙传</b></div><span>⌄</span></div>
+          <div class="search">⌕ 搜索世界、人物、作品…</div>
+          <div class="chip"><i class="dot"></i>AI 接入 · 已配置</div>
+          <div class="chip"><i class="dot"></i>后端已连接</div>
+          <div class="chip">♟</div><div class="avatar">兰</div>
+        </div>
+        <div class="biz">
+          <span class="btab">总览</span><span class="btab">世界管理</span><span class="btab on">人物管理</span>
+          <span class="btab">AI 角色聊天（NPC）</span><span class="btab">事件管理</span><span class="btab">时间线</span><span class="btab">模拟与写作</span><span class="more">更多</span>
+        </div>
+        <div class="body">
+          <div class="pagehead">
+            <div class="back2">← 返回</div>
+            <div><h2>人物种子编辑器 <span style="font-size:8px;color:#777;font-weight:400">PERSONA SEED</span></h2><p>稳定底色：设定人物的长期倾向与初始条件</p></div>
+            <div class="ops"><div class="seg"><span class="on">种子设定</span><span>当前运行态</span></div><div class="btn">保存种子</div></div>
+          </div>
+          <div class="split">
+            <div class="rail">
+              <div class="railhead">人物编辑模块 · 01—08</div>
+              <div class="railitem on"><span class="n">01</span><div><b>基础档案</b><small>身份、背景与外在特征</small></div></div>
+              <div class="railitem"><span class="n">02</span><div><b>人格动力结构</b><small>OVTDE 五大人格引擎</small></div></div>
+              <div class="railitem"><span class="n">03</span><div><b>人格运行与防御机制</b><small>认知处理与主权边界</small></div></div>
+              <div class="railitem"><span class="n">04</span><div><b>现实承载条件</b><small>环境、能力与资源基础</small></div></div>
+              <div class="railitem"><span class="n">05</span><div><b>个体特征与思想钢印</b><small>生活方式与价值结构</small></div></div>
+              <div class="railitem"><span class="n">06</span><div><b>生命经历与历史沉积</b><small>成长经历与重要关系</small></div></div>
+              <div class="railitem"><span class="n">07</span><div><b>人物初始状态</b><small>进入模拟时的初始值</small></div></div>
+              <div class="railitem"><span class="n">08</span><div><b>运行态与成长</b><small>经历之后的当前版本</small></div></div>
+            </div>
+            <div class="content">
+              <div class="modulehead"><div><div class="k">MODULE 01 / 08</div><h3>基础档案 <span>Basic Profile</span></h3><p>人物身份、社会角色、基本背景与外在特征。</p></div><div class="big">01</div></div>
+              <div class="cards">
+                <div class="card"><h4>身份与称谓</h4><div class="row"><div class="field">姓名 · 韩立</div><div class="field">人物编号 · A-001</div></div><div class="row"><div class="field">性别</div><div class="field">年龄</div></div><div class="field tall">人物简介与背景摘要</div></div>
+                <div class="card"><h4>社会角色与外在</h4><div class="row"><div class="field">身份 / 职业</div><div class="field">所属势力</div></div><div class="card" style="padding:8px;box-shadow:none;background:rgba(0,0,0,.025);border-style:dashed"><div style="font-size:6.5px;color:#888">头像与外在特征区域</div></div></div>
+                <div class="card wide"><h4>人物底色备注</h4><div class="field tall">只记录长期稳定的身份事实，不填写运行态成长。</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 02 Writing -->
+  <section class="panel">
+    <div class="panel-title"><strong>02 · 写作辅助</strong><em>writing</em><span class="tag">COMPACT PHASE BAR · 3 COLUMNS</span></div>
+    <div class="frame">
+      <aside class="side">
+        <div class="brand"><i>W</i><div><b>世界模拟器</b><small>WORLD SIMULATOR</small></div></div>
+        <div class="slabel">创作与体验</div><div class="snav">创作中心</div><div class="snav">内容社区</div><div class="snav">AI 互动中心</div>
+        <div class="slabel">当前工作台</div><div class="snav on">游戏创作</div><div class="snav">文学创作</div><div class="snav">虚拟角色</div>
+        <div class="slabel">账户服务</div><div class="snav">商业与服务中心</div><div class="snav">用户与身份中心</div>
+      </aside>
+      <div class="main">
+        <div class="topbar"><div class="back">← 创作中心</div><div class="picon">🎮</div><div class="ptitle"><small>当前工作台</small><b>游戏创作</b></div><div class="world"><div><small>选择世界</small><b>凡人修仙传</b></div><span>⌄</span></div><div class="search">⌕ 搜索世界、人物、作品…</div><div class="chip"><i class="dot"></i>AI 接入 · 已配置</div><div class="chip"><i class="dot"></i>后端已连接</div><div class="chip">♟</div><div class="avatar">兰</div></div>
+        <div class="biz"><span class="btab">总览</span><span class="btab">世界管理</span><span class="btab">人物管理</span><span class="btab">AI 角色聊天（NPC）</span><span class="btab">事件管理</span><span class="btab">时间线</span><span class="btab on">模拟与写作</span><span class="more">更多</span></div>
+        <div class="stage"><span class="st">01 模拟运行</span><span style="font-size:8px;color:#999">→</span><span class="st on">02 写作输出</span><span class="note">同一套世界、事件与推演结果</span></div>
+        <div class="body" style="padding-top:10px">
+          <div class="cols3">
+            <div class="pane" style="width:232px;flex:0 0 232px">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start"><div><div style="font-size:6.5px;letter-spacing:.1em;color:#888">MANUSCRIPTS</div><h4 style="font-size:12px;margin-top:3px">手稿库</h4></div><div class="btn" style="height:22px;padding:0 8px">＋ 新章</div></div>
+              <p style="margin-top:6px">12 章 · 两种入口共用同一份世界设定</p>
+              <div style="display:flex;gap:4px;margin-bottom:8px"><span class="mini">导出 TXT</span><span class="mini">从推演生成</span></div>
+              <div class="list">
+                <div class="story" style="border-color:#222"><b>第一章 · 山边小村</b><small>3,240 字 · 架构师</small></div>
+                <div class="story"><b>第二章 · 七玄门</b><small>2,880 字 · 架构师</small></div>
+                <div class="story"><b>第三章 · 墨大夫</b><small>3,110 字 · 探险家</small></div>
+                <div class="story"><b>第四章 · 修仙之路</b><small>1,760 字 · 架构师</small></div>
+              </div>
+              <div class="notecard" style="margin-top:auto">增量入库：提取结果先进入草稿箱，不直接写入正式设定。</div>
+            </div>
+            <div class="pane" style="flex:1">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start">
+                <div><div style="font-size:6.5px;letter-spacing:.1em;color:#888">08 写作工作台</div><h4 style="font-size:12px;margin-top:3px">第四章 · 修仙之路</h4><p style="margin-top:4px">1,760 字 · 已自动保存 · 最后修改 10:42</p></div>
+                <div class="seg"><span class="on">架构师</span><span>探险家</span></div>
+              </div>
+              <div class="toolrow"><span>B</span><span>I</span><span>S</span><span>H2</span><span>“”</span><span>•</span><span>1.</span><span>↶</span><span>↷</span><span style="width:auto;padding:0 7px">AI 辅助</span></div>
+              <div class="editorspace"><div class="h">CHAPTER 04</div>山风从崖口吹过，带着潮湿的草木气息。韩立站在石阶尽头，抬头看见云层后那一线极淡的天光。<br><br>他没有立刻迈步，只是把袖中的手又握紧了一点。往前走，或许仍是未知；但退回去，便再无别的路。</div>
+            </div>
+            <div class="pane" style="width:238px;flex:0 0 238px">
+              <div class="righttabs"><span class="on">推演参照</span><span>素材提取</span></div>
+              <div style="font-size:7px;color:#888;line-height:1.5;margin-bottom:7px">使用该章节已绑定的事件与推演记录。</div>
+              <div class="resultbox"><b>事件 05 · 初入七玄门</b><p>人物进入新的宗门环境，关系与资源条件发生变化。</p></div>
+              <div class="resultbox"><b>推演结果 · 韩立的判断</b><p>先观察，不急于表态；保留退路，避免暴露底牌。</p></div>
+              <div class="notecard" style="margin-top:auto">AI 辅助只处理当前章节，不改变世界正式设定。</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 03 World -->
+  <section class="panel">
+    <div class="panel-title"><strong>03 · 世界构建</strong><em>world-building</em><span class="tag">STAGE RAIL · MODULE SUBNAV</span></div>
+    <div class="frame">
+      <aside class="side">
+        <div class="brand"><i>W</i><div><b>世界模拟器</b><small>WORLD SIMULATOR</small></div></div>
+        <div class="slabel">创作与体验</div><div class="snav">创作中心</div><div class="snav">内容社区</div><div class="snav">AI 互动中心</div>
+        <div class="slabel">当前工作台</div><div class="snav on">游戏创作</div><div class="snav">文学创作</div><div class="snav">虚拟角色</div>
+        <div class="slabel">账户服务</div><div class="snav">商业与服务中心</div><div class="snav">用户与身份中心</div>
+      </aside>
+      <div class="main">
+        <div class="topbar"><div class="back">← 创作中心</div><div class="picon">🎮</div><div class="ptitle"><small>当前工作台</small><b>游戏创作</b></div><div class="world"><div><small>选择世界</small><b>凡人修仙传</b></div><span>⌄</span></div><div class="search">⌕ 搜索世界、人物、作品…</div><div class="chip"><i class="dot"></i>AI 接入 · 已配置</div><div class="chip"><i class="dot"></i>后端已连接</div><div class="chip">♟</div><div class="avatar">兰</div></div>
+        <div class="biz"><span class="btab">总览</span><span class="btab on">世界管理</span><span class="btab">人物管理</span><span class="btab">AI 角色聊天（NPC）</span><span class="btab">事件管理</span><span class="btab">时间线</span><span class="btab">模拟与写作</span><span class="more">更多</span></div>
+        <div class="body">
+          <div class="pagehead">
+            <div><div style="font-size:6.5px;letter-spacing:.1em;color:#888">WORLD BUILDING · 世界建设配置</div><h2 style="margin-top:3px">凡人修仙传</h2><p>定义世界的基底、社会运转与日常生活规则。</p></div>
+            <div class="ops"><span class="mini">世界 ID · a89474…</span><div class="btn ghost">删除世界</div><div class="btn">保存设定</div></div>
+          </div>
+          <div class="split">
+            <div class="rail" style="width:196px;flex-basis:196px">
+              <div class="railhead">世界阶段 · 01—04</div>
+              <div class="railitem on" style="min-height:48px;padding:8px"><span class="n">01</span><div><b>宏观：世界基础</b><small>时代、自然与法则基底</small></div></div>
+              <div class="railitem" style="min-height:48px;padding:8px"><span class="n">02</span><div><b>中观：社会运转</b><small>政体、经济、法律与教育</small></div></div>
+              <div class="railitem" style="min-height:48px;padding:8px"><span class="n">03</span><div><b>微观：生活与治理</b><small>聚落、组织、家庭与文化</small></div></div>
+              <div class="railitem" style="min-height:48px;padding:8px"><span class="n">04</span><div><b>压力源</b><small>世界中的持续压力与危机</small></div></div>
+            </div>
+            <div class="content">
+              <div class="stagehead"><div><div style="font-size:6.5px;letter-spacing:.10em;color:#888">STAGE 01 · 宏观</div><h3>世界基础</h3><p>先定义时代与思想，再补充自然生态与世界法则。</p></div><div class="big">01</div></div>
+              <div class="subnav"><span class="on">时代与思想</span><span>自然与生态</span><span>法则与历史</span></div>
+              <div class="worldgrid">
+                <div class="card"><h4>时代与思想</h4><div class="row"><div class="field">时代背景 · 古代修仙</div><div class="field">文明阶段 · 宗门林立</div></div><div class="field tall">主流思想、信仰与价值结构</div><div style="margin-top:7px"><span class="mini on">修仙</span><span class="mini">宗门</span><span class="mini">灵气</span></div></div>
+                <div class="card"><h4>自然与生态</h4><div class="row"><div class="field">地理形态</div><div class="field">气候与灵脉</div></div><div class="field tall">生态环境、资源分布与危险区域</div><div style="margin-top:7px"><span class="mini">山脉</span><span class="mini on">灵脉</span><span class="mini">秘境</span></div></div>
+                <div class="card wide"><h4>世界法则与历史</h4><div class="field tall">世界运行法则、历史分期的关键事件与当前时代压力。</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 04 Simulation -->
+  <section class="panel">
+    <div class="panel-title"><strong>04 · 模拟推演</strong><em>simulation</em><span class="tag">PHASE BAR · 3 COLUMNS PRESERVED</span></div>
+    <div class="frame">
+      <aside class="side">
+        <div class="brand"><i>W</i><div><b>世界模拟器</b><small>WORLD SIMULATOR</small></div></div>
+        <div class="slabel">创作与体验</div><div class="snav">创作中心</div><div class="snav">内容社区</div><div class="snav">AI 互动中心</div>
+        <div class="slabel">当前工作台</div><div class="snav on">游戏创作</div><div class="snav">文学创作</div><div class="snav">虚拟角色</div>
+        <div class="slabel">账户服务</div><div class="snav">商业与服务中心</div><div class="snav">用户与身份中心</div>
+      </aside>
+      <div class="main">
+        <div class="topbar"><div class="back">← 创作中心</div><div class="picon">🎮</div><div class="ptitle"><small>当前工作台</small><b>游戏创作</b></div><div class="world"><div><small>选择世界</small><b>凡人修仙传</b></div><span>⌄</span></div><div class="search">⌕ 搜索世界、人物、作品…</div><div class="chip"><i class="dot"></i>AI 接入 · 已配置</div><div class="chip"><i class="dot"></i>后端已连接</div><div class="chip">♟</div><div class="avatar">兰</div></div>
+        <div class="biz"><span class="btab">总览</span><span class="btab">世界管理</span><span class="btab">人物管理</span><span class="btab">AI 角色聊天（NPC）</span><span class="btab">事件管理</span><span class="btab">时间线</span><span class="btab on">模拟与写作</span><span class="more">更多</span></div>
+        <div class="stage"><span class="st on">01 模拟运行</span><span style="font-size:8px;color:#999">→</span><span class="st">02 写作输出</span><span class="note">同一套世界、事件与推演结果 · 模拟完成即进入写作</span></div>
+        <div class="body" style="padding-top:10px">
+          <div class="simcols">
+            <div class="pane simleft">
+              <h4>事件注入台</h4><p>选择事件或开启自动推演</p>
+              <div class="notecard" style="margin-bottom:7px">辅助模式不会自动改写正文或故事线；结果需要手动采纳。</div>
+              <div class="story" style="border-color:#222"><b>初入七玄门</b><small>正 · 中等强度 · 已推演</small></div>
+              <div class="story"><b>墨大夫的试探</b><small>负 · 高强度</small></div>
+              <div class="story"><b>山路遇袭</b><small>负 · 中等强度</small></div>
+              <div class="story"><b>灵石分配</b><small>正 · 低强度</small></div>
+            </div>
+            <div class="pane" style="flex:1">
+              <div class="control" style="height:100%">
+                <div class="head"><h4>推演控制台</h4><div class="run"><span class="on">单事件</span><span>连续推演</span></div></div>
+                <div class="row" style="margin:0"><div class="field">推演方向（可选）</div></div>
+                <div class="row" style="margin:0"><div class="field">观察视角 · 第三人称限知</div><div class="btn" style="height:26px">开始推演</div></div>
+                <div class="codearea"><b style="color:#444">[当前输入事件]</b> 初入七玄门<br>描述：韩立进入七玄门，面对新的宗门环境与人物关系。<br><br><span style="color:#777">AI 推演记录</span><br>· 世界现实变化：宗门资源与人物关系开始重新排列。<br>· 人物自主行动：韩立先观察环境，不急于表态。<br>· 潜在后果：暴露身份的风险上升，但保留了退路。</div>
+              </div>
+            </div>
+            <div class="pane simright">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start"><div><h4>推演结果观察</h4><p>本次推演的结构化输出</p></div><div class="btn" style="height:23px;padding:0 8px">写成章节 →</div></div>
+              <div class="resultbox"><b>世界现实变化</b><p>宗门内部对韩立的关注度上升，资源分配出现新的倾斜。</p></div>
+              <div class="resultbox"><b>人物自主行动</b><p>韩立选择先观察，不立即展示能力；与墨大夫保持距离。</p></div>
+              <div class="resultbox"><b>后续叙事接口</b><p>可将本次结果写成章节，或保留为后续事件素材。</p></div>
+              <div class="notecard" style="margin-top:auto">推演结果不会自动写入正文；需要作者确认。</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="footer">
+    <span>视觉预览 · 未修改生产代码</span>
+    <span>统一规范：全局顶栏 / 产品导航 / 页面内部导航 三层职责分离</span>
+  </div>
+</div>
+</body>
+</html>

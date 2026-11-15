@@ -10,7 +10,6 @@
 
 body {
   margin: 0;
-  min-width: 900px;
   min-height: 100vh;
   font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI",
     "PingFang SC", "Microsoft YaHei", sans-serif;
@@ -1002,3 +1001,16 @@ button {
   background: rgba(128,128,128,0.13) !important;
 }
 
+
+/* 窄屏（约 800px 窗口）：侧边栏作为抽屉覆盖，主区域不再被 260px 挤压 */
+@media (max-width: 900px) {
+  .main-area {
+    margin-left: 0 !important;
+  }
+  .cc-sidebar {
+    box-shadow: 24px 0 60px rgba(0, 0, 0, 0.28);
+  }
+  .topbar {
+    padding: 0 16px;
+  }
+}

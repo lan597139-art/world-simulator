@@ -10,8 +10,6 @@ from database import get_db
 
 router = APIRouter(tags=["story-threads"])
 
-KINDS = {"main", "side", "copy", "shadow", "ensemble"}
-
 
 def _fail(code, message):
     raise HTTPException(status_code=code, detail=message)
@@ -49,6 +47,7 @@ def _thread_row(db, row):
         "title": row.title,
         "order_index": row.order_index or 0,
         "status": row.status,
+        "meta": row.meta or {},
         "events": [
             {
                 "id": link.id,
@@ -97,9 +96,7 @@ def create_thread(story_id: str, payload: dict, db: Session = Depends(get_db)):
     title = str(payload.get("title") or "").strip()[:200]
     if not title:
         _fail(422, "缺少人物线标题")
-    kind = str(payload.get("kind") or "main")
-    if kind not in KINDS:
-        _fail(422, "人物线类型不合法")
+    kind = str(payload.get("kind") or "未分类").strip()[:40] or "未分类"
     character_id = str(payload.get("character_id") or "").strip() or None
     if character_id:
         char = db.query(models.Character).filter(models.Character.id == character_id).first()
@@ -111,6 +108,7 @@ def create_thread(story_id: str, payload: dict, db: Session = Depends(get_db)):
         if parent.story_id != story.id:
             _fail(409, "父人物线不属于该故事")
     count = db.query(models.StoryThread).filter(models.StoryThread.story_id == story.id).count()
+    meta = payload.get("meta") if isinstance(payload.get("meta"), dict) else {}
     row = models.StoryThread(
         story_id=story.id,
         world_id=story.world_id,
@@ -119,7 +117,7 @@ def create_thread(story_id: str, payload: dict, db: Session = Depends(get_db)):
         kind=kind,
         title=title,
         order_index=int(payload.get("order_index") or count),
-        meta={"note": str(payload.get("note") or "")[:500]},
+        meta={"note": str(payload.get("note") or "")[:500], **meta},
     )
     db.add(row)
     db.commit()
@@ -136,10 +134,7 @@ def update_thread(thread_id: str, payload: dict, db: Session = Depends(get_db)):
             _fail(422, "标题不能为空")
         row.title = title
     if "kind" in payload:
-        kind = str(payload.get("kind") or "")
-        if kind not in KINDS:
-            _fail(422, "人物线类型不合法")
-        row.kind = kind
+        row.kind = str(payload.get("kind") or "未分类").strip()[:40] or "未分类"
     if "status" in payload:
         row.status = str(payload.get("status") or "active")[:20]
     if "character_id" in payload:
@@ -167,6 +162,8 @@ def update_thread(thread_id: str, payload: dict, db: Session = Depends(get_db)):
         row.parent_thread_id = parent_id
     if "order_index" in payload:
         row.order_index = int(payload.get("order_index") or 0)
+    if "meta" in payload and isinstance(payload.get("meta"), dict):
+        row.meta = {**(row.meta or {}), **payload["meta"]}
     db.commit()
     db.refresh(row)
     return _thread_row(db, row)

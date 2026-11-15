@@ -5,6 +5,7 @@ import {
   Gamepad2,
   IdCard,
   MessagesSquare,
+  FolderKanban,
   PanelLeftClose,
   Settings,
   ShoppingBag,
@@ -23,6 +24,7 @@ export type HomeNavTarget =
   | 'content-store'
   | 'yunbao'
   | 'business'
+  | 'assets'
   | 'settings'
 
 type Lang = 'zh' | 'en'
@@ -39,7 +41,7 @@ type NavGroup = {
   items: NavItem[]
 }
 
-function groups(lang: Lang, active: 'home' | 'identity' | 'community' | 'community-social' | 'ai-interaction' | 'game-experience' | 'content-store' | 'business'): NavGroup[] {
+function groups(lang: Lang, active: 'home' | 'identity' | 'community' | 'community-social' | 'ai-interaction' | 'game-experience' | 'content-store' | 'business' | 'assets'): NavGroup[] {
   return [
     {
       label: lang === 'zh' ? '个人空间' : 'Personal Space',
@@ -56,6 +58,12 @@ function groups(lang: Lang, active: 'home' | 'identity' | 'community' | 'communi
         { target: 'ai-interaction', label: lang === 'zh' ? 'AI 互动中心' : 'AI Interaction Center', icon: Sparkles, active: active === 'ai-interaction' },
         { target: 'game-experience', label: lang === 'zh' ? '游戏体验中心' : 'Game Experience Center', icon: Gamepad2, active: active === 'game-experience' },
         { target: 'content-store', label: lang === 'zh' ? '内容商城' : 'Content Store', icon: ShoppingBag, active: active === 'content-store' },
+      ],
+    },
+    {
+      label: lang === 'zh' ? '创作管理' : 'Creation Management',
+      items: [
+        { target: 'assets', label: lang === 'zh' ? '创作者资产库' : 'Creator Assets', icon: FolderKanban },
       ],
     },
     {
@@ -78,7 +86,7 @@ export default function CreationCenterSidebar({
   canAccessYunbao = false,
 }: {
   lang: Lang
-  active: 'home' | 'identity' | 'community' | 'community-social' | 'ai-interaction' | 'game-experience' | 'content-store' | 'business'
+  active: 'home' | 'identity' | 'community' | 'community-social' | 'ai-interaction' | 'game-experience' | 'content-store' | 'business' | 'assets'
   onNavigate: (target: HomeNavTarget) => void
   onToggleLang: () => void
   onCollapse: () => void

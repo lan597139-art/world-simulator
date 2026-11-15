@@ -27,10 +27,12 @@ npm run dev                 # http://localhost:5173
 
 前端可以部署在 Vercel，但 **FastAPI 后端不能只靠 Vercel 静态站点**。线上需要：
 
-1. 一个可公网访问的 FastAPI 后端，并给 SQLite 配持久磁盘（Render / Railway / Fly.io 等）。
-   仓库已包含 `backend/Dockerfile`、`backend/requirements.txt` 和 `render.yaml`：
-   Render 新建 Blueprint 指向本仓库即可，挂载 `/data`，数据库地址为
-   `sqlite:////data/world_simulator.db`。把 `DEEPSEEK_API_KEY` 填在 Render 环境变量里。
+1. 一个可公网访问的 FastAPI 后端。仓库已包含 `backend/Dockerfile`、
+   `backend/requirements.txt` 和 `render.yaml`。Render 新建 Blueprint 指向本仓库即可：
+   - 结构化数据用 Render PostgreSQL（`render.yaml` 已声明 `world-simulator-db`，
+     `DATABASE_URL` 自动注入并规范化为 `postgresql+psycopg://`）；
+   - 图片/附件默认落在 `/data/uploads` 持久磁盘，也可切换到 S3/R2/MinIO；
+   - 把 `DEEPSEEK_API_KEY` 填在 Render 环境变量里。
 2. 在 Vercel 项目 Settings → Environment Variables 设置：
 
 ```env
@@ -39,7 +41,33 @@ VITE_API_BASE_URL=https://你的后端域名
 
 3. 重新部署前端。入口的 API 桥接会把代码里默认的
    `http://127.0.0.1:8000` 自动改写为 `VITE_API_BASE_URL`。
-4. 后端 CORS 已允许 `https://world-simulator-elht.vercel.app` 及本项目 Vercel 预览域名。
+4. 后端 CORS 已允许 `https://world-simulator-elht.vercel.app` 及本项目 Vercel 预览域名；
+   额外域名写入 `WS_CORS_ORIGINS`（逗号分隔）。
+5. 首次上线后访问前端，会进入开发者账号初始化；初始化完成后在
+   **设置 → 账户与安全 → 邀请码与公开注册** 生成邀请码。注册必须由服务端校验并消耗邀请码。
+6. 公开注册相关环境变量：
+
+```env
+WS_REGISTRATION_ENABLED=1      # 0 关闭公开注册
+WS_INVITE_REQUIRED=1           # 1 必须邀请码
+WS_EMAIL_MODE=off              # off | dev | smtp
+WS_SETUP_TOKEN=                # 可选：初始化开发者账号的额外令牌
+```
+
+`off` 表示不发邮件；`dev` 只在后端日志输出验证码，适合内测；`smtp` 需要配置
+`WS_SMTP_HOST/PORT/USER/PASSWORD/FROM`（SSL/TLS 分别用 `WS_SMTP_SSL`、`WS_SMTP_TLS`）。
+
+媒体存储可在本地磁盘与 S3 兼容对象存储之间切换：
+
+```env
+WS_STORAGE_BACKEND=local       # local | s3
+WS_S3_BUCKET=
+WS_S3_ENDPOINT=                # R2/MinIO 等自定义端点
+WS_S3_REGION=auto
+WS_S3_ACCESS_KEY=
+WS_S3_SECRET_KEY=
+WS_S3_PUBLIC_BASE=             # 可选 CDN/公开访问域名
+```
 
 没有设置 `VITE_API_BASE_URL` 时，线上页面会尝试访问访客自己的 `127.0.0.1:8000`，只能用于“本机后端 + 线上前端”的开发调试。
 
@@ -98,3 +126,6 @@ python backend/tests/smoke_workspace.py
 - Vercel：`https://world-simulator-elht.vercel.app`
 
 推送到 `main` 后，Vercel 的 Git 集成会自动构建并发布 `dist/`。
+
+当前仓库的改动尚未提交/推送；部署后还需要在 Vercel 与 Render 控制台确认
+`VITE_API_BASE_URL` 指向新后端域名，并完成一次真实注册/登录回归。

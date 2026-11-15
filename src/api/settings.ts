@@ -34,6 +34,7 @@ export type SettingsProfile = {
   display_name: string
   bio: string
   avatar: string
+  avatar_url: string
   is_owner: boolean
   created_at?: string | null
 }
@@ -81,7 +82,7 @@ export const updateSettings = (payload: {
   notifications?: Partial<SettingsNotifications>
 }) => request<SettingsData>('/settings', { method: 'PATCH', body: JSON.stringify(payload) })
 
-export const updateProfile = (payload: { display_name?: string; bio?: string; avatar?: string }) =>
+export const updateProfile = (payload: { display_name?: string; bio?: string; avatar?: string; avatar_url?: string }) =>
   request<SettingsProfile>('/auth/profile', { method: 'PATCH', body: JSON.stringify(payload) })
 
 export const changePassword = (payload: { current_password: string; new_password: string }) =>

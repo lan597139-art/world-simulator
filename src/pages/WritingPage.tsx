@@ -1,18 +1,29 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { CSSProperties, ReactNode } from 'react'
+import type { CSSProperties, ReactNode, MouseEvent as ReactMouseEvent } from 'react'
 import { EditorContent, useEditor } from '@tiptap/react'
 import { BubbleMenu } from '@tiptap/react/menus'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import type { Editor } from '@tiptap/core'
 import * as writingApi from '../api/writing'
-import type { DraftItem, StoryItem } from '../api/writing'
+import type { DraftItem, StoryItem, WritingToolPatch } from '../api/writing'
 import { API_ORIGIN } from '../api/config'
-import { listBranches } from '../api/multipath'
-import type { Branch } from '../api/multipath'
+import WritingToolbox from '../components/writing/WritingToolbox'
+import type { ToolSelection } from '../components/writing/WritingToolbox'
+import WritingReview from '../components/writing/WritingReview'
+import ForeshadowBoard from '../components/writing/ForeshadowBoard'
+import OutlineBoard from '../components/writing/OutlineBoard'
+import WritingStats from '../components/writing/WritingStats'
+import SensitiveWords from '../components/writing/SensitiveWords'
+import VolumeTree from '../components/writing/VolumeTree'
+import { TypewriterFocus } from '../editor/typewriter'
+import { getWritingTree } from '../api/writingVolumes'
+import type { WritingChapter, WritingVolume } from '../api/writingVolumes'
+import '../styles/product-workspace.css'
 
 type Mode = 'architect' | 'explorer'
-type SidebarTab = 'reference' | 'extract'
+type ReviewTool = 'reader_sim' | 'release_check'
+type SidebarTab = 'reference' | 'extract' | 'toolbox'
 type SaveState = 'saved' | 'dirty' | 'saving' | 'error'
 
 const API_BASE = `${API_ORIGIN}/api`
@@ -72,6 +83,36 @@ function stripHtml(value: string): string {
   const div = document.createElement('div')
   div.innerHTML = value || ''
   return (div.textContent || '').replace(/\u00a0/g, ' ').trim()
+}
+
+type DiffChunk = { type: 'same' | 'del' | 'add'; text: string }
+
+function buildSimpleDiff(before: string, after: string): DiffChunk[] {
+  const oldText = before || ''
+  const newText = after || ''
+  let prefix = 0
+  const maxPrefix = Math.min(oldText.length, newText.length)
+  while (prefix < maxPrefix && oldText[prefix] === newText[prefix]) prefix += 1
+  let suffix = 0
+  const maxSuffix = Math.min(oldText.length - prefix, newText.length - prefix)
+  while (
+    suffix < maxSuffix &&
+    oldText[oldText.length - 1 - suffix] === newText[newText.length - 1 - suffix]
+  ) {
+    suffix += 1
+  }
+  const chunks: DiffChunk[] = []
+  if (prefix > 0) chunks.push({ type: 'same', text: oldText.slice(0, prefix) })
+  const removed = oldText.slice(prefix, oldText.length - suffix)
+  const added = newText.slice(prefix, newText.length - suffix)
+  if (removed) chunks.push({ type: 'del', text: removed })
+  if (added) chunks.push({ type: 'add', text: added })
+  if (suffix > 0) chunks.push({ type: 'same', text: oldText.slice(oldText.length - suffix) })
+  return chunks
+}
+
+function plainToInlineHtml(value: string): string {
+  return escapeHtml(value || '').replace(/\r?\n/g, '<br>')
 }
 
 function fmtTime(value?: string | null): string {
@@ -153,6 +194,8 @@ const DRAFT_LABELS: Record<DraftItem['entity_type'], string> = {
 const EDITOR_CSS = `
 .ws-editor .ProseMirror {
   min-height: 420px;
+  max-width: 860px;
+  margin: 0 auto;
   outline: none;
   font-family: "Songti SC", "Noto Serif SC", Georgia, serif;
   font-size: 17px;
@@ -205,6 +248,9 @@ export default function WritingPage({
 }) {
   const [stories, setStories] = useState<StoryItem[]>([])
   const [current, setCurrent] = useState<StoryItem | null>(null)
+  const [volumes, setVolumes] = useState<WritingVolume[]>([])
+  const [treeChapters, setTreeChapters] = useState<WritingChapter[]>([])
+  const [treeLoading, setTreeLoading] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saveState, setSaveState] = useState<SaveState>('saved')
   const [words, setWords] = useState(0)
@@ -212,22 +258,31 @@ export default function WritingPage({
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedEventIds, setSelectedEventIds] = useState<string[]>([])
   const [direction, setDirection] = useState<string>(() => localStorage.getItem('ws.write.direction') || '')
-  const [perspective, setPerspective] = useState<string>(() => localStorage.getItem('ws.write.perspective') || '第三人称限知 · 跟随主角')
-  // 可选多路径创作：默认关闭；开启后可选择某个推演分支作为素材。
-  const [multiPathCreative, setMultiPathCreative] = useState(() => localStorage.getItem('ws.write.multipath') === '1')
-  const [branches, setBranches] = useState<Branch[]>([])
-  const [branchId, setBranchId] = useState('')
-  useEffect(() => { localStorage.setItem('ws.write.multipath', multiPathCreative ? '1' : '0') }, [multiPathCreative])
+
+  // 视角设置（模式 + 角色）
+  const [perspectiveMode, setPerspectiveMode] = useState<string>(() => localStorage.getItem('ws.write.perspectiveMode') || 'third_limited');
+  const [perspectiveChar, setPerspectiveChar] = useState<string>(() => localStorage.getItem('ws.write.perspectiveChar') || '');
+  const [characters, setCharacters] = useState<any[]>([]);
+
+  useEffect(() => { localStorage.setItem('ws.write.perspectiveMode', perspectiveMode); }, [perspectiveMode]);
+  useEffect(() => { localStorage.setItem('ws.write.perspectiveChar', perspectiveChar); }, [perspectiveChar]);
+
   useEffect(() => {
-    if (!multiPathCreative || !worldId) {
-      setBranches([])
-      setBranchId('')
-      return
-    }
-    listBranches(worldId)
-      .then((rows) => setBranches(rows.filter((b) => b.status !== 'archived')))
-      .catch(() => setBranches([]))
-  }, [multiPathCreative, worldId])
+    if (!worldId) return;
+    fetch(`${API_BASE}/characters?world_id=${worldId}`)
+      .then(res => res.json())
+      .then(data => setCharacters(Array.isArray(data) ? data : []))
+      .catch(console.error);
+  }, [worldId]);
+
+  const buildPerspectiveString = () => {
+    if (perspectiveMode === 'third_omniscient') return '第三人称全知（上帝视角）';
+    if (perspectiveMode === 'ensemble') return '群像多视角（多角色切换）';
+    const charName = perspectiveChar || '主导人物';
+    if (perspectiveMode === 'first_person') return `第一人称（代入 ${charName}）`;
+    return `第三人称限知（跟随 ${charName}）`;
+  };
+
   const [generating, setGenerating] = useState(false)
   const [generatingText, setGeneratingText] = useState('')
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>('reference')
@@ -237,11 +292,78 @@ export default function WritingPage({
   const [bulkApproving, setBulkApproving] = useState(false)
   const [runsByEvent, setRunsByEvent] = useState<Record<string, any[]>>({})
   useEffect(() => { localStorage.setItem('ws.write.direction', direction) }, [direction])
-  useEffect(() => { localStorage.setItem('ws.write.perspective', perspective) }, [perspective])
+  
   const [assist, setAssist] = useState<{ label: string; preview: string } | null>(null)
+  const [assistDiff, setAssistDiff] = useState<{ label: string; from: number; to: number; before: string; after: string } | null>(null)
   const [toast, setToast] = useState('')
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [modeBusy, setModeBusy] = useState(false)
+  const [libraryOpen, setLibraryOpen] = useState(true)
+  const [assistantOpen, setAssistantOpen] = useState(true)
+  const [focusMode, setFocusMode] = useState(false)
+  const [typewriterMode, setTypewriterMode] = useState(() => localStorage.getItem('ws.write.typewriter') === '1')
+  const [immersiveMode, setImmersiveMode] = useState(false)
+  const [statsOpen, setStatsOpen] = useState(false)
+  const [sensitiveOpen, setSensitiveOpen] = useState(false)
+  const [hoverCard, setHoverCard] = useState<{ x: number; y: number; name: string; kind: string; summary: string } | null>(null)
+  const [locations, setLocations] = useState<any[]>([])
+  const [reviewTool, setReviewTool] = useState<ReviewTool | null>(null)
+  const [foreshadowOpen, setForeshadowOpen] = useState(false)
+  const [foreshadowSeed, setForeshadowSeed] = useState('')
+  const [outlineOpen, setOutlineOpen] = useState(false)
+  const [contextOptions, setContextOptions] = useState(() => {
+    try {
+      const raw = localStorage.getItem('ws.write.context')
+      if (!raw) return { characters: true, events: true, previous: true, world: true }
+      const parsed = JSON.parse(raw)
+      return {
+        characters: parsed.characters !== false,
+        events: parsed.events !== false,
+        previous: parsed.previous !== false,
+        world: parsed.world !== false,
+      }
+    } catch {
+      return { characters: true, events: true, previous: true, world: true }
+    }
+  })
+  useEffect(() => { localStorage.setItem('ws.write.context', JSON.stringify(contextOptions)) }, [contextOptions])
+  useEffect(() => { localStorage.setItem('ws.write.typewriter', typewriterMode ? '1' : '0') }, [typewriterMode])
+
+  useEffect(() => {
+    if (!worldId) {
+      setLocations([])
+      return
+    }
+    let cancelled = false
+    fetch(`${API_BASE}/locations?world_id=${encodeURIComponent(worldId)}`)
+      .then((res) => res.json())
+      .then((rows) => {
+        if (!cancelled) setLocations(Array.isArray(rows) ? rows : [])
+      })
+      .catch(() => {
+        if (!cancelled) setLocations([])
+      })
+    return () => { cancelled = true }
+  }, [worldId])
+
+  useEffect(() => {
+    setAssistDiff(null)
+    setHoverCard(null)
+  }, [current?.id])
+
+  useEffect(() => {
+    if (words <= 0) return
+    try {
+      const key = new Date().toISOString().slice(0, 10)
+      const raw = localStorage.getItem('ws.write.daily')
+      const parsed = raw ? JSON.parse(raw) : {}
+      const daily = parsed && typeof parsed === 'object' ? parsed : {}
+      daily[key] = Math.max(Number(daily[key] || 0), words)
+      localStorage.setItem('ws.write.daily', JSON.stringify(daily))
+    } catch {
+      /* stats is a local nicety; ignore quota/private mode */
+    }
+  }, [words])
 
   const currentRef = useRef<StoryItem | null>(null)
   const editorRef = useRef<Editor | null>(null)
@@ -270,6 +392,20 @@ export default function WritingPage({
       saveTimer.current = null
     }
     setSaveState('saving')
+    // 先落本地 IndexedDB（按当前账号隔离），后端失败时草稿仍然存在。
+    void saveLocalDraft({
+      id: `story:${story.id}`,
+      kind: 'story',
+      worldId: story.world_id || '',
+      title: story.title || '未命名章节',
+      payload: {
+        storyId: story.id,
+        title: story.title,
+        content: latestHtml.current || story.content,
+        plainText: latestText.current,
+        savedAt: new Date().toISOString(),
+      },
+    }).catch(() => { /* 本地空间不足时不影响在线保存 */ })
     try {
       const updated = await writingApi.updateStory(story.id, {
         title: story.title,
@@ -302,6 +438,7 @@ export default function WritingPage({
       Placeholder.configure({
         placeholder: '从这里开始写。可以是一句对白、一个场景，或一段还没想好去哪里的开头……',
       }),
+      TypewriterFocus,
     ],
     content: '<p></p>',
     editorProps: {
@@ -329,6 +466,30 @@ export default function WritingPage({
       console.warn('草稿加载失败', error)
     }
   }, [])
+
+  const loadTree = useCallback(async () => {
+    if (!worldId) {
+      setVolumes([])
+      setTreeChapters([])
+      return
+    }
+    setTreeLoading(true)
+    try {
+      const tree = await getWritingTree(worldId)
+      setVolumes(Array.isArray(tree.volumes) ? tree.volumes : [])
+      setTreeChapters(Array.isArray(tree.chapters) ? tree.chapters : [])
+    } catch {
+      // 卷章目录是增强能力；旧后端未迁移时不影响正文编辑。
+      setVolumes([])
+      setTreeChapters([])
+    } finally {
+      setTreeLoading(false)
+    }
+  }, [worldId])
+
+  useEffect(() => {
+    void loadTree()
+  }, [loadTree])
 
   const loadStories = useCallback(async () => {
     setLoading(true)
@@ -423,7 +584,66 @@ export default function WritingPage({
     setWords(story.word_count || 0)
   }
 
-  const createBlank = async () => {
+  const handleEditorHover = (event: ReactMouseEvent<HTMLDivElement>) => {
+    if (!editor || event.buttons !== 0) {
+      setHoverCard(null)
+      return
+    }
+    let caret = (document as any).caretRangeFromPoint?.(event.clientX, event.clientY) as Range | null
+    if (!caret) {
+      const position = (document as any).caretPositionFromPoint?.(event.clientX, event.clientY)
+      if (position?.offsetNode) {
+        caret = document.createRange()
+        caret.setStart(position.offsetNode, position.offset)
+        caret.collapse(true)
+      }
+    }
+    if (!caret || caret.startContainer.nodeType !== Node.TEXT_NODE) {
+      setHoverCard(null)
+      return
+    }
+    const node = caret.startContainer
+    const full = node.textContent || ''
+    const offset = caret.startOffset
+    const windowText = full.slice(Math.max(0, offset - 24), Math.min(full.length, offset + 24))
+    if (!windowText.trim()) {
+      setHoverCard(null)
+      return
+    }
+    const entities: Array<{ name: string; kind: string; summary: string }> = [
+      ...characters.map((character: any) => ({
+        name: String(character.name || ''),
+        kind: '人物',
+        summary: String(character.basic_profile?.identity || character.basic_profile?.appearance || character.description || '人物设定'),
+      })),
+      ...events.map((item: any) => ({
+        name: String(item.name || ''),
+        kind: '事件',
+        summary: String(item.description || item.summary || '事件'),
+      })),
+      ...locations.map((item: any) => ({
+        name: String(item.name || ''),
+        kind: '地点',
+        summary: String(item.description || item.summary || '地点'),
+      })),
+    ].filter((item) => item.name.length >= 2)
+    const found = entities
+      .filter((item) => windowText.includes(item.name))
+      .sort((a, b) => b.name.length - a.name.length)[0]
+    if (!found) {
+      setHoverCard(null)
+      return
+    }
+    setHoverCard({
+      x: Math.min(event.clientX + 14, window.innerWidth - 260),
+      y: Math.min(event.clientY + 18, window.innerHeight - 180),
+      name: found.name,
+      kind: found.kind,
+      summary: found.summary.slice(0, 220),
+    })
+  }
+
+  const createBlank = async (volumeId?: string) => {
     if (!worldId) {
       setToast('请先进入一个世界')
       return
@@ -432,15 +652,17 @@ export default function WritingPage({
       if (currentRef.current && dirtyRef.current) await saveCurrent()
       const story = await writingApi.createStory({
         world_id: worldId,
-        title: `第 ${stories.length + 1} 章`,
+        title: `第 ${(volumeId ? treeChapters.filter((chapter) => chapter.volume_id === volumeId).length : treeChapters.length) + 1} 章`,
         mode: 'explorer',
         content: '<p></p>',
         plain_text: '',
+        ...(volumeId ? { volume_id: volumeId } : {}),
       })
       setStories((prev) => [story, ...prev])
       setCurrent(story)
       setSidebarTab('extract')
-      setToast('空白章节已创建，直接开始写')
+      void loadTree()
+      setToast(volumeId ? '章节已加入本卷，直接开始写' : '空白章节已创建，直接开始写')
     } catch (error: any) {
       setToast(String(error.message || error))
     }
@@ -454,9 +676,7 @@ export default function WritingPage({
     setModalOpen(false)
     setGenerating(true)
     setGeneratingText('')
-    // 选择分支时以分支内事件为素材，忽略上方的主时间线事件勾选。
-    const activeBranch = branches.find((branch) => branch.id === branchId)
-    const effectiveEventIds = branchId ? [] : (selectedEventIds.length > 0 ? selectedEventIds : events.slice(0, 5).map((event) => event.id))
+    const effectiveEventIds = selectedEventIds.length > 0 ? selectedEventIds : events.slice(0, 5).map((event) => event.id)
     try {
       if (currentRef.current && dirtyRef.current) await saveCurrent()
       const full = await writingApi.streamGenerate(
@@ -464,8 +684,9 @@ export default function WritingPage({
           world_id: worldId,
           event_ids: effectiveEventIds,
           user_direction: direction,
-          perspective,
-          branch_id: branchId || undefined,
+          perspective: buildPerspectiveString(),
+          story_id: currentRef.current?.id,
+          context_options: contextOptions,
         },
         (chunk) => setGeneratingText((prev) => prev + chunk)
       )
@@ -473,9 +694,7 @@ export default function WritingPage({
         throw new Error(full.replace('[生成中断', '').trim() || 'AI 没有返回正文，请检查模型额度后重试')
       }
       const chosen = events.filter((event) => effectiveEventIds.includes(event.id))
-      const title = branchId && activeBranch
-        ? `推演 · ${activeBranch.name}`
-        : (chosen[0]?.name ? `推演 · ${chosen[0].name}` : `推演章节 ${stories.length + 1}`)
+      const title = chosen[0]?.name ? `推演 · ${chosen[0].name}` : `推演章节 ${stories.length + 1}`
       const story = await writingApi.createStory({
         world_id: worldId,
         title,
@@ -488,6 +707,7 @@ export default function WritingPage({
       setCurrent(story)
       setSidebarTab('reference')
       setWords(story.word_count || 0)
+      void loadTree()
       setToast('推演正文已生成，已自动存入手稿库')
     } catch (error: any) {
       setToast(String(error.message || error))
@@ -511,6 +731,15 @@ export default function WritingPage({
     } finally {
       setModeBusy(false)
     }
+  }
+
+  const openReview = async (tool: ReviewTool) => {
+    if (!current) {
+      setToast('先打开一章再检查')
+      return
+    }
+    if (dirtyRef.current) await saveCurrent()
+    setReviewTool(tool)
   }
 
   const analyzeCurrent = async (targetTypes?: string[]) => {
@@ -540,7 +769,7 @@ export default function WritingPage({
     }
   }
 
-  const runAssist = async (action: 'polish' | 'expand' | 'dialogue') => {
+  const runAssist = useCallback(async (action: 'polish' | 'expand' | 'dialogue') => {
     const instance = editorRef.current
     if (!instance) return
     const { from, to } = instance.state.selection
@@ -548,12 +777,14 @@ export default function WritingPage({
       setToast('请先选中一段文字')
       return
     }
-    const text = instance.state.doc.textBetween(from, to, '\n').trim()
+    const raw = instance.state.doc.textBetween(from, to, '\n')
+    const text = raw.trim()
     if (!text) {
       setToast('请先选中一段文字')
       return
     }
     const label = action === 'polish' ? 'AI 润色' : action === 'expand' ? 'AI 扩写' : '生成对白'
+    setAssistDiff(null)
     setAssist({ label, preview: '' })
     try {
       const full = await writingApi.streamAssist(
@@ -567,15 +798,79 @@ export default function WritingPage({
       if (full.startsWith('\n[AI')) {
         setToast(full.trim())
       } else {
-        instance.chain().focus().insertContentAt({ from, to }, textToHtml(full)).run()
-        setToast(`${label}完成，已替换选区`)
+        setAssistDiff({ label, from, to, before: raw, after: full.trim() })
+        setToast(`${label}已生成，先在下方对比再决定是否替换`)
       }
     } catch (error: any) {
       setToast(String(error.message || error))
     } finally {
       setAssist(null)
     }
+  }, [])
+
+  const applyAssistDiff = () => {
+    const instance = editorRef.current
+    if (!instance || !assistDiff) return
+    const selected = instance.state.doc.textBetween(assistDiff.from, assistDiff.to, '\n')
+    if (selected !== assistDiff.before) {
+      setToast('选区已变化，请重新生成，避免覆盖你刚写的内容')
+      setAssistDiff(null)
+      return
+    }
+    instance.chain().focus().insertContentAt(
+      { from: assistDiff.from, to: assistDiff.to },
+      plainToInlineHtml(assistDiff.after),
+    ).run()
+    setAssistDiff(null)
+    setToast(`${assistDiff.label}已应用，可继续修改`)
   }
+
+  const getToolSelection = useCallback((): ToolSelection | null => {
+    const instance = editorRef.current
+    if (!instance) return null
+    const { from, to, empty } = instance.state.selection
+    if (empty || from === to) return null
+    const text = instance.state.doc.textBetween(from, to, '\n').trim()
+    if (!text) return null
+    return { from, to, text }
+  }, [])
+
+  const applyToolPatch = useCallback((patch: WritingToolPatch, range: ToolSelection): ToolSelection | null => {
+    const instance = editorRef.current
+    if (!instance) return null
+    const docSize = instance.state.doc.content.size
+    if (range.to > docSize) {
+      setToast('正文已经变化，请重新选中文字后再诊断')
+      return null
+    }
+    const selected = instance.state.doc.textBetween(range.from, range.to, '\n')
+    const index = selected.indexOf(patch.before)
+    if (index < 0) {
+      setToast('原文已变化，找不到要替换的句子，请重新分析')
+      return null
+    }
+
+    const start = range.from + index
+    const end = start + patch.before.length
+    const beforeLength = patch.before.length
+    const afterLength = patch.after.length
+
+    if (patch.operation === '删除') {
+      instance.chain().focus().deleteRange({ from: start, to: end }).run()
+      const newTo = Math.max(range.from, Math.min(range.to - beforeLength, instance.state.doc.content.size))
+      return { ...range, to: newTo, text: instance.state.doc.textBetween(range.from, newTo, '\n').trim() }
+    }
+
+    if (patch.operation === '增加') {
+      instance.chain().focus().insertContentAt(end, patch.after).run()
+      const newTo = Math.min(range.to + afterLength, instance.state.doc.content.size)
+      return { ...range, to: newTo, text: instance.state.doc.textBetween(range.from, newTo, '\n').trim() }
+    }
+
+    instance.chain().focus().insertContentAt({ from: start, to: end }, patch.after).run()
+    const newTo = Math.min(range.to + (afterLength - beforeLength), instance.state.doc.content.size)
+    return { ...range, to: newTo, text: instance.state.doc.textBetween(range.from, newTo, '\n').trim() }
+  }, [])
 
   const approveDraft = async (draft: DraftItem) => {
     const target = draft.target_label || DRAFT_LABELS[draft.entity_type]
@@ -654,6 +949,7 @@ export default function WritingPage({
       const next = stories.filter((item) => item.id !== current.id)
       setStories(next)
       setCurrent(next[0] || null)
+      void loadTree()
       setToast('章节已封存到归档库')
     } catch (error: any) {
       setToast(String(error.message || error))
@@ -668,6 +964,7 @@ export default function WritingPage({
       setStories(next)
       setCurrent(next[0] || null)
       setDeleteOpen(false)
+      void loadTree()
       setToast('章节已移入回收站')
     } catch (error: any) {
       setToast(String(error.message || error))
@@ -708,28 +1005,85 @@ export default function WritingPage({
           ? '保存失败'
           : '已自动保存'
 
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      const mod = event.metaKey || event.ctrlKey
+      const key = event.key.toLowerCase()
+      const target = event.target as HTMLElement | null
+      const typing = target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.isContentEditable
+
+      if (event.key === 'Escape') {
+        if (assistDiff) {
+          setAssistDiff(null)
+        } else if (deleteOpen) {
+          setDeleteOpen(false)
+        } else if (reviewTool) {
+          setReviewTool(null)
+        } else if (outlineOpen) {
+          setOutlineOpen(false)
+        } else if (foreshadowOpen) {
+          setForeshadowOpen(false)
+        } else if (statsOpen) {
+          setStatsOpen(false)
+        } else if (sensitiveOpen) {
+          setSensitiveOpen(false)
+        } else if (immersiveMode) {
+          setImmersiveMode(false)
+        }
+        return
+      }
+
+      if (mod && key === 's') {
+        event.preventDefault()
+        if (currentRef.current) void saveCurrent()
+        return
+      }
+
+      if (!mod || !event.shiftKey || typing) return
+      if (key === 'i') {
+        event.preventDefault()
+        void runAssist('polish')
+      } else if (key === 'f') {
+        event.preventDefault()
+        setFocusMode((prev) => !prev)
+      } else if (key === 'm') {
+        event.preventDefault()
+        setImmersiveMode((prev) => !prev)
+      } else if (key === 'k') {
+        event.preventDefault()
+        setForeshadowSeed('')
+        setForeshadowOpen(true)
+      } else if (key === 'u') {
+        event.preventDefault()
+        setStatsOpen(true)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [assistDiff, deleteOpen, reviewTool, outlineOpen, foreshadowOpen, statsOpen, sensitiveOpen, immersiveMode, saveCurrent, runAssist])
+
   return (
-    <div style={{ display: 'flex', height: '100%', minHeight: 640, overflow: 'hidden' }}>
+    <div className={`wp-shell${focusMode ? ' is-focus' : ''}${typewriterMode ? ' is-typewriter' : ''}${immersiveMode ? ' is-immersive' : ''}`}>
       <style>{EDITOR_CSS}</style>
 
       {/* 手稿库 */}
-      <aside style={{ width: '286px', flexShrink: 0, borderRight: '1px solid var(--card-border)', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ padding: '18px 16px 12px' }}>
+      <aside className={`wp-library${libraryOpen ? '' : ' is-hidden'}`}>
+        <div style={{ padding: '16px 14px 12px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
             <div>
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)', letterSpacing: '0.12em' }}>MANUSCRIPTS</div>
-              <h2 style={{ margin: '5px 0 0', fontSize: '19px', color: 'var(--text-main)' }}>手稿库</h2>
+              <div style={{ fontSize: '10px', color: 'var(--text-muted)', letterSpacing: '0.12em' }}>MANUSCRIPTS</div>
+              <h2 style={{ margin: '4px 0 0', fontSize: '17px', color: 'var(--text-main)' }}>手稿库</h2>
             </div>
-            <Btn kind="primary" onClick={createBlank} disabled={!worldId} title="新建空白章节">
+            <Btn kind="primary" onClick={() => void createBlank()} disabled={!worldId} title="新建空白章节">
               ＋ 新章
             </Btn>
           </div>
-          <div style={{ marginTop: '10px', fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.6 }}>
-            {stories.length} 章 · 两种入口共用同一份世界设定
+          <div style={{ marginTop: '9px', fontSize: '10px', color: 'var(--text-muted)', lineHeight: 1.6 }}>
+            {stories.length} 章 · 共用同一份世界设定
           </div>
-          <div style={{ display: 'flex', gap: '6px', marginTop: '10px' }}>
+          <div style={{ display: 'flex', gap: '6px', marginTop: '9px' }}>
+            <button style={tinyBtn} onClick={() => setOutlineOpen(true)} disabled={!worldId}>目录大纲</button>
             <button style={tinyBtn} onClick={exportTxt}>导出 TXT</button>
-            <button style={tinyBtn} onClick={() => setModalOpen(true)} disabled={generating}>从推演生成</button>
           </div>
         </div>
 
@@ -740,38 +1094,39 @@ export default function WritingPage({
               还没有章节。可以新建一张白纸，也可以从 07 推演生成第一章。
             </div>
           )}
-          {stories.map((story) => {
-            const active = current?.id === story.id
-            return (
-              <button
-                key={story.id}
-                onClick={() => void selectStory(story)}
-                style={{
-                  width: '100%',
-                  textAlign: 'left',
-                  padding: '11px 12px',
-                  marginBottom: '6px',
-                  borderRadius: '10px',
-                  border: `1px solid ${active ? 'var(--primary-color)' : 'transparent'}`,
-                  background: active ? 'var(--card-bg)' : 'transparent',
-                  cursor: 'pointer',
-                  color: 'var(--text-main)',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ fontSize: '13px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {story.title}
+          {volumes.length === 0 && treeChapters.length === 0 ? (
+            stories.map((story) => {
+              const active = current?.id === story.id
+              return (
+                <button
+                  key={story.id}
+                  onClick={() => void selectStory(story)}
+                  className={`vt-chapter${active ? ' is-active' : ''}`}
+                  style={{ width: '100%', padding: '11px 12px', marginBottom: '6px' }}
+                >
+                  <span className="vt-chapter-main" style={{ padding: 0 }}>
+                    <span className="vt-chapter-title">{story.title}</span>
+                    <span className="vt-chapter-meta">{story.word_count || 0} 字 · {fmtTime(story.updated_at)}</span>
                   </span>
-                  <ModeBadge mode={story.mode} />
-                </div>
-                <div style={{ marginTop: '6px', fontSize: '10px', color: 'var(--text-muted)', display: 'flex', gap: '8px' }}>
-                  <span>{story.word_count || 0} 字</span>
-                  <span>{fmtTime(story.updated_at)}</span>
-                  {story.status === 'published' && <span style={{ color: 'var(--primary-color)' }}>已定稿</span>}
-                </div>
-              </button>
-            )
-          })}
+                </button>
+              )
+            })
+          ) : (
+            <VolumeTree
+              worldId={worldId || ''}
+              volumes={volumes}
+              chapters={treeChapters}
+              currentId={current?.id}
+              busy={treeLoading}
+              onSelectChapter={(id) => {
+                const story = stories.find((item) => item.id === id)
+                if (story) void selectStory(story)
+              }}
+              onCreateChapter={(volumeId) => void createBlank(volumeId)}
+              onRefresh={() => void loadTree()}
+              onToast={setToast}
+            />
+          )}
         </div>
 
         <div style={{ padding: '12px 16px', borderTop: '1px solid var(--card-border)', fontSize: '10px', color: 'var(--text-muted)', lineHeight: 1.7 }}>
@@ -781,10 +1136,10 @@ export default function WritingPage({
       </aside>
 
       {/* 工作台 */}
-      <main style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', padding: '18px 22px', gap: '12px' }}>
-        <header style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
+      <main className="wp-main">
+        <header className="wp-head">
           <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', color: 'var(--text-muted)', letterSpacing: '0.1em' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '10px', color: 'var(--text-muted)', letterSpacing: '0.12em' }}>
               {productMode === 'biography' ? '08 传记写作 · 基于人生记录' : '08 写作工作台'}
               {current && <ModeBadge mode={current.mode} />}
             </div>
@@ -799,29 +1154,60 @@ export default function WritingPage({
                   setSaveState('dirty')
                   scheduleSave()
                 }}
+                className="wp-title-input"
                 style={{
                   ...inputStyle,
-                  marginTop: '6px',
+                  marginTop: '5px',
                   padding: '2px 0',
                   border: 'none',
-                  fontSize: '26px',
-                  fontWeight: 700,
-                  letterSpacing: '0.01em',
                   background: 'transparent',
                 }}
               />
             ) : (
-              <h1 style={{ margin: '6px 0 0', fontSize: '26px', color: 'var(--text-main)' }}>写作工作台</h1>
+              <h1 style={{ margin: '5px 0 0', fontSize: '24px', color: 'var(--text-main)' }}>写作工作台</h1>
             )}
-            <div style={{ marginTop: '5px', fontSize: '11px', color: 'var(--text-muted)' }}>
+            <div style={{ marginTop: '4px', fontSize: '10px', color: 'var(--text-muted)' }}>
               {current ? `${current.word_count || words} 字 · ${saveLabel} · 最后修改 ${fmtTime(current.updated_at)}` : '先选一种模式开始'}
               {productMode === 'biography' && <span style={{ marginLeft: 8, padding: '2px 6px', borderRadius: 8, border: '1px solid var(--card-border)' }}>传记模式：事实须有来源，AI 推断不能自动写成事实</span>}
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div className="wp-head-actions">
+            <div className="wp-view-toggle">
+              <button
+                type="button"
+                className={`wp-view-btn${libraryOpen && !focusMode ? ' is-on' : ''}`}
+                onClick={() => setLibraryOpen((prev) => !prev)}
+                title="显示 / 隐藏手稿库"
+              >手稿</button>
+              <button
+                type="button"
+                className={`wp-view-btn${assistantOpen && !focusMode ? ' is-on' : ''}`}
+                onClick={() => setAssistantOpen((prev) => !prev)}
+                title="显示 / 隐藏 AI 辅助面板"
+              >AI 面板</button>
+              <button
+                type="button"
+                className={`wp-view-btn${focusMode ? ' is-on' : ''}`}
+                onClick={() => setFocusMode((prev) => !prev)}
+                title="隐藏两侧面板，只保留正文"
+              >{focusMode ? '退出专注' : '专注写作'}</button>
+              <button
+                type="button"
+                className={`wp-view-btn${typewriterMode ? ' is-on' : ''}`}
+                onClick={() => setTypewriterMode((prev) => !prev)}
+                title="压暗非当前段落，保持写作节奏（⌘/Ctrl+Shift+F）"
+              >打字机</button>
+              <button
+                type="button"
+                className={`wp-view-btn${immersiveMode ? ' is-on' : ''}`}
+                onClick={() => setImmersiveMode((prev) => !prev)}
+                title="隐藏全部界面，只留正文（⌘/Ctrl+Shift+M，Esc 退出）"
+              >沉浸</button>
+            </div>
+
             {current && (
-              <div style={{ display: 'flex', border: '1px solid var(--card-border)', borderRadius: '8px', overflow: 'hidden' }}>
+              <div className="wp-mode-switch">
                 {(['architect', 'explorer'] as Mode[]).map((mode) => (
                   <button
                     key={mode}
@@ -846,11 +1232,20 @@ export default function WritingPage({
               {analyzing ? '解析中…' : '解析本章'}
             </Btn>
             <Btn onClick={() => setModalOpen(true)} disabled={!worldId || generating}>素材 / 生成</Btn>
+            <Btn onClick={() => setOutlineOpen(true)} disabled={!worldId}>目录大纲</Btn>
+            <Btn onClick={() => { setForeshadowSeed(''); setForeshadowOpen(true) }} disabled={!worldId}>伏笔 · ⌘⇧K</Btn>
+            <Btn onClick={() => void openReview('reader_sim')} disabled={!current || generating}>读者模拟</Btn>
+            <Btn onClick={() => void openReview('release_check')} disabled={!current || generating}>发布检查</Btn>
             {current && (
-              <Btn onClick={() => void archiveStory()}>归档</Btn>
-            )}
-            {current && (
-              <Btn kind="danger" onClick={() => setDeleteOpen(true)}>删除</Btn>
+              <details className="wp-more">
+                <summary>更多</summary>
+                <div className="wp-more-menu">
+                  <button type="button" onClick={() => setStatsOpen(true)}>码字统计 · ⌘⇧U</button>
+                  <button type="button" onClick={() => setSensitiveOpen(true)}>敏感词扫描</button>
+                  <button type="button" onClick={() => void archiveStory()}>归档本章</button>
+                  <button type="button" className="is-danger" onClick={() => setDeleteOpen(true)}>删除本章</button>
+                </div>
+              </details>
             )}
           </div>
         </header>
@@ -875,7 +1270,7 @@ export default function WritingPage({
                 <div style={{ marginTop: '14px', fontSize: '11px', color: 'var(--primary-color)' }}>从推演生成 →</div>
               </button>
               <button
-                onClick={createBlank}
+                onClick={() => void createBlank()}
                 style={{ ...card, padding: '22px', textAlign: 'left', cursor: 'pointer', color: 'var(--text-main)' }}
               >
                 <div style={{ fontSize: '22px', marginBottom: '10px' }}>✎</div>
@@ -962,12 +1357,26 @@ export default function WritingPage({
                     }}
                   />
                   <span style={{ width: '1px', background: 'var(--card-border)', margin: '2px 3px' }} />
+                  <BubbleBtn
+                    label="埋伏笔"
+                    onClick={() => {
+                      const { from, to } = editor.state.selection
+                      const text = editor.state.doc.textBetween(from, to, '\n').trim()
+                      setForeshadowSeed(text)
+                      setForeshadowOpen(true)
+                    }}
+                  />
                   <BubbleBtn label="AI 润色" onClick={() => void runAssist('polish')} />
                   <BubbleBtn label="AI 扩写" onClick={() => void runAssist('expand')} />
                   <BubbleBtn label="生成对白" onClick={() => void runAssist('dialogue')} />
                 </BubbleMenu>
               )}
-              <div className="ws-editor" style={{ padding: '30px 46px 80px' }}>
+              <div
+                className="ws-editor"
+                style={{ padding: '28px clamp(22px, 5vw, 60px) 80px' }}
+                onMouseMove={handleEditorHover}
+                onMouseLeave={() => setHoverCard(null)}
+              >
                 <EditorContent editor={editor} />
               </div>
               {assist && (
@@ -991,9 +1400,32 @@ export default function WritingPage({
                   </div>
                 </div>
               )}
+              {assistDiff && (
+                <div className="ad-panel">
+                  <header>
+                    <div>
+                      <span className="ad-kicker">{assistDiff.label} · 待确认</span>
+                      <strong>只改这一个选区，不会动其他段落</strong>
+                    </div>
+                    <span className="ad-count">{assistDiff.before.length} → {assistDiff.after.length} 字</span>
+                  </header>
+                  <div className="ad-diff">
+                    {buildSimpleDiff(assistDiff.before.trim(), assistDiff.after).map((chunk, index) => (
+                      <span key={`${chunk.type}-${index}`} className={`ad-${chunk.type}`}>{chunk.text}</span>
+                    ))}
+                  </div>
+                  <footer>
+                    <span>红色为删去，绿色为新增。</span>
+                    <div>
+                      <button type="button" onClick={() => setAssistDiff(null)}>保留原文</button>
+                      <button type="button" className="is-primary" onClick={applyAssistDiff}>应用修改</button>
+                    </div>
+                  </footer>
+                </div>
+              )}
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 14px', borderTop: '1px solid var(--card-border)', fontSize: '10px', color: 'var(--text-muted)' }}>
+            <div className="wp-statusbar" style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 14px', borderTop: '1px solid var(--card-border)', fontSize: '10px', color: 'var(--text-muted)' }}>
               <span>{words} 字 · {saveLabel}</span>
               <span>{current.mode === 'architect' ? '架构师：推演 → 正文 → 精修' : '探险家：手写 → 解析 → 入库'}</span>
             </div>
@@ -1002,25 +1434,27 @@ export default function WritingPage({
       </main>
 
       {/* 侧边栏 */}
-      <aside style={{ width: '340px', flexShrink: 0, borderLeft: '1px solid var(--card-border)', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+      <aside className={`wp-side${assistantOpen ? '' : ' is-hidden'}`}>
         <div style={{ display: 'flex', borderBottom: '1px solid var(--card-border)' }}>
           {([
             ['reference', '推演参照'],
             ['extract', `素材提取${pendingDrafts.length ? ` ${pendingDrafts.length}` : ''}`],
+            ['toolbox', '写作工具'],
           ] as [SidebarTab, string][]).map(([key, label]) => (
             <button
               key={key}
               onClick={() => setSidebarTab(key)}
               style={{
                 flex: 1,
-                padding: '13px 8px',
+                padding: '13px 5px',
                 border: 'none',
                 borderBottom: sidebarTab === key ? '2px solid var(--primary-color)' : '2px solid transparent',
                 background: 'transparent',
                 color: sidebarTab === key ? 'var(--text-main)' : 'var(--text-muted)',
-                fontSize: '12px',
+                fontSize: '11px',
                 fontWeight: 600,
                 cursor: 'pointer',
+                whiteSpace: 'nowrap',
               }}
             >
               {label}
@@ -1028,8 +1462,16 @@ export default function WritingPage({
           ))}
         </div>
 
-        <div style={{ flex: 1, overflowY: 'auto', padding: '14px' }}>
-          {sidebarTab === 'reference' ? (
+        <div style={{ flex: 1, overflowY: 'auto', padding: sidebarTab === 'toolbox' ? 0 : '14px' }}>
+          {sidebarTab === 'toolbox' ? (
+            <WritingToolbox
+              worldId={worldId}
+              storyId={current?.id}
+              getSelection={getToolSelection}
+              applyPatch={applyToolPatch}
+              onToast={setToast}
+            />
+          ) : sidebarTab === 'reference' ? (
             !current ? (
               <SidebarEmpty text="选择一章后查看推演参照" />
             ) : sourceEvents.length === 0 ? (
@@ -1211,41 +1653,35 @@ export default function WritingPage({
                 })
               )}
             </div>
-            <div style={{ padding: '12px 20px', borderTop: '1px dashed var(--card-border)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', color: 'var(--text-main)', fontWeight: 700, cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={multiPathCreative}
-                  onChange={(event) => setMultiPathCreative(event.target.checked)}
-                />
-                启用多路径创作（可选）
-                <span style={{ fontSize: '10px', fontWeight: 400, color: 'var(--text-muted)' }}>
-                  关闭时按原有写作流程；开启后可选一个推演分支，围绕不同走向创作。
-                </span>
-              </label>
-              {multiPathCreative && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                  <select
-                    value={branchId}
-                    onChange={(event) => setBranchId(event.target.value)}
-                    style={{ ...inputStyle, maxWidth: '360px', fontWeight: 400 }}
-                  >
-                    <option value="">主时间线（默认）</option>
-                    {branches.map((branch) => (
-                      <option key={branch.id} value={branch.id}>
-                        {branch.name}（{branch.node_count} 个节点）
-                      </option>
-                    ))}
-                  </select>
-                  <span style={{ fontSize: '10px', color: 'var(--text-muted)', lineHeight: 1.6 }}>
-                    {branchId
-                      ? '将以该分支内的事件与推演记录为素材，上方主时间线事件勾选暂不生效。'
-                      : branches.length === 0
-                        ? '当前世界还没有推演分支，可先到「多路径推演」或 07 模拟运行中创建。'
-                        : '选择分支后，生成结果只来自该分支沙盒，不污染主时间线。'}
-                  </span>
-                </div>
-              )}
+            <div className="ctx-inject">
+              <div className="ctx-head">
+                <span>上下文注入</span>
+                <small>只发送勾选内容，避免一次塞满设定</small>
+              </div>
+              <div className="ctx-grid">
+                {([
+                  ['characters', '人物设定', '当前出场人物'],
+                  ['events', '事件因果', '当前事件与因果链'],
+                  ['previous', '前置章节', '防断片'],
+                  ['world', '世界观限制', '硬规则与边界'],
+                ] as const).map(([key, label, hint]) => {
+                  const checked = contextOptions[key]
+                  return (
+                    <label key={key} className={`ctx-check${checked ? ' is-on' : ''}`}>
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => setContextOptions((prev) => ({ ...prev, [key]: !prev[key] }))}
+                        style={{ accentColor: 'var(--primary-color)' }}
+                      />
+                      <span>
+                        <strong>{label}</strong>
+                        <small>{hint}</small>
+                      </span>
+                    </label>
+                  )
+                })}
+              </div>
             </div>
             <div style={{ padding: '14px 20px', borderTop: '1px dashed var(--card-border)', display: 'grid', gridTemplateColumns: '1.25fr 1fr', gap: '12px' }}>
               <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '11px', color: 'var(--primary-color)', fontWeight: 700 }}>
@@ -1263,23 +1699,30 @@ export default function WritingPage({
                 <label style={{ fontSize: '11px', color: 'var(--primary-color)', fontWeight: 700 }}>
                   推演视角
                 </label>
-                <input
-                  value={perspective}
-                  onChange={(event) => setPerspective(event.target.value)}
-                  placeholder="例如：第三人称限知 · 跟随韩立"
-                  style={{ ...inputStyle, fontWeight: 400 }}
-                />
-                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                  {['第一人称 · 主角', '第三人称限知 · 跟随主角', '第三人称全知', '群像多视角'].map((item) => (
-                    <button
-                      key={item}
-                      type="button"
-                      onClick={() => setPerspective(item)}
-                      style={{ padding: '3px 7px', borderRadius: '999px', border: `1px solid ${perspective === item ? 'var(--primary-color)' : 'var(--card-border)'}`, background: 'transparent', color: perspective === item ? 'var(--primary-color)' : 'var(--text-muted)', fontSize: '9px', cursor: 'pointer' }}
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <select
+                    value={perspectiveMode}
+                    onChange={(event) => setPerspectiveMode(event.target.value)}
+                    style={{ flex: 1, padding: '8px 10px', borderRadius: '7px', border: '1px solid var(--card-border)', background: 'var(--bg-color)', color: 'var(--text-main)', fontSize: '12px', outline: 'none' }}
+                  >
+                    <option value="third_limited">第三人称限知（跟随角色）</option>
+                    <option value="first_person">第一人称（代入角色）</option>
+                    <option value="third_omniscient">第三人称全知（上帝视角）</option>
+                    <option value="ensemble">群像多视角</option>
+                  </select>
+
+                  {(perspectiveMode === 'third_limited' || perspectiveMode === 'first_person') && (
+                    <select
+                      value={perspectiveChar}
+                      onChange={(event) => setPerspectiveChar(event.target.value)}
+                      style={{ flex: 1, padding: '8px 10px', borderRadius: '7px', border: '1px solid var(--card-border)', background: 'var(--bg-color)', color: 'var(--text-main)', fontSize: '12px', outline: 'none' }}
                     >
-                      {item}
-                    </button>
-                  ))}
+                      <option value="">自动跟随主导人物</option>
+                      {characters.map((c: any) => (
+                        <option key={c.id} value={c.name}>{c.name}</option>
+                      ))}
+                    </select>
+                  )}
                 </div>
                 <span style={{ fontSize: '10px', color: 'var(--text-muted)', lineHeight: 1.6 }}>视角决定读者跟随谁，不改变事件事实。设置会自动记住。</span>
               </div>
@@ -1310,6 +1753,96 @@ export default function WritingPage({
             </div>
           </div>
         </div>
+      )}
+
+      {reviewTool && current && (
+        <WritingReview
+          key={reviewTool}
+          toolId={reviewTool}
+          storyId={current.id}
+          worldId={worldId}
+          onClose={() => setReviewTool(null)}
+          onToast={setToast}
+        />
+      )}
+
+      {outlineOpen && worldId && (
+        <OutlineBoard
+          worldId={worldId}
+          stories={stories}
+          volumes={volumes}
+          chapters={treeChapters}
+          currentStoryId={current?.id}
+          onClose={() => setOutlineOpen(false)}
+          onRefresh={() => void loadTree()}
+          onCreateChapter={(volumeId) => {
+            setOutlineOpen(false)
+            void createBlank(volumeId)
+          }}
+          onSelectChapter={(id) => {
+            const story = stories.find((item) => item.id === id)
+            setOutlineOpen(false)
+            if (story) void selectStory(story)
+          }}
+          onChapterUpdated={(id, patch) => {
+            setStories((prev) => prev.map((item) => (item.id === id ? { ...item, ...patch } : item)))
+            setTreeChapters((prev) => prev.map((item) => (item.id === id ? { ...item, ...patch } : item)))
+            setCurrent((prev) => (prev && prev.id === id ? { ...prev, ...patch } : prev))
+          }}
+          onToast={setToast}
+        />
+      )}
+
+      {foreshadowOpen && worldId && (
+        <ForeshadowBoard
+          worldId={worldId}
+          stories={stories}
+          currentStoryId={current?.id}
+          volumes={volumes}
+          chapters={treeChapters}
+          events={events.map((event) => ({ id: event.id, name: event.name }))}
+          initialText={foreshadowSeed}
+          onClose={() => setForeshadowOpen(false)}
+          onToast={setToast}
+          onSelectChapter={(id) => {
+            const story = stories.find((item) => item.id === id)
+            setForeshadowOpen(false)
+            if (story) void selectStory(story)
+          }}
+        />
+      )}
+
+      {hoverCard && (
+        <div className="ws-hover-card" style={{ left: hoverCard.x, top: hoverCard.y }}>
+          <span>{hoverCard.kind}</span>
+          <strong>{hoverCard.name}</strong>
+          <p>{hoverCard.summary || '暂无补充设定'}</p>
+          <small>来自当前世界设定</small>
+        </div>
+      )}
+
+      {immersiveMode && (
+        <button type="button" className="wp-immersive-exit" onClick={() => setImmersiveMode(false)}>
+          退出沉浸 · Esc
+        </button>
+      )}
+
+      {statsOpen && (
+        <WritingStats
+          stories={stories}
+          volumes={volumes}
+          chapters={treeChapters}
+          current={current}
+          onClose={() => setStatsOpen(false)}
+        />
+      )}
+
+      {sensitiveOpen && (
+        <SensitiveWords
+          text={latestText.current || current?.plain_text || (current ? stripHtml(current.content) : '')}
+          onClose={() => setSensitiveOpen(false)}
+          onToast={setToast}
+        />
       )}
 
       {toast && (

@@ -12,3 +12,13 @@ export function setAuthToken(token: string) {
 export function clearAuthToken() {
   try { localStorage.removeItem(AUTH_TOKEN_KEY); localStorage.removeItem(AUTH_USER_KEY) } catch { /* ignore */ }
 }
+
+
+export function getStoredAuthUser(): { id?: string; username?: string; display_name?: string } | null {
+  try {
+    const raw = localStorage.getItem(AUTH_USER_KEY)
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}

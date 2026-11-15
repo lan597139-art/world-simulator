@@ -5,7 +5,7 @@ export const PRODUCT_KEYS: ProductKey[] = ['game', 'literature', 'companion', 'd
 export const PRODUCT_LABELS: Record<ProductKey, string> = {
   game: '游戏创作',
   literature: '文学创作',
-  companion: 'AI 伴侣',
+  companion: '虚拟角色',
   diary: '日记与传记',
   yunbao: '云宝工作台',
 }
@@ -13,7 +13,7 @@ export const PRODUCT_LABELS: Record<ProductKey, string> = {
 export const PRODUCT_SHORT: Record<ProductKey, string> = {
   game: '游戏',
   literature: '文学',
-  companion: '伴侣',
+  companion: '角色',
   diary: '日记',
   yunbao: '云宝',
 }
@@ -108,7 +108,7 @@ function config(
     description: PRODUCT_DESCRIPTIONS[key],
     home: key === 'game' ? 'overview' : key === 'literature' ? 'world-management' : key === 'companion' ? 'character-management' : key === 'yunbao' ? 'yunbao' : 'diary',
     auto_workspace: key === 'companion' || key === 'diary' || key === 'yunbao',
-    workspace_name: key === 'companion' ? 'AI 伴侣空间' : key === 'diary' ? '人生记录空间' : key === 'yunbao' ? '云宝领域' : null,
+    workspace_name: key === 'companion' ? '虚拟角色空间' : key === 'diary' ? '人生记录空间' : key === 'yunbao' ? '云宝领域' : null,
     allowed_modules: allowed,
     nav_groups: navGroups,
     modes,
@@ -193,9 +193,8 @@ export const FALLBACK_PRODUCTS: ProductConfig[] = [
     ]),
     nav('模拟与推演', [
       ['timeline', MODULE_LABELS.timeline],
-      ['simulation', MODULE_LABELS.simulation],
+      ['simulation', '模拟与写作'],
       ['storyline', MODULE_LABELS.storyline],
-      ['writing', MODULE_LABELS.writing],
     ]),
     nav('数据安全', [
       ['time-machine', MODULE_LABELS['time-machine']],
@@ -205,7 +204,7 @@ export const FALLBACK_PRODUCTS: ProductConfig[] = [
   ], {
     'character-management': 'full', events: 'narrative', timeline: 'world', simulation: 'full',
     writing: 'narrative', chat: 'npc', relationships: 'world', personas: 'hidden',
-  }, ['world-building', 'multipath']),
+  }, ['world-building', 'multipath', 'writing']),
   config('literature', [
     nav('世界构建', [
       ['world-management', MODULE_LABELS['world-management']],
@@ -219,8 +218,7 @@ export const FALLBACK_PRODUCTS: ProductConfig[] = [
     nav('故事创作', [
       ['timeline', MODULE_LABELS.timeline],
       ['storyline', MODULE_LABELS.storyline],
-      ['writing', MODULE_LABELS.writing],
-      ['simulation', '07 模拟运行 · 辅助'],
+      ['simulation', '模拟与写作'],
     ]),
     nav('数据安全', [
       ['time-machine', MODULE_LABELS['time-machine']],
@@ -230,11 +228,11 @@ export const FALLBACK_PRODUCTS: ProductConfig[] = [
   ], {
     'character-management': 'full', events: 'narrative', timeline: 'world', simulation: 'auxiliary',
     writing: 'narrative', chat: 'npc', relationships: 'world', personas: 'hidden',
-  }, ['world-building', 'multipath']),
+  }, ['world-building', 'multipath', 'writing']),
   config('companion', [
-    nav('伴侣空间', [
+    nav('虚拟角色空间', [
       ['character-management', '03 人物管理 · 轻量'],
-      ['chat', 'AI 伴侣角色'],
+      ['chat', '虚拟角色'],
     ]),
     nav('长期互动', [
       ['relationships', '04 关系管理'],

@@ -3,7 +3,6 @@ import { initializeWorldBuildingConfig, getWorldBuildingConfig } from '../servic
 import { getWorldById } from '../services/worldService'
 import { createWorld, updateWorld, deleteWorld } from '../services/worldService'
 import AxisObjectsPanel from '../components/AxisObjectsPanel'
-import { useAutoHideOnScroll } from '../hooks/useAutoHideOnScroll'
 
 // =========================================================
 // 1. 数据字典 (已按宏观-中观-微观重新梳理，去除了所有序号)
@@ -496,28 +495,46 @@ function TagGroup({ label, selected, options, onChange, lang }: { label: string,
   );
 }
 
+const WORLD_LEVELS = [
+  { id: 'macro', num: '01', title: '宏观：世界基底', description: '时代、自然与法则基底' },
+  { id: 'meso', num: '02', title: '中观：社会运转', description: '政体、经济、法律与教育' },
+  { id: 'micro', num: '03', title: '微观：生活与治理', description: '聚落、组织、家庭与文化' },
+  { id: 'pressure', num: '04', title: '压力源', description: '世界中的持续压力与危机' },
+] as const
+
 // =========================================================
 // 3. 页面主体 (宏观 -> 中观 -> 微观 排布)
 // =========================================================
-export default function WorldBuildingPage({ worldId, onBack, lang, product = 'game' }: { worldId: string, onBack?: () => void, lang: string, product?: string }) {
+export default function WorldBuildingPage({ worldId, onBack, onSaved, lang, product = 'game' }: { worldId: string, onBack?: () => void, onSaved?: (world?: any) => void | Promise<void>, lang: string, product?: string }) {
   const [activeSubTab, setActiveSubTab] = useState<string>('era')
   const [config, setConfig] = useState<any>(null)
   const [worldName, setWorldName] = useState('')
   const [inputId, setInputId] = useState(worldId || crypto.randomUUID().slice(0, 8))
   
   // ✅ 新增：控制当前显示宏观、中观还是微观
-  const [activeLevel, setActiveLevel] = useState<'macro' | 'meso' | 'micro'>('macro')
-  const secondaryNavHidden = useAutoHideOnScroll()
+  const [activeLevel, setActiveLevel] = useState<'macro' | 'meso' | 'micro' | 'pressure'>('macro')
+  const [stageNavOpen, setStageNavOpen] = useState(false)
+  const currentLevel = WORLD_LEVELS.find(level => level.id === activeLevel) || WORLD_LEVELS[0]
+
+  useEffect(() => {
+    if (!stageNavOpen) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setStageNavOpen(false)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [stageNavOpen])
 
   useEffect(() => {
     async function init() {
       if (worldId) {
         const w = await getWorldById(worldId)
-        if (w) setWorldName(w.name)
+        setWorldName(w?.name || '')
         let cfg = await getWorldBuildingConfig(worldId)
         if (!cfg) cfg = await initializeWorldBuildingConfig(worldId)
         setConfig(cfg)
       } else {
+        setWorldName('')
         setInputId(crypto.randomUUID().slice(0, 8))
         setConfig({ id: crypto.randomUUID(), worldId: 'temp-id', selections: {}, parameters: {}, updatedAt: new Date().toISOString() })
       }
@@ -555,9 +572,10 @@ export default function WorldBuildingPage({ worldId, onBack, lang, product = 'ga
       const backgroundStr = JSON.stringify(configData)
 
       // 👇 修改：用 worldId 来判断是新建还是更新，而不是 inputId
+      let savedWorld: any = null
       if (!worldId) {
         // 如果是新建，调用后端生成 UUID
-        await createWorld({
+        savedWorld = await createWorld({
           name: worldName,
           description: 'Custom World',
           type: 'fiction',
@@ -570,8 +588,11 @@ export default function WorldBuildingPage({ worldId, onBack, lang, product = 'ga
           name: worldName,
           background: backgroundStr
         })
+        savedWorld = { id: worldId, name: worldName }
       }
 
+      // 先让外壳刷新列表并切到新世界，再提示与返回；否则返回后仍显示旧列表。
+      await onSaved?.(savedWorld)
       alert(lang === 'zh' ? '世界保存成功！' : 'World saved successfully!')
       
       if (typeof onBack === 'function') {
@@ -599,59 +620,107 @@ export default function WorldBuildingPage({ worldId, onBack, lang, product = 'ga
     }
   }
 
-    return (
+ return (
     <div style={{ padding: '2rem' }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-        
-        {/* 1. 顶部头部区域 */}
-        <header className="wb-scene-head glass-card">
-          <div className="wb-scene-main">
-            {onBack && (
-              <button onClick={onBack} type="button" className="wb-back">
-                ← 返回
-              </button>
-            )}
-            <div className="wb-scene-title">
-              <span className="wb-scene-eyebrow">WORLD BUILDING · 世界建设配置</span>
-              <input value={worldName} onChange={e => setWorldName(e.target.value)} placeholder={lang === 'zh' ? '请输入世界名称' : 'Enter World Name'} className="wb-name-input" />
-              <p className="wb-scene-desc">{lang === 'zh' ? '定义世界的基底、社会运转与日常生活规则。' : 'Define the world foundation, social systems and everyday rules.'}</p>
-              <div className="wb-scene-meta">
-                {lang === 'zh' ? '世界 ID' : 'World ID'} · <code>{inputId}</code>
-              </div>
-            </div>
+      <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+        {/* 👇 单行极简头部：阶段导航、名称、ID、删除、保存 👇 */}
+        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '16px', paddingBottom: '12px', borderBottom: '1px solid var(--card-border)' }}>
+          {/* 1. 阶段导航胶囊 + 描述（移到最左侧） */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button
+              type="button"
+              onClick={() => setStageNavOpen(v => !v)}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '8px',
+                padding: '6px 14px', borderRadius: '20px',
+                background: 'var(--text-main)', color: 'var(--bg-color)',
+                border: 'none', cursor: 'pointer', fontWeight: 600,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)', transition: 'all 0.2s',
+                flexShrink: 0
+              }}
+            >
+              <span style={{ fontSize: '12px', opacity: 0.8 }}>{currentLevel.num}</span>
+              <span style={{ fontSize: '13px' }}>{currentLevel.title}</span>
+              <span style={{ fontSize: '10px', marginLeft: '4px', opacity: 0.8 }}>{stageNavOpen ? '收起 ▲' : '展开 ▼'}</span>
+            </button>
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+              {currentLevel.description}
+            </span>
           </div>
-          <div className="wb-scene-actions">
-            <button onClick={handleDelete} className="wb-danger">
-              {lang === 'zh' ? '删除世界' : 'Delete'}
+
+          {/* 2. 世界名称 + 短ID（靠右） */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <input 
+              value={worldName} 
+              onChange={e => setWorldName(e.target.value)} 
+              placeholder={lang === 'zh' ? '请输入世界名称' : 'Enter World Name'} 
+              style={{ 
+                fontSize: '20px', fontWeight: 600, color: 'var(--text-main)', 
+                background: 'transparent', border: '1px solid transparent', 
+                padding: '4px 8px', borderRadius: '6px', outline: 'none', 
+                width: '180px'
+              }} 
+              onFocus={(e) => e.currentTarget.style.borderColor = 'var(--card-border)'}
+              onBlur={(e) => e.currentTarget.style.borderColor = 'transparent'}
+            />
+            <span title={inputId} style={{ fontSize: '11px', color: 'var(--text-muted)', cursor: 'help', background: 'rgba(128,128,128,0.1)', padding: '2px 6px', borderRadius: '4px' }}>
+              ID: <code>{inputId.slice(0, 8)}</code>
+            </span>
+          </div>
+
+          {/* 3. 删除 + 保存（推到最右侧） */}
+          <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
+            <button onClick={handleDelete} style={{ padding: '6px 16px', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger-color)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' }}>
+              删除世界
             </button>
-            <button onClick={handleSave} className="wb-primary">
-              {lang === 'zh' ? '保存设定' : 'Save'}
+            <button onClick={handleSave} style={{ padding: '6px 20px', background: 'var(--primary-color)', color: 'var(--primary-text)', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>
+              保存设定
             </button>
           </div>
-        </header>
 
-        {worldId && (
-          <section className="glass-card" style={{ padding: '1.1rem 1.3rem' }}>
-            <AxisObjectsPanel worldId={worldId} title="六轴压强 · 世界基础配置" />
-          </section>
-        )}
-
-        {/* 2. 母导航 (宏观-中观-微观) */}
-        <div className={`wb-level-nav${secondaryNavHidden ? ' is-auto-hidden' : ''}`}>
-          {[
-            { id: 'macro', num: '01', title: '宏观：世界基底' },
-            { id: 'meso', num: '02', title: '中观：社会运转' },
-            { id: 'micro', num: '03', title: '微观：生活与治理' }
-          ].map(level => (
-           <button key={level.id} type="button" onClick={() => { setActiveLevel(level.id as any); if (level.id === 'macro') setActiveSubTab('era'); if (level.id === 'meso') setActiveSubTab('regime'); if (level.id === 'micro') setActiveSubTab('governance'); }} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '16px', background: activeLevel === level.id ? 'rgba(128, 128, 128, 0.15)' : 'transparent', border: activeLevel === level.id ? '1px solid var(--text-main)' : '1px solid var(--card-border)', borderRadius: '16px', cursor: 'pointer', transition: 'all 0.2s' }}>
-              <span style={{ fontSize: '14px', fontWeight: 600, color: activeLevel === level.id ? 'var(--primary-color)' : 'var(--text-muted)', marginBottom: '4px' }}>{level.num}</span>
-              <span style={{ fontSize: '16px', fontWeight: 600, color: activeLevel === level.id ? 'var(--primary-color)' : 'var(--text-main)' }}>{level.title}</span>
-            </button>
-          ))}
         </div>
 
-                {/* 3. 子导航 (具体模块) */}
-        <div className={`wb-subnav${secondaryNavHidden ? ' is-auto-hidden' : ''}`}>
+        {/* 4. 展开的横向卡片列表 */}
+        {stageNavOpen && (
+          <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'stretch', gap: '12px', overflowX: 'auto', paddingBottom: '8px', marginBottom: '1rem' }}>
+            {WORLD_LEVELS.map(level => {
+              const isActive = activeLevel === level.id
+              return (
+                <button
+                  key={level.id}
+                  type="button"
+                  onClick={() => {
+                    setActiveLevel(level.id as any)
+                    if (level.id === 'macro') setActiveSubTab('era')
+                    if (level.id === 'meso') setActiveSubTab('regime')
+                    if (level.id === 'micro') setActiveSubTab('governance')
+                  }}
+                  style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
+                    padding: '12px', width: '150px',
+                    background: isActive ? 'var(--text-main)' : 'var(--card-bg)',
+                    color: isActive ? 'var(--bg-color)' : 'var(--text-main)',
+                    border: isActive ? '1px solid var(--text-main)' : '1px solid var(--card-border)',
+                    borderRadius: '12px', cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.05)', transition: 'all 0.2s',
+                    textAlign: 'left', flexShrink: 0
+                  }}
+                >
+                  <span style={{ fontSize: '10px', marginBottom: '4px', opacity: isActive ? 0.8 : 0.5 }}>{level.num}</span>
+                  <span style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <strong style={{ fontSize: '13px', fontWeight: 600 }}>{level.title.split('：')[1] || level.title}</strong>
+                    <small style={{ fontSize: '10px', opacity: isActive ? 0.8 : 0.6, lineHeight: 1.4, whiteSpace: 'normal', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                      {level.description}
+                    </small>
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        )}
+
+        {/* 3. 子导航 (具体模块) */}
+        <div className="wb-subnav" style={{ marginBottom: '0', marginTop: '0' }}>
           {activeLevel === 'macro' && [{ id: 'era', label: '时代与思想' }, { id: 'nature', label: '自然与生态' }, { id: 'supernatural', label: '法则与历史' }].map(tab => (
             <button key={tab.id} onClick={() => setActiveSubTab(tab.id)} style={{ padding: '8px 16px', background: activeSubTab === tab.id ? 'var(--text-main)' : 'transparent', borderRadius: '8px', border: 'none', color: activeSubTab === tab.id ? 'var(--bg-color)' : 'var(--text-main)', fontWeight: activeSubTab === tab.id ? 600 : 500, cursor: 'pointer', transition: 'all 0.2s', opacity: activeSubTab === tab.id ? 1 : 0.6 }}>{tab.label}</button>
           ))}
@@ -971,8 +1040,14 @@ export default function WorldBuildingPage({ worldId, onBack, lang, product = 'ga
                </div>
              </div>
           )}
+                    {/* ================= 压力源层级 ================= */}
+          {activeLevel === 'pressure' && (
+            <div className="glass-card" style={{ padding: '2rem' }}>
+              <AxisObjectsPanel worldId={worldId} title="压力源" />
+            </div>
+          )}
 
-        </div>
+        </div> {/* 👈 这里是原本闭合 <div style={{ minHeight: '400px' }}> 的地方，确认一下是否加在它上面 */}
       </div>
     </div>
   )

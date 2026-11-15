@@ -1,99 +1,361 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { API_ORIGIN } from '../api/config'
 import * as storyApi from '../api/storyline'
 import * as api from '../api/storyThreads'
 import type { StoryProject } from '../api/storyline'
 
-type EventLite = {
+type EventLite = { id: string; name: string; description?: string; storyline?: string; scale?: string; participants?: string[] }
+
+const KIND_LABEL: Record<string, string> = { main: '主线', side: '支线', copy: '副本', shadow: '暗线/影线', ensemble: '群像' }
+const KIND_COLOR: Record<string, string> = { main: '#4f7cff', side: '#2f9e6f', copy: '#8b5cf6', shadow: '#c08a2e', ensemble: '#7a8294' }
+
+type TreeMode = 'logic' | 'mindmap' | 'tree' | 'skeleton'
+type PlusPos = 'above' | 'below' | 'side'
+type NodeKind = 'root' | 'thread' | 'event'
+
+type LaidNode = {
   id: string
-  name: string
-  description?: string
-  story_time?: string
-  storyline?: string
-  scale?: string
-  participants?: string[]
-  domain?: string[]
-}
-type CharacterLite = { id: string; name: string }
-
-const KIND_LABEL: Record<string, string> = {
-  main: '主线', side: '支线', copy: '副本', shadow: '暗线/影线', ensemble: '群像',
-}
-const KIND_COLOR: Record<string, string> = {
-  main: 'var(--primary-color)', side: '#7a9e7e', copy: '#a58ac1', shadow: '#b08a5a', ensemble: '#7d8fa8',
-}
-const LANE_W = 286
-const LANE_GAP = 22
-const PAD = 18
-const HEADER_H = 62
-const CARD_H = 84
-const CARD_GAP = 12
-
-const card: React.CSSProperties = {
-  background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '12px', padding: '12px',
-  display: 'flex', flexDirection: 'column', gap: '9px', minHeight: 0,
-}
-const hint: React.CSSProperties = { fontSize: '10px', color: 'var(--text-muted)', lineHeight: 1.65 }
-const input: React.CSSProperties = {
-  padding: '7px 9px', borderRadius: '7px', border: '1px solid var(--card-border)', background: 'var(--card-bg)',
-  color: 'var(--text-main)', fontSize: '11px', minWidth: 0, boxSizing: 'border-box',
-}
-const btn: React.CSSProperties = {
-  padding: '6px 10px', borderRadius: '7px', border: '1px solid var(--card-border)', background: 'transparent',
-  color: 'var(--text-main)', fontSize: '10px', cursor: 'pointer', whiteSpace: 'nowrap',
+  kind: NodeKind
+  title: string
+  sub: string
+  color: string
+  width: number
+  height: number
+  x: number
+  y: number
+  subW: number
+  subH: number
+  side: 'left' | 'right'
+  children: LaidNode[]
+  threadId?: string
+  linkId?: string
+  eventId?: string
+  index?: number
+  parentThreadId?: string | null
 }
 
-function laneX(index: number) { return PAD + index * (LANE_W + LANE_GAP) }
-function cardY(index: number) { return HEADER_H + 14 + index * (CARD_H + CARD_GAP) }
+type PickerTarget = { node: LaidNode; position: PlusPos }
+
+const NODE_W = 156
+const EVENT_W = 186
+const NODE_H = 42
+const EVENT_H = 40
+const ROOT_W = 170
+const ROOT_H = 58
+const TREE_X_GAP = 34
+const TREE_Y_GAP = 54
+const LOGIC_X_GAP = 52
+const LOGIC_Y_GAP = 22
+const PAD = 30
+
+function curveX(x1: number, y1: number, x2: number, y2: number) {
+  const mx = x1 + (x2 - x1) * 0.52
+  return `M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`
+}
+
+function curveY(x1: number, y1: number, x2: number, y2: number) {
+  const my = y1 + (y2 - y1) * 0.52
+  return `M ${x1} ${y1} C ${x1} ${my}, ${x2} ${my}, ${x2} ${y2}`
+}
+
+function measureV(node: LaidNode) {
+  const totalChildW = node.children.reduce((sum, child) => sum + child.subW, 0) + Math.max(0, node.children.length - 1) * TREE_X_GAP
+  node.subW = Math.max(node.width, totalChildW)
+  node.subH = node.height + (node.children.length ? TREE_Y_GAP + Math.max(...node.children.map((child) => child.subH)) : 0)
+  node.children.forEach(measureV)
+}
+
+function measureH(node: LaidNode) {
+  const totalChildH = node.children.reduce((sum, child) => sum + child.subH, 0) + Math.max(0, node.children.length - 1) * LOGIC_Y_GAP
+  node.subW = node.width + (node.children.length ? LOGIC_X_GAP + Math.max(...node.children.map((child) => child.subW)) : 0)
+  node.subH = Math.max(node.height, totalChildH)
+  node.children.forEach(measureH)
+}
+
+function measureSkeleton(node: LaidNode, depth: number) {
+  if (depth === 0) {
+    node.children.forEach((c) => measureSkeleton(c, 1))
+    const maxW = node.children.length ? Math.max(...node.children.map((c) => c.subW)) : 0
+    const totalH = node.children.reduce((sum, c) => sum + c.subH, 0) + (node.children.length > 1 ? (node.children.length - 1) * TREE_Y_GAP : 0)
+    node.subW = Math.max(node.width, maxW)
+    node.subH = node.height + (node.children.length ? TREE_Y_GAP + totalH : 0)
+  } else {
+    node.children.forEach((c) => measureSkeleton(c, depth + 1))
+    const right = node.children.filter((_, i) => i % 2 === 0)
+    const left = node.children.filter((_, i) => i % 2 === 1)
+
+    const measureGroup = (group: LaidNode[]) => {
+      if (!group.length) return { w: 0, h: 0 }
+      const totalH = group.reduce((sum, c) => sum + c.subH, 0) + (group.length > 1 ? (group.length - 1) * LOGIC_Y_GAP : 0)
+      const maxW = Math.max(...group.map((c) => c.subW))
+      return { w: maxW, h: totalH }
+    }
+
+    const r = measureGroup(right)
+    const l = measureGroup(left)
+
+    node.subW = (l.w ? l.w + LOGIC_X_GAP : 0) + node.width + (r.w ? r.w + LOGIC_X_GAP : 0)
+    node.subH = Math.max(node.height, r.h, l.h)
+  }
+}
+
+function placeV(node: LaidNode, left: number, top: number) {
+  node.x = left + ((node.subW - node.width) / 2)
+  node.y = top
+  if (!node.children.length) return
+  const childW = node.children.reduce((sum, child) => sum + child.subW, 0) + (node.children.length - 1) * TREE_X_GAP
+  let childLeft = left + ((node.subW - childW) / 2)
+  const childTop = top + node.height + TREE_Y_GAP
+  for (const child of node.children) {
+    placeV(child, childLeft, childTop)
+    childLeft += child.subW + TREE_X_GAP
+  }
+}
+
+function placeH(node: LaidNode, left: number, top: number) {
+  node.x = left
+  node.y = top + ((node.subH - node.height) / 2)
+  if (!node.children.length) return
+  const childH = node.children.reduce((sum, child) => sum + child.subH, 0) + (node.children.length - 1) * LOGIC_Y_GAP
+  let childTop = top + ((node.subH - childH) / 2)
+  const childLeft = left + node.width + LOGIC_X_GAP
+  for (const child of node.children) {
+    placeH(child, childLeft, childTop)
+    childTop += child.subH + LOGIC_Y_GAP
+  }
+}
+
+function placeSide(node: LaidNode, anchorX: number, centerY: number, side: 'left' | 'right') {
+  node.side = side
+  node.x = side === 'right' ? anchorX + LOGIC_X_GAP : anchorX - LOGIC_X_GAP - node.width
+  node.y = centerY - (node.height / 2)
+  if (!node.children.length) return
+  const childH = node.children.reduce((sum, child) => sum + child.subH, 0) + (node.children.length - 1) * LOGIC_Y_GAP
+  let childCenter = centerY - (childH / 2)
+  const childAnchor = side === 'right' ? node.x + node.width : node.x
+  for (const child of node.children) {
+    placeSide(child, childAnchor, childCenter + (child.subH / 2), side)
+    childCenter += child.subH + LOGIC_Y_GAP
+  }
+}
+
+function placeSkeleton(node: LaidNode, baseLeft: number, baseTop: number, depth: number) {
+  if (depth === 0) {
+    node.x = baseLeft + ((node.subW - node.width) / 2)
+    node.y = baseTop
+    let childTop = baseTop + node.height + TREE_Y_GAP
+    for (const child of node.children) {
+      const childLeft = baseLeft + ((node.subW - child.subW) / 2)
+      placeSkeleton(child, childLeft, childTop, 1)
+      childTop += child.subH + TREE_Y_GAP
+    }
+  } else {
+    node.x = baseLeft + ((node.subW - node.width) / 2)
+    node.y = baseTop + ((node.subH - node.height) / 2)
+
+    const right = node.children.filter((_, i) => i % 2 === 0)
+    const left = node.children.filter((_, i) => i % 2 === 1)
+
+    const placeGroup = (group: LaidNode[], side: 'left' | 'right') => {
+      if (!group.length) return
+      const totalH = group.reduce((sum, c) => sum + c.subH, 0) + (group.length > 1 ? (group.length - 1) * LOGIC_Y_GAP : 0)
+      let cTop = node.y + (node.height / 2) - (totalH / 2)
+      const anchor = side === 'right' ? node.x + node.width : node.x
+
+      for (const child of group) {
+        const cLeft = side === 'right' ? anchor + LOGIC_X_GAP : anchor - LOGIC_X_GAP - child.subW
+        placeSkeleton(child, cLeft, cTop, 2)
+        cTop += child.subH + LOGIC_Y_GAP
+      }
+    }
+    placeGroup(right, 'right')
+    placeGroup(left, 'left')
+  }
+}
+
+function collect(node: LaidNode, list: LaidNode[] = []) {
+  list.push(node)
+  node.children.forEach((child) => collect(child, list))
+  return list
+}
+
+function layoutTree(root: LaidNode, mode: TreeMode) {
+  if (mode === 'tree') {
+    measureV(root)
+    placeV(root, 0, 0)
+  } else if (mode === 'logic') {
+    measureH(root)
+    placeH(root, 0, 0)
+  } else if (mode === 'skeleton') {
+    measureSkeleton(root, 0)
+    placeSkeleton(root, 0, 0, 0)
+  } else {
+    measureH(root)
+    root.x = 0
+    root.y = 0
+    root.side = 'right'
+    const right = root.children.filter((_, index) => index % 2 === 0)
+    const left = root.children.filter((_, index) => index % 2 === 1)
+    const placeGroup = (group: LaidNode[], side: 'left' | 'right') => {
+      const total = group.reduce((sum, child) => sum + child.subH, 0) + Math.max(0, group.length - 1) * LOGIC_Y_GAP
+      let center = root.y + (root.height / 2) - (total / 2)
+      const anchor = side === 'right' ? root.x + root.width : root.x
+      for (const child of group) {
+        placeSide(child, anchor, center + (child.subH / 2), side)
+        center += child.subH + LOGIC_Y_GAP
+      }
+    }
+    placeGroup(right, 'right')
+    placeGroup(left, 'left')
+  }
+
+  const nodes = collect(root)
+  const minX = Math.min(...nodes.map((node) => node.x))
+  const minY = Math.min(...nodes.map((node) => node.y))
+  for (const node of nodes) {
+    node.x += PAD - minX
+    node.y += PAD - minY
+  }
+  const width = Math.max(...nodes.map((node) => node.x + node.width)) + PAD
+  const height = Math.max(...nodes.map((node) => node.y + node.height)) + PAD
+  return { nodes, root, width, height }
+}
+
+function buildTree(
+  storyTitle: string,
+  threads: api.StoryThread[],
+  events: EventLite[],
+): LaidNode {
+  const eventsById = new Map(events.map((event) => [event.id, event]))
+  const byParent = new Map<string, api.StoryThread[]>()
+  for (const thread of threads) {
+    const key = thread.parent_thread_id || ''
+    if (!byParent.has(key)) byParent.set(key, [])
+    byParent.get(key)!.push(thread)
+  }
+
+  const seen = new Set<string>()
+  const buildThread = (thread: api.StoryThread): LaidNode => {
+    seen.add(thread.id)
+    const color = KIND_COLOR[thread.kind] || KIND_COLOR.main
+    const eventChildren = thread.events.map((link, index) => {
+      const event = eventsById.get(link.event_id)
+      return {
+        id: `event:${link.id}`,
+        kind: 'event' as const,
+        title: event?.name || link.event_name || '未知事件',
+        sub: event?.storyline || link.role || '未分类',
+        color,
+        width: EVENT_W,
+        height: EVENT_H,
+        x: 0,
+        y: 0,
+        subW: EVENT_W,
+        subH: EVENT_H,
+        side: 'right' as const,
+        children: [] as LaidNode[],
+        threadId: thread.id,
+        linkId: link.id,
+        eventId: link.event_id,
+        index,
+      }
+    })
+    const childThreads = (byParent.get(thread.id) || []).filter((child) => !seen.has(child.id)).map(buildThread)
+    const node: LaidNode = {
+      id: `thread:${thread.id}`,
+      kind: 'thread',
+      title: thread.title,
+      sub: `${KIND_LABEL[thread.kind] || thread.kind} · ${thread.events.length} 节点`,
+      color,
+      width: NODE_W,
+      height: NODE_H,
+      x: 0,
+      y: 0,
+      subW: NODE_W,
+      subH: NODE_H,
+      side: 'right',
+      children: [...eventChildren, ...childThreads],
+      threadId: thread.id,
+      parentThreadId: thread.parent_thread_id || null,
+    }
+    return node
+  }
+
+  const topThreads = (byParent.get('') || []).map(buildThread)
+  const root: LaidNode = {
+    id: 'root',
+    kind: 'root',
+    title: storyTitle,
+    sub: `${threads.length} 条线 · ${threads.reduce((sum, thread) => sum + thread.events.length, 0)} 个节点`,
+    color: '#4f7cff',
+    width: ROOT_W,
+    height: ROOT_H,
+    x: 0,
+    y: 0,
+    subW: ROOT_W,
+    subH: ROOT_H,
+    side: 'right',
+    children: topThreads,
+  }
+  return root
+}
+
+// 通用气泡样式
+const popoverStyle: React.CSSProperties = {
+  position: 'absolute',
+  top: '100%',
+  left: '0',
+  marginTop: '12px',
+  width: '320px',
+  background: 'var(--bg-color, #1e1e24)',
+  border: '1px solid var(--card-border, #333)',
+  borderRadius: '12px',
+  padding: '16px',
+  boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+  zIndex: 100,
+  cursor: 'default',
+  textAlign: 'left',
+  pointerEvents: 'auto',
+};
 
 export default function StorylinePage({ worldId, onOpenEvents }: { worldId?: string; onOpenEvents?: () => void }) {
   const [stories, setStories] = useState<StoryProject[]>([])
   const [storyId, setStoryId] = useState('')
   const [threads, setThreads] = useState<api.StoryThread[]>([])
-  const [edges, setEdges] = useState<api.ThreadEdge[]>([])
   const [events, setEvents] = useState<EventLite[]>([])
-  const [characters, setCharacters] = useState<CharacterLite[]>([])
-  const [loading, setLoading] = useState(false)
-  const [importing, setImporting] = useState(false)
-  const [log, setLog] = useState('')
-
-  const [query, setQuery] = useState('')
-  const [filterCharacter, setFilterCharacter] = useState('')
-  const [filterLine, setFilterLine] = useState('')
-  const [filterScale, setFilterScale] = useState('')
-
-  const [newStoryTitle, setNewStoryTitle] = useState('')
-  const [newThreadTitle, setNewThreadTitle] = useState('')
-  const [newThreadKind, setNewThreadKind] = useState('main')
-  const [newThreadCharacter, setNewThreadCharacter] = useState('')
-
   const [selectedLinkId, setSelectedLinkId] = useState('')
   const [selectedThreadId, setSelectedThreadId] = useState('')
-  const [connectMode, setConnectMode] = useState(false)
-  const [connectFrom, setConnectFrom] = useState<{ linkId: string; threadId: string; eventId: string } | null>(null)
-  const [editingThread, setEditingThread] = useState(false)
-  const [threadTitle, setThreadTitle] = useState('')
-  const [threadKind, setThreadKind] = useState('main')
-  const [threadCharacter, setThreadCharacter] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [treeMode, setTreeMode] = useState<TreeMode>('skeleton')
+  const [picker, setPicker] = useState<PickerTarget | null>(null)
+  const [pickerQuery, setPickerQuery] = useState('')
+  const canvasRef = useRef<HTMLDivElement>(null)
 
-  const currentStory = stories.find((item) => item.id === storyId) || null
-  const selectedThread = threads.find((item) => item.id === selectedThreadId) || null
-  const selectedLink = threads.flatMap((thread) => thread.events).find((item) => item.id === selectedLinkId) || null
-  const selectedEvent = selectedLink ? events.find((item) => item.id === selectedLink.event_id) || null : null
+  const selectedThread = threads.find((thread) => thread.id === selectedThreadId) || null
+  const selectedLink = threads.flatMap((thread) => thread.events).find((link) => link.id === selectedLinkId) || null
+  const selectedEvent = selectedLink ? events.find((event) => event.id === selectedLink.event_id) || null : null
+  const selectedIndex = selectedThread && selectedLink
+    ? selectedThread.events.findIndex((link) => link.id === selectedLink.id)
+    : -1
+  const currentStory = stories.find((story) => story.id === storyId) || null
 
-  const characterName = (id?: string | null) => characters.find((item) => item.id === id)?.name || ''
-  const participantLabel = (event: EventLite) => (event.participants || []).map((id) => characterName(id) || id).join('、')
+  const clearSelection = () => {
+    setSelectedThreadId('')
+    setSelectedLinkId('')
+  }
 
   const loadStory = async (id: string) => {
-    if (!id) { setThreads([]); setEdges([]); return }
-    setLoading(true)
+    if (!id) {
+      setThreads([])
+      return
+    }
     try {
-      const [threadRows, edgeRows] = await Promise.all([api.listThreads(id), api.listThreadEdges(id)])
+      const threadRows = await api.listThreads(id)
       setThreads(threadRows)
-      setEdges(edgeRows)
-      setSelectedThreadId((prev) => (prev && threadRows.some((t) => t.id === prev) ? prev : threadRows[0]?.id || ''))
-    } catch (error: any) { setLog(`❌ ${error.message || error}`) }
-    finally { setLoading(false) }
+      setSelectedThreadId((prev) => (prev && threadRows.some((thread) => thread.id === prev) ? prev : threadRows[0]?.id || ''))
+    } catch (error) {
+      console.error(error)
+    }
   }
 
   useEffect(() => {
@@ -101,442 +363,330 @@ export default function StorylinePage({ worldId, onOpenEvents }: { worldId?: str
     Promise.all([
       storyApi.listStories(worldId),
       fetch(`${API_ORIGIN}/api/events?world_id=${worldId}`).then((res) => res.json()),
-      fetch(`${API_ORIGIN}/api/characters?world_id=${worldId}`).then((res) => res.json()),
-    ]).then(([storyRows, eventRows, charRows]) => {
+    ]).then(([storyRows, eventRows]) => {
       setStories(storyRows)
       setEvents(Array.isArray(eventRows) ? eventRows : [])
-      setCharacters(Array.isArray(charRows) ? charRows.map((row: any) => ({ id: row.id, name: row.name })) : [])
       setStoryId((prev) => (prev && storyRows.some((row) => row.id === prev) ? prev : storyRows[0]?.id || ''))
-    }).catch((error) => setLog(`❌ ${error.message || error}`))
+    })
   }, [worldId])
 
   useEffect(() => { void loadStory(storyId) }, [storyId])
 
-  const createStoryNow = async () => {
-    if (!worldId || !newStoryTitle.trim()) return
-    try {
-      const created = await storyApi.createStory({ world_id: worldId, title: newStoryTitle.trim() })
-      setStories((prev) => [...prev, created])
-      setStoryId(created.id)
-      setNewStoryTitle('')
-      setLog('故事已创建')
-    } catch (error: any) { setLog(`❌ ${error.message || error}`) }
-  }
+  const layout = useMemo(() => {
+    const root = buildTree(currentStory?.title || '故事主题', threads, events)
+    return layoutTree(root, treeMode)
+  }, [threads, events, currentStory?.title, treeMode])
 
-  const createThreadNow = async () => {
-    if (!storyId || !newThreadTitle.trim()) return
-    try {
-      await api.createThread(storyId, {
-        title: newThreadTitle.trim(), kind: newThreadKind, character_id: newThreadCharacter || undefined,
-      })
-      setNewThreadTitle(''); setNewThreadCharacter('')
-      await loadStory(storyId)
-      setLog('故事线已创建')
-    } catch (error: any) { setLog(`❌ ${error.message || error}`) }
-  }
-
-  const importLegacy = async () => {
-    if (!storyId || importing) return
-    if (!window.confirm('把该故事既有的结构事件导入为故事树？事件仍引用 05 事件库，不会复制或删除事件。')) return
-    setImporting(true)
-    try {
-      const detail = await storyApi.getStory(storyId)
-      const known = [...threads]
-      let created = 0
-      let attached = 0
-      for (const space of detail.spaces) {
-        const units = await storyApi.listUnits(space.id)
-        for (const unit of units) {
-          const title = space.id === detail.original_space_id ? unit.title : `${space.name} · ${unit.title}`
-          let thread = known.find((row) => row.title === title)
-          if (!thread) {
-            const kind = unit.kind === 'mainline' ? 'main' : unit.kind === 'instance' ? 'copy' : 'side'
-            thread = await api.createThread(storyId, { title, kind })
-            known.push(thread)
-            created += 1
-          }
-          const unitEvents = await storyApi.listUnitEvents(unit.id)
-          for (const link of unitEvents) {
-            if (thread.events.some((row) => row.event_id === link.event_id)) continue
-            const updated = await api.attachThreadEvent(thread.id, link.event_id)
-            thread = updated
-            attached += 1
-          }
+  const pathList = useMemo(() => {
+    const paths: Array<{ key: string; d: string; color: string }> = []
+    for (const node of layout.nodes) {
+      for (const child of node.children) {
+        const isSkeletonRoot = treeMode === 'skeleton' && node.kind === 'root'
+        if (treeMode === 'tree' || isSkeletonRoot) {
+          paths.push({
+            key: `${node.id}-${child.id}`,
+            d: curveY(node.x + (node.width / 2), node.y + node.height, child.x + (child.width / 2), child.y),
+            color: child.color,
+          })
+        } else {
+          const anchorLeft = child.x >= node.x
+          paths.push({
+            key: `${node.id}-${child.id}`,
+            d: curveX(
+              anchorLeft ? node.x + node.width : node.x,
+              node.y + (node.height / 2),
+              anchorLeft ? child.x : child.x + child.width,
+              child.y + (child.height / 2),
+            ),
+            color: child.color,
+          })
         }
       }
-      await loadStory(storyId)
-      setLog(created || attached ? `已从既有故事生成 ${created} 条线，引用 ${attached} 个事件` : '既有故事没有可导入的结构事件')
-    } catch (error: any) { setLog(`❌ ${error.message || error}`) }
-    finally { setImporting(false) }
-  }
+    }
+    return paths
+  }, [layout, treeMode])
 
-  const attachEvent = async (threadId: string, eventId: string, index?: number) => {
-    try {
-      await api.attachThreadEvent(threadId, eventId, index)
-      await loadStory(storyId)
-      setLog('事件已放入故事树')
-    } catch (error: any) { setLog(`❌ ${error.message || error}`) }
-  }
+  useEffect(() => {
+    if (treeMode === 'logic') return
+    const frame = requestAnimationFrame(() => {
+      const el = canvasRef.current
+      if (el) el.scrollLeft = Math.max(0, (layout.width - el.clientWidth) / 2)
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [treeMode, layout.width])
 
-  const moveLink = async (linkId: string, threadId: string, index: number) => {
-    try {
-      await api.updateThreadEvent(linkId, { thread_id: threadId, order_index: index })
-      await loadStory(storyId)
-      setSelectedThreadId(threadId)
-      setLog('事件位置已调整')
-    } catch (error: any) { setLog(`❌ ${error.message || error}`) }
-  }
-
-  const removeLink = async (linkId: string) => {
+  const detachEvent = async (linkId: string) => {
+    setBusy(true)
     try {
       await api.detachThreadEvent(linkId)
-      if (selectedLinkId === linkId) setSelectedLinkId('')
+      setSelectedLinkId('')
       await loadStory(storyId)
-      setLog('事件已从故事树移除，事件库中的事件不受影响')
-    } catch (error: any) { setLog(`❌ ${error.message || error}`) }
+    } finally {
+      setBusy(false)
+    }
   }
 
-  const moveThread = async (threadId: string, index: number) => {
+  const deleteThreadNow = async (threadId: string) => {
+    if (!window.confirm('删除这条故事线？线内事件不会被删除，只会解除挂接。')) return
+    setBusy(true)
     try {
-      await api.updateThread(threadId, { order_index: index })
-      await loadStory(storyId)
-      setLog('故事线顺序已调整')
-    } catch (error: any) { setLog(`❌ ${error.message || error}`) }
-  }
-
-  const saveThread = async () => {
-    if (!selectedThread || !threadTitle.trim()) return
-    try {
-      await api.updateThread(selectedThread.id, {
-        title: threadTitle.trim(), kind: threadKind, character_id: threadCharacter || null,
-      })
-      setEditingThread(false)
-      await loadStory(storyId)
-      setLog('故事线已更新')
-    } catch (error: any) { setLog(`❌ ${error.message || error}`) }
-  }
-
-  const deleteThreadNow = async () => {
-    if (!selectedThread) return
-    if (!window.confirm(`删除故事线「${selectedThread.title}」？事件库中的事件不会被删除。`)) return
-    try {
-      await api.deleteThread(selectedThread.id)
+      await api.deleteThread(threadId)
       setSelectedThreadId('')
       await loadStory(storyId)
-      setLog('故事线已删除')
-    } catch (error: any) { setLog(`❌ ${error.message || error}`) }
-  }
-
-  const startConnect = (thread: api.StoryThread, link: api.StoryThread['events'][number]) => {
-    if (!connectMode) return
-    if (!connectFrom) {
-      setConnectFrom({ linkId: link.id, threadId: thread.id, eventId: link.event_id })
-      setLog('已选择起点事件，再点击目标事件建立叙事连线')
-      return
-    }
-    if (connectFrom.linkId === link.id) { setConnectFrom(null); return }
-    void createEdge(connectFrom, { linkId: link.id, threadId: thread.id, eventId: link.event_id })
-  }
-
-  const createEdge = async (from: { linkId: string; threadId: string; eventId: string }, to: { linkId: string; threadId: string; eventId: string }) => {
-    try {
-      await api.createThreadEdge(storyId, {
-        from_thread_id: from.threadId, to_thread_id: to.threadId,
-        from_event_id: from.eventId, to_event_id: to.eventId, edge_type: 'impact',
-      })
-      setConnectFrom(null)
-      setConnectMode(false)
-      await loadStory(storyId)
-      setLog('叙事连线已建立')
-    } catch (error: any) { setLog(`❌ ${error.message || error}`) }
-  }
-
-  const removeEdge = async (edgeId: string) => {
-    try {
-      await api.deleteThreadEdge(edgeId)
-      await loadStory(storyId)
-      setLog('连线已删除')
-    } catch (error: any) { setLog(`❌ ${error.message || error}`) }
-  }
-
-  const handleLaneDrop = (event: React.DragEvent, thread: api.StoryThread) => {
-    event.preventDefault()
-    const eventId = event.dataTransfer.getData('application/x-event-id')
-    const linkId = event.dataTransfer.getData('application/x-link-id')
-    if (eventId) void attachEvent(thread.id, eventId)
-    else if (linkId) {
-      const index = threads.find((item) => item.id === thread.id)?.events.length || 0
-      void moveLink(linkId, thread.id, index)
+    } finally {
+      setBusy(false)
     }
   }
 
-  const handleCardDrop = (event: React.DragEvent, thread: api.StoryThread, index: number) => {
-    event.preventDefault(); event.stopPropagation()
-    const eventId = event.dataTransfer.getData('application/x-event-id')
-    const linkId = event.dataTransfer.getData('application/x-link-id')
-    if (eventId) void attachEvent(thread.id, eventId, index)
-    else if (linkId) void moveLink(linkId, thread.id, index)
+  const pickerEvents = events.filter((event) =>
+    `${event.name} ${event.storyline || ''} ${event.description || ''}`.toLowerCase().includes(pickerQuery.trim().toLowerCase()),
+  )
+
+  const openPicker = (node: LaidNode, position: PlusPos) => {
+    if (!storyId || busy) return
+    setPickerQuery('')
+    setPicker({ node, position })
   }
 
-  const filteredEvents = useMemo(() => {
-    const needle = query.trim().toLowerCase()
-    return events.filter((event) => {
-      if (needle && !`${event.name} ${event.description || ''}`.toLowerCase().includes(needle)) return false
-      if (filterCharacter && !(event.participants || []).includes(filterCharacter)) return false
-      if (filterLine && event.storyline !== filterLine) return false
-      if (filterScale && event.scale !== filterScale) return false
-      return true
+  const createBranchWithEvent = async (event: EventLite, parentThreadId: string | null, kind = 'side') => {
+    const thread = await api.createThread(storyId, {
+      title: event.name,
+      kind,
+      parent_thread_id: parentThreadId || undefined,
     })
-  }, [events, query, filterCharacter, filterLine, filterScale])
-
-  const storylineOptions = useMemo(() => Array.from(new Set(events.map((e) => e.storyline).filter(Boolean))), [events])
-  const canvasWidth = Math.max(760, PAD * 2 + threads.length * LANE_W + Math.max(0, threads.length - 1) * LANE_GAP)
-  const canvasHeight = Math.max(480, HEADER_H + 20 + Math.max(1, ...threads.map((t) => t.events.length)) * (CARD_H + CARD_GAP) + 80)
-
-  const linkPosition = (threadId: string, eventId: string) => {
-    const threadIndex = threads.findIndex((thread) => thread.id === threadId)
-    const thread = threads[threadIndex]
-    if (!thread || threadIndex < 0) return null
-    const eventIndex = thread.events.findIndex((link) => link.event_id === eventId)
-    if (eventIndex < 0) return null
-    return { x: laneX(threadIndex) + 12, y: cardY(eventIndex), centerY: cardY(eventIndex) + CARD_H / 2 }
+    await api.attachThreadEvent(thread.id, event.id)
+    await loadStory(storyId)
+    setSelectedThreadId(thread.id)
+    setSelectedLinkId('')
   }
+
+  const applyPick = async (event: EventLite) => {
+    const target = picker
+    if (!target) return
+    setPicker(null)
+    setBusy(true)
+    try {
+      const { node, position } = target
+      if (node.kind === 'root') {
+        await createBranchWithEvent(event, null, 'main')
+      } else if (node.kind === 'thread') {
+        if (position === 'side') {
+          await api.attachThreadEvent(node.threadId!, event.id)
+          await loadStory(storyId)
+        } else {
+          await createBranchWithEvent(event, node.parentThreadId || null, node.side === 'left' ? 'side' : 'main')
+        }
+      } else if (node.kind === 'event') {
+        if (position === 'side') {
+          await createBranchWithEvent(event, node.threadId || null, 'side')
+        } else {
+          const index = position === 'above' ? node.index : (node.index ?? 0) + 1
+          await api.attachThreadEvent(node.threadId!, event.id, index)
+          await loadStory(storyId)
+        }
+      }
+    } catch (error) {
+      console.error(error)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const renderPlus = (node: LaidNode) => (
+    <>
+      <button type="button" className="slx-plus is-above" title="在上方新增" onClick={(event) => { event.stopPropagation(); openPicker(node, 'above') }}>+</button>
+      <button type="button" className="slx-plus is-below" title="在下方新增" onClick={(event) => { event.stopPropagation(); openPicker(node, 'below') }}>+</button>
+      <button
+        type="button"
+        className={`slx-plus is-side${node.side === 'left' ? ' is-left' : ''}`}
+        title={node.kind === 'thread' ? '在侧边添加事件' : node.kind === 'event' ? '在侧边创建子分支' : '在侧边创建主线'}
+        onClick={(event) => { event.stopPropagation(); openPicker(node, 'side') }}
+      >+</button>
+    </>
+  )
 
   return (
-    <div style={{ padding: '1rem', height: 'calc(100vh - 60px)', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-      <div style={{ ...card, flexDirection: 'row', alignItems: 'center', padding: '10px 14px', gap: '8px', flexWrap: 'wrap' }}>
-        <h2 style={{ margin: 0, fontSize: '16px', color: 'var(--text-main)' }}>故事线管理</h2>
-        <select value={storyId} onChange={(e) => setStoryId(e.target.value)} style={{ ...input, maxWidth: '190px' }}>
-          <option value="">选择故事</option>
-          {stories.map((story) => <option key={story.id} value={story.id}>{story.title}</option>)}
-        </select>
-        <input value={newStoryTitle} onChange={(e) => setNewStoryTitle(e.target.value)} placeholder="新故事名" style={{ ...input, width: '140px' }} />
-        <button style={btn} onClick={() => void createStoryNow()}>+ 故事</button>
-        <button style={btn} onClick={() => onOpenEvents?.()}>管理 05 事件</button>
-        {threads.length === 0 && <button style={btn} disabled={importing} onClick={() => void importLegacy()}>{importing ? '导入中…' : '从既有故事导入'}</button>}
-        <div style={{ flex: 1 }} />
-        {connectMode && <span style={{ fontSize: '10px', color: 'var(--primary-color)' }}>{connectFrom ? '点击目标事件完成连线' : '点击起点事件开始连线'}</span>}
-        <button style={{ ...btn, ...(connectMode ? { borderColor: 'var(--primary-color)', color: 'var(--primary-color)' } : {}) }}
-          onClick={() => { setConnectMode((prev) => !prev); setConnectFrom(null) }}>{connectMode ? '退出连线' : '连线'}</button>
-        <span style={{ ...hint }}>{threads.length} 条线 · {threads.reduce((sum, t) => sum + t.events.length, 0)} 事件 · {edges.length} 连线</span>
+    <div className="slx-page" style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--bg-color)' }}>
+      {/* 极简顶部工具栏，只保留故事选择与视图切换 */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px', borderBottom: '1px solid var(--card-border)' }}>
+        
+        {/* 左侧：只保留故事选择 */}
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <select value={storyId} onChange={(event) => setStoryId(event.target.value)} style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)', fontWeight: 600 }}>
+            {stories.length === 0 && <option value="">暂无故事</option>}
+            {stories.map((story) => <option key={story.id} value={story.id}>{story.title}</option>)}
+          </select>
+        </div>
+
+        {/* 右侧：只保留视图切换 */}
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <div className="slx-modes" style={{ display: 'flex', background: 'rgba(128,128,128,0.1)', borderRadius: '8px', padding: '4px' }}>
+            <button type="button" className={treeMode === 'skeleton' ? 'is-on' : ''} onClick={() => setTreeMode('skeleton')} style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: treeMode === 'skeleton' ? 'var(--bg-color)' : 'transparent', color: treeMode === 'skeleton' ? 'var(--text-main)' : 'var(--text-muted)' }}>骨架图</button>
+            <button type="button" className={treeMode === 'logic' ? 'is-on' : ''} onClick={() => setTreeMode('logic')} style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: treeMode === 'logic' ? 'var(--bg-color)' : 'transparent', color: treeMode === 'logic' ? 'var(--text-main)' : 'var(--text-muted)' }}>逻辑图</button>
+            <button type="button" className={treeMode === 'mindmap' ? 'is-on' : ''} onClick={() => setTreeMode('mindmap')} style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: treeMode === 'mindmap' ? 'var(--bg-color)' : 'transparent', color: treeMode === 'mindmap' ? 'var(--text-main)' : 'var(--text-muted)' }}>思维导图</button>
+            <button type="button" className={treeMode === 'tree' ? 'is-on' : ''} onClick={() => setTreeMode('tree')} style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: treeMode === 'tree' ? 'var(--bg-color)' : 'transparent', color: treeMode === 'tree' ? 'var(--text-main)' : 'var(--text-muted)' }}>树状图</button>
+          </div>
+        </div>
       </div>
 
-      {!storyId ? (
-        <div style={{ ...card, flex: 1, alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '12px' }}>
-          {stories.length === 0 ? '当前世界还没有故事。先创建故事，再从 05 事件库组织剧情。' : '选择一条故事开始编辑。'}
-        </div>
-      ) : (
-        <div style={{ display: 'flex', gap: '10px', flex: 1, minHeight: 0 }}>
-          {/* 左：事件库 */}
-          <div style={{ ...card, width: '266px', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <h3 style={{ margin: 0, fontSize: '13px', color: 'var(--text-main)' }}>事件库</h3>
-              <div style={{ flex: 1 }} />
-              <span style={hint}>{filteredEvents.length}/{events.length}</span>
-            </div>
-            <div style={{ ...hint }}>来自 05 事件管理；拖到中间故事树即可引用。</div>
-            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="搜索事件…" style={input} />
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px' }}>
-              <select value={filterCharacter} onChange={(e) => setFilterCharacter(e.target.value)} style={input}>
-                <option value="">全部人物</option>
-                {characters.map((char) => <option key={char.id} value={char.id}>{char.name}</option>)}
-              </select>
-              <select value={filterLine} onChange={(e) => setFilterLine(e.target.value)} style={input}>
-                <option value="">全部剧情线</option>
-                {storylineOptions.map((line) => <option key={line} value={line}>{line}</option>)}
-              </select>
-              <select value={filterScale} onChange={(e) => setFilterScale(e.target.value)} style={{ ...input, gridColumn: '1 / -1' }}>
-                <option value="">全部层级</option>
-                <option value="宏观">宏观</option>
-                <option value="中观">中观</option>
-                <option value="微观">微观</option>
-              </select>
-            </div>
-            {filteredEvents.length === 0 && <div style={{ ...hint, padding: '8px' }}>没有匹配事件。可在 05 创建新事件。</div>}
-            {filteredEvents.map((event) => (
-              <div key={event.id} draggable data-library-event={event.id}
-                onDragStart={(e) => { e.dataTransfer.setData('application/x-event-id', event.id); e.dataTransfer.effectAllowed = 'copy' }}
-                style={{ padding: '8px', borderRadius: '7px', border: '1px solid var(--card-border)', cursor: 'grab', background: 'rgba(128,128,128,0.04)' }}>
-                <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-main)' }}>{event.name}</div>
-                <div style={{ ...hint, marginTop: '3px' }}>{event.storyline || '未分线'} · {event.scale || '未分层'}{participantLabel(event) ? ` · ${participantLabel(event)}` : ''}</div>
-                {event.description && <div style={{ ...hint, marginTop: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{event.description}</div>}
-              </div>
-            ))}
+      {/* 全宽画布区域 */}
+      <div 
+        className="slx-canvas-wrap" 
+        ref={canvasRef} 
+        style={{ flex: 1, overflow: 'auto', position: 'relative', padding: '24px' }}
+        onClick={clearSelection}
+      >
+        {threads.length === 0 ? (
+          <div className="slx-empty" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)' }}>
+            <strong style={{ fontSize: '18px', marginBottom: '8px', color: 'var(--text-main)' }}>还没有故事线</strong>
+            <span>点击根节点的“+”从事件库生成第一根枝干。</span>
           </div>
-
-          {/* 中：故事树 */}
-          <div style={{ ...card, flex: 1, minWidth: 0, padding: 0, overflow: 'hidden' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '9px 12px', borderBottom: '1px solid var(--card-border)', flexWrap: 'wrap' }}>
-              <h3 style={{ margin: 0, fontSize: '13px', color: 'var(--text-main)' }}>故事树</h3>
-              <input value={newThreadTitle} onChange={(e) => setNewThreadTitle(e.target.value)} placeholder="主线/支线名称，如：韩立成长线" style={{ ...input, flex: 1, minWidth: '150px' }} />
-              <select value={newThreadKind} onChange={(e) => setNewThreadKind(e.target.value)} style={input}>
-                {Object.entries(KIND_LABEL).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-              </select>
-              <select value={newThreadCharacter} onChange={(e) => setNewThreadCharacter(e.target.value)} style={input}>
-                <option value="">不绑定人物</option>
-                {characters.map((char) => <option key={char.id} value={char.id}>{char.name}</option>)}
-              </select>
-              <button style={btn} onClick={() => void createThreadNow()}>+ 故事线</button>
-            </div>
-
-            <div style={{ position: 'relative', overflow: 'auto', flex: 1 }}>
-              {loading && <div style={{ ...hint, padding: '10px' }}>加载故事树…</div>}
-              {threads.length === 0 && !loading && (
-                <div style={{ padding: '50px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '12px', lineHeight: 2 }}>
-                  从一个目标开始：创建「主线」，再把 05 事件拖进来。<br />支线、副本、暗线可以稍后添加。
-                </div>
-              )}
-              {threads.length > 0 && (
-                <div style={{ position: 'relative', width: canvasWidth, height: canvasHeight }}>
-                  <svg width={canvasWidth} height={canvasHeight} style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 2 }}>
-                    {edges.map((edge) => {
-                      const from = edge.from_event_id ? linkPosition(edge.from_thread_id, edge.from_event_id) : { x: laneX(threads.findIndex((t) => t.id === edge.from_thread_id)) + LANE_W - 12, y: HEADER_H / 2 + 4, centerY: HEADER_H / 2 + 4 }
-                      const to = edge.to_event_id ? linkPosition(edge.to_thread_id, edge.to_event_id) : { x: laneX(threads.findIndex((t) => t.id === edge.to_thread_id)) + 12, y: HEADER_H / 2 + 4, centerY: HEADER_H / 2 + 4 }
-                      if (!from || !to) return null
-                      const x1 = from.x + (edge.from_event_id ? LANE_W - 24 : 0)
-                      const y1 = from.centerY
-                      const x2 = to.x
-                      const y2 = to.centerY
-                      const mid = (x1 + x2) / 2
-                      return (
-                        <g key={edge.id}>
-                          <path d={`M ${x1} ${y1} C ${mid} ${y1}, ${mid} ${y2}, ${x2} ${y2}`} fill="none" stroke="var(--primary-color)" strokeWidth="1.4" opacity="0.7" />
-                          <circle cx={x2} cy={y2} r="3" fill="var(--primary-color)" opacity="0.8" />
-                        </g>
-                      )
-                    })}
-                  </svg>
-
-                  {threads.map((thread, threadIndex) => (
-                    <div key={thread.id} data-story-lane={thread.id}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={(e) => handleLaneDrop(e, thread)}
-                      onClick={() => setSelectedThreadId(thread.id)}
-                      style={{
-                        position: 'absolute', left: laneX(threadIndex), top: 8, width: LANE_W, bottom: 8,
-                        border: `1px solid ${selectedThreadId === thread.id ? 'var(--primary-color)' : 'var(--card-border)'}`,
-                        borderRadius: '10px', background: 'rgba(128,128,128,0.035)', zIndex: 1,
-                      }}>
-                      <div style={{ height: HEADER_H, padding: '10px 12px', borderBottom: '1px dashed var(--card-border)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: KIND_COLOR[thread.kind] || 'var(--text-muted)' }} />
-                          <strong style={{ fontSize: '12.5px', color: 'var(--text-main)' }}>{thread.title}</strong>
-                          <span style={{ flex: 1 }} />
-                          <button style={{ ...btn, padding: '1px 4px', fontSize: '9px' }} disabled={threadIndex === 0}
-                            onClick={(e) => { e.stopPropagation(); void moveThread(thread.id, threadIndex - 1) }}>←</button>
-                          <button style={{ ...btn, padding: '1px 4px', fontSize: '9px' }} disabled={threadIndex === threads.length - 1}
-                            onClick={(e) => { e.stopPropagation(); void moveThread(thread.id, threadIndex + 1) }}>→</button>
-                          <span style={{ ...hint }}>{KIND_LABEL[thread.kind] || thread.kind}</span>
-                        </div>
-                        <div style={{ ...hint, marginTop: '4px' }}>{thread.character_name || '未绑定人物'} · {thread.events.length} 事件</div>
-                      </div>
-                      <div style={{ padding: '8px' }}>
-                        {thread.events.map((link, index) => {
-                          const event = events.find((row) => row.id === link.event_id)
-                          const isSelected = selectedLinkId === link.id
-                          const isConnectSource = connectFrom?.linkId === link.id
-                          return (
-                            <div key={link.id} draggable data-story-link={link.id} data-story-event={link.event_id}
-                              onDragStart={(e) => { e.dataTransfer.setData('application/x-link-id', link.id); e.dataTransfer.effectAllowed = 'move' }}
-                              onDragOver={(e) => e.preventDefault()}
-                              onDrop={(e) => handleCardDrop(e, thread, index)}
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setSelectedThreadId(thread.id)
-                                setSelectedLinkId(link.id)
-                                if (connectMode) startConnect(thread, link)
-                              }}
-                              style={{
-                                height: CARD_H, boxSizing: 'border-box', padding: '8px', marginBottom: CARD_GAP,
-                                borderRadius: '8px', cursor: connectMode ? 'crosshair' : 'grab',
-                                border: `1px solid ${isConnectSource ? 'var(--primary-color)' : isSelected ? 'var(--text-main)' : 'var(--card-border)'}`,
-                                background: isSelected || isConnectSource ? 'rgba(128,128,128,0.12)' : 'var(--card-bg)',
-                                display: 'flex', flexDirection: 'column', gap: '4px', overflow: 'hidden',
-                              }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>{index + 1}</span>
-                                <strong style={{ fontSize: '11.5px', color: 'var(--text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{event?.name || link.event_name || '事件'}</strong>
-                              </div>
-                              <div style={{ ...hint, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{event?.description || '暂无说明'}</div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '3px', marginTop: 'auto' }}>
-                                <span style={{ ...hint, fontSize: '9px' }}>{event?.storyline || ''}</span>
-                                <span style={{ flex: 1 }} />
-                                <button style={{ ...btn, padding: '1px 4px', fontSize: '9px' }} onClick={(e) => { e.stopPropagation(); void moveLink(link.id, thread.id, Math.max(0, index - 1)) }}>↑</button>
-                                <button style={{ ...btn, padding: '1px 4px', fontSize: '9px' }} onClick={(e) => { e.stopPropagation(); void moveLink(link.id, thread.id, Math.min(thread.events.length - 1, index + 1)) }}>↓</button>
-                                <button style={{ ...btn, padding: '1px 4px', fontSize: '9px', color: 'var(--danger-color)' }} onClick={(e) => { e.stopPropagation(); void removeLink(link.id) }}>×</button>
-                              </div>
-                            </div>
-                          )
-                        })}
-                        {thread.events.length === 0 && <div style={{ ...hint, textAlign: 'center', padding: '18px 6px', border: '1px dashed var(--card-border)', borderRadius: '8px' }}>拖事件到这里</div>}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* 右：检查器 */}
-          <div style={{ ...card, width: '252px', overflowY: 'auto' }}>
-            <h3 style={{ margin: 0, fontSize: '13px', color: 'var(--text-main)' }}>详情</h3>
-            {selectedEvent ? (
-              <>
-                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-main)' }}>{selectedEvent.name}</div>
-                <div style={hint}>{selectedEvent.storyline || '未分线'} · {selectedEvent.scale || '未分层'} · {selectedEvent.story_time || ''}</div>
-                {selectedEvent.description && <div style={{ fontSize: '11px', color: 'var(--text-main)', lineHeight: 1.7 }}>{selectedEvent.description}</div>}
-                {participantLabel(selectedEvent) && <div style={hint}>人物：{participantLabel(selectedEvent)}</div>}
-                <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
-                  <button style={btn} onClick={() => onOpenEvents?.()}>到 05 编辑</button>
-                  <button style={{ ...btn, color: 'var(--danger-color)' }} onClick={() => selectedLink && void removeLink(selectedLink.id)}>移出故事树</button>
-                </div>
-              </>
-            ) : selectedThread ? (
-              <>
-                {editingThread ? (
-                  <>
-                    <input value={threadTitle} onChange={(e) => setThreadTitle(e.target.value)} style={input} />
-                    <select value={threadKind} onChange={(e) => setThreadKind(e.target.value)} style={input}>
-                      {Object.entries(KIND_LABEL).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-                    </select>
-                    <select value={threadCharacter} onChange={(e) => setThreadCharacter(e.target.value)} style={input}>
-                      <option value="">不绑定人物</option>
-                      {characters.map((char) => <option key={char.id} value={char.id}>{char.name}</option>)}
-                    </select>
-                    <div style={{ display: 'flex', gap: '5px' }}>
-                      <button style={btn} onClick={() => void saveThread()}>保存</button>
-                      <button style={btn} onClick={() => setEditingThread(false)}>取消</button>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-main)' }}>{selectedThread.title}</div>
-                    <div style={hint}>{KIND_LABEL[selectedThread.kind] || selectedThread.kind} · {selectedThread.character_name || '未绑定人物'} · {selectedThread.events.length} 事件</div>
-                    <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
-                      <button style={btn} onClick={() => { setEditingThread(true); setThreadTitle(selectedThread.title); setThreadKind(selectedThread.kind); setThreadCharacter(selectedThread.character_id || '') }}>编辑故事线</button>
-                      <button style={{ ...btn, color: 'var(--danger-color)' }} onClick={() => void deleteThreadNow()}>删除</button>
-                    </div>
-                  </>
-                )}
-              </>
-            ) : (
-              <div style={hint}>点击故事线或事件查看详情。拖拽事件可调整位置或移入其他线。</div>
-            )}
-
-            <div style={{ borderTop: '1px dashed var(--card-border)', paddingTop: '8px', marginTop: '4px' }}>
-              <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '5px' }}>叙事连线</div>
-              {edges.length === 0 && <div style={hint}>点击顶部「连线」，再依次点击起点/目标事件。</div>}
-              {edges.map((edge) => (
-                <div key={edge.id} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', color: 'var(--text-muted)', padding: '4px 0', borderBottom: '1px dashed var(--card-border)' }}>
-                  <span style={{ flex: 1 }}>{edge.from_event_name || edge.from_thread_id.slice(0, 6)} → {edge.to_event_name || edge.to_thread_id.slice(0, 6)}</span>
-                  <button style={{ ...btn, padding: '1px 4px', color: 'var(--danger-color)' }} onClick={() => void removeEdge(edge.id)}>×</button>
-                </div>
+        ) : (
+          <div className="slx-canvas" style={{ width: layout.width, height: layout.height, position: 'relative' }}>
+            <svg className="slx-links" width={layout.width} height={layout.height} aria-hidden="true" style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}>
+              {pathList.map((path) => (
+                <path
+                  key={path.key}
+                  d={path.d}
+                  fill="none"
+                  stroke={path.color}
+                  strokeWidth={path.key.startsWith('root') ? 2.4 : 1.5}
+                  opacity={path.key.startsWith('root') ? 0.9 : 0.58}
+                  strokeLinecap="round"
+                />
               ))}
+            </svg>
+
+            {layout.nodes.map((node) => {
+              const isSelectedThread = selectedThreadId === node.threadId && !selectedLinkId;
+              const isSelectedEvent = selectedLinkId === node.linkId;
+
+              if (node.kind === 'root') {
+                return (
+                  <div
+                    key={node.id}
+                    className="slx-node slx-root"
+                    style={{ left: node.x, top: node.y, width: node.width, height: node.height, position: 'absolute' }}
+                  >
+                    <span className="slx-root-mark">◎</span>
+                    <strong>{node.title}</strong>
+                    <small>{node.sub}</small>
+                    {renderPlus(node)}
+                  </div>
+                )
+              }
+              
+              if (node.kind === 'thread') {
+                return (
+                  <div
+                    key={node.id}
+                    className={`slx-node slx-branch${isSelectedThread ? ' is-selected' : ''}`}
+                    style={{ left: node.x, top: node.y, width: node.width, height: node.height, borderColor: node.color, position: 'absolute' }}
+                    onClick={(e) => { e.stopPropagation(); setSelectedThreadId(node.threadId || ''); setSelectedLinkId(''); }}
+                  >
+                    <span className="slx-branch-bar" style={{ background: node.color }} />
+                    <div>
+                      <strong>{node.title}</strong>
+                      <small>{node.sub}</small>
+                    </div>
+                    <button
+                      type="button"
+                      className="slx-branch-del"
+                      title="删除故事线"
+                      onClick={(event) => { event.stopPropagation(); void deleteThreadNow(node.threadId!) }}
+                    >×</button>
+                    {renderPlus(node)}
+
+                    {/* 悬浮详情气泡：Thread */}
+                    {isSelectedThread && (
+                      <div style={popoverStyle} onClick={e => e.stopPropagation()}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                          <span style={{ fontSize: '12px', color: KIND_COLOR[selectedThread?.kind || 'main'], fontWeight: 600 }}>
+                            {KIND_LABEL[selectedThread?.kind || 'main'] || '主线'}
+                          </span>
+                        </div>
+                        <h4 style={{ margin: '0 0 4px 0', fontSize: '16px', color: 'var(--text-main)' }}>{node.title}</h4>
+                        <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-muted)' }}>{selectedThread?.events.length} 个事件节点</p>
+                        <p style={{ margin: '8px 0 0 0', fontSize: '12px', color: 'var(--text-muted)', opacity: 0.8 }}>
+                          悬停节点使用 + 新增：上方/下方创建同级，侧边创建子级。
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )
+              }
+              
+              return (
+                <div
+                  key={node.id}
+                  className={`slx-node slx-leaf${isSelectedEvent ? ' is-selected' : ''}`}
+                  style={{ left: node.x, top: node.y, width: node.width, height: node.height, borderLeftColor: node.color, position: 'absolute' }}
+                  onClick={(e) => { e.stopPropagation(); setSelectedThreadId(node.threadId || ''); setSelectedLinkId(node.linkId || ''); }}
+                >
+                  <span className="slx-leaf-index">{String((node.index ?? 0) + 1).padStart(2, '0')}</span>
+                  <div>
+                    <strong>{node.title}</strong>
+                    <small>{node.sub}</small>
+                  </div>
+                  {renderPlus(node)}
+
+                  {/* 悬浮详情气泡：Event */}
+                  {isSelectedEvent && selectedEvent && (
+                    <div style={popoverStyle} onClick={e => e.stopPropagation()}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <span style={{ fontSize: '12px', color: KIND_COLOR[selectedThread?.kind || 'main'], fontWeight: 600 }}>
+                          {KIND_LABEL[selectedThread?.kind || 'main'] || '主线'} · 节点 {selectedIndex >= 0 ? selectedIndex + 1 : '—'}
+                        </span>
+                        <button onClick={(e) => { e.stopPropagation(); void detachEvent(selectedLink!.id) }} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '12px' }}>移除</button>
+                      </div>
+                      <h4 style={{ margin: '0 0 4px 0', fontSize: '16px', color: 'var(--text-main)' }}>{selectedEvent.name}</h4>
+                      <p style={{ margin: '0 0 8px 0', fontSize: '12px', color: 'var(--text-muted)' }}>{selectedEvent.storyline || '未分类'} · {selectedEvent.scale || '未分层'}</p>
+                      <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-main)', lineHeight: 1.5 }}>{selectedEvent.description || '暂无描述'}</p>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* 选择事件弹窗 */}
+      {picker && (
+        <div className="slx-picker-overlay" role="dialog" aria-modal="true" aria-label="选择事件" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setPicker(null)}>
+          <div className="slx-picker" onClick={e => e.stopPropagation()} style={{ width: '500px', background: 'var(--bg-color)', borderRadius: '12px', border: '1px solid var(--card-border)', display: 'flex', flexDirection: 'column', maxHeight: '80vh' }}>
+            <header className="slx-picker-head" style={{ padding: '16px 20px', borderBottom: '1px solid var(--card-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{picker.position === 'above' ? '上方新增' : picker.position === 'below' ? '下方新增' : '侧边新增'}</span>
+                <strong style={{ fontSize: '18px', color: 'var(--text-main)' }}>选择事件</strong>
+                <small style={{ fontSize: '12px', color: 'var(--text-muted)' }}>目标：{picker.node.title} · {picker.position === 'side' ? '创建子级' : '创建同级'}</small>
+              </div>
+              <button type="button" onClick={() => setPicker(null)} aria-label="关闭" style={{ background: 'transparent', border: 'none', fontSize: '24px', color: 'var(--text-muted)', cursor: 'pointer' }}>×</button>
+            </header>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--card-border)' }}>
+              <input
+                className="slx-picker-search"
+                value={pickerQuery}
+                onChange={(event) => setPickerQuery(event.target.value)}
+                placeholder="搜索事件名称、故事线…"
+                autoFocus
+                style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)' }}
+              />
             </div>
-            {log && <div style={{ fontSize: '10px', color: log.startsWith('❌') ? 'var(--danger-color)' : 'var(--text-muted)', lineHeight: 1.6 }}>{log}</div>}
+            <div className="slx-picker-list" style={{ padding: '8px', overflowY: 'auto', flex: 1 }}>
+              {pickerEvents.map((event) => (
+                <button type="button" key={event.id} className="slx-picker-event" onClick={() => void applyPick(event)} style={{ width: '100%', textAlign: 'left', padding: '12px', border: 'none', background: 'transparent', borderBottom: '1px solid var(--card-border)', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <strong style={{ fontSize: '14px', color: 'var(--text-main)' }}>{event.name}</strong>
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{event.storyline || '未分类'}{event.description ? ` · ${event.description.slice(0, 48)}` : ''}</span>
+                </button>
+              ))}
+              {pickerEvents.length === 0 && <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)' }}>没有匹配事件</div>}
+            </div>
           </div>
         </div>
       )}
+
+      {busy && <div className="slx-busy" style={{ position: 'fixed', bottom: '24px', right: '24px', background: 'var(--primary-color)', color: '#fff', padding: '8px 16px', borderRadius: '8px', zIndex: 1000 }}>同步中…</div>}
     </div>
   )
 }

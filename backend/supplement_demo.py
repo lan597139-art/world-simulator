@@ -79,7 +79,7 @@ def seed_supplement_demo(db: Session) -> int:
     ).first()
     if not event:
         return 0
-    from multipath import create_branch
+    from multipath import create_branch_core
     created = 0
     for spec in DEMOS:
         branch = db.query(models.SimulationBranch).filter(
@@ -88,10 +88,10 @@ def seed_supplement_demo(db: Session) -> int:
             models.SimulationBranch.name == spec["branch"],
         ).first()
         if not branch:
-            row = create_branch({
+            row = create_branch_core(db, {
                 "root_event_id": event.id, "name": spec["branch"],
                 "note": "补充整改演示：同一事件的分支沙盒差异",
-            }, db)
+            })
             branch = db.query(models.SimulationBranch).filter(models.SimulationBranch.id == row["id"]).first()
             created += 1
         scenario = db.query(models.EventSandboxScenario).filter(

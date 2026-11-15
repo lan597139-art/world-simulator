@@ -55,6 +55,7 @@ def _node_row(db: Session, row: models.StoryTreeNode) -> dict:
         "order_index": row.order_index or 0,
         "collapsed": bool(row.collapsed),
         "note": row.note or "",
+        "meta": row.meta or {},
         "created_at": row.created_at,
         "updated_at": row.updated_at,
     }
@@ -203,6 +204,7 @@ def create_node(story_id: str, payload: dict, db: Session = Depends(get_db)):
         node_status=status,
         order_index=int(payload.get("order_index") if payload.get("order_index") is not None else siblings),
         note=str(payload.get("note") or "")[:1000],
+        meta=payload.get("meta") if isinstance(payload.get("meta"), dict) else {},
     )
     db.add(row)
     db.commit()
@@ -260,6 +262,8 @@ def update_node(node_id: str, payload: dict, db: Session = Depends(get_db)):
         row.collapsed = bool(payload.get("collapsed"))
     if "order_index" in payload:
         row.order_index = int(payload.get("order_index") or 0)
+    if "meta" in payload and isinstance(payload.get("meta"), dict):
+        row.meta = {**(row.meta or {}), **payload["meta"]}
     row.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(row)

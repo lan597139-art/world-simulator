@@ -3,6 +3,7 @@ import { API_ORIGIN } from '../api/config'
 import * as storyApi from '../api/storyline'
 import * as treeApi from '../api/storyTree'
 import * as threadApi from '../api/storyThreads'
+import '../styles/product-workspace.css'
 
 type EventLite = {
   id: string; name: string; description?: string; story_time?: string
@@ -259,42 +260,37 @@ export default function StorylinePage({ worldId, onOpenEvents }: { worldId?: str
       const filled = Boolean(node.event_id)
       const selected = node.id === selectedNodeId
       return (
-        <div key={node.id} style={{ marginLeft: depth ? 18 : 0, marginTop: 6 }}>
+        <div key={node.id} className={`st-node-wrap${depth ? ' is-child' : ''}`}>
           <div
             draggable={false}
             onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy' }}
             onDrop={(e) => { e.preventDefault(); e.stopPropagation(); const eventId = e.dataTransfer.getData('text/ws-event'); if (eventId) void dropEvent(threadId, eventId, node.id) }}
             onClick={() => { setSelectedNodeId(node.id); setSelectedBranchId(threadId); setSelectedEventId(node.event_id || '') }}
-            style={{
-              ...card, padding: '9px 10px', cursor: 'pointer', position: 'relative',
-              borderStyle: filled ? 'solid' : 'dashed',
-              borderColor: selected ? 'var(--primary-color)' : filled ? 'var(--card-border)' : '#b9883e',
-              background: selected ? 'color-mix(in srgb, var(--primary-color) 12%, var(--card-bg))'
-                : filled ? 'var(--card-bg)' : 'color-mix(in srgb, #b9883e 9%, var(--card-bg))',
-            }}
+            className={`st-node${filled ? ' is-filled' : ' is-pending'}${selected ? ' is-selected' : ''}`}
             title={filled ? node.event_name : '待填充位置：点击后从右侧选事件，或直接拖事件进来'}
           >
-            <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 9, padding: '1px 5px', borderRadius: 10, background: filled ? 'rgba(128,128,128,.15)' : 'rgba(185,136,62,.18)', color: filled ? 'var(--text-muted)' : '#8a6429' }}>
-                {filled ? '事件叶' : '待填充'}
-              </span>
-              {node.event_polarity && <span style={tiny}>{node.event_polarity}</span>}
-              <strong style={{ fontSize: 11.5, color: 'var(--text-main)' }}>{filled ? (node.event_name || node.title) : (node.title || '待填充事件')}</strong>
-              <span style={{ flex: 1 }} />
-              <button
-                type="button"
-                title="在该事件叶下新增延伸位置"
-                onClick={(e) => { e.stopPropagation(); void addChildNode(node) }}
-                style={{ ...btn, padding: '0 5px', fontSize: 11 }}
-              >＋</button>
-            </div>
-            {filled && node.event_description && <div style={{ ...tiny, marginTop: 4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{node.event_description}</div>}
-            {!filled && <div style={{ ...tiny, marginTop: 4 }}>拖入 05 事件，或点击后在右侧选择。之后仍可编辑。</div>}
-            {nodeChildren(threadId, node.id).length > 0 && (
-              <div style={{ marginTop: 6, borderLeft: '1px dashed var(--card-border)', paddingLeft: 8 }}>
-                {renderNodes(threadId, node.id, depth + 1)}
+            <i className="st-node-dot" aria-hidden="true" />
+            <div className="st-node-body">
+              <div className="st-node-line">
+                <strong>{filled ? (node.event_name || node.title) : (node.title || '待填充事件')}</strong>
+                {node.event_polarity && <span className="st-node-polarity">{node.event_polarity}</span>}
+                <span className="st-node-badge">{filled ? '事件叶' : '待填充'}</span>
+                <span className="st-node-spacer" />
+                <button
+                  type="button"
+                  className="st-node-add"
+                  title="在该事件叶下新增延伸位置"
+                  onClick={(e) => { e.stopPropagation(); void addChildNode(node) }}
+                >＋</button>
               </div>
-            )}
+              {filled && node.event_description && <div className="st-node-desc">{node.event_description}</div>}
+              {!filled && <div className="st-node-desc">拖入 05 事件，或点击后在右侧选择。之后仍可编辑。</div>}
+              {nodeChildren(threadId, node.id).length > 0 && (
+                <div className="st-node-children">
+                  {renderNodes(threadId, node.id, depth + 1)}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )
@@ -306,49 +302,37 @@ export default function StorylinePage({ worldId, onOpenEvents }: { worldId?: str
     const children = childBranches(branch.id)
     const isTrunk = branch.kind === 'main'
     return (
-      <div key={branch.id} style={{ marginLeft: depth ? 26 : 0, marginTop: depth ? 8 : 14, position: 'relative' }}>
-        {depth > 0 && (
-          <div aria-hidden style={{ position: 'absolute', left: -16, top: 16, width: 14, height: 1, background: 'var(--card-border)' }} />
-        )}
+      <div key={branch.id} className={`st-branch${depth ? ' is-child' : ''}${isTrunk ? ' is-trunk' : ''}`}>
         <div
           onClick={() => { setSelectedBranchId(branch.id); setSelectedNodeId(''); setSelectedEventId('') }}
-          style={{
-            ...card, padding: '10px 12px', cursor: 'pointer',
-            borderLeft: `4px solid ${KIND_COLOR[branch.kind] || 'var(--card-border)'}`,
-            background: selectedBranchId === branch.id ? 'color-mix(in srgb, var(--primary-color) 10%, var(--card-bg))' : 'var(--card-bg)',
-            boxShadow: isTrunk ? '0 4px 18px rgba(0,0,0,.08)' : 'none',
-          }}
+          className={`st-branch-head${selectedBranchId === branch.id ? ' is-selected' : ''}`}
+          style={{ borderLeftColor: KIND_COLOR[branch.kind] || 'var(--card-border)' }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); toggleBranch(branch.id) }}
-              style={{ ...btn, padding: '0 5px', fontSize: 12, lineHeight: '18px' }}
-              title={collapsed ? '展开' : '收起'}
-            >{collapsed ? '▸' : '▾'}</button>
-            <span style={{ fontSize: 9, color: '#fff', background: KIND_COLOR[branch.kind] || '#777', borderRadius: 10, padding: '2px 7px' }}>
-              {KIND_LABEL[branch.kind] || branch.kind}
-            </span>
-            <strong style={{ fontSize: isTrunk ? 15 : 13, color: 'var(--text-main)' }}>{branch.title}</strong>
-            {branch.character_name && <span style={{ ...tiny, border: '1px solid var(--card-border)', borderRadius: 9, padding: '0 5px' }}>归属：{branch.character_name}</span>}
-            <span style={tiny}>{nodes.length} 个事件叶 · {children.length} 个子枝</span>
-            <span style={{ flex: 1 }} />
-            <button type="button" onClick={(e) => { e.stopPropagation(); setSelectedBranchId(branch.id); openBranchForm('create', branch.id) }} style={btn}>＋子枝</button>
-            <button type="button" onClick={(e) => { e.stopPropagation(); void addPending(branch.id) }} style={btn}>＋待填充位置</button>
-          </div>
-          {isTrunk && <div style={{ ...tiny, marginTop: 5 }}>树干：这条线是故事主线；其他颜色从树干或彼此分叉。</div>}
+          <button
+            type="button"
+            className="st-twist"
+            onClick={(e) => { e.stopPropagation(); toggleBranch(branch.id) }}
+            title={collapsed ? '展开' : '收起'}
+          >{collapsed ? '▸' : '▾'}</button>
+          <span className="st-branch-kind" style={{ background: KIND_COLOR[branch.kind] || '#777' }}>
+            {KIND_LABEL[branch.kind] || branch.kind}
+          </span>
+          <strong className="st-branch-title">{branch.title}</strong>
+          {branch.character_name && <span className="st-branch-owner">归属：{branch.character_name}</span>}
+          <span className="st-branch-stats">{nodes.length} 个事件叶 · {children.length} 个子枝</span>
+          <span className="st-node-spacer" />
+          <button type="button" className="st-branch-action" onClick={(e) => { e.stopPropagation(); setSelectedBranchId(branch.id); openBranchForm('create', branch.id) }}>＋子枝</button>
+          <button type="button" className="st-branch-action" onClick={(e) => { e.stopPropagation(); void addPending(branch.id) }}>＋待填充</button>
         </div>
         {!collapsed && (
-          <div style={{ paddingLeft: 14, borderLeft: `1px solid ${isTrunk ? 'var(--primary-color)' : 'var(--card-border)'}`, marginLeft: 10 }}>
+          <div className="st-branch-body">
             <div
+              className="st-branch-drop"
               onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy' }}
               onDrop={(e) => { e.preventDefault(); const eventId = e.dataTransfer.getData('text/ws-event'); if (eventId) void dropEvent(branch.id, eventId) }}
-              style={{ display: 'flex', flexDirection: 'column', gap: 2, minHeight: 34 }}
             >
               {nodes.length === 0 ? (
-                <div style={{ ...tiny, border: '1px dashed var(--card-border)', borderRadius: 8, padding: 10 }}>
-                  这里还没有事件叶。从右侧拖一个 05 事件进来，或先加一个待填充位置。
-                </div>
+                <div className="st-empty-branch">这里还没有事件叶。从右侧拖一个 05 事件进来，或先加一个待填充位置。</div>
               ) : renderNodes(branch.id, null)}
             </div>
             {children.map((child) => renderBranch(child, depth + 1))}

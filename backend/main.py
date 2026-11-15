@@ -1,14 +1,16 @@
 from datetime import datetime
+import os
 from typing import List, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 
 import models
 import schemas
 from ai_engine import reset_request_ai_config, set_request_ai_config
-from database import SessionLocal, engine, get_db
+from database import IS_SQLITE, SessionLocal, engine, get_db
 from migrations.runner import run_migrations
 
 # 领域路由
@@ -49,6 +51,9 @@ from simulation import router as simulation_router
 from multipath import router as multipath_router
 from assistant import router as assistant_router
 from writing import router as writing_router
+from writing_volumes import router as writing_volumes_router
+from writing_foreshadows import router as writing_foreshadows_router
+from writing_compliance import router as writing_compliance_router
 from archive import router as archive_router
 from trash import router as trash_router
 from snapshots import router as snapshots_router
@@ -59,22 +64,28 @@ from story_tree_seed import seed_official_tree
 from supplement_demo import seed_supplement_demo
 from storyline import router as storyline_router
 from chat import router as chat_router
+from creator_assets import router as creator_assets_router
+from storage import upload_root
 
-# 建表（新表）+ 增量迁移（已有表加列、数据回填）
+# SQLite 保留增量迁移；PostgreSQL 新库直接由模型建表，避免执行 SQLite 专用 DDL。
 models.Base.metadata.create_all(bind=engine)
-run_migrations()
+if IS_SQLITE:
+    run_migrations()
 
 app = FastAPI(title="世界模拟器 API", version="1.1.0")
+app.mount("/uploads", StaticFiles(directory=str(upload_root())), name="uploads")
 
+_default_origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "https://world-simulator-elht.vercel.app",
+]
+_env_origins = [item.strip() for item in os.getenv("WS_CORS_ORIGINS", "").split(",") if item.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "https://world-simulator-elht.vercel.app",
-    ],
+    allow_origins=list(dict.fromkeys(_default_origins + _env_origins)),
     # Vercel 预览域名每天变化，允许本项目所有预览部署。
-    allow_origin_regex=r"https://world-simulator-.*\.vercel\.app",
+    allow_origin_regex=os.getenv("WS_CORS_ORIGIN_REGEX", r"https://world-simulator-.*\.vercel\.app"),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -130,6 +141,9 @@ for router in (
     information_sources_router,
     auth_router,
     writing_router,
+    writing_volumes_router,
+    writing_foreshadows_router,
+    writing_compliance_router,
     nodes_router,
     geography_router,
     orgs_router,
@@ -150,6 +164,7 @@ for router in (
     assistant_router,
     storyline_router,
     chat_router,
+    creator_assets_router,
     settings_router,
     billing_router,
     community_social_router,

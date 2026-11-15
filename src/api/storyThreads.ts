@@ -15,7 +15,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export interface ThreadEvent { id: string; event_id: string; event_name: string; order_index: number; role: string }
 export interface StoryThread {
   id: string; story_id: string; character_id?: string | null; character_name: string;
-  parent_thread_id?: string | null; kind: string; title: string; order_index: number; status: string;
+  parent_thread_id?: string | null; kind: string; title: string; order_index: number; status: string; meta?: any;
   events: ThreadEvent[];
 }
 export interface ThreadEdge {
@@ -25,7 +25,7 @@ export interface ThreadEdge {
 }
 
 export const listThreads = (storyId: string) => request<StoryThread[]>(`/stories/${storyId}/threads`)
-export const createThread = (storyId: string, payload: { title: string; kind?: string; character_id?: string; parent_thread_id?: string }) =>
+export const createThread = (storyId: string, payload: { title: string; kind?: string; character_id?: string; parent_thread_id?: string; meta?: any; note?: string }) =>
   request<StoryThread>(`/stories/${storyId}/threads`, { method: 'POST', body: JSON.stringify(payload) })
 export const deleteThread = (threadId: string) =>
   request<{ status: string }>(`/story-threads/${threadId}`, { method: 'DELETE' })
@@ -37,7 +37,7 @@ export const listThreadEdges = (storyId: string) => request<ThreadEdge[]>(`/stor
 export const createThreadEdge = (storyId: string, payload: { from_thread_id: string; to_thread_id: string; edge_type?: string; from_event_id?: string; to_event_id?: string; note?: string }) =>
   request<ThreadEdge>(`/stories/${storyId}/thread-edges`, { method: 'POST', body: JSON.stringify(payload) })
 
-export const updateThread = (threadId: string, payload: { title?: string; kind?: string; character_id?: string | null; parent_thread_id?: string | null; order_index?: number }) =>
+export const updateThread = (threadId: string, payload: { title?: string; kind?: string; character_id?: string | null; parent_thread_id?: string | null; order_index?: number; meta?: any }) =>
   request<StoryThread>(`/story-threads/${threadId}`, { method: 'PATCH', body: JSON.stringify(payload) })
 export const updateThreadEvent = (linkId: string, payload: { thread_id?: string; order_index?: number; role?: string; note?: string }) =>
   request<{ status: string; thread: StoryThread; link_id: string }>(`/story-thread-events/${linkId}`, { method: 'PATCH', body: JSON.stringify(payload) })

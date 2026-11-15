@@ -35,6 +35,8 @@ import {
   type SettingsPreferences,
   type SettingsPrivacy,
 } from '../api/settings'
+import InviteCodesPanel from '../components/settings/InviteCodesPanel'
+import LocalWorkspacePanel from '../components/settings/LocalWorkspacePanel'
 import '../styles/settings.css'
 import { applyExperience } from '../utils/experience'
 
@@ -150,11 +152,25 @@ export default function SettingsPage({
   const [data, setData] = useState<SettingsData | null>(null)
   const [sessions, setSessions] = useState<AuthSessionRow[]>([])
   const [about, setAbout] = useState<Awaited<ReturnType<typeof getSettingsAbout>> | null>(null)
-  const [profileDraft, setProfileDraft] = useState({ display_name: '', bio: '', avatar: '' })
+  const [profileDraft, setProfileDraft] = useState({ display_name: '', bio: '', avatar: '', avatar_url: '' })
+  const [avatarUploading, setAvatarUploading] = useState(false)
+  const [skin, setSkin] = useState(() => localStorage.getItem('ws.ui.skin') || 'default')
+  const [glass, setGlass] = useState(() => localStorage.getItem('ws.ui.glass') || 'medium')
   const [passwords, setPasswords] = useState({ current_password: '', new_password: '', confirm: '' })
   const [busy, setBusy] = useState('')
   const [error, setError] = useState('')
   const [flash, setFlash] = useState('')
+
+  useEffect(() => {
+    document.documentElement.dataset.skin = skin
+    localStorage.setItem('ws.ui.skin', skin)
+  }, [skin])
+
+  useEffect(() => {
+    if (glass === 'medium') delete document.documentElement.dataset.glass
+    else document.documentElement.dataset.glass = glass
+    localStorage.setItem('ws.ui.glass', glass)
+  }, [glass])
 
   const load = async () => {
     setError('')
@@ -169,6 +185,7 @@ export default function SettingsPage({
         display_name: next.profile.display_name || '',
         bio: next.profile.bio || '',
         avatar: next.profile.avatar || '',
+        avatar_url: next.profile.avatar_url || '',
       })
       applyExperience(next.preferences)
     } catch (err: any) {
@@ -222,6 +239,17 @@ export default function SettingsPage({
       setFlash('个人资料已更新')
     } catch (err: any) { setError(String(err?.message || err)) }
     finally { setBusy('') }
+  }
+
+  const uploadAvatar = async (file: File | null) => {
+    if (!file) return
+    setAvatarUploading(true); setError(''); setFlash('')
+    try {
+      const uploaded = await uploadMedia(file)
+      setProfileDraft((current) => ({ ...current, avatar_url: uploaded.file_url }))
+      setFlash('头像已上传，点击“保存资料”后生效')
+    } catch (err: any) { setError(String(err?.message || err)) }
+    finally { setAvatarUploading(false) }
   }
 
   const submitPassword = async () => {
@@ -307,7 +335,11 @@ export default function SettingsPage({
           <p>管理你的公开身份、账户安全、隐私边界与社区体验。设置只影响当前账号。</p>
         </div>
         <div className="settings-hero-user">
-          <span className="settings-hero-avatar">{data.profile.avatar || (data.profile.display_name || data.profile.username).slice(0, 1)}</span>
+          <span className="settings-hero-avatar">
+            {data.profile.avatar_url
+              ? <img src={resolveMediaUrl(data.profile.avatar_url)} alt="" />
+              : data.profile.avatar || (data.profile.display_name || data.profile.username).slice(0, 1)}
+          </span>
           <div>
             <strong>{data.profile.display_name || data.profile.username}</strong>
             <span>@{data.profile.username}{data.profile.is_owner ? ' · 开发者' : ''}</span>
@@ -340,11 +372,22 @@ export default function SettingsPage({
           {section === 'profile' && (
             <Panel title="个人资料与偏好" subtitle="这些信息会显示在用户与身份中心、社区讨论和好友列表中。" aside={<button type="button" style={primary} disabled={busy === 'profile'} onClick={() => void saveProfile()}><Save size={14} /> {busy === 'profile' ? '保存中…' : '保存资料'}</button>}>
               <div className="settings-avatar-row">
-                <span className="settings-avatar-preview">{profileDraft.avatar || (profileDraft.display_name || data.profile.username).slice(0, 1)}</span>
+                <span className="settings-avatar-preview">
+                  {profileDraft.avatar_url
+                    ? <img src={resolveMediaUrl(profileDraft.avatar_url)} alt="" />
+                    : profileDraft.avatar || (profileDraft.display_name || data.profile.username).slice(0, 1)}
+                </span>
                 <div style={{ flex: 1 }}>
-                  <Field label="头像符号" hint="可用一个 emoji 或字符，例如 ☁、A、🌙。">
+                  <Field label="头像符号" hint="可用一个 emoji 或字符；也可以上传图片作为头像。">
                     <input style={input} maxLength={16} value={profileDraft.avatar} onChange={(e) => setProfileDraft((p) => ({ ...p, avatar: e.target.value }))} />
                   </Field>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
+                    <label style={{ ...ghost, cursor: avatarUploading ? 'wait' : 'pointer' }}>
+                      {avatarUploading ? '上传中…' : '上传头像图片'}
+                      <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden disabled={avatarUploading} onChange={(e) => void uploadAvatar(e.target.files?.[0] || null)} />
+                    </label>
+                    {profileDraft.avatar_url && <button type="button" style={dangerGhost} onClick={() => setProfileDraft((p) => ({ ...p, avatar_url: '' }))}>移除图片</button>}
+                  </div>
                 </div>
               </div>
               <div className="settings-two-col">
@@ -381,6 +424,10 @@ export default function SettingsPage({
                 </div>
                 <button type="button" style={primary} disabled={busy === 'password'} onClick={() => void submitPassword()}><KeyRound size={14} /> {busy === 'password' ? '更新中…' : '更新密码'}</button>
               </Panel>
+
+              <LocalWorkspacePanel />
+
+              {data.profile.is_owner && <InviteCodesPanel />}
 
               <Panel title="登录会话" subtitle="只显示当前账号的会话；撤销后该设备需要重新登录。" aside={<button type="button" style={ghost} onClick={() => void load()}><RefreshCw size={13} /> 刷新</button>}>
                 <div className="settings-session-list">
@@ -463,7 +510,33 @@ export default function SettingsPage({
                 <Toggle checked={data.preferences.show_tips} onChange={(v) => preference('show_tips', v)} title="显示操作提示" desc="在复杂编辑器中显示简短说明与引导。" />
                 <Toggle checked={data.preferences.auto_save} onChange={(v) => preference('auto_save', v)} title="自动保存草稿" desc="在写作与编辑页面自动保存本地草稿。" />
               </div>
-              <div className="settings-inline-note"><SlidersHorizontal size={14} /> 主题与密度会应用到整个工作区；正文大小主要影响阅读型页面。</div>
+              <div className="settings-two-col" style={{ marginTop: 14 }}>
+                <Field label="视觉皮肤" hint="只改变环境光与玻璃折射，不改变内容结构。">
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {[
+                      ['default', '极简'], ['aurora', '极光'], ['sand', '暖砂'], ['mono', '单色'],
+                    ].map(([value, label]) => (
+                      <button key={value} type="button" onClick={() => setSkin(value)}
+                        style={{ ...ghost, borderColor: skin === value ? 'var(--text-main)' : 'var(--card-border)', background: skin === value ? 'var(--text-main)' : 'transparent', color: skin === value ? 'var(--bg-color)' : 'var(--text-main)' }}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </Field>
+                <Field label="玻璃强度" hint="低性能设备建议使用“低”或“实色”。">
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {[
+                      ['low', '低'], ['medium', '标准'], ['high', '高'], ['solid', '实色'],
+                    ].map(([value, label]) => (
+                      <button key={value} type="button" onClick={() => setGlass(value)}
+                        style={{ ...ghost, borderColor: glass === value ? 'var(--text-main)' : 'var(--card-border)', background: glass === value ? 'var(--text-main)' : 'transparent', color: glass === value ? 'var(--bg-color)' : 'var(--text-main)' }}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </Field>
+              </div>
+              <div className="settings-inline-note"><SlidersHorizontal size={14} /> 主题、皮肤与玻璃强度会应用到整个工作区；正文大小主要影响阅读型页面。</div>
             </Panel>
           )}
 

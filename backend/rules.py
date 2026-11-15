@@ -2,12 +2,13 @@
 
 from typing import Optional
 
-from fastapi import APIRouter, Body, Depends
+from fastapi import APIRouter, Body, Depends, Request
 from sqlalchemy.orm import Session
 
 import models
 from common import fail, get_or_404, get_world, record_history, resolve_entity, utcnow
 from database import get_db
+import access
 
 router = APIRouter()
 
@@ -103,8 +104,8 @@ def applicable_rules(
 
 
 @router.post("/api/worlds/{world_id}/rules")
-def create_rule(world_id: str, payload: dict = Body(...), db: Session = Depends(get_db)):
-    get_world(db, world_id)
+def create_rule(world_id: str, payload: dict, request: Request, db: Session = Depends(get_db)):
+    access.assert_world_access(db, world_id, request, write=True)
     name = (payload.get("name") or "").strip()
     if not name:
         fail(422, "VALIDATION_ERROR", "规则名称不能为空")

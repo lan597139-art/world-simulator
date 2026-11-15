@@ -8,7 +8,7 @@ export type TreeNode = {
   id: string; story_id: string; thread_id: string; parent_node_id?: string | null
   event_id?: string | null; event_name?: string; event_description?: string
   event_polarity?: string; event_storyline?: string; title: string
-  node_status: 'filled' | 'pending' | 'new'; order_index: number; collapsed: boolean; note?: string
+  node_status: 'filled' | 'pending' | 'new'; order_index: number; collapsed: boolean; note?: string; meta?: any
 }
 export type TreeEdge = {
   id: string; from_thread_id: string; from_event_id?: string | null

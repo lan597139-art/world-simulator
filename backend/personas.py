@@ -10,7 +10,7 @@ import json
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 import models
@@ -19,24 +19,27 @@ from ai_engine import ai_config_status, ai_error_message, get_client, get_model
 from database import get_db
 
 router = APIRouter()
-OWNER = "local"
 
 
-def _persona(db: Session, persona_id: str) -> models.PersonalPersona:
+def _owner(request: Request) -> str:
+    return str(getattr(request.state, "user_id", None) or "local")
+
+
+def _persona(db: Session, persona_id: str, owner: str) -> models.PersonalPersona:
     row = db.query(models.PersonalPersona).filter(
         models.PersonalPersona.id == persona_id,
-        models.PersonalPersona.owner_user_id == OWNER,
+        models.PersonalPersona.owner_user_id == owner,
     ).first()
     if not row:
         raise HTTPException(status_code=404, detail="个人 AI 人格不存在")
     return row
 
 
-def _thread(db: Session, persona_id: str, thread_id: str) -> models.PersonaThread:
+def _thread(db: Session, persona_id: str, thread_id: str, owner: str) -> models.PersonaThread:
     row = db.query(models.PersonaThread).filter(
         models.PersonaThread.id == thread_id,
         models.PersonaThread.persona_id == persona_id,
-        models.PersonaThread.owner_user_id == OWNER,
+        models.PersonaThread.owner_user_id == owner,
     ).first()
     if not row:
         raise HTTPException(status_code=404, detail="人格会话不存在")
@@ -88,13 +91,13 @@ def _clean_persona(payload: dict) -> dict:
 
 
 @router.get("/api/personas")
-def list_personas(product: str = "companion", db: Session = Depends(get_db)):
+def list_personas(request: Request, product: str = "companion", db: Session = Depends(get_db)):
     try:
         pc.require_module(product, "personas")
     except (ValueError, PermissionError) as exc:
         raise HTTPException(status_code=403, detail=str(exc)) from exc
     rows = db.query(models.PersonalPersona).filter(
-        models.PersonalPersona.owner_user_id == OWNER,
+        models.PersonalPersona.owner_user_id == _owner(request),
         models.PersonalPersona.product_key == product,
         models.PersonalPersona.status != "archived",
     ).order_by(models.PersonalPersona.created_at.asc()).all()
@@ -102,7 +105,7 @@ def list_personas(product: str = "companion", db: Session = Depends(get_db)):
 
 
 @router.post("/api/personas")
-def create_persona(payload: dict, db: Session = Depends(get_db)):
+def create_persona(payload: dict, request: Request, db: Session = Depends(get_db)):
     product = str(payload.get("product_key") or "companion").strip().lower()
     try:
         pc.require_module(product, "personas")
@@ -111,7 +114,7 @@ def create_persona(payload: dict, db: Session = Depends(get_db)):
     clean = _clean_persona(payload)
     if not clean.get("name"):
         raise HTTPException(status_code=422, detail="人格名称不能为空")
-    row = models.PersonalPersona(owner_user_id=OWNER, product_key=product, **clean)
+    row = models.PersonalPersona(owner_user_id=_owner(request), product_key=product, **clean)
     db.add(row)
     db.commit()
     db.refresh(row)
@@ -119,8 +122,8 @@ def create_persona(payload: dict, db: Session = Depends(get_db)):
 
 
 @router.patch("/api/personas/{persona_id}")
-def update_persona(persona_id: str, payload: dict, db: Session = Depends(get_db)):
-    row = _persona(db, persona_id)
+def update_persona(persona_id: str, payload: dict, request: Request, db: Session = Depends(get_db)):
+    row = _persona(db, persona_id, _owner(request))
     for key, value in _clean_persona(payload).items():
         setattr(row, key, value)
     row.updated_at = datetime.utcnow()
@@ -130,8 +133,8 @@ def update_persona(persona_id: str, payload: dict, db: Session = Depends(get_db)
 
 
 @router.delete("/api/personas/{persona_id}")
-def delete_persona(persona_id: str, db: Session = Depends(get_db)):
-    row = _persona(db, persona_id)
+def delete_persona(persona_id: str, request: Request, db: Session = Depends(get_db)):
+    row = _persona(db, persona_id, _owner(request))
     db.query(models.PersonaMemory).filter(models.PersonaMemory.persona_id == row.id).delete(synchronize_session=False)
     threads = db.query(models.PersonaThread).filter(models.PersonaThread.persona_id == row.id).all()
     for thread in threads:
@@ -143,8 +146,8 @@ def delete_persona(persona_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/api/personas/{persona_id}/threads")
-def list_threads(persona_id: str, db: Session = Depends(get_db)):
-    _persona(db, persona_id)
+def list_threads(persona_id: str, request: Request, db: Session = Depends(get_db)):
+    _persona(db, persona_id, _owner(request))
     rows = db.query(models.PersonaThread).filter(
         models.PersonaThread.persona_id == persona_id,
         models.PersonaThread.status != "archived",
@@ -157,10 +160,10 @@ def list_threads(persona_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/api/personas/{persona_id}/threads")
-def create_thread(persona_id: str, payload: Optional[dict] = None, db: Session = Depends(get_db)):
-    _persona(db, persona_id)
+def create_thread(persona_id: str, request: Request, payload: Optional[dict] = None, db: Session = Depends(get_db)):
+    _persona(db, persona_id, _owner(request))
     row = models.PersonaThread(
-        persona_id=persona_id, owner_user_id=OWNER,
+        persona_id=persona_id, owner_user_id=_owner(request),
         title=str((payload or {}).get("title") or "新对话")[:120],
     )
     db.add(row); db.commit(); db.refresh(row)
@@ -168,18 +171,18 @@ def create_thread(persona_id: str, payload: Optional[dict] = None, db: Session =
 
 
 @router.delete("/api/personas/{persona_id}/threads/{thread_id}")
-def delete_thread(persona_id: str, thread_id: str, db: Session = Depends(get_db)):
-    _persona(db, persona_id)
-    row = _thread(db, persona_id, thread_id)
+def delete_thread(persona_id: str, thread_id: str, request: Request, db: Session = Depends(get_db)):
+    _persona(db, persona_id, _owner(request))
+    row = _thread(db, persona_id, thread_id, _owner(request))
     db.query(models.PersonaMessage).filter(models.PersonaMessage.thread_id == row.id).delete(synchronize_session=False)
     db.delete(row); db.commit()
     return {"status": "removed"}
 
 
 @router.get("/api/personas/{persona_id}/threads/{thread_id}/messages")
-def list_messages(persona_id: str, thread_id: str, db: Session = Depends(get_db)):
-    _persona(db, persona_id)
-    _thread(db, persona_id, thread_id)
+def list_messages(persona_id: str, thread_id: str, request: Request, db: Session = Depends(get_db)):
+    _persona(db, persona_id, _owner(request))
+    _thread(db, persona_id, thread_id, _owner(request))
     rows = db.query(models.PersonaMessage).filter(
         models.PersonaMessage.thread_id == thread_id
     ).order_by(models.PersonaMessage.created_at.asc()).all()
@@ -187,8 +190,8 @@ def list_messages(persona_id: str, thread_id: str, db: Session = Depends(get_db)
 
 
 @router.get("/api/personas/{persona_id}/memories")
-def list_memories(persona_id: str, db: Session = Depends(get_db)):
-    _persona(db, persona_id)
+def list_memories(persona_id: str, request: Request, db: Session = Depends(get_db)):
+    _persona(db, persona_id, _owner(request))
     rows = db.query(models.PersonaMemory).filter(
         models.PersonaMemory.persona_id == persona_id
     ).order_by(models.PersonaMemory.importance.desc(), models.PersonaMemory.created_at.desc()).all()
@@ -200,8 +203,8 @@ def list_memories(persona_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/api/personas/{persona_id}/memories")
-def create_memory(persona_id: str, payload: dict, db: Session = Depends(get_db)):
-    _persona(db, persona_id)
+def create_memory(persona_id: str, payload: dict, request: Request, db: Session = Depends(get_db)):
+    _persona(db, persona_id, _owner(request))
     content = str(payload.get("content") or "").strip()[:4000]
     if not content:
         raise HTTPException(status_code=422, detail="记忆内容不能为空")
@@ -218,8 +221,8 @@ def create_memory(persona_id: str, payload: dict, db: Session = Depends(get_db))
 
 
 @router.delete("/api/personas/{persona_id}/memories/{memory_id}")
-def delete_memory(persona_id: str, memory_id: str, db: Session = Depends(get_db)):
-    _persona(db, persona_id)
+def delete_memory(persona_id: str, memory_id: str, request: Request, db: Session = Depends(get_db)):
+    _persona(db, persona_id, _owner(request))
     row = db.query(models.PersonaMemory).filter(
         models.PersonaMemory.id == memory_id,
         models.PersonaMemory.persona_id == persona_id,
@@ -267,16 +270,16 @@ def _prompt(persona: models.PersonalPersona, memories: list[models.PersonaMemory
 
 
 @router.post("/api/personas/{persona_id}/chat")
-def persona_chat(persona_id: str, payload: dict, db: Session = Depends(get_db)):
-    persona = _persona(db, persona_id)
+def persona_chat(persona_id: str, payload: dict, request: Request, db: Session = Depends(get_db)):
+    persona = _persona(db, persona_id, _owner(request))
     text = str(payload.get("message") or "").strip()
     if not text:
         raise HTTPException(status_code=422, detail="消息不能为空")
     thread_id = str(payload.get("thread_id") or "").strip() or None
-    thread = _thread(db, persona_id, thread_id) if thread_id else None
+    thread = _thread(db, persona_id, thread_id, _owner(request)) if thread_id else None
     if not thread:
         thread = models.PersonaThread(
-            persona_id=persona_id, owner_user_id=OWNER,
+            persona_id=persona_id, owner_user_id=_owner(request),
             title=text[:40] or "新对话",
         )
         db.add(thread); db.flush()

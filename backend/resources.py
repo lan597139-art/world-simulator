@@ -1,11 +1,12 @@
 """资源：类型、资源实体、持有角色、流水。"""
 
-from fastapi import APIRouter, Body, Depends
+from fastapi import APIRouter, Body, Depends, Request
 from sqlalchemy.orm import Session
 
 import models
 from common import fail, get_or_404, get_world, parse_datetime, record_history, resolve_entity, utcnow
 from database import get_db
+import access
 from reference_guard import assert_not_referenced
 
 router = APIRouter()
@@ -105,8 +106,8 @@ def list_resources(world_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/api/worlds/{world_id}/resources")
-def create_resource(world_id: str, payload: dict = Body(...), db: Session = Depends(get_db)):
-    get_world(db, world_id)
+def create_resource(world_id: str, payload: dict, request: Request, db: Session = Depends(get_db)):
+    access.assert_world_access(db, world_id, request, write=True)
     name = (payload.get("name") or "").strip()
     resource_type_id = payload.get("resource_type_id")
     if not name or not resource_type_id:
@@ -175,7 +176,7 @@ def list_holdings(world_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/api/resource-holdings")
-def create_holding(payload: dict = Body(...), db: Session = Depends(get_db)):
+def create_holding(payload: dict, request: Request, db: Session = Depends(get_db)):
     world_id = payload.get("world_id")
     resource_id = payload.get("resource_id")
     holder_type = payload.get("holder_type")
@@ -188,7 +189,7 @@ def create_holding(payload: dict = Body(...), db: Session = Depends(get_db)):
     if role not in ROLES:
         fail(422, "VALIDATION_ERROR", "role 非法")
 
-    get_world(db, world_id)
+    access.assert_world_access(db, world_id, request, write=True)
     resource = get_or_404(db, models.Resource, resource_id, "资源")
     if resource.world_id != world_id:
         fail(409, "WORLD_MISMATCH", "资源不属于当前世界")
@@ -249,14 +250,14 @@ def list_transactions(world_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/api/resource-transactions")
-def create_transaction(payload: dict = Body(...), db: Session = Depends(get_db)):
+def create_transaction(payload: dict, request: Request, db: Session = Depends(get_db)):
     world_id = payload.get("world_id")
     resource_id = payload.get("resource_id")
     amount = payload.get("amount")
     if not (world_id and resource_id) or amount is None:
         fail(422, "VALIDATION_ERROR", "缺少 world_id / resource_id / amount")
 
-    get_world(db, world_id)
+    access.assert_world_access(db, world_id, request, write=True)
     resource = get_or_404(db, models.Resource, resource_id, "资源")
     if resource.world_id != world_id:
         fail(409, "WORLD_MISMATCH", "资源不属于当前世界")

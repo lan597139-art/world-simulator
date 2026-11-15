@@ -2,7 +2,7 @@
 
 from typing import Optional
 
-from fastapi import APIRouter, Body, Depends
+from fastapi import APIRouter, Body, Depends, Request
 from sqlalchemy.orm import Session
 
 import models
@@ -16,6 +16,7 @@ from common import (
     utcnow,
 )
 from database import get_db
+import access
 from reference_guard import assert_not_referenced, delete_entity
 
 router = APIRouter()
@@ -131,11 +132,11 @@ def list_location_types(world_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/api/location-types")
-def create_location_type(payload: dict = Body(...), db: Session = Depends(get_db)):
+def create_location_type(payload: dict, request: Request, db: Session = Depends(get_db)):
     world_id = payload.get("world_id")
     if not world_id:
         fail(422, "VALIDATION_ERROR", "缺少 world_id")
-    get_world(db, world_id)
+    access.assert_world_access(db, world_id, request, write=True)
     name = (payload.get("name") or "").strip()
     if not name:
         fail(422, "VALIDATION_ERROR", "类型名称不能为空")
@@ -175,13 +176,13 @@ def list_locations(world_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/api/locations")
-def list_locations_legacy(world_id: Optional[str] = None, db: Session = Depends(get_db)):
+def list_locations_legacy(request: Request, world_id: Optional[str] = None, db: Session = Depends(get_db)):
     """兼容旧前端：GET /api/locations?world_id="""
-    if world_id:
-        get_world(db, world_id)
     query = db.query(models.Location)
     if world_id:
         query = query.filter(models.Location.world_id == world_id)
+    else:
+        query = query.filter(models.Location.world_id.in_(access.accessible_world_ids(db, request)))
     rows = query.order_by(models.Location.created_at.desc()).all()
     names = _type_names(db, world_id) if world_id else {}
     return [_loc_dict(loc, names) for loc in rows]
@@ -205,11 +206,11 @@ def location_tree(world_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/api/locations")
-def create_location(payload: dict = Body(...), db: Session = Depends(get_db)):
+def create_location(payload: dict, request: Request, db: Session = Depends(get_db)):
     world_id = payload.get("world_id")
     if not world_id:
         fail(422, "VALIDATION_ERROR", "缺少 world_id")
-    get_world(db, world_id)
+    access.assert_world_access(db, world_id, request, write=True)
     name = (payload.get("name") or "").strip()
     if not name:
         fail(422, "VALIDATION_ERROR", "地点名称不能为空")

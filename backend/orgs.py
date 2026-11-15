@@ -2,7 +2,7 @@
 
 from typing import Optional
 
-from fastapi import APIRouter, Body, Depends
+from fastapi import APIRouter, Body, Depends, Request
 from sqlalchemy.orm import Session
 
 import models
@@ -17,6 +17,7 @@ from common import (
     utcnow,
 )
 from database import get_db
+import access
 from reference_guard import assert_not_referenced
 
 router = APIRouter()
@@ -122,19 +123,21 @@ def list_organizations(world_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/api/organizations")
-def list_organizations_legacy(world_id: Optional[str] = None, db: Session = Depends(get_db)):
+def list_organizations_legacy(request: Request, world_id: Optional[str] = None, db: Session = Depends(get_db)):
     query = db.query(models.Organization)
     if world_id:
         query = query.filter(models.Organization.world_id == world_id)
+    else:
+        query = query.filter(models.Organization.world_id.in_(access.accessible_world_ids(db, request)))
     return [_org_dict(org) for org in query.order_by(models.Organization.created_at.desc()).all()]
 
 
 @router.post("/api/organizations")
-def create_organization(payload: dict = Body(...), db: Session = Depends(get_db)):
+def create_organization(payload: dict, request: Request, db: Session = Depends(get_db)):
     world_id = payload.get("world_id")
     if not world_id:
         fail(422, "VALIDATION_ERROR", "缺少 world_id")
-    get_world(db, world_id)
+    access.assert_world_access(db, world_id, request, write=True)
     name = (payload.get("name") or "").strip()
     if not name:
         fail(422, "VALIDATION_ERROR", "组织名称不能为空")

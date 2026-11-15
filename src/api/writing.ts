@@ -37,6 +37,11 @@ export interface StoryItem {
   status: 'draft' | 'published'
   source_event_ids: string[]
   source_simulation_ids: string[]
+  volume_id?: string | null
+  sort_order?: number
+  summary?: string
+  outline_goal?: string
+  target_words?: number
   created_at: string
   updated_at: string
 }
@@ -67,6 +72,58 @@ export interface AnalyzeResult {
   drafts: DraftItem[]
 }
 
+export type WritingToolId =
+  | 'clinic'
+  | 'surgery'
+  | 'crash_check'
+  | 'storyboard'
+  | 'reader_sim'
+  | 'release_check'
+  | 'foreshadow_audit'
+
+export interface WritingToolPatch {
+  location: string
+  operation: '替换' | '删除' | '增加'
+  before: string
+  after: string
+}
+
+export interface WritingToolResult {
+  [key: string]: any
+  state?: 'S1' | 'S2' | 'S3' | 'S4'
+  cause?: string
+  symptoms?: string[]
+  root_cause?: string
+  direction?: string
+  next_actions?: string[]
+  risks?: string[]
+  patches?: WritingToolPatch[]
+  new_shot?: string
+  style_guard?: string
+  ooc?: Array<Record<string, any>>
+  continuity?: Array<Record<string, any>>
+  pacing?: Array<Record<string, any>>
+  water?: Array<Record<string, any>>
+  must_fix?: string[]
+  goal?: string
+  shots?: Array<{ action: string; camera: string; purpose: string }>
+  lines?: Array<{ speaker: string; line: string; force: string }>
+  hook_type?: string
+  hook?: string
+  personas?: Array<{ name: string; score: number; praise: string; roast: string; drop_risk: string }>
+  overall?: string
+  checklist?: Array<{ id: string; label: string; status: string; evidence: string; fix: string }>
+  blockers?: string[]
+}
+
+export interface WritingToolResponse {
+  ok: boolean
+  tool_id: WritingToolId
+  prompt_version: string
+  result: WritingToolResult
+  meta: { latency_ms: number; input_chars: number; model: string }
+}
+
 export const listStories = (worldId?: string) =>
   get<StoryItem[]>(`/writings${worldId ? `?world_id=${encodeURIComponent(worldId)}` : ''}`)
 
@@ -80,11 +137,16 @@ export const createStory = (body: {
   mode?: 'architect' | 'explorer'
   status?: 'draft' | 'published'
   source_event_ids?: string[]
+  volume_id?: string
+  sort_order?: number
+  summary?: string
+  outline_goal?: string
+  target_words?: number
 }) => post<StoryItem>('/writings', body)
 
 export const updateStory = (
   id: string,
-  body: Partial<Pick<StoryItem, 'title' | 'content' | 'plain_text' | 'mode' | 'status' | 'source_event_ids'>>
+  body: Partial<Pick<StoryItem, 'title' | 'content' | 'plain_text' | 'mode' | 'status' | 'source_event_ids' | 'volume_id' | 'sort_order' | 'summary' | 'outline_goal' | 'target_words'>>
 ) => patch<StoryItem>(`/writings/${id}`, body)
 
 export const deleteStory = (id: string) => del<{ status: string }>(`/writings/${id}`)
@@ -163,7 +225,15 @@ async function streamText(
 }
 
 export const streamGenerate = (
-  body: { world_id?: string; event_ids?: string[]; user_direction?: string; perspective?: string; branch_id?: string },
+  body: {
+    world_id?: string
+    event_ids?: string[]
+    user_direction?: string
+    perspective?: string
+    branch_id?: string
+    story_id?: string
+    context_options?: { characters?: boolean; events?: boolean; previous?: boolean; world?: boolean }
+  },
   onChunk: (text: string) => void,
   signal?: AbortSignal
 ) => streamText('/writing/generate', body, onChunk, signal)
@@ -173,3 +243,13 @@ export const streamAssist = (
   onChunk: (text: string) => void,
   signal?: AbortSignal
 ) => streamText('/writing/assist', body, onChunk, signal)
+
+export const runWritingTool = (body: {
+  tool_id: WritingToolId
+  story_id?: string
+  world_id?: string
+  text?: string
+  goal?: string
+  constraints?: string
+  style_keep?: string
+}) => post<WritingToolResponse>('/writing/tool', body)

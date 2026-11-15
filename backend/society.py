@@ -1,11 +1,12 @@
 """文明与社会：社会实体、群体、成员、文化档案。"""
 
-from fastapi import APIRouter, Body, Depends
+from fastapi import APIRouter, Body, Depends, Request
 from sqlalchemy.orm import Session
 
 import models
 from common import fail, get_or_404, get_world, parse_datetime, resolve_entity
 from database import get_db
+import access
 from reference_guard import assert_not_referenced
 
 router = APIRouter()
@@ -45,8 +46,8 @@ def list_societies(world_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/api/worlds/{world_id}/societies")
-def create_society(world_id: str, payload: dict = Body(...), db: Session = Depends(get_db)):
-    get_world(db, world_id)
+def create_society(world_id: str, payload: dict, request: Request, db: Session = Depends(get_db)):
+    access.assert_world_access(db, world_id, request, write=True)
     name = (payload.get("name") or "").strip()
     if not name:
         fail(422, "VALIDATION_ERROR", "社会实体名称不能为空")
@@ -104,8 +105,8 @@ def list_groups(world_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/api/worlds/{world_id}/social-groups")
-def create_group(world_id: str, payload: dict = Body(...), db: Session = Depends(get_db)):
-    get_world(db, world_id)
+def create_group(world_id: str, payload: dict, request: Request, db: Session = Depends(get_db)):
+    access.assert_world_access(db, world_id, request, write=True)
     name = (payload.get("name") or "").strip()
     if not name:
         fail(422, "VALIDATION_ERROR", "群体名称不能为空")
@@ -156,14 +157,14 @@ def list_memberships(world_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/api/group-memberships")
-def create_membership(payload: dict = Body(...), db: Session = Depends(get_db)):
+def create_membership(payload: dict, request: Request, db: Session = Depends(get_db)):
     world_id = payload.get("world_id")
     group_id = payload.get("group_id")
     member_type = payload.get("member_type") or "character"
     member_id = payload.get("member_id")
     if not (world_id and group_id and member_id):
         fail(422, "VALIDATION_ERROR", "缺少 world_id / group_id / member_id")
-    get_world(db, world_id)
+    access.assert_world_access(db, world_id, request, write=True)
     group = get_or_404(db, models.SocialGroup, group_id, "群体")
     if group.world_id != world_id:
         fail(409, "WORLD_MISMATCH", "群体不属于当前世界")

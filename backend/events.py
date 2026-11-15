@@ -1,12 +1,13 @@
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from typing import Optional
 
 import models
 from event_links import sync_event_entities
 from database import get_db
+import access
 
 router = APIRouter()
 
@@ -26,7 +27,7 @@ def _normalize_datetimes(data: dict) -> dict:
 
 
 @router.post("/api/events")
-def create_event(event_data: dict, db: Session = Depends(get_db)):
+def create_event(event_data: dict, request: Request, db: Session = Depends(get_db)):
     data = _normalize_datetimes(dict(event_data))
     branch_id = data.get("branch_id")
     if branch_id:
@@ -38,6 +39,8 @@ def create_event(event_data: dict, db: Session = Depends(get_db)):
         if data.get("world_id") and data.get("world_id") != branch.world_id:
             raise HTTPException(status_code=409, detail="事件世界与分支世界不一致")
         data["world_id"] = branch.world_id
+    if data.get("world_id"):
+        access.assert_world_access(db, str(data["world_id"]), request, write=True)
     new_event = models.Event(**data)
     db.add(new_event)
     db.flush()
@@ -50,13 +53,17 @@ def create_event(event_data: dict, db: Session = Depends(get_db)):
 # 支持按 world_id 过滤
 @router.get("/api/events")
 def list_events(
+    request: Request,
     world_id: Optional[str] = None,
     branch_id: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
     query = db.query(models.Event)
-    if world_id is not None:
+    if world_id:
         query = query.filter(models.Event.world_id == world_id)
+    else:
+        world_ids = access.accessible_world_ids(db, request)
+        query = query.filter(models.Event.world_id.in_(world_ids))
     if branch_id:
         # 分支视图：主时间线事件 + 该分支专属事件
         query = query.filter(
@@ -68,10 +75,13 @@ def list_events(
 
 
 @router.get("/api/events/unprocessed")
-def get_unprocessed_events(world_id: Optional[str] = None, db: Session = Depends(get_db)):
+def get_unprocessed_events(request: Request, world_id: Optional[str] = None, db: Session = Depends(get_db)):
     query = db.query(models.Event).filter(models.Event.branch_id.is_(None))
     if world_id:
         query = query.filter(models.Event.world_id == world_id)
+    else:
+        world_ids = access.accessible_world_ids(db, request)
+        query = query.filter(models.Event.world_id.in_(world_ids))
     events = query.all()
     simulated_event_ids = [
         r.event_id

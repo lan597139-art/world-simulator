@@ -15,7 +15,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
 import models
@@ -23,6 +23,7 @@ import world_lifecycle as lifecycle
 from ai_engine import run_branch_simulation, run_direction_suggestions
 from common import fail, get_or_404, parse_datetime, utcnow
 from database import get_db
+import access
 from axis_objects import effective_objects, aggregate_axis
 
 router = APIRouter()
@@ -563,7 +564,18 @@ def _add_node(
 
 
 @router.post("/api/branches")
-def create_branch(payload: dict, db: Session = Depends(get_db)):
+def create_branch(payload: dict, request: Request, db: Session = Depends(get_db)):
+    root_event_id = payload.get("root_event_id")
+    if not root_event_id:
+        fail(422, "VALIDATION_ERROR", "缺少 root_event_id")
+    event = get_or_404(db, models.Event, str(root_event_id), "事件")
+    if event.world_id:
+        access.assert_world_access(db, event.world_id, request, write=True)
+    return create_branch_core(db, payload)
+
+
+def create_branch_core(db: Session, payload: dict):
+    """Internal branch creation; callers are responsible for access checks."""
     root_event_id = payload.get("root_event_id")
     if not root_event_id:
         fail(422, "VALIDATION_ERROR", "缺少 root_event_id")
@@ -1424,13 +1436,14 @@ def _diff_snapshots(a: dict, b: dict) -> dict:
 
 
 @router.post("/api/branches/compare")
-def compare_branches(payload: dict, db: Session = Depends(get_db)):
+def compare_branches(payload: dict, request: Request, db: Session = Depends(get_db)):
     ids = payload.get("branch_ids") or payload.get("ids")
     if not isinstance(ids, list) or len(ids) < 2:
         fail(422, "VALIDATION_ERROR", "至少选择两个分支")
     branches = []
     for branch_id in ids[:4]:
         branch = _branch(db, str(branch_id))
+        access.assert_world_access(db, branch.world_id, request)
         branches.append(
             {
                 "branch": _branch_row(branch, node_count=_node_count(db, branch.id), ending_count=_ending_count(db, branch.id)),
@@ -1451,13 +1464,14 @@ def compare_branches(payload: dict, db: Session = Depends(get_db)):
 
 
 @router.post("/api/endings/compare")
-def compare_endings(payload: dict, db: Session = Depends(get_db)):
+def compare_endings(payload: dict, request: Request, db: Session = Depends(get_db)):
     ids = payload.get("ending_ids") or payload.get("ids")
     if not isinstance(ids, list) or len(ids) < 2:
         fail(422, "VALIDATION_ERROR", "至少选择两个结局")
     endings = []
     for ending_id in ids[:4]:
         row = get_or_404(db, models.SimulationEnding, str(ending_id), "结局")
+        access.assert_world_access(db, row.world_id, request)
         endings.append(_ending_row(row))
 
     def pack_ending(row: dict) -> dict:

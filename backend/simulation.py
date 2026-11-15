@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 import uuid
 from datetime import datetime
 import models
 from database import get_db
+import access
 from ai_engine import run_simulation
 from sqlalchemy.orm.attributes import flag_modified # ✅ 核心：强制更新 JSON 字段
 
@@ -11,7 +12,7 @@ router = APIRouter()
 
 # ================= 07 模拟推演 =================
 @router.post("/api/simulate")
-def simulate_event(payload: dict, db: Session = Depends(get_db)):
+def simulate_event(payload: dict, request: Request, db: Session = Depends(get_db)):
     event_id = payload.get("event_id")
     direction = str(payload.get("direction") or "").strip()[:2000]
     perspective = str(payload.get("perspective") or "").strip()[:200]
@@ -25,6 +26,7 @@ def simulate_event(payload: dict, db: Session = Depends(get_db)):
         raise HTTPException(status_code=409, detail="该事件属于某个推演分支，请在分支中推演")
 
     if event.world_id:
+        access.assert_world_access(db, event.world_id, request, write=True)
         world = db.query(models.World).filter(models.World.id == event.world_id).first()
         if not world or world.deleted_at is not None:
             raise HTTPException(status_code=404, detail="World not found")
@@ -187,10 +189,16 @@ def simulate_event(payload: dict, db: Session = Depends(get_db)):
     return result
 
 @router.get("/api/simulations")
-def list_all_simulations(db: Session = Depends(get_db)):
-    return db.query(models.SimulationRun).all()
+def list_all_simulations(request: Request, db: Session = Depends(get_db)):
+    world_ids = access.accessible_world_ids(db, request)
+    return db.query(models.SimulationRun).filter(models.SimulationRun.world_id.in_(world_ids)).all()
 
 @router.get("/api/simulations/{event_id}")
-def get_simulations(event_id: str, db: Session = Depends(get_db)):
+def get_simulations(event_id: str, request: Request, db: Session = Depends(get_db)):
+    event = db.query(models.Event).filter(models.Event.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    if event.world_id:
+        access.assert_world_access(db, event.world_id, request)
     runs = db.query(models.SimulationRun).filter(models.SimulationRun.event_id == event_id).order_by(models.SimulationRun.created_at.desc()).all()
     return runs

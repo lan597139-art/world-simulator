@@ -13,7 +13,7 @@ PRODUCT_KEYS = ("game", "literature", "companion", "diary", "yunbao")
 PRODUCT_LABELS = {
     "game": "游戏创作",
     "literature": "文学创作",
-    "companion": "AI 伴侣",
+    "companion": "虚拟角色",
     "diary": "日记与传记",
     "yunbao": "云宝工作台",
 }
@@ -21,7 +21,7 @@ PRODUCT_LABELS = {
 PRODUCT_SHORT = {
     "game": "游戏",
     "literature": "文学",
-    "companion": "伴侣",
+    "companion": "角色",
     "diary": "日记",
     "yunbao": "云宝",
 }
@@ -48,7 +48,7 @@ MODULES = {
     "world-management": {"label": "02 世界管理", "page": "world-management", "description": "进入或创建本产品世界"},
     "world-building": {"label": "世界建设配置", "page": "world-building", "description": "世界初始配置；仅作为创建世界的子页面"},
     "character-management": {"label": "03 人物管理", "page": "character-management", "description": "人物档案与云宝卡片；不同产品使用完整/轻量模式"},
-    "chat": {"label": "AI 角色聊天", "page": "chat", "description": "NPC 或 AI 伴侣角色会话"},
+    "chat": {"label": "AI 角色聊天", "page": "chat", "description": "NPC 或虚拟角色会话"},
     "world-structure": {"label": "世界结构", "page": "world-structure", "description": "地点、组织、资源等世界结构"},
     "world-data": {"label": "世界设定", "page": "world-data", "description": "世界规则、背景与设定"},
     "relationships": {"label": "04 关系与组织", "page": "relationships", "description": "人物关系网络"},
@@ -149,16 +149,16 @@ def _nav(title: str, modules: list[str]) -> dict:
 NAV_GROUPS = {
     "game": [
         _nav("世界构建", ["overview", "world-management", "character-management", "chat", "world-structure", "world-data", "relationships", "events"]),
-        _nav("模拟与推演", ["timeline", "simulation", "storyline", "writing"]),
+        _nav("模拟与推演", ["timeline", "simulation", "storyline"]),
         _nav("数据安全", ["time-machine", "archive", "trash"]),
     ],
     "literature": [
         _nav("世界构建", ["world-management", "character-management", "chat", "world-structure", "world-data", "relationships", "events"]),
-        _nav("故事创作", ["timeline", "storyline", "writing", "simulation"]),
+        _nav("故事创作", ["timeline", "storyline", "simulation"]),
         _nav("数据安全", ["time-machine", "archive", "trash"]),
     ],
     "companion": [
-        _nav("伴侣空间", ["character-management", "chat"]),
+        _nav("虚拟角色空间", ["character-management", "chat"]),
         _nav("长期互动", ["relationships", "events", "timeline"]),
         _nav("数据安全", ["time-machine", "archive", "trash"]),
     ],
@@ -177,11 +177,11 @@ NAV_GROUPS = {
 
 # 同一模块在不同产品导航中的业务化命名（底层能力不变）。
 NAV_LABEL_OVERRIDES = {
-    "game": {"chat": "AI 角色聊天（NPC）"},
-    "literature": {"chat": "AI 角色聊天", "simulation": "07 模拟运行 · 辅助", "writing": "08 写作工作台"},
+    "game": {"chat": "AI 角色聊天（NPC）", "simulation": "模拟与写作"},
+    "literature": {"chat": "AI 角色聊天", "simulation": "模拟与写作", "writing": "08 写作工作台"},
     "companion": {
         "character-management": "03 人物管理 · 轻量",
-        "chat": "AI 伴侣角色",
+        "chat": "虚拟角色",
         "relationships": "04 关系管理",
         "events": "05 互动事件",
         "timeline": "06 互动时间线",
@@ -205,8 +205,8 @@ NAV_LABEL_OVERRIDES = {
 
 # 导航之外的合法子页面权限。
 EXTRA_ALLOWED = {
-    "game": {"world-building", "multipath"},
-    "literature": {"world-building", "multipath"},
+    "game": {"world-building", "multipath", "writing"},
+    "literature": {"world-building", "multipath", "writing"},
     "companion": {"personas", "memories", "companion-runtime"},
     "diary": set(),
     "yunbao": {"yunbao"},
@@ -221,7 +221,7 @@ AUTO_WORKSPACE = {
 }
 
 WORKSPACE_NAME = {
-    "companion": "AI 伴侣空间",
+    "companion": "虚拟角色空间",
     "diary": "人生记录空间",
     "yunbao": "云宝领域",
 }

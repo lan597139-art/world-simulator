@@ -1,5 +1,5 @@
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
   /* 浅色模式 - 极简灰白 */
   --bg-color: #c3c8d0; 
   --sidebar-bg: #303038; /* 你的深灰侧边栏 */
@@ -42,6 +42,41 @@
   }
 }
 
+/* 设置中心显式选择的主题：必须覆盖系统偏好，保证页面与 3D 画布同一套配色 */
+html[data-theme="light"] {
+  color-scheme: light;
+  --bg-color: #c3c8d0;
+  --sidebar-bg: #303038;
+  --sidebar-text: #cfcfd9;
+  --sidebar-text-muted: #8E8E93;
+  --card-bg: rgba(255, 255, 255, 0.6);
+  --card-border: rgba(0, 0, 0, 0.05);
+  --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.04);
+  --text-main: #000000;
+  --text-muted: #8E8E93;
+  --primary-color: #3A3A3C;
+  --primary-hover: #1C1C1E;
+  --primary-text: #FFFFFF;
+  --danger-color: #FF3B30;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --bg-color: #121212;
+  --sidebar-bg: #000000;
+  --sidebar-text: #d8d8db;
+  --sidebar-text-muted: #A1A1AA;
+  --card-bg: rgba(255, 255, 255, 0.06);
+  --card-border: rgba(255, 255, 255, 0.12);
+  --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  --text-main: #cbcbcb;
+  --text-muted: #A1A1AA;
+  --primary-color: #dcdcdc;
+  --primary-hover: #E5E5EA;
+  --primary-text: #343434;
+  --danger-color: #c7534d;
+}
+
 body, html, #root {
   margin: 0;
   padding: 0;
@@ -49,7 +84,7 @@ body, html, #root {
   background-color: var(--bg-color) !important;
   color: var(--text-main);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  transition: all 0.3s ease;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 /* =========================================
@@ -67,7 +102,7 @@ button[style*="var(--primary-color)"] {
   border: 1px solid var(--card-border) !important;
   border-radius: 24px !important;
   box-shadow: var(--card-shadow) !important;
-  transition: all 0.3s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
   position: relative;
   overflow: hidden;
 }
@@ -86,6 +121,8 @@ input:focus, textarea:focus, select:focus {
 @media (prefers-color-scheme: dark) {
   option { background-color: #1E1E1E !important; color: #FFFFFF !important; }
 }
+html[data-theme="dark"] option { background-color: #1E1E1E !important; color: #FFFFFF !important; }
+html[data-theme="light"] option { background-color: #FFFFFF !important; color: #161618 !important; }
 
 /* =========================================
    高级玻璃小部件 (保留你的设定)
@@ -113,4 +150,116 @@ input:focus, textarea:focus, select:focus {
   -webkit-backdrop-filter: blur(10px);
   border: 1px solid var(--card-border);
   box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.1), 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+/* =========================================
+   液态玻璃视觉基础设施
+   变量化：模糊、透明度、饱和度、辉光、圆角、动效。
+   ========================================= */
+:root {
+  --glass-blur: 40px;
+  --glass-saturate: 180%;
+  --glass-opacity: 1;
+  --glass-radius: 24px;
+  --glass-glow: 0.05;
+  --glass-highlight: rgba(255, 255, 255, 0.35);
+  --ambient-a: rgba(140, 170, 255, 0.16);
+  --ambient-b: rgba(255, 180, 220, 0.11);
+  --ambient-c: rgba(120, 230, 210, 0.08);
+  --motion-duration: 0.22s;
+}
+
+html[data-theme="dark"] {
+  --glass-glow: 0.32;
+  --glass-highlight: rgba(255, 255, 255, 0.12);
+  --ambient-a: rgba(72, 106, 190, 0.20);
+  --ambient-b: rgba(150, 72, 130, 0.13);
+  --ambient-c: rgba(52, 130, 120, 0.10);
+}
+
+/* 皮肤：极简、极光、暖砂。后续设置页只需切换 data-skin。 */
+html[data-skin="aurora"] {
+  --ambient-a: rgba(84, 160, 255, 0.22);
+  --ambient-b: rgba(190, 110, 255, 0.16);
+  --ambient-c: rgba(80, 240, 210, 0.12);
+}
+html[data-skin="sand"] {
+  --ambient-a: rgba(255, 180, 120, 0.16);
+  --ambient-b: rgba(240, 140, 120, 0.10);
+  --ambient-c: rgba(255, 220, 160, 0.10);
+}
+html[data-skin="mono"] {
+  --ambient-a: rgba(160, 160, 170, 0.10);
+  --ambient-b: rgba(120, 120, 130, 0.08);
+  --ambient-c: rgba(200, 200, 210, 0.06);
+  --glass-saturate: 110%;
+}
+
+/* 性能/可读性档位 */
+html[data-glass="low"] { --glass-blur: 14px; --glass-saturate: 120%; }
+html[data-glass="high"] { --glass-blur: 56px; --glass-saturate: 200%; }
+html[data-glass="solid"] { --glass-opacity: 0.96; --glass-blur: 0px; }
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: -20%;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(42% 38% at 18% 20%, var(--ambient-a), transparent 70%),
+    radial-gradient(38% 42% at 82% 30%, var(--ambient-b), transparent 72%),
+    radial-gradient(46% 40% at 52% 88%, var(--ambient-c), transparent 70%);
+  filter: blur(18px);
+  opacity: calc(0.55 * var(--glass-opacity));
+}
+
+.glass-card,
+.glass-panel {
+  background: color-mix(in srgb, var(--card-bg) calc(var(--glass-opacity) * 100%), transparent) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)) !important;
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)) !important;
+  border: 1px solid var(--card-border) !important;
+  border-radius: var(--glass-radius) !important;
+  box-shadow:
+    0 1px 0 var(--glass-highlight) inset,
+    var(--card-shadow),
+    0 0 38px rgba(120, 150, 255, var(--glass-glow));
+}
+
+.glass-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(135deg, var(--glass-highlight), transparent 24%, transparent 76%, rgba(255, 255, 255, 0.05));
+  opacity: 0.5;
+}
+
+.glass-panel {
+  padding: 18px;
+}
+
+/* 动效统一出口：低性能设备与“减少动态效果”都能一键降级。 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+html[data-motion="reduce"] *,
+html[data-motion="reduce"] *::before,
+html[data-motion="reduce"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
+html[data-motion="reduce"] body::before {
+  filter: none;
+  opacity: 0.35;
 }

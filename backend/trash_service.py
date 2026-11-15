@@ -88,8 +88,12 @@ def trash_entity(
     if entity_type == "story":
         payload["drafts"] = _drafts_for_story(db, row.id)
 
+    world_row = None
+    if getattr(row, "world_id", None):
+        world_row = db.query(models.World).filter(models.World.id == row.world_id).first()
     entry = models.TrashEntry(
         world_id=getattr(row, "world_id", "") or "",
+        owner_user_id=getattr(row, "owner_user_id", "") or (world_row.owner_id if world_row else "") or "local",
         entity_type=entity_type,
         entity_id=row.id,
         name=getattr(row, "name", None) or getattr(row, "title", None) or row.id,
@@ -118,6 +122,7 @@ def trash_world(db: Session, world: models.World) -> models.TrashEntry:
     world.deleted_at = datetime.utcnow()
     entry = models.TrashEntry(
         world_id=world.id,
+        owner_user_id=world.owner_id or "local",
         entity_type="world",
         entity_id=world.id,
         name=world.name or world.id,
@@ -184,8 +189,10 @@ def restore_entry(db: Session, entry: models.TrashEntry):
     return row
 
 
-def list_entries(db: Session, world_id: str = ""):
+def list_entries(db: Session, world_id: str = "", owner_user_id: str = ""):
     query = db.query(models.TrashEntry)
     if world_id:
         query = query.filter(models.TrashEntry.world_id == world_id)
+    if owner_user_id:
+        query = query.filter(models.TrashEntry.owner_user_id == owner_user_id)
     return query.order_by(models.TrashEntry.deleted_at.desc()).all()

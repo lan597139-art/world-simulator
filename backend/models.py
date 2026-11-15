@@ -10,6 +10,7 @@ from sqlalchemy import (
     Index,
     UniqueConstraint,
     Text,
+    text,
 )
 from datetime import datetime, timezone
 import uuid
@@ -31,15 +32,25 @@ def _now() -> datetime:
 # =====================================================================
 class AppUser(Base):
     __tablename__ = "app_users"
+    __table_args__ = (
+        Index(
+            "ux_app_users_email", "email", unique=True,
+            sqlite_where=text("email IS NOT NULL"),
+            postgresql_where=text("email IS NOT NULL"),
+        ),
+    )
 
     id = Column(String, primary_key=True, default=_uuid)
     username = Column(String, unique=True, nullable=False)
     display_name = Column(String, default="")
     password_hash = Column(String)
+    email = Column(String)
+    email_verified_at = Column(DateTime)
     is_active = Column(Boolean, default=True)
     is_owner = Column(Boolean, default=False, nullable=False)
     bio = Column(Text, default="")
     avatar = Column(Text, default="")
+    avatar_url = Column(String, default="")
     created_at = Column(DateTime, default=_now)
     updated_at = Column(DateTime, default=_now)
 
@@ -53,6 +64,52 @@ class AuthSession(Base):
     user_id = Column(String, nullable=False, index=True)
     token_hash = Column(String, unique=True, nullable=False, index=True)
     expires_at = Column(DateTime, nullable=False)
+    created_at = Column(DateTime, default=_now)
+
+
+class InviteCode(Base):
+    """开发者邀请码：只存 SHA-256，创建时返回一次明文。"""
+
+    __tablename__ = "invite_codes"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    code_hash = Column(String, unique=True, nullable=False, index=True)
+    code_prefix = Column(String, default="")
+    label = Column(String, default="")
+    created_by = Column(String, nullable=False)
+    max_uses = Column(Integer, default=1, nullable=False)
+    used_count = Column(Integer, default=0, nullable=False)
+    expires_at = Column(DateTime)
+    revoked_at = Column(DateTime)
+    created_at = Column(DateTime, default=_now)
+    last_used_at = Column(DateTime)
+
+
+class InviteRedemption(Base):
+    __tablename__ = "invite_redemptions"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    invite_id = Column(String, ForeignKey("invite_codes.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(String, nullable=False, index=True)
+    redeemed_at = Column(DateTime, default=_now)
+
+
+class PendingRegistration(Base):
+    """邮箱验证中的注册：验证通过后才创建用户并消耗邀请码。"""
+
+    __tablename__ = "pending_registrations"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    email = Column(String, nullable=False, index=True)
+    username = Column(String, nullable=False, index=True)
+    display_name = Column(String, default="")
+    password_hash = Column(String, nullable=False)
+    invite_id = Column(String, nullable=False, index=True)
+    code_hash = Column(String, nullable=False)
+    code_expires_at = Column(DateTime, nullable=False)
+    attempts = Column(Integer, default=0, nullable=False)
+    last_sent_at = Column(DateTime, default=_now)
+    consumed_at = Column(DateTime)
     created_at = Column(DateTime, default=_now)
 
 
@@ -717,12 +774,85 @@ class Story(Base):
     status = Column(String, default="draft")    # draft / published
     source_event_ids = Column(JSON, default=list)
     source_simulation_ids = Column(JSON, default=list)
+    volume_id = Column(String, index=True)
+    sort_order = Column(Integer, default=0, nullable=False)
+    summary = Column(Text, default="")
+    outline_goal = Column(Text, default="")
+    target_words = Column(Integer, default=0)
     archived_at = Column(DateTime)
     created_at = Column(DateTime, default=_now)
     updated_at = Column(DateTime, default=_now)
 
     __table_args__ = (
         Index("ix_stories_world_updated", "world_id", "updated_at"),
+        Index("ix_stories_volume_order", "volume_id", "sort_order"),
+    )
+
+
+class StoryVolume(Base):
+    """写作目录中的“卷”：章节通过 stories.volume_id 归入卷。"""
+
+    __tablename__ = "story_volumes"
+
+    id = Column(String, primary_key=True, index=True, default=_uuid)
+    world_id = Column(String, ForeignKey("worlds.id", ondelete="CASCADE"), nullable=False, index=True)
+    owner_user_id = Column(String, default="local", index=True)
+    title = Column(String, default="未命名卷")
+    summary = Column(Text, default="")
+    act = Column(String, default="setup")  # setup/develop/turn/climax
+    outline_goal = Column(Text, default="")
+    target_words = Column(Integer, default=0)
+    sort_order = Column(Integer, default=0, nullable=False)
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now)
+
+    __table_args__ = (
+        Index("ix_story_volumes_world_order", "world_id", "sort_order"),
+    )
+
+
+class WritingForeshadow(Base):
+    """写作伏笔：独立的写作债务，不混入 05 事件/07 推演。"""
+
+    __tablename__ = "writing_foreshadows"
+
+    id = Column(String, primary_key=True, index=True, default=_uuid)
+    world_id = Column(String, ForeignKey("worlds.id", ondelete="CASCADE"), nullable=False, index=True)
+    owner_user_id = Column(String, default="local", index=True)
+    story_id = Column(String, index=True)
+    event_id = Column(String, ForeignKey("events.id", ondelete="SET NULL"), index=True)
+    text = Column(Text, default="")
+    promise = Column(Text, default="")
+    cost = Column(Text, default="")
+    planned_story_id = Column(String, index=True)
+    resolved_story_id = Column(String, index=True)
+    payoff_form = Column(String, default="信息")  # 信息/情绪/危机
+    status = Column(String, default="pending")  # pending/planted/paid/abandoned
+    tags = Column(JSON, default=list)
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now)
+
+    __table_args__ = (
+        Index("ix_writing_foreshadows_world_status", "world_id", "status"),
+        Index("ix_writing_foreshadows_story", "story_id", "status"),
+    )
+
+
+class WritingSensitiveWord(Base):
+    """用户自维护的发布风险词；默认空表，不做平台级词库推断。"""
+
+    __tablename__ = "writing_sensitive_words"
+
+    id = Column(String, primary_key=True, index=True, default=_uuid)
+    owner_user_id = Column(String, nullable=False, index=True)
+    word = Column(String, nullable=False)
+    category = Column(String, default="通用")
+    severity = Column(String, default="warn")  # warn/block
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now)
+
+    __table_args__ = (
+        Index("ux_writing_sensitive_owner_word", "owner_user_id", "word", unique=True),
     )
 
 
@@ -814,6 +944,7 @@ class TrashEntry(Base):
 
     id = Column(String, primary_key=True, default=_uuid, index=True)
     world_id = Column(String, index=True)
+    owner_user_id = Column(String, index=True, default="")
     entity_type = Column(String, nullable=False, index=True)
     entity_id = Column(String, nullable=False, index=True)
     name = Column(String, default="")
@@ -2048,3 +2179,97 @@ class BillingSettlement(Base):
     __table_args__ = (
         Index("ix_billing_settlements_creator_time", "creator_id", "created_at"),
     )
+
+
+# =====================================================================
+# 创作者文件与内容管理
+# 文件夹只负责组织，资产的身份/关联由 entity_type/entity_id 决定。
+# =====================================================================
+class CreatorFolder(Base):
+    __tablename__ = "creator_folders"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    owner_id = Column(String, nullable=False, index=True)
+    world_id = Column(String, nullable=True, index=True)
+    parent_id = Column(String, ForeignKey("creator_folders.id", ondelete="RESTRICT"), index=True)
+    name = Column(String, nullable=False)
+    sort_order = Column(Integer, default=0, nullable=False)
+    is_system = Column(Boolean, default=False, nullable=False)
+    system_key = Column(String, nullable=True)
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now)
+
+    __table_args__ = (
+        Index("ix_creator_folders_owner_parent", "owner_id", "parent_id", "sort_order"),
+    )
+
+
+class CreatorAsset(Base):
+    """资产是内容的统一入口；folder_id 变化不影响 entity_id 关联。"""
+
+    __tablename__ = "creator_assets"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    owner_id = Column(String, nullable=False, index=True)
+    world_id = Column(String, nullable=True, index=True)
+    folder_id = Column(String, ForeignKey("creator_folders.id", ondelete="SET NULL"), index=True)
+    asset_type = Column(String, nullable=False, index=True)
+    entity_id = Column(String, nullable=True, index=True)
+    title = Column(String, nullable=False)
+    description = Column(Text, default="")
+    content = Column(Text, default="")
+    file_url = Column(String, default="")
+    mime_type = Column(String, default="")
+    file_size = Column(Integer, default=0)
+    status = Column(String, default="draft", nullable=False, index=True)  # draft/published/archived/deleted
+    visibility = Column(String, default="private", nullable=False, index=True)  # private/scoped/public
+    scope = Column(JSON, default=list)
+    published_at = Column(DateTime)
+    archived_at = Column(DateTime)
+    deleted_at = Column(DateTime)
+    archived_from_status = Column(String, default="draft")
+    deleted_from_status = Column(String, default="draft")
+    original_folder_id = Column(String, nullable=True)
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now)
+
+    __table_args__ = (
+        Index("ix_creator_assets_owner_status", "owner_id", "status", "updated_at"),
+        Index("ix_creator_assets_owner_folder", "owner_id", "folder_id"),
+        Index("ix_creator_assets_owner_entity", "owner_id", "asset_type", "entity_id"),
+    )
+
+
+class CreatorPublication(Base):
+    """一次发布就是一个不可覆盖的版本记录；下架不删除记录。"""
+
+    __tablename__ = "creator_publications"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    asset_id = Column(String, ForeignKey("creator_assets.id", ondelete="CASCADE"), nullable=False, index=True)
+    owner_id = Column(String, nullable=False, index=True)
+    version_no = Column(Integer, nullable=False, default=1)
+    title = Column(String, default="")
+    visibility = Column(String, default="private", nullable=False)
+    scope = Column(JSON, default=list)
+    snapshot = Column(JSON, default=dict)
+    published_at = Column(DateTime, default=_now)
+    unpublished_at = Column(DateTime)
+    created_at = Column(DateTime, default=_now)
+
+    __table_args__ = (
+        UniqueConstraint("asset_id", "version_no", name="uq_creator_publication_version"),
+    )
+
+
+class CreatorTrashEntry(Base):
+    __tablename__ = "creator_trash_entries"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    asset_id = Column(String, nullable=False, index=True)
+    owner_id = Column(String, nullable=False, index=True)
+    original_folder_id = Column(String, nullable=True)
+    snapshot = Column(JSON, default=dict)
+    deleted_at = Column(DateTime, default=_now, index=True)
+    restored_at = Column(DateTime)
+    purged_at = Column(DateTime)

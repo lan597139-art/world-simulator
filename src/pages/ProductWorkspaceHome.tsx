@@ -10,7 +10,6 @@ import {
   NotebookPen,
   PenLine,
   Play,
-  Plus,
   Quote,
   ShieldCheck,
   Sparkles,
@@ -492,7 +491,7 @@ function CompanionHome({ lang, characters, threads, activeThread, memories, erro
 
       <div className="pwh-companion-grid">
         <aside className="pwh-card pwh-roster">
-          <SectionHead title={lang === 'zh' ? '我的伴侣' : 'Companions'} aside={<button type="button" className="pwh-icon-btn" onClick={() => onNavigate('character-management')} aria-label={lang === 'zh' ? '创建伴侣' : 'Create companion'}><Plus size={14} /></button>} />
+          <SectionHead title={lang === 'zh' ? '我的伴侣' : 'Companions'} />
           <div className="pwh-roster-list">
             {characters.map((char, index) => {
               const relatedThread = threads.find((thread) => thread.participants?.some((participant) => participant.character_id === char.id))

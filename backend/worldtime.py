@@ -3,12 +3,13 @@
 from datetime import timedelta
 from typing import Optional
 
-from fastapi import APIRouter, Body, Depends
+from fastapi import APIRouter, Body, Depends, Request
 from sqlalchemy.orm import Session
 
 import models
 from common import fail, get_or_404, get_world, parse_datetime, sync_world_time, utcnow
 from database import get_db
+import access
 
 router = APIRouter()
 
@@ -121,8 +122,8 @@ def list_eras(world_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/api/worlds/{world_id}/eras")
-def create_era(world_id: str, payload: dict = Body(...), db: Session = Depends(get_db)):
-    get_world(db, world_id)
+def create_era(world_id: str, payload: dict, request: Request, db: Session = Depends(get_db)):
+    access.assert_world_access(db, world_id, request, write=True)
     name = (payload.get("name") or "").strip()
     if not name:
         fail(422, "VALIDATION_ERROR", "时代名称不能为空")

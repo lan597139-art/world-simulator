@@ -61,7 +61,7 @@ function sceneCopy(lang: Lang): Scene[] {
     ? [
         { product: 'game', number: '01', title: '游戏创作', description: '构建世界、角色、规则与多结局游戏。', action: '进入创作', icon: Gamepad2 },
         { product: 'literature', number: '02', title: '文学创作', description: '人物塑造、关系和故事构思中心，保留模拟作为辅助推演，不改变完整写作能力。', action: '进入创作', icon: BookOpen },
-        { product: 'companion', number: '03', title: 'AI 伴侣制作与体验', description: '创建角色、设定关系与长期互动。', action: '进入空间', icon: Sparkles },
+        { product: 'companion', number: '03', title: '虚拟角色制作与体验', description: '创建角色、设定关系与长期互动。', action: '进入空间', icon: Sparkles },
         { product: 'diary', number: '04', title: '日记与传记', description: '记录本人及他人的人生、关系、经历与来源证据，生成时间线与传记。', action: '进入空间', icon: NotebookPen },
       ]
     : [

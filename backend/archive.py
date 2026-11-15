@@ -1,11 +1,12 @@
 """全局归档：旧世界、亡故/退场人物、旧章节封存，不参与当前推演。"""
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 import models
 from database import get_db
+import access
 
 router = APIRouter()
 
@@ -27,16 +28,26 @@ def _get_row(db: Session, entity_type: str, entity_id: str):
 
 
 @router.get("/api/archive")
-def list_archive(world_id: str = "", db: Session = Depends(get_db)):
+def list_archive(request: Request, world_id: str = "", db: Session = Depends(get_db)):
+    user_id = access.current_user_id(request)
+    world_ids = access.accessible_world_ids(db, request)
     worlds = db.query(models.World).filter(
-        models.World.archived_at.is_not(None), models.World.deleted_at.is_(None)
+        models.World.archived_at.is_not(None), models.World.deleted_at.is_(None),
+        models.World.owner_id == user_id,
     )
-    characters = db.query(models.Character).filter(models.Character.archived_at.is_not(None))
-    stories = db.query(models.Story).filter(models.Story.archived_at.is_not(None))
+    characters = db.query(models.Character).filter(
+        models.Character.archived_at.is_not(None), models.Character.world_id.in_(world_ids)
+    )
+    stories = db.query(models.Story).filter(
+        models.Story.archived_at.is_not(None), models.Story.owner_user_id == user_id
+    )
     if world_id:
         characters = characters.filter(models.Character.world_id == world_id)
         stories = stories.filter(models.Story.world_id == world_id)
-    world_names = {row.id: row.name for row in db.query(models.World).all()}
+    world_names = {
+        row.id: row.name
+        for row in db.query(models.World).filter(models.World.id.in_(world_ids)).all()
+    }
 
     def char_item(row):
         return {
@@ -74,10 +85,14 @@ def list_archive(world_id: str = "", db: Session = Depends(get_db)):
 
 
 @router.post("/api/archive/{entity_type}/{entity_id}")
-def archive_entity(entity_type: str, entity_id: str, db: Session = Depends(get_db)):
+def archive_entity(entity_type: str, entity_id: str, request: Request, db: Session = Depends(get_db)):
     if entity_type not in ARCHIVE_TYPES:
         raise HTTPException(status_code=422, detail="不支持归档该类型")
     row = _get_row(db, entity_type, entity_id)
+    if entity_type == "world":
+        access.assert_world_access(db, row.id, request, write=True)
+    else:
+        access.assert_entity_access(db, row, request, write=True, allow_free=True)
     if entity_type == "world" and row.is_official:
         raise HTTPException(status_code=409, detail="官方演示世界已锁定，不能归档")
     row.archived_at = datetime.utcnow()
@@ -86,8 +101,12 @@ def archive_entity(entity_type: str, entity_id: str, db: Session = Depends(get_d
 
 
 @router.post("/api/archive/{entity_type}/{entity_id}/restore")
-def restore_archived(entity_type: str, entity_id: str, db: Session = Depends(get_db)):
+def restore_archived(entity_type: str, entity_id: str, request: Request, db: Session = Depends(get_db)):
     row = _get_row(db, entity_type, entity_id)
+    if entity_type == "world":
+        access.assert_world_access(db, row.id, request, write=True)
+    else:
+        access.assert_entity_access(db, row, request, write=True, allow_free=True)
     row.archived_at = None
     db.commit()
     return {"status": "ok", "archived": False}

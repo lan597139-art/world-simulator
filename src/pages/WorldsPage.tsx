@@ -111,7 +111,12 @@ export default function WorldsPage({
 
         {/* 👇 原本的世界列表 👇 */}
         {filteredWorlds.map(w => (
-          <div key={w.id} className="glass-card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div 
+            key={w.id} 
+            className="glass-card" 
+            onClick={() => onEnterWorld(w.id)}
+            style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '12px', cursor: 'pointer' }}
+          >
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
               <h3 style={{ margin: 0, fontSize: '20px', color: 'var(--text-main)', fontWeight: 600 }}>{w.name}</h3>
@@ -134,20 +139,9 @@ export default function WorldsPage({
             )}
 
             <div style={{ display: 'flex', gap: '8px', marginTop: 'auto', paddingTop: '16px', flexWrap: 'wrap' }}>
-              <button
-                onClick={() => onEnterWorld(w.id)}
-                style={{
-                  flex: 2, padding: '10px',
-                  background: 'var(--primary-color)', color: 'var(--bg-color)',
-                  border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600
-                }}
-              >
-                {lang === 'zh' ? '进入工作台' : 'Enter'}
-              </button>
-
               {!readOnly && (
               <button
-                onClick={() => onOpenWorldBuilding(w.id)}
+                onClick={(e) => { e.stopPropagation(); onOpenWorldBuilding(w.id); }}
                 style={{
                   flex: 1, padding: '10px',
                   background: 'transparent', color: 'var(--text-main)',
@@ -163,7 +157,7 @@ export default function WorldsPage({
 
               {!readOnly && (
               <button
-                onClick={() => handleArchive(w.id)}
+                onClick={(e) => { e.stopPropagation(); handleArchive(w.id); }}
                 disabled={Boolean(w.is_official)}
                 style={{
                   flex: 1, padding: '10px',
@@ -178,7 +172,7 @@ export default function WorldsPage({
               
               {!readOnly && (w.is_official ? (
                 <button
-                  onClick={() => void handleResetOfficial(w.id, w.name)}
+                  onClick={(e) => { e.stopPropagation(); void handleResetOfficial(w.id, w.name); }}
                   style={{
                     flex: 1, padding: '10px',
                     background: 'rgba(128,128,128,0.08)', color: 'var(--text-main)',
@@ -189,7 +183,7 @@ export default function WorldsPage({
                 </button>
               ) : (
                 <button
-                  onClick={() => handleDelete(w.id)}
+                  onClick={(e) => { e.stopPropagation(); handleDelete(w.id); }}
                   style={{
                     flex: 1, padding: '10px',
                     background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger-color)',

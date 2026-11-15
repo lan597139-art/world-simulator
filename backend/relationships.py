@@ -2,7 +2,7 @@
 
 from typing import Optional
 
-from fastapi import APIRouter, Body, Depends
+from fastapi import APIRouter, Body, Depends, Request
 from sqlalchemy.orm import Session
 
 import models
@@ -18,6 +18,7 @@ from common import (
     utcnow,
 )
 from database import get_db
+import access
 from relationship_types import resolve_type
 
 router = APIRouter()
@@ -67,6 +68,7 @@ def _with_history(db: Session, rows):
 
 @router.get("/api/relationships")
 def list_relationships(
+    request: Request,
     world_id: Optional[str] = None,
     entity_type: Optional[str] = None,
     entity_id: Optional[str] = None,
@@ -76,8 +78,9 @@ def list_relationships(
 ):
     query = db.query(models.Relationship)
     if world_id:
-        get_world(db, world_id)
         query = query.filter(models.Relationship.world_id == world_id)
+    else:
+        query = query.filter(models.Relationship.world_id.in_(access.accessible_world_ids(db, request)))
     if entity_type and entity_id:
         query = query.filter(
             ((models.Relationship.source_type == entity_type)
@@ -99,11 +102,11 @@ def list_relationships(
 
 
 @router.post("/api/relationships")
-def create_relationship(payload: dict = Body(...), db: Session = Depends(get_db)):
+def create_relationship(payload: dict, request: Request, db: Session = Depends(get_db)):
     world_id = payload.get("world_id")
     if not world_id:
         fail(422, "VALIDATION_ERROR", "缺少 world_id（必须绑定世界）")
-    get_world(db, world_id)
+    access.assert_world_access(db, world_id, request, write=True)
 
     source_type = payload.get("source_type") or "character"
     target_type = payload.get("target_type") or "character"

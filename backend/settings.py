@@ -116,6 +116,7 @@ def _profile(user: models.AppUser) -> dict:
         "display_name": user.display_name or user.username,
         "bio": user.bio or "",
         "avatar": user.avatar or "",
+        "avatar_url": user.avatar_url or "",
         "is_owner": bool(user.is_owner),
         "created_at": _iso(user.created_at),
     }

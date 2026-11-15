@@ -9,13 +9,14 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
 import models
 from ai_engine import ai_config_status, ai_error_message, get_client, get_model
 from common import fail, get_or_404, utcnow
 from database import get_db
+import access
 from axis_objects import effective_objects, aggregate_axis
 
 router = APIRouter()
@@ -349,11 +350,13 @@ def update_ai_role(character_id: str, payload: dict, db: Session = Depends(get_d
 # 会话
 # ---------------------------------------------------------------------
 @router.post("/api/chat/threads")
-def create_thread(payload: dict, db: Session = Depends(get_db)):
+def create_thread(payload: dict, request: Request, db: Session = Depends(get_db)):
     world_id = str(payload.get("world_id") or "").strip()
     if not world_id:
         fail(422, "VALIDATION_ERROR", "缺少 world_id")
+    access.assert_world_access(db, world_id, request, write=True)
     world = _world(db, world_id)
+    owner_user_id = access.current_user_id(request)
     kind = str(payload.get("kind") or "private")
     if kind not in {"private", "group"}:
         fail(422, "INVALID_KIND", "会话类型不合法")
@@ -369,7 +372,7 @@ def create_thread(payload: dict, db: Session = Depends(get_db)):
         if not role.enabled:
             fail(409, "ROLE_DISABLED", "该角色聊天已关闭")
         title = str(payload.get("title") or "").strip()[:120] or f"与{char.name}的对话"
-        thread = models.ChatThread(world_id=world.id, kind="private", title=title, status="active")
+        thread = models.ChatThread(world_id=world.id, owner_user_id=owner_user_id, kind="private", title=title, status="active")
         db.add(thread)
         db.flush()
         db.add(
@@ -415,14 +418,19 @@ def create_thread(payload: dict, db: Session = Depends(get_db)):
 
 
 @router.get("/api/worlds/{world_id}/chat/threads")
-def list_threads(world_id: str, db: Session = Depends(get_db)):
+def list_threads(world_id: str, request: Request, db: Session = Depends(get_db)):
     _world(db, world_id)
     threads = (
         db.query(models.ChatThread)
-        .filter(models.ChatThread.world_id == world_id, models.ChatThread.status != "deleted")
+        .filter(
+            models.ChatThread.world_id == world_id,
+            models.ChatThread.status != "deleted",
+        )
         .order_by(models.ChatThread.last_message_at.desc().nullslast(), models.ChatThread.created_at.desc())
         .all()
     )
+    user_id = access.current_user_id(request)
+    threads = [thread for thread in threads if (thread.owner_user_id or "local") == user_id]
     return [_thread_row(db, thread) for thread in threads]
 
 

@@ -2,12 +2,13 @@
 
 from typing import Optional
 
-from fastapi import APIRouter, Body, Depends
+from fastapi import APIRouter, Body, Depends, Request
 from sqlalchemy.orm import Session
 
 import models
 from common import fail, get_or_404, get_world, parse_datetime, resolve_entity, utcnow
 from database import get_db
+import access
 
 router = APIRouter()
 
@@ -217,7 +218,7 @@ def list_relations(
 
 
 @router.post("/api/event-relations")
-def create_relation(payload: dict = Body(...), db: Session = Depends(get_db)):
+def create_relation(payload: dict, request: Request, db: Session = Depends(get_db)):
     world_id = payload.get("world_id")
     source_id = payload.get("source_event_id")
     target_id = payload.get("target_event_id")
@@ -229,7 +230,7 @@ def create_relation(payload: dict = Body(...), db: Session = Depends(get_db)):
     if relation_type not in EVENT_RELATION_TYPES:
         fail(422, "VALIDATION_ERROR", "因果关系类型非法")
 
-    get_world(db, world_id)
+    access.assert_world_access(db, world_id, request, write=True)
     source = get_or_404(db, models.Event, source_id, "起因事件")
     target = get_or_404(db, models.Event, target_id, "结果事件")
     for event in (source, target):

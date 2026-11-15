@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import * as api from '../api/structure'
+import '../styles/product-workspace.css'
 
 const API = 'http://127.0.0.1:8000/api'
 
@@ -40,15 +41,7 @@ function Chip({ active, onClick, children }: { active: boolean; onClick: () => v
   return (
     <button
       onClick={onClick}
-      style={{
-        padding: '4px 11px',
-        borderRadius: '999px',
-        border: active ? '1px solid var(--text-main)' : '1px solid var(--card-border)',
-        background: active ? 'var(--text-main)' : 'transparent',
-        color: active ? 'var(--bg-color)' : 'var(--text-main)',
-        fontSize: '12px',
-        cursor: 'pointer',
-      }}
+      className={`tlx-chip${active ? ' is-on' : ''}`}
     >
       {children}
     </button>
@@ -60,6 +53,7 @@ export default function UnifiedTimelinePage({ worldId, worldName, mode = 'world'
     ? SCOPES
     : [{ key: 'world', label: '全部记录' }, { key: 'character', label: '人物' }] as const
   const [scope, setScope] = useState<ScopeKey>('world')
+  const [orientation, setOrientation] = useState<'vertical' | 'horizontal'>('vertical')
   const [entityId, setEntityId] = useState('')
   const [kinds, setKinds] = useState<string[]>(mode === 'world' ? ['event', 'history', 'transaction'] : ['event', 'history'])
   const [data, setData] = useState<{ counts: Record<string, number>; items: api.TimelineItem[] } | null>(null)
@@ -134,6 +128,16 @@ export default function UnifiedTimelinePage({ worldId, worldName, mode = 'world'
     return Array.from(map.entries())
   }, [data])
 
+  const dayGroups = useMemo(() => groups.map(([date, items]) => {
+    const timeMap = new Map<string, api.TimelineItem[]>()
+    for (const item of items) {
+      const time = item.occurred_at ? item.occurred_at.replace('T', ' ').slice(11, 16) : '时间未知'
+      if (!timeMap.has(time)) timeMap.set(time, [])
+      timeMap.get(time)!.push(item)
+    }
+    return { date, items, times: Array.from(timeMap.entries()) }
+  }), [groups])
+
   const options =
     scope === 'character'
       ? entities.character
@@ -173,99 +177,161 @@ export default function UnifiedTimelinePage({ worldId, worldName, mode = 'world'
     )
   }
 
-  return (
-    <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      <div style={{ ...card, padding: '16px 18px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: '10px' }}>
-          <div>
-            <div style={{ fontSize: '16px', color: 'var(--text-main)' }}>{mode === 'life' ? '人生时间线' : mode === 'interaction' ? '互动时间线' : '统一时间线'}</div>
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '3px' }}>
-              当前空间：{worldName || '未选择'} · {mode === 'life' ? '按人生经历与记录整理时间顺序，不做世界推演' : mode === 'interaction' ? '按互动事件与关系变化整理时间顺序' : '只读取事件、状态历史与资源流水，不重复维护历史'}
-            </div>
-          </div>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-            {data ? `事件 ${data.counts.event || 0} · 变化 ${data.counts.history || 0} · 流水 ${data.counts.transaction || 0}` : '加载中'}
-          </div>
-        </div>
+  const renderItem = (item: api.TimelineItem, key: string) => {
+    const meta = KIND_META[item.kind] || { icon: '·', label: item.kind }
+    return (
+      <button
+        type="button"
+        key={key}
+        className={`tlx-item is-${item.kind}`}
+        onClick={() => void openDetail(item)}
+        title="点击查看详情与来源"
+      >
+        <span className="tlx-item-head">
+          <span className="tlx-item-time">
+            {item.occurred_at ? item.occurred_at.replace('T', ' ').slice(11, 16) : '—'}
+          </span>
+          <span className="tlx-item-kind">{meta.icon} {meta.label}</span>
+        </span>
+        <span className="tlx-item-title">{item.title}</span>
+        {item.description && <span className="tlx-item-desc">{item.description}</span>}
+        {item.meta?.reason && <span className="tlx-item-reason">原因：{item.meta.reason}</span>}
+        <span className="tlx-item-open">查看 →</span>
+      </button>
+    )
+  }
 
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', marginTop: '14px' }}>
+  return (
+    <div className="tlx-page">
+      <header className="tlx-head">
+        <div className="tlx-head-copy">
+          <span className="tlx-kicker">TIMELINE / XMIND VIEW</span>
+          <strong>{mode === 'life' ? '人生时间线' : mode === 'interaction' ? '互动时间线' : '统一时间线'}</strong>
+          <small>
+            {mode === 'life' ? '按人生经历与记录整理时间顺序，不做世界推演' : mode === 'interaction' ? '按互动事件与关系变化整理时间顺序' : '时间主轴只负责排序，枝干负责说明每条记录属于谁、改变了什么'}
+          </small>
+        </div>
+        <div className="tlx-head-right">
+          <span className="tlx-world">{worldName || '未选择世界'}</span>
+          <span className="tlx-counts">
+            {data ? `${data.items.length} 条记录` : '加载中'}
+          </span>
+        </div>
+      </header>
+
+      <div className="tlx-controls">
+        <div className="tlx-orient">
+          <button type="button" className={orientation === 'vertical' ? 'is-on' : ''} onClick={() => setOrientation('vertical')}>↕ 纵向</button>
+          <button type="button" className={orientation === 'horizontal' ? 'is-on' : ''} onClick={() => setOrientation('horizontal')}>↔ 横向</button>
+        </div>
+        <div className="tlx-scopes">
           {scopes.map((item) => (
             <Chip key={item.key} active={scope === item.key} onClick={() => setScope(item.key)}>
               {item.label}
             </Chip>
           ))}
+        </div>
 
-          {scope !== 'world' && (
-            <select style={selectStyle} value={entityId} onChange={(e) => setEntityId(e.target.value)}>
-              <option value="">选择{scopes.find((s) => s.key === scope)?.label}</option>
-              {options.map((option: any) => (
-                <option key={option.id} value={option.id}>
-                  {option.name}
-                </option>
-              ))}
-            </select>
-          )}
-
-          <span style={{ marginLeft: 'auto', display: 'flex', gap: '6px', alignItems: 'center' }}>
-            {Object.entries(KIND_META).map(([kind, meta]) => (
-              <Chip key={kind} active={kinds.includes(kind)} onClick={() => toggleKind(kind)}>
-                {meta.icon} {meta.label}
-              </Chip>
+        {scope !== 'world' && (
+          <select className="tlx-select" value={entityId} onChange={(e) => setEntityId(e.target.value)}>
+            <option value="">选择{scopes.find((s) => s.key === scope)?.label}</option>
+            {options.map((option: any) => (
+              <option key={option.id} value={option.id}>
+                {option.name}
+              </option>
             ))}
-          </span>
+          </select>
+        )}
+
+        <div className="tlx-kinds">
+          {Object.entries(KIND_META).map(([kind, meta]) => (
+            <Chip key={kind} active={kinds.includes(kind)} onClick={() => toggleKind(kind)}>
+              {meta.icon} {meta.label}
+            </Chip>
+          ))}
         </div>
       </div>
 
-      {error && (
-        <div style={{ ...card, padding: '10px 14px', color: 'var(--danger-color)', fontSize: '12px' }}>{error}</div>
-      )}
+      {error && <div className="tlx-error">{error}</div>}
 
-      {groups.length === 0 && (
-        <div style={{ ...card, padding: '34px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '12px' }}>
-          世界「{worldName || '当前'}」在这个范围还没有可展示的历史。如果这不是你想要的世界，请先用左上角「退出当前世界」切回有数据的那个世界；新世界本身就是空的。
-        </div>
-      )}
-
-      {groups.map(([date, items]) => (
-        <div key={date} style={{ display: 'flex', gap: '14px' }}>
-          <div style={{ width: '96px', flexShrink: 0, textAlign: 'right', paddingTop: '4px' }}>
-            <div style={{ fontSize: '12px', color: 'var(--text-main)' }}>{date}</div>
-            <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>{items.length} 条</div>
+      <div className="tlx-canvas">
+        {groups.length === 0 ? (
+          <div className="tlx-empty">
+            <strong>这个范围还没有时间线</strong>
+            <span>世界「{worldName || '当前'}」还没有事件、状态变化或资源流水。先去事件库建立第一条记录。</span>
           </div>
-          <div style={{ flex: 1, borderLeft: '1px solid var(--card-border)', paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {items.map((item) => {
-              const meta = KIND_META[item.kind] || { icon: '·', label: item.kind }
-              return (
-                <div
-                  key={`${item.kind}-${item.id}`}
-                  onClick={() => openDetail(item)}
-                  style={{ ...card, padding: '10px 13px', cursor: 'pointer' }}
-                  title="点击查看详情与来源"
-                >
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'baseline' }}>
-                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', width: '16px' }}>{meta.icon}</span>
-                    <span style={{ fontSize: '13px', color: 'var(--text-main)', flex: 1 }}>{item.title}</span>
-                    <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{meta.label}</span>
-                    <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
-                      {item.occurred_at ? item.occurred_at.replace('T', ' ').slice(11, 16) : ''}
-                    </span>
+        ) : orientation === 'vertical' ? (
+          <div className="tlx-tree">
+            <div className="tlx-root">
+              <span className="tlx-root-mark">◎</span>
+              <div>
+                <span className="tlx-root-kicker">WORLD TIMELINE / VERTICAL</span>
+                <strong>{worldName || '当前世界'}</strong>
+              </div>
+              <span className="tlx-root-count">{groups.length} 个时间节点</span>
+            </div>
+
+            <div className="tlx-feed">
+              {dayGroups.map((day) => (
+                <section className="tlx-day" key={day.date}>
+                  <div className="tlx-date">
+                    <span className="tlx-date-dot" />
+                    <strong>{day.date === '时间未知' ? day.date : day.date.slice(5)}</strong>
+                    <span>{day.date === '时间未知' ? '待定' : day.date.slice(0, 4)}</span>
+                    <small>{day.items.length} 条</small>
                   </div>
-                  {item.description && (
-                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px', marginLeft: '24px' }}>
-                      {item.description}
-                    </div>
-                  )}
-                  {item.meta?.reason && (
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px', marginLeft: '24px' }}>
-                      原因：{item.meta.reason}
-                    </div>
-                  )}
-                </div>
-              )
-            })}
+                  <div className="tlx-times">
+                    {day.times.map(([time, timeItems]) => (
+                      <div className="tlx-time-group" key={`${day.date}-${time}`}>
+                        <div className="tlx-time-label">
+                          <span>{time}</span>
+                          {timeItems.length > 1 && <em>同时 {timeItems.length}</em>}
+                        </div>
+                        <div className={`tlx-time-cards${timeItems.length > 1 ? ' is-multi' : ''}`}>
+                          {timeItems.map((item) => renderItem(item, `${day.date}-${time}-${item.kind}-${item.id}`))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
           </div>
-        </div>
-      ))}
+        ) : (
+          <div className="tlx-h-scroll">
+            <div className="tlx-h-tree" style={{ width: Math.max(920, dayGroups.length * 286 + 150) }}>
+              <div className="tlx-h-root">
+                <span className="tlx-root-mark">◎</span>
+                <div>
+                  <span className="tlx-root-kicker">WORLD TIMELINE / HORIZONTAL</span>
+                  <strong>{worldName || '当前世界'}</strong>
+                </div>
+              </div>
+              <div className="tlx-h-axis" />
+              {dayGroups.map((day, index) => (
+                <div className="tlx-h-col" key={day.date} style={{ left: 84 + index * 286 }}>
+                  <div className="tlx-h-marker">
+                    <i />
+                    <strong>{day.date === '时间未知' ? day.date : day.date.slice(5)}</strong>
+                    <small>{day.date === '时间未知' ? '待定' : day.date.slice(0, 4)} · {day.items.length} 条</small>
+                  </div>
+                  <div className="tlx-h-cards">
+                    {day.times.map(([time, timeItems]) => (
+                      <div className="tlx-h-time" key={`${day.date}-${time}`}>
+                        <div className="tlx-h-time-head">
+                          <span>{time}</span>
+                          {timeItems.length > 1 && <em>同时 {timeItems.length}</em>}
+                        </div>
+                        {timeItems.map((item) => renderItem(item, `h-${day.date}-${time}-${item.kind}-${item.id}`))}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
 
       {selected && (
         <div
