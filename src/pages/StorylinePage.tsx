@@ -3,13 +3,14 @@ import { API_ORIGIN } from '../api/config'
 import * as storyApi from '../api/storyline'
 import * as api from '../api/storyThreads'
 import type { StoryProject } from '../api/storyline'
+import NarrativeGraphView, { type NarrativeEvent } from '../components/narrative/NarrativeGraphView'
 
-type EventLite = { id: string; name: string; description?: string; storyline?: string; scale?: string; participants?: string[] }
+type EventLite = NarrativeEvent
 
 const KIND_LABEL: Record<string, string> = { main: '主线', side: '支线', copy: '副本', shadow: '暗线/影线', ensemble: '群像' }
 const KIND_COLOR: Record<string, string> = { main: '#4f7cff', side: '#2f9e6f', copy: '#8b5cf6', shadow: '#c08a2e', ensemble: '#7a8294' }
 
-type TreeMode = 'logic' | 'mindmap' | 'tree' | 'skeleton'
+type TreeMode = 'logic' | 'mindmap' | 'tree' | 'skeleton' | 'fishbone' | 'spiral'
 type PlusPos = 'above' | 'below' | 'side'
 type NodeKind = 'root' | 'thread' | 'event'
 
@@ -318,7 +319,7 @@ const popoverStyle: React.CSSProperties = {
   pointerEvents: 'auto',
 };
 
-export default function StorylinePage({ worldId, onOpenEvents }: { worldId?: string; onOpenEvents?: () => void }) {
+export default function StorylinePage({ worldId, onOpenEvents, lang = 'zh' }: { worldId?: string; onOpenEvents?: () => void; lang?: 'zh' | 'en' }) {
   const [stories, setStories] = useState<StoryProject[]>([])
   const [storyId, setStoryId] = useState('')
   const [threads, setThreads] = useState<api.StoryThread[]>([])
@@ -327,6 +328,7 @@ export default function StorylinePage({ worldId, onOpenEvents }: { worldId?: str
   const [selectedThreadId, setSelectedThreadId] = useState('')
   const [busy, setBusy] = useState(false)
   const [treeMode, setTreeMode] = useState<TreeMode>('skeleton')
+  const isGraphMode = treeMode === 'fishbone' || treeMode === 'spiral'
   const [picker, setPicker] = useState<PickerTarget | null>(null)
   const [pickerQuery, setPickerQuery] = useState('')
   const canvasRef = useRef<HTMLDivElement>(null)
@@ -506,9 +508,9 @@ export default function StorylinePage({ worldId, onOpenEvents }: { worldId?: str
   )
 
   return (
-    <div className="slx-page" style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--bg-color)' }}>
+    <div className="slx-page" style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, background: 'transparent' }}>
       {/* 极简顶部工具栏，只保留故事选择与视图切换 */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px', borderBottom: '1px solid var(--card-border)' }}>
+      <div className="slx-topbar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px', borderBottom: '1px solid var(--card-border)' }}>
         
         {/* 左侧：只保留故事选择 */}
         <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -520,11 +522,13 @@ export default function StorylinePage({ worldId, onOpenEvents }: { worldId?: str
 
         {/* 右侧：只保留视图切换 */}
         <div style={{ display: 'flex', alignItems: 'center' }}>
-          <div className="slx-modes" style={{ display: 'flex', background: 'rgba(128,128,128,0.1)', borderRadius: '8px', padding: '4px' }}>
+          <div className="slx-modes" style={{ display: 'flex', flexWrap: 'wrap', gap: '2px', background: 'rgba(128,128,128,0.1)', borderRadius: '8px', padding: '4px' }}>
             <button type="button" className={treeMode === 'skeleton' ? 'is-on' : ''} onClick={() => setTreeMode('skeleton')} style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: treeMode === 'skeleton' ? 'var(--bg-color)' : 'transparent', color: treeMode === 'skeleton' ? 'var(--text-main)' : 'var(--text-muted)' }}>骨架图</button>
             <button type="button" className={treeMode === 'logic' ? 'is-on' : ''} onClick={() => setTreeMode('logic')} style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: treeMode === 'logic' ? 'var(--bg-color)' : 'transparent', color: treeMode === 'logic' ? 'var(--text-main)' : 'var(--text-muted)' }}>逻辑图</button>
             <button type="button" className={treeMode === 'mindmap' ? 'is-on' : ''} onClick={() => setTreeMode('mindmap')} style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: treeMode === 'mindmap' ? 'var(--bg-color)' : 'transparent', color: treeMode === 'mindmap' ? 'var(--text-main)' : 'var(--text-muted)' }}>思维导图</button>
             <button type="button" className={treeMode === 'tree' ? 'is-on' : ''} onClick={() => setTreeMode('tree')} style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: treeMode === 'tree' ? 'var(--bg-color)' : 'transparent', color: treeMode === 'tree' ? 'var(--text-main)' : 'var(--text-muted)' }}>树状图</button>
+            <button type="button" className={treeMode === 'fishbone' ? 'is-on' : ''} onClick={() => setTreeMode('fishbone')} style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: treeMode === 'fishbone' ? 'var(--bg-color)' : 'transparent', color: treeMode === 'fishbone' ? 'var(--text-main)' : 'var(--text-muted)' }}>鱼骨图</button>
+            <button type="button" className={treeMode === 'spiral' ? 'is-on' : ''} onClick={() => setTreeMode('spiral')} style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: treeMode === 'spiral' ? 'var(--bg-color)' : 'transparent', color: treeMode === 'spiral' ? 'var(--text-main)' : 'var(--text-muted)' }}>DNA 螺旋</button>
           </div>
         </div>
       </div>
@@ -533,10 +537,25 @@ export default function StorylinePage({ worldId, onOpenEvents }: { worldId?: str
       <div 
         className="slx-canvas-wrap" 
         ref={canvasRef} 
-        style={{ flex: 1, overflow: 'auto', position: 'relative', padding: '24px' }}
-        onClick={clearSelection}
+        style={{ flex: 1, overflow: isGraphMode ? 'hidden' : 'auto', position: 'relative', padding: isGraphMode ? '16px 20px 20px' : '24px' }}
+        onClick={isGraphMode ? undefined : clearSelection}
       >
-        {threads.length === 0 ? (
+        {isGraphMode ? (
+          <NarrativeGraphView
+            worldId={worldId}
+            threads={threads}
+            events={events}
+            mode={treeMode as 'fishbone' | 'spiral'}
+            lang={lang}
+            selectedEventId={selectedLink?.event_id || ''}
+            onSelectEvent={(eventId) => {
+              const thread = threads.find((row) => row.events.some((link) => link.event_id === eventId))
+              const link = thread?.events.find((row) => row.event_id === eventId)
+              if (thread) setSelectedThreadId(thread.id)
+              setSelectedLinkId(link?.id || '')
+            }}
+          />
+        ) : threads.length === 0 ? (
           <div className="slx-empty" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)' }}>
             <strong style={{ fontSize: '18px', marginBottom: '8px', color: 'var(--text-main)' }}>还没有故事线</strong>
             <span>点击根节点的“+”从事件库生成第一根枝干。</span>

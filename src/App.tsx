@@ -1255,7 +1255,7 @@ export default function App() {
           ) : activePage === 'multipath' ? (
             <MultiPathPage worldId={currentWorldId} />
           ) : activePage === 'storyline' ? (
-            <StorylinePage worldId={currentWorldId} onOpenEvents={() => navigate('events')} />
+            <StorylinePage worldId={currentWorldId} onOpenEvents={() => navigate('events')} lang={lang} />
           ) : activePage === 'chat' ? (
             <ChatPage worldId={currentWorldId} product={product} />
           ) : activePage === 'writing' ? (

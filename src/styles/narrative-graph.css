@@ -1,0 +1,592 @@
+/* 叙事图谱：树/鱼骨/螺旋共用同一套事件与实体数据。 */
+.ng-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  color: var(--text-main);
+}
+
+.ng-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 2px 12px;
+  flex-wrap: wrap;
+}
+
+.ng-focus {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.ng-focus-kicker {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.ng-focus button,
+.ng-focus-button,
+.ng-panel-foot button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 8px;
+  border: 1px solid var(--card-border);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--card-bg) 70%, transparent);
+  color: var(--text-main);
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.ng-focus button:hover,
+.ng-focus-button:hover,
+.ng-panel-foot button:hover {
+  border-color: color-mix(in srgb, var(--primary-color) 40%, var(--card-border));
+}
+
+.ng-hint {
+  font-size: 9.5px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  text-align: right;
+}
+
+.ng-layout {
+  display: flex;
+  gap: 14px;
+  min-height: 0;
+  flex: 1;
+}
+
+.ng-stage {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 480px;
+  overflow: hidden;
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+  background:
+    radial-gradient(ellipse at 50% 40%, color-mix(in srgb, var(--primary-color) 7%, transparent), transparent 58%),
+    color-mix(in srgb, var(--card-bg) 42%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .2);
+}
+
+.ng-stage > .react-transform-wrapper {
+  height: 100%;
+}
+
+.ng-canvas {
+  position: relative;
+}
+
+.ng-canvas svg {
+  display: block;
+  overflow: visible;
+}
+
+.ng-zoom {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--card-border);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--card-bg) 82%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+.ng-zoom button {
+  display: grid;
+  place-items: center;
+  width: 25px;
+  height: 25px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.ng-zoom button:hover {
+  background: color-mix(in srgb, var(--text-main) 8%, transparent);
+  color: var(--text-main);
+}
+
+.ng-spine {
+  fill: none;
+  stroke: color-mix(in srgb, var(--text-main) 24%, transparent);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.ng-spine-arrow {
+  fill: none;
+  stroke: color-mix(in srgb, var(--text-main) 35%, transparent);
+  stroke-width: 1.5;
+}
+
+.ng-stem {
+  stroke: color-mix(in srgb, var(--text-main) 20%, transparent);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+}
+
+.ng-helix {
+  fill: none;
+  stroke: color-mix(in srgb, var(--primary-color) 36%, transparent);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ng-helix-shadow {
+  stroke: color-mix(in srgb, #2f9e6f 28%, transparent);
+  stroke-dasharray: 5 7;
+}
+
+.ng-sequence {
+  fill: none;
+  stroke: color-mix(in srgb, var(--text-main) 16%, transparent);
+  stroke-width: 1.4;
+}
+
+.ng-relation path {
+  fill: none;
+  stroke: color-mix(in srgb, #8b5cf6 36%, transparent);
+  stroke-width: 1.2;
+  stroke-dasharray: 4 4;
+}
+
+.ng-relation.is-hot path {
+  stroke: #8b5cf6;
+  stroke-width: 1.8;
+  opacity: .9;
+}
+
+.ng-thread-tag {
+  cursor: pointer;
+}
+
+.ng-thread-tag rect {
+  stroke-width: 1;
+}
+
+.ng-thread-tag text {
+  font-size: 11px;
+  font-weight: 650;
+  fill: var(--text-main);
+  pointer-events: none;
+}
+
+.ng-thread-tag.is-active rect {
+  filter: url(#ng-glow);
+}
+
+.ng-event {
+  cursor: pointer;
+  outline: none;
+}
+
+.ng-event rect:first-of-type {
+  fill: color-mix(in srgb, var(--card-bg) 88%, transparent);
+  stroke-width: 1;
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, .12));
+  transition: fill .16s ease, stroke-width .16s ease;
+}
+
+.ng-event:hover rect:first-of-type {
+  fill: color-mix(in srgb, var(--card-bg) 100%, transparent);
+  stroke-width: 1.6;
+}
+
+.ng-event text {
+  font-size: 11.5px;
+  font-weight: 650;
+  fill: var(--text-main);
+  pointer-events: none;
+}
+
+.ng-event .ng-event-sub {
+  font-size: 9px;
+  font-weight: 450;
+  fill: var(--text-muted);
+}
+
+.ng-event.is-related rect:first-of-type {
+  stroke-width: 1.7;
+  filter: drop-shadow(0 0 9px rgba(139, 92, 246, .34));
+}
+
+.ng-event.is-active rect:first-of-type {
+  stroke-width: 2;
+  filter: url(#ng-glow) drop-shadow(0 10px 22px rgba(79, 124, 255, .22));
+}
+
+.ng-event-live {
+  fill: #2f9e6f;
+  animation: ng-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes ng-pulse {
+  0%, 100% { opacity: .45; transform: scale(.8); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+
+.ng-entity {
+  cursor: pointer;
+}
+
+.ng-entity rect {
+  stroke-width: 1;
+  fill: color-mix(in srgb, var(--card-bg) 86%, transparent);
+}
+
+.ng-entity text {
+  font-size: 9.5px;
+  font-weight: 600;
+  fill: var(--text-main);
+  pointer-events: none;
+}
+
+.ng-entity.is-character rect { stroke: #2f9e6f; }
+.ng-entity.is-location rect { stroke: #d08437; }
+.ng-entity.is-organization rect { stroke: #8b5cf6; }
+
+.ng-entity.is-character { color: #2f9e6f; }
+.ng-entity.is-location { color: #d08437; }
+.ng-entity.is-organization { color: #8b5cf6; }
+
+.ng-entity-link {
+  stroke: currentColor;
+  stroke-width: 1.2;
+  stroke-dasharray: 3 4;
+  opacity: .65;
+}
+
+.ng-legend {
+  position: absolute;
+  left: 13px;
+  bottom: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 6px 9px;
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--card-bg) 80%, transparent);
+  backdrop-filter: blur(12px);
+  font-size: 9px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.ng-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ng-legend i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.ng-panel {
+  flex: 0 0 clamp(248px, 23vw, 308px);
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px;
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--card-bg) 58%, transparent);
+  backdrop-filter: blur(18px) saturate(130%);
+}
+
+.ng-panel-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ng-panel-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 8.5px;
+  letter-spacing: .09em;
+  font-weight: 700;
+  color: var(--primary-color);
+  text-transform: uppercase;
+}
+
+.ng-panel h3 {
+  margin: 9px 0 4px;
+  font-size: 17px;
+  line-height: 1.25;
+  color: var(--text-main);
+}
+
+.ng-panel-desc {
+  margin: 0;
+  font-size: 10.5px;
+  line-height: 1.65;
+  color: var(--text-muted);
+}
+
+.ng-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 11px 0 14px;
+}
+
+.ng-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  border: 1px solid var(--card-border);
+  border-radius: 6px;
+  font-size: 9px;
+  color: var(--text-muted);
+}
+
+.ng-panel-empty {
+  margin: 0 0 12px;
+  padding: 9px 10px;
+  border: 1px dashed var(--card-border);
+  border-radius: 8px;
+  font-size: 9.5px;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+
+.ng-entity-group {
+  padding-top: 11px;
+  border-top: 1px solid var(--card-border);
+  margin-top: 10px;
+}
+
+.ng-entity-group h4 {
+  margin: 0 0 7px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.ng-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.ng-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 7px;
+  border: 1px solid var(--card-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-main);
+  font-size: 9.5px;
+  cursor: pointer;
+}
+
+.ng-chip.is-character { border-color: color-mix(in srgb, #2f9e6f 40%, var(--card-border)); }
+.ng-chip.is-location { border-color: color-mix(in srgb, #d08437 40%, var(--card-border)); }
+.ng-chip.is-organization { border-color: color-mix(in srgb, #8b5cf6 40%, var(--card-border)); }
+
+.ng-related-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ng-related-list button {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 8px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--text-main) 4%, transparent);
+  text-align: left;
+  cursor: pointer;
+}
+
+.ng-related-list button:hover {
+  border-color: var(--card-border);
+  background: color-mix(in srgb, var(--text-main) 7%, transparent);
+}
+
+.ng-related-list strong {
+  font-size: 10px;
+  color: var(--text-main);
+}
+
+.ng-related-list span {
+  font-size: 8.5px;
+  color: var(--text-muted);
+}
+
+.ng-panel-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid var(--card-border);
+  font-size: 8.5px;
+  color: var(--text-muted);
+}
+
+.ng-panel-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 280px;
+  gap: 8px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.ng-panel-placeholder strong {
+  font-size: 12px;
+  color: var(--text-main);
+}
+
+.ng-panel-placeholder p {
+  max-width: 200px;
+  margin: 0;
+  font-size: 9.5px;
+  line-height: 1.65;
+}
+
+.ng-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 360px;
+  gap: 10px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.ng-empty strong {
+  max-width: 330px;
+  font-size: 12px;
+  color: var(--text-main);
+}
+
+@media (max-width: 900px) {
+  .ng-layout { flex-direction: column; }
+  .ng-stage { min-height: 300px; flex: 1 1 auto; }
+  .ng-panel { flex: 0 0 auto; max-height: 270px; }
+  .ng-hint { display: none; }
+}
+
+/* 螺旋时间轴与关系能量流 */
+.ng-time-axis {
+  stroke: color-mix(in srgb, var(--text-main) 18%, transparent);
+  stroke-width: 1.2;
+  stroke-dasharray: 2 6;
+}
+
+.ng-time-arrow,
+.ng-time-tick {
+  stroke: color-mix(in srgb, var(--text-main) 30%, transparent);
+  stroke-width: 1.2;
+}
+
+.ng-axis-label {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  fill: var(--text-muted);
+}
+
+.ng-time-label {
+  font-size: 7.5px;
+  fill: var(--text-muted);
+  opacity: .72;
+}
+
+.ng-rung {
+  stroke: color-mix(in srgb, var(--primary-color) 14%, transparent);
+  stroke-width: 1;
+  stroke-dasharray: 2 6;
+}
+
+.ng-entity-link,
+.ng-relation.is-hot path {
+  animation: ng-energy-flow 1.6s linear infinite;
+}
+
+@keyframes ng-energy-flow {
+  to { stroke-dashoffset: -16; }
+}
+
+@media (max-width: 900px) {
+}
+
+.ng-thread-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  border: 1px solid var(--card-border);
+  border-radius: 7px;
+  color: var(--text-muted);
+  background: color-mix(in srgb, var(--card-bg) 56%, transparent);
+}
+
+.ng-thread-select select {
+  max-width: 180px;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--text-main);
+  font-size: 9px;
+  cursor: pointer;
+}
+
+.ng-thread-select option {
+  background: var(--card-bg);
+  color: var(--text-main);
+}
+
+
+/* 叙事页工具栏：移动端允许视图按钮换行，不挤压故事选择器 */
+.slx-topbar { flex-wrap: wrap; gap: 8px; }
+.slx-modes { max-width: 100%; }
+@media (max-width: 680px) {
+  .slx-topbar { align-items: flex-start; flex-direction: column; padding: 12px 14px !important; }
+  .slx-topbar .slx-modes { width: 100%; }
+  .slx-topbar .slx-modes button { flex: 1 1 auto; padding: 6px 8px !important; font-size: 10px; }
+}
