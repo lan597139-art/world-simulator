@@ -15,7 +15,7 @@
 
 | 项目 | 结果 | 证据 |
 | --- | --- | --- |
-| 前端生产构建 | 通过 | `vite build` 退出 0；产物 `dist/assets/index-BTdKtnjY.js`（Vercel 产物 `index-B7R4MqqE.js`） |
+| 前端生产构建 | 通过 | `vite build` 退出 0；产物 `dist/assets/index-CzrBMqhm.js`（Vercel 产物 `index-COYiq0V2.js`） |
 | TypeScript | 通过 | `tsc --noEmit` 退出 0 |
 | 现有认证回归 | 13/13 通过 | `backend/tests/smoke_auth.py` |
 | 全量后端回归 | 690/690 通过 | `backend/tests/run_all.sh`，25 个套件 |
@@ -36,6 +36,7 @@
 | 液态玻璃皮肤 | 通过 | 设置 → 使用体验：皮肤/四档玻璃强度 + 背景图/透明度/模糊/辉光即时控件 |
 | 生产静态上传 | 通过 | `api.psyengine.top` 上传 PNG，`/uploads/...` 返回 200 `image/png` |
 | 生产最新后端 | 通过 | Fly 机器 version 4；组织创建/删除、认证状态、CORS 均正常 |
+| 生产 UI E2E | 通过 | `app.psyengine.top` 测试账号登录：3 个密码框眼睛图标、背景/模糊/透明度/辉光面板均渲染；账号与邀请码已清理 |
 
 ## 尚未完成 / 需要账号或凭据
 
