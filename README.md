@@ -25,18 +25,27 @@ npm run dev                 # http://localhost:5173
 
 ## 部署结构
 
-前端可以部署在 Vercel，但 **FastAPI 后端不能只靠 Vercel 静态站点**。线上需要：
+前端部署在 Vercel；FastAPI 后端实际部署在 **Fly.io**：
 
-1. 一个可公网访问的 FastAPI 后端。仓库已包含 `backend/Dockerfile`、
-   `backend/requirements.txt` 和 `render.yaml`。Render 新建 Blueprint 指向本仓库即可：
-   - 结构化数据用 Render PostgreSQL（`render.yaml` 已声明 `world-simulator-db`，
-     `DATABASE_URL` 自动注入并规范化为 `postgresql+psycopg://`）；
-   - 图片/附件默认落在 `/data/uploads` 持久磁盘，也可切换到 S3/R2/MinIO；
-   - 把 `DEEPSEEK_API_KEY` 填在 Render 环境变量里。
+- 后端地址：`https://backend-lingering-moonbeam-4274.fly.dev`
+- Fly 配置：`backend/fly.toml`，应用 `backend-lingering-moonbeam-4274`，区域 `nrt`
+- 持久卷：`world_sim_data` 挂载到 `/data`
+- 数据库：SQLite `/data/worlds.db`（`DB_PATH`）
+- 上传文件：`/data/uploads`（`WS_UPLOAD_DIR`）
+- 部署命令（在 `backend/` 下）：
+
+```bash
+fly deploy
+```
+
+Fly secrets 至少需要：`DEEPSEEK_API_KEY`。如果使用 S3/R2，再设置
+`WS_STORAGE_BACKEND=s3`、`WS_S3_BUCKET`、`WS_S3_ENDPOINT`、`WS_S3_REGION`、
+`WS_S3_ACCESS_KEY`、`WS_S3_SECRET_KEY`、`WS_S3_PUBLIC_BASE`。
+
 2. 在 Vercel 项目 Settings → Environment Variables 设置：
 
 ```env
-VITE_API_BASE_URL=https://你的后端域名
+VITE_API_BASE_URL=https://backend-lingering-moonbeam-4274.fly.dev
 ```
 
 3. 重新部署前端。入口的 API 桥接会把代码里默认的
@@ -127,5 +136,9 @@ python backend/tests/smoke_workspace.py
 
 推送到 `main` 后，Vercel 的 Git 集成会自动构建并发布 `dist/`。
 
-当前仓库的改动尚未提交/推送；部署后还需要在 Vercel 与 Render 控制台确认
-`VITE_API_BASE_URL` 指向新后端域名，并完成一次真实注册/登录回归。
+当前仓库的改动已提交到 `main` 并推送到 GitHub；Vercel 会按 Git 集成自动构建。
+Fly 后端需要单独执行 `fly deploy` 才能带上最新代码。部署后在 Vercel 确认
+`VITE_API_BASE_URL` 指向 `https://backend-lingering-moonbeam-4274.fly.dev`，
+并完成一次真实注册/登录回归。
+
+`render.yaml` 仅作为备用部署方案保留，不是当前线上环境。
