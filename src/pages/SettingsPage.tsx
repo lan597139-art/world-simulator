@@ -42,7 +42,7 @@ import InviteCodesPanel from '../components/settings/InviteCodesPanel'
 import LocalWorkspacePanel from '../components/settings/LocalWorkspacePanel'
 import '../styles/settings.css'
 import { applyExperience } from '../utils/experience'
-import { applyAppearance, loadAppearance, saveAppearance, type Appearance } from '../utils/appearance'
+import { DEFAULT_APPEARANCE, applyAppearance, loadAppearance, saveAppearance, type Appearance } from '../utils/appearance'
 
 type Lang = 'zh' | 'en'
 type Section = 'profile' | 'account' | 'privacy' | 'notifications' | 'experience' | 'data' | 'about'
@@ -641,7 +641,7 @@ export default function SettingsPage({
                   <strong>背景与玻璃细节</strong>
                   <span>全部即时生效，只保存在当前浏览器；上传图片走创作者媒体库。</span>
                 </div>
-                <button type="button" style={ghost} onClick={() => setAppearance(loadAppearance())}><RotateCcw size={13} /> 恢复默认</button>
+                <button type="button" style={ghost} onClick={() => setAppearance({ ...DEFAULT_APPEARANCE })}><RotateCcw size={13} /> 恢复默认</button>
               </div>
               <div className="settings-appearance-grid">
                 <Field label="背景图" hint="支持图片 URL，或直接上传到当前账号的媒体库。">
