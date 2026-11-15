@@ -845,10 +845,9 @@ button.cc-status-chip:hover {
   overflow: hidden;
   border: 1px solid var(--card-border);
   border-radius: 22px;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.74), rgba(255, 255, 255, 0.38));
+  /* 删除原本的 background 和 backdrop-filter，避免和 WebGL 冲突 */
+  background: transparent;
   box-shadow: 0 14px 38px rgba(0, 0, 0, 0.055);
-  backdrop-filter: blur(30px) saturate(160%);
-  -webkit-backdrop-filter: blur(30px) saturate(160%);
   color: var(--text-main);
   cursor: pointer;
   text-align: left;
@@ -1185,10 +1184,6 @@ button.cc-status-chip:hover {
     background: rgba(255, 255, 255, 0.08);
   }
 
-  .cc-scene-card {
-    background: linear-gradient(145deg, rgba(255, 255, 255, 0.095), rgba(255, 255, 255, 0.035));
-  }
-
   .cc-scene-icon {
     background: linear-gradient(145deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.015));
   }
@@ -1286,6 +1281,3 @@ button.cc-status-chip:hover {
   font-size: 8.5px;
   line-height: 1.2;
 }
-
-
-/* 创作工作区：上滑收起全局操作栏，模块栏吸附顶部 */

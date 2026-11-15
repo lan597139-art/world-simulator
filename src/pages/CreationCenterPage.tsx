@@ -19,7 +19,7 @@ import { API_ORIGIN } from '../api/config'
 import { listStories } from '../api/writing'
 import { getAllWorlds } from '../services/worldService'
 import type { ProductKey } from '../product/types'
-
+import { LiquidGlass } from '../components/LiquidGlass';
 type Lang = 'zh' | 'en'
 
 export type CreationToolKey =
@@ -173,13 +173,12 @@ export default function CreationCenterPage({
         </div>
       </section>
 
-      <section className="cc-scenes-grid" aria-label={lang === 'zh' ? '创作场景' : 'Creation scenes'}>
+            <section className="cc-scenes-grid" aria-label={lang === 'zh' ? '创作场景' : 'Creation scenes'}>
         {scenes.map((scene) => {
           const Icon = scene.icon
           return (
-            <button
+            <LiquidGlass
               key={scene.product}
-              type="button"
               className="cc-scene-card"
               onClick={() => onOpenScene(scene.product)}
               aria-label={`${scene.number} ${scene.title} · ${scene.action}`}
@@ -194,7 +193,7 @@ export default function CreationCenterPage({
                 <span>{scene.action}</span>
                 <ArrowUpRight aria-hidden="true" strokeWidth={1.8} />
               </span>
-            </button>
+            </LiquidGlass>
           )
         })}
       </section>
