@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Liquid Glass Test</title>
+  <style>
+    body {
+      background: url('https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=1920&auto=format&fit=crop') no-repeat center center fixed;
+      background-size: cover;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    #my-glass {
+      width: 400px;
+      height: 300px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      font-size: 24px;
+      font-weight: bold;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      border-radius: 24px;
+      /* 降级用的 CSS */
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+  </style>
+</head>
+<body>
+
+  <div id="my-glass">
+    液态玻璃效果测试
+  </div>
+
+  <script type="module">
+    // 直接使用本地 node_modules 里安装的库
+    import { LiquidGlass } from './node_modules/apple-liquid-glass-webgl/dist/index.js';
+
+    const el = document.getElementById('my-glass');
+
+    if (LiquidGlass.isSupported()) {
+      console.log('✅ 浏览器支持 WebGL2，正在初始化液态玻璃...');
+      
+      const glass = new LiquidGlass(el, {
+        tint: 0.2,
+        tintTone: 'light',
+        frost: 0.1,
+        material: {
+          refraction: 90,
+          edgeReach: 0.15,
+          dispersion: 3.0,
+          rim: 0.4,
+        }
+      });
+
+      // 移除降级用的 backdrop-filter
+      el.style.backdropFilter = 'none';
+      el.style.webkitBackdropFilter = 'none';
+
+    } else {
+      console.warn('❌ 浏览器不支持 WebGL2，使用 CSS 模糊降级');
+    }
+  </script>
+</body>
+</html>

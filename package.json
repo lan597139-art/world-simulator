@@ -22,6 +22,7 @@
     "@tiptap/starter-kit": "^3.33.0",
     "@xyflow/react": "^12.12.1",
     "3d-force-graph": "^1.80.2",
+    "apple-liquid-glass-webgl": "^2.6.0",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.5.2",
     "d3-force": "^3.0.1",
