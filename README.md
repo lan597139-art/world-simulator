@@ -132,13 +132,14 @@ python backend/tests/smoke_workspace.py
 
 - 主分支：`main`
 - GitHub：`https://github.com/lan597139-art/world-simulator`
-- Vercel：`https://world-simulator-elht.vercel.app`
+- Vercel 项目：`world-simulator-elht`（生产域名 `https://app.psyengine.top`）
 
 推送到 `main` 后，Vercel 的 Git 集成会自动构建并发布 `dist/`。
 
 当前仓库的改动已提交到 `main` 并推送到 GitHub；Vercel 会按 Git 集成自动构建。
-Fly 后端需要单独执行 `fly deploy` 才能带上最新代码。部署后在 Vercel 确认
-`VITE_API_BASE_URL` 指向 `https://backend-lingering-moonbeam-4274.fly.dev`，
+仓库曾被关联到四个 Vercel 项目（`elht`、`czq2`、`j9gr`、`world-simulator`），目前只有 `elht` 绑定生产域名；建议在 Vercel 控制台删除其余三个，避免出现“构建成功但域名没更新”。
+Fly 后端需要单独执行 `cd backend && fly deploy` 才能带上最新代码。部署后在 Vercel 确认
+`VITE_API_BASE_URL` 指向 `https://api.psyengine.top`，
 并完成一次真实注册/登录回归。
 
 `render.yaml` 仅作为备用部署方案保留，不是当前线上环境。
