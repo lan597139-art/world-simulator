@@ -16,7 +16,8 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { API_ORIGIN } from '../api/config'
-import { listStories } from '../api/writing'
+import { listWorks, type CreativeWork } from '../api/creativeWorks'
+import { resolveMediaUrl } from '../api/media'
 import { getAllWorlds } from '../services/worldService'
 import type { ProductKey } from '../product/types'
 import { LiquidGlass } from '../components/LiquidGlass';
@@ -101,7 +102,7 @@ function assetCopy(lang: Lang): Asset[] {
     ? [
         { key: 'worlds', label: '我的世界', unit: '个世界' },
         { key: 'characters', label: '我的 OC', unit: '位人物' },
-        { key: 'works', label: '我的作品', unit: '篇作品' },
+        { key: 'works', label: '我的作品', unit: '部作品' },
       ]
     : [
         { key: 'worlds', label: 'My worlds', unit: 'worlds' },
@@ -124,6 +125,7 @@ export default function CreationCenterPage({
   onOpenAsset: (asset: CreationAssetKey) => void
 }) {
   const [counts, setCounts] = useState<AssetCounts>({ worlds: null, characters: null, works: null })
+  const [recentWorks, setRecentWorks] = useState<CreativeWork[]>([])
 
   useEffect(() => {
     let cancelled = false
@@ -140,10 +142,11 @@ export default function CreationCenterPage({
         }
       })
       .catch(() => undefined)
-    void listStories()
-      .then((stories) => {
-        if (!cancelled && Array.isArray(stories)) {
-          setCounts((current) => ({ ...current, works: stories.length }))
+    void listWorks()
+      .then((works) => {
+        if (!cancelled && Array.isArray(works)) {
+          setCounts((current) => ({ ...current, works: works.length }))
+          setRecentWorks(works.slice(0, 4))
         }
       })
       .catch(() => undefined)
@@ -249,6 +252,29 @@ export default function CreationCenterPage({
           ))}
         </div>
       </section>
+
+      {recentWorks.length > 0 && (
+        <section className="cc-section">
+          <div className="cc-section-head">
+            <h2>{lang === 'zh' ? '最近作品' : 'Recent works'}</h2>
+            <p>{lang === 'zh' ? '封面与更新状态 · 点击进入作品管理' : 'Covers and status · open work management'}</p>
+          </div>
+          <div className="cc-recent-grid">
+            {recentWorks.map((work) => (
+              <button key={work.id} type="button" className="cc-recent-work" onClick={() => onOpenAsset('works')}>
+                <span className="cc-recent-cover">
+                  {work.cover_url ? <img src={resolveMediaUrl(work.cover_url)} alt="" loading="lazy" /> : <BookOpen size={18} strokeWidth={1.3} aria-hidden="true" />}
+                </span>
+                <span className="cc-recent-copy">
+                  <strong>{work.title}</strong>
+                  <small>{work.category} · {work.status === 'completed' ? (lang === 'zh' ? '已完成' : 'Completed') : work.status === 'in_progress' ? (lang === 'zh' ? '创作中' : 'In progress') : work.status === 'archived' ? (lang === 'zh' ? '已归档' : 'Archived') : (lang === 'zh' ? '草稿' : 'Draft')}</small>
+                </span>
+                <ArrowUpRight size={12} aria-hidden="true" />
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   )
 }

@@ -52,6 +52,8 @@ import GameCenterPage from './pages/GameCenterPage'
 import ContentStorePage from './pages/ContentStorePage'
 import SettingsPage from './pages/SettingsPage'
 import BillingCenterPage from './pages/BillingCenterPage'
+import WorksPage from './pages/WorksPage'
+import type { WorkScene } from './api/creativeWorks'
 import { getSettings } from './api/settings'
 import { applyExperience } from './utils/experience'
 import { ensureProductWorkspace, fetchProductMatrix } from './api/productConfig'
@@ -94,6 +96,7 @@ type PageKey =
   | 'companion-runtime'
   | 'information-sources'
   | 'creator-assets'
+  | 'works'
 
 export type Language = 'zh' | 'en'
 
@@ -149,6 +152,7 @@ function pageLabel(key: PageKey, dict: Record<string, string>): string {
     'archive': '归档库',
     'trash': '回收站',
     'creator-assets': '创作者资产库',
+    works: '我的作品',
     'time-machine': '时光机',
     personas: '云宝人格',
     'yunbao-seed': '人物种子编辑器',
@@ -181,11 +185,11 @@ const initialPage: PageKey = hasWorkbenchLink
 const WORLD_FREE_PAGES: PageKey[] = [
   'home', 'user-center', 'community', 'community-social', 'business', 'settings', 'ai-center', 'game-center', 'content-store', 'workspace-home', 'overview', 'world-management', 'world-building', 'diary', 'archive', 'trash',
   'information-sources', 'personas', 'yunbao-seed', 'memories', 'companion-runtime', 'yunbao',
-  'creator-assets',
+  'creator-assets', 'works',
 ]
 
 function isGlobalPage(page: PageKey): boolean {
-  return page === 'home' || page === 'user-center' || page === 'community' || page === 'community-social' || page === 'business' || page === 'settings' || page === 'ai-center' || page === 'game-center' || page === 'content-store' || page === 'creator-assets'
+  return page === 'home' || page === 'user-center' || page === 'community' || page === 'community-social' || page === 'business' || page === 'settings' || page === 'ai-center' || page === 'game-center' || page === 'content-store' || page === 'creator-assets' || page === 'works'
 }
 
 function readStoredAuthUser(): AuthUser | null {
@@ -410,6 +414,34 @@ export default function App() {
     // 自动工作空间由下方 effect 统一创建，避免切换时重复 POST。
   }
 
+  const openWorkSpace = (scene: WorkScene, worldId?: string) => {
+    const next = productByKey(productMatrix.products, scene)
+    storeProduct(scene)
+    setProduct(scene)
+    setProductError('')
+    setNavStack([])
+    setCreatingWorld(false)
+    setFocusCharacterId(null)
+    setFocusYunbao(false)
+    const world = worldId ? allWorldsList.find((item) => item.id === worldId) : undefined
+    if (world && world.product_scene === scene) applyProductWorld(world)
+    setActivePage(usesWorkspaceShell(scene) ? 'workspace-home' : next.home as PageKey)
+    window.setTimeout(() => document.querySelector('.cc-page-scroll')?.scrollTo({ top: 0 }), 0)
+  }
+
+  const openWorkNarrative = (scene: WorkScene, worldId: string, page: 'storyline' | 'writing') => {
+    storeProduct(scene)
+    setProduct(scene)
+    setProductError('')
+    setNavStack([])
+    setFocusCharacterId(null)
+    setFocusYunbao(false)
+    const world = allWorldsList.find((item) => item.id === worldId)
+    if (world && world.product_scene === scene) applyProductWorld(world)
+    setActivePage(page)
+    window.setTimeout(() => document.querySelector('.cc-page-scroll')?.scrollTo({ top: 0 }), 0)
+  }
+
   const openProductPage = (nextKey: ProductKey, page: PageKey) => {
     const next = productByKey(productMatrix.products, nextKey)
     const nextNavigation = navigationConfig(next)
@@ -439,6 +471,14 @@ export default function App() {
         return
       }
       document.querySelector('.cc-page-scroll')?.scrollTo({ top: 0, behavior: 'smooth' })
+      return
+    }
+    if (target === 'works') {
+      setNavStack([])
+      setFocusCharacterId(null)
+      setFocusYunbao(false)
+      setActivePage('works')
+      window.setTimeout(() => document.querySelector('.cc-page-scroll')?.scrollTo({ top: 0 }), 0)
       return
     }
     if (target === 'settings') {
@@ -525,7 +565,7 @@ export default function App() {
   const handleOpenAsset = (asset: CreationAssetKey) => {
     if (asset === 'worlds') openProductPage('game', 'world-management')
     else if (asset === 'characters') openProductPage('game', 'character-management')
-    else openProductPage('game', 'writing')
+    else setActivePage('works')
   }
 
   const ensureAssetWorld = (): boolean => {
@@ -544,12 +584,16 @@ export default function App() {
       openProductPage('game', 'world-management')
       return
     }
-    // 作品、人物与剧情都属于具体工作台；未选世界时先进入首个真实世界，避免被路由守卫打回世界管理。
+    if (target === 'works') {
+      setActivePage('works')
+      return
+    }
+    // 人物与剧情都属于具体工作台；未选世界时先进入首个真实世界，避免被路由守卫打回世界管理。
     if (!ensureAssetWorld()) {
       openProductPage('game', 'world-management')
       return
     }
-    openProductPage('game', target === 'works' ? 'writing' : target === 'characters' ? 'character-management' : 'storyline')
+    openProductPage('game', target === 'characters' ? 'character-management' : 'storyline')
   }
 
   const handleUserUpdated = (nextUser: AuthUser) => {
@@ -771,7 +815,8 @@ export default function App() {
   const isCommunitySocial = activePage === 'community-social'
   const isBusiness = activePage === 'business'
   const isCreatorAssets = activePage === 'creator-assets'
-  const isGlobalShell = isHome || isUserCenter || isCommunity || isCommunitySocial || isBusiness || isSettings || isAiCenter || isGameCenter || isContentStore || isCreatorAssets
+  const isWorks = activePage === 'works'
+  const isGlobalShell = isHome || isUserCenter || isCommunity || isCommunitySocial || isBusiness || isSettings || isAiCenter || isGameCenter || isContentStore || isCreatorAssets || isWorks
   const isProductWorkspace = !isGlobalShell && usesWorkspaceShell(product)
   const isYunbaoWorkspace = isProductWorkspace && product === 'yunbao'
   const topbarWorlds = allWorldsList.filter(
@@ -784,7 +829,7 @@ export default function App() {
       {(isGlobalShell || isProductWorkspace) && (
         <CreationCenterSidebar
           lang={lang}
-          active={isUserCenter ? 'identity' : isCommunity ? 'community' : isCommunitySocial ? 'community-social' : isBusiness ? 'business' : isAiCenter ? 'ai-interaction' : isGameCenter ? 'game-experience' : isContentStore ? 'content-store' : isCreatorAssets ? 'assets' : 'home'}
+          active={isUserCenter ? 'identity' : isCommunity ? 'community' : isCommunitySocial ? 'community-social' : isBusiness ? 'business' : isAiCenter ? 'ai-interaction' : isGameCenter ? 'game-experience' : isContentStore ? 'content-store' : isCreatorAssets ? 'assets' : isWorks ? 'works' : 'home'}
           onNavigate={handleHomeNav}
           onToggleLang={() => setLang(lang === 'zh' ? 'en' : 'zh')}
           onCollapse={() => setSidebarCollapsed(true)}
@@ -963,7 +1008,7 @@ export default function App() {
                 (isProductWorkspace || isGlobalShell) ? (
                     <CreationCenterTopbar
                       lang={lang}
-                      page={isProductWorkspace ? 'workspace' : isUserCenter ? 'identity' : isCommunity ? 'community' : isCommunitySocial ? 'community-social' : isBusiness ? 'business' : isAiCenter ? 'ai-center' : isGameCenter ? 'game-center' : isContentStore ? 'content-store' : isCreatorAssets ? 'assets' : 'home'}
+                      page={isProductWorkspace ? 'workspace' : isUserCenter ? 'identity' : isCommunity ? 'community' : isCommunitySocial ? 'community-social' : isBusiness ? 'business' : isAiCenter ? 'ai-center' : isGameCenter ? 'game-center' : isContentStore ? 'content-store' : isCreatorAssets ? 'assets' : isWorks ? 'works' : 'home'}
                       productLabel={isProductWorkspace ? productConfig.label : undefined}
                       productKey={isProductWorkspace ? product : undefined}
                       currentWorldName={isProductWorkspace ? (productConfig.auto_workspace ? productConfig.workspace_name || currentWorldName : currentWorldName) : undefined}
@@ -1205,6 +1250,13 @@ export default function App() {
             <WorldDataPage worldId={currentWorldId} />
           ) : activePage === 'world-structure' ? (
             <WorldStructurePage worldId={currentWorldId} worldName={currentWorldName} />
+          ) : activePage === 'works' ? (
+            <WorksPage
+              lang={lang}
+              userName={authUser?.display_name || authUser?.username || ''}
+              onOpenScene={openWorkSpace}
+              onOpenNarrative={openWorkNarrative}
+            />
           ) : activePage === 'creator-assets' ? (
             <CreatorAssetsPage worldId={currentWorldId} />
           ) : activePage === 'archive' ? (

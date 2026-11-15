@@ -31,3 +31,27 @@ export async function uploadMedia(file: File): Promise<UploadedMedia> {
   if (data.file_url.startsWith('/')) data.file_url = `${API_ORIGIN}${data.file_url}`
   return data
 }
+
+
+/** 将已上传文件登记进创作者媒体资产库；失败不阻断主流程。 */
+export async function recordMediaAsset(input: {
+  title: string
+  fileUrl: string
+  mimeType?: string
+  fileSize?: number
+  description?: string
+}): Promise<void> {
+  const relative = input.fileUrl.startsWith(API_ORIGIN) ? input.fileUrl.slice(API_ORIGIN.length) : input.fileUrl
+  await fetch(`${API_ORIGIN}/api/creator-assets`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      asset_type: 'image',
+      title: input.title,
+      file_url: relative,
+      mime_type: input.mimeType || '',
+      file_size: input.fileSize || 0,
+      description: input.description || '',
+    }),
+  })
+}

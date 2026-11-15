@@ -28,7 +28,7 @@ export default function CreationCenterTopbar({
   onLogout,
 }: {
   lang: Lang
-  page: 'home' | 'identity' | 'community' | 'community-social' | 'business' | 'ai-center' | 'game-center' | 'content-store' | 'assets' | 'workspace'
+  page: 'home' | 'identity' | 'community' | 'community-social' | 'business' | 'ai-center' | 'game-center' | 'content-store' | 'assets' | 'works' | 'workspace'
   productLabel?: string
   productKey?: ProductKey
   currentWorldName?: string
@@ -75,7 +75,7 @@ export default function CreationCenterTopbar({
     }
   }, [panel, worldOpen])
 
-  const breadcrumbRoot = page === 'identity' ? (lang === 'zh' ? '用户与身份中心' : 'User & Identity Center') : page === 'community' ? (lang === 'zh' ? '内容社区' : 'Content Community') : page === 'community-social' ? (lang === 'zh' ? '社区社交' : 'Community Social') : page === 'business' ? (lang === 'zh' ? '商业与服务中心' : 'Business & Services') : page === 'ai-center' ? (lang === 'zh' ? 'AI 互动中心' : 'AI Interaction Center') : page === 'game-center' ? (lang === 'zh' ? '游戏体验中心' : 'Game Experience Center') : page === 'content-store' ? (lang === 'zh' ? '内容商城' : 'Content Store') : page === 'assets' ? (lang === 'zh' ? '创作者资产库' : 'Creator Assets') : (lang === 'zh' ? '创作中心' : 'Creation Center')
+  const breadcrumbRoot = page === 'identity' ? (lang === 'zh' ? '用户与身份中心' : 'User & Identity Center') : page === 'community' ? (lang === 'zh' ? '内容社区' : 'Content Community') : page === 'community-social' ? (lang === 'zh' ? '社区社交' : 'Community Social') : page === 'business' ? (lang === 'zh' ? '商业与服务中心' : 'Business & Services') : page === 'ai-center' ? (lang === 'zh' ? 'AI 互动中心' : 'AI Interaction Center') : page === 'game-center' ? (lang === 'zh' ? '游戏体验中心' : 'Game Experience Center') : page === 'content-store' ? (lang === 'zh' ? '内容商城' : 'Content Store') : page === 'assets' ? (lang === 'zh' ? '创作者资产库' : 'Creator Assets') : page === 'works' ? (lang === 'zh' ? '我的作品' : 'My Works') : (lang === 'zh' ? '创作中心' : 'Creation Center')
   const productIcons: Record<ProductKey, LucideIcon> = {
     game: Gamepad2,
     literature: BookOpen,
@@ -85,7 +85,7 @@ export default function CreationCenterTopbar({
   }
   const WorkspaceIcon = productKey ? productIcons[productKey] : Gamepad2
   const isWorkspace = page === 'workspace' && Boolean(productLabel)
-  const breadcrumbCurrent = productLabel || (page === 'identity' ? (lang === 'zh' ? '个人管理' : 'Profile') : page === 'community' ? (lang === 'zh' ? '发现' : 'Discover') : page === 'community-social' ? (lang === 'zh' ? '讨论与关系' : 'Discussions & Relations') : page === 'business' ? (lang === 'zh' ? '账户与服务' : 'Account & Services') : page === 'ai-center' ? (lang === 'zh' ? '角色与关系' : 'Characters & Relations') : page === 'game-center' ? (lang === 'zh' ? '剧情与探索' : 'Story & Exploration') : page === 'content-store' ? (lang === 'zh' ? '资产与授权' : 'Assets & Licensing') : page === 'assets' ? (lang === 'zh' ? '文件与内容管理' : 'Files & Content') : (lang === 'zh' ? '首页' : 'Home'))
+  const breadcrumbCurrent = productLabel || (page === 'identity' ? (lang === 'zh' ? '个人管理' : 'Profile') : page === 'community' ? (lang === 'zh' ? '发现' : 'Discover') : page === 'community-social' ? (lang === 'zh' ? '讨论与关系' : 'Discussions & Relations') : page === 'business' ? (lang === 'zh' ? '账户与服务' : 'Account & Services') : page === 'ai-center' ? (lang === 'zh' ? '角色与关系' : 'Characters & Relations') : page === 'game-center' ? (lang === 'zh' ? '剧情与探索' : 'Story & Exploration') : page === 'content-store' ? (lang === 'zh' ? '资产与授权' : 'Assets & Licensing') : page === 'assets' ? (lang === 'zh' ? '文件与内容管理' : 'Files & Content') : page === 'works' ? (lang === 'zh' ? '作品与引用' : 'Works & References') : (lang === 'zh' ? '首页' : 'Home'))
 
   return (
     <header className="cc-topbar">

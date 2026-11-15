@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { getCharacterRuntime, updateCharacterRuntime, type CharacterLayer, type GrowthEntry } from '../api/characterRuntime'
+import { API_ORIGIN } from '../api/config'
+import { recordMediaAsset, resolveMediaUrl, uploadMedia } from '../api/media'
+import '../styles/character-media.css'
 // ================= 基础表单组件 =================
 function TextField({ label, value, onChange, placeholder }: { label: string, value: string, onChange: (v: string) => void, placeholder?: string }) {
   return (
@@ -330,7 +333,7 @@ useEffect(() => {
       })
       .then(data => {
         // 1. 基础档案
-        if (data.basic_profile) setCharData(data.basic_profile);
+        if (data.basic_profile) setCharData(prev => ({ ...prev, ...data.basic_profile, name: data.basic_profile.name || data.name || prev.name }));
         
         // 2. 绑定世界
         if (data.world_id) setSelectedWorldId(data.world_id);
@@ -499,11 +502,72 @@ useEffect(() => {
     setIsEventImportModalOpen(false);
   };
   // ✅ 01 基础档案（必须放在函数体内的最上面）
-  const [charData, setCharData] = useState({
-    name: '', code: '', avatar: '', species: '', age: '', gender: '',
+  const [charData, setCharData] = useState<Record<string, any>>({
+    name: '', code: '', avatar: '', portraits: [], species: '', age: '', gender: '',
     world: '', nation: '', org: '', socialClass: '', profession: '', role: '',
     appearance: '', education: '', degree: '', intro: '', background: ''
   })
+  const avatarInputRef = useRef<HTMLInputElement>(null)
+  const portraitsInputRef = useRef<HTMLInputElement>(null)
+  const [mediaBusy, setMediaBusy] = useState(false)
+  const [mediaError, setMediaError] = useState('')
+  const [previewUrls, setPreviewUrls] = useState<string[]>([])
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null)
+  const portraitUrls: string[] = Array.isArray(charData.portraits) ? charData.portraits : []
+  const openImagePreview = (urls: string[], index: number) => {
+    if (!urls[index]) return
+    setPreviewUrls(urls)
+    setPreviewIndex(index)
+  }
+  const stepPreview = (delta: number) => {
+    if (previewIndex === null || previewUrls.length < 2) return
+    setPreviewIndex((previewIndex + delta + previewUrls.length) % previewUrls.length)
+  }
+
+  const mediaPath = (url: string) => (url.startsWith(API_ORIGIN) ? url.slice(API_ORIGIN.length) : url)
+  const uploadCharacterAvatar = async (file?: File) => {
+    if (!file) return
+    setMediaBusy(true)
+    setMediaError('')
+    try {
+      const uploaded = await uploadMedia(file)
+      setCharData(prev => ({ ...prev, avatar: mediaPath(uploaded.file_url) }))
+      await recordMediaAsset({
+        title: `人物头像 · ${charData.name || '未命名人物'}`,
+        fileUrl: uploaded.file_url,
+        mimeType: uploaded.mime_type,
+        fileSize: uploaded.file_size,
+        description: '人物头像',
+      }).catch(() => undefined)
+    } catch (error) {
+      setMediaError(error instanceof Error ? error.message : String(error))
+    } finally {
+      setMediaBusy(false)
+      if (avatarInputRef.current) avatarInputRef.current.value = ''
+    }
+  }
+  const uploadCharacterPortraits = async (files?: FileList | null) => {
+    if (!files?.length) return
+    setMediaBusy(true)
+    setMediaError('')
+    try {
+      const uploadedRows = await Promise.all([...files].slice(0, 8).map((file) => uploadMedia(file)))
+      setCharData(prev => ({ ...prev, portraits: [...(Array.isArray(prev.portraits) ? prev.portraits : []), ...uploadedRows.map(row => mediaPath(row.file_url))] }))
+      await Promise.all(uploadedRows.map((row) => recordMediaAsset({
+        title: `人物立绘 · ${charData.name || '未命名人物'}`,
+        fileUrl: row.file_url,
+        mimeType: row.mime_type,
+        fileSize: row.file_size,
+        description: '人物立绘 / 三视图 / 参考图',
+      }).catch(() => undefined)))
+    } catch (error) {
+      setMediaError(error instanceof Error ? error.message : String(error))
+    } finally {
+      setMediaBusy(false)
+      if (portraitsInputRef.current) portraitsInputRef.current.value = ''
+    }
+  }
+  const removePortrait = (url: string) => setCharData(prev => ({ ...prev, portraits: (Array.isArray(prev.portraits) ? prev.portraits : []).filter((item: string) => item !== url) }))
   const updateChar = (field: string, val: string) => setCharData(prev => ({ ...prev, [field]: val }))
 
   // 02 引擎
@@ -1032,7 +1096,7 @@ useEffect(() => {
       await handleRuntimeSave()
       return
     }
-    if (!charData.name.trim()) return alert('❌ 请填写人物名称！');
+    if (!String(charData.name || '').trim()) return alert('❌ 请填写人物名称！');
     if (!selectedWorldId) return alert('❌ 请选择人物所属的世界！');
 
     try {
@@ -1236,6 +1300,54 @@ return (
           {/* 模块 01 */}
           {currentModule.id === 'basic' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              <div className="glass-card cm-card">
+                <div className="cm-head">
+                  <div>
+                    <span className="cm-eyebrow">Character visuals</span>
+                    <h3>人物形象</h3>
+                  </div>
+                  <span className="cm-hint">头像用于列表与关联作品识别；立绘可保存多张设定图。</span>
+                </div>
+                <div className="cm-layout">
+                  <div className="cm-avatar-block">
+                    <button type="button" className="cm-avatar-preview" onClick={() => charData.avatar && openImagePreview([charData.avatar], 0)} aria-label="预览人物头像">
+                      {charData.avatar ? <img src={resolveMediaUrl(charData.avatar)} alt="人物头像" /> : <span>{charData.name?.slice(0, 1) || '?'}</span>}
+                    </button>
+                    <div className="cm-actions">
+                      <input ref={avatarInputRef} type="file" accept="image/*" hidden onChange={(event) => void uploadCharacterAvatar(event.target.files?.[0])} />
+                      <button type="button" className="cm-button" disabled={mediaBusy} onClick={() => avatarInputRef.current?.click()}>上传头像</button>
+                      {charData.avatar && <button type="button" className="cm-text-button" onClick={() => setCharData(prev => ({ ...prev, avatar: '' }))}>移除</button>}
+                    </div>
+                  </div>
+                  <div className="cm-portrait-block">
+                    <div className="cm-portrait-grid">
+                      {portraitUrls.map((url, index) => (
+                        <div className="cm-portrait" key={url}>
+                          <button type="button" className="cm-portrait-image" title="预览立绘" onClick={() => openImagePreview(portraitUrls, index)}>
+                            <img src={resolveMediaUrl(url)} alt="人物立绘" />
+                          </button>
+                          <button type="button" className="cm-portrait-remove" title="移除这张立绘" onClick={() => removePortrait(url)}>×</button>
+                        </div>
+                      ))}
+                      <button type="button" className="cm-portrait-add" disabled={mediaBusy} onClick={() => portraitsInputRef.current?.click()}>
+                        <span>＋</span>
+                        <small>{mediaBusy ? '上传中…' : '添加立绘'}</small>
+                      </button>
+                    </div>
+                    <input ref={portraitsInputRef} type="file" accept="image/*" multiple hidden onChange={(event) => void uploadCharacterPortraits(event.target.files)} />
+                  </div>
+                </div>
+                {mediaError && <div className="cm-error">图片上传失败：{mediaError}</div>}
+              </div>
+              {previewIndex !== null && previewUrls[previewIndex] && (
+                <div className="cm-lightbox" role="dialog" aria-modal="true" aria-label="人物形象预览" onClick={() => setPreviewIndex(null)}>
+                  <button type="button" className="cm-lightbox-close" onClick={() => setPreviewIndex(null)} aria-label="关闭预览">×</button>
+                  {previewUrls.length > 1 && <button type="button" className="cm-lightbox-nav is-prev" onClick={(event) => { event.stopPropagation(); stepPreview(-1) }} aria-label="上一张">‹</button>}
+                  <img src={resolveMediaUrl(previewUrls[previewIndex])} alt="人物形象预览" onClick={(event) => event.stopPropagation()} />
+                  {previewUrls.length > 1 && <button type="button" className="cm-lightbox-nav is-next" onClick={(event) => { event.stopPropagation(); stepPreview(1) }} aria-label="下一张">›</button>}
+                  {previewUrls.length > 1 && <div className="cm-lightbox-count">{previewIndex + 1} / {previewUrls.length}</div>}
+                </div>
+              )}
               <div className="glass-card" style={{ padding: '24px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                   <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>人物类型</span>
@@ -1254,7 +1366,7 @@ return (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
                   <TextField label="人物名称" value={charData.name} onChange={v => updateChar('name', v)} placeholder="例如：张三" />
                   <TextField label="人物编号" value={charData.code} onChange={v => updateChar('code', v)} placeholder="A-001" />
-                  <TextField label="人物头像 (URL)" value={charData.avatar} onChange={v => updateChar('avatar', v)} />
+                  <TextField label="人物头像 URL（也可直接填写）" value={charData.avatar} onChange={v => updateChar('avatar', v)} />
                   <TextField label="物种" value={charData.species} onChange={v => updateChar('species', v)} placeholder="人类/精灵/赛博格..." />
                   <TextField label="年龄" value={charData.age} onChange={v => updateChar('age', v)} />
                   <TextField label="性别" value={charData.gender} onChange={v => updateChar('gender', v)} />

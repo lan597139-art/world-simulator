@@ -504,21 +504,21 @@
   text-decoration: underline;
 }
 
-.uc-work-icon {
+.uc-work-cover {
   display: grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
+  width: 38px;
+  height: 46px;
   flex: 0 0 auto;
-  border-radius: 7px;
+  overflow: hidden;
   border: 1px solid var(--card-border);
-  color: var(--text-main);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--primary-color) 9%, transparent);
+  color: var(--text-muted);
 }
-
-.uc-work-icon svg {
-  width: 13px;
-  height: 13px;
-}
+.uc-work-cover img { width: 100%; height: 100%; object-fit: cover; }
+.uc-work-cover.is-empty { width: 32px; height: 32px; border-radius: 8px; }
+.uc-work-cover svg { width: 14px; height: 14px; }
 
 .uc-work-copy {
   display: flex;

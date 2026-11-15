@@ -61,6 +61,7 @@ MODULES = [
     "m049_auth_multiuser",
     "m050_avatar_url",
     "m051_trash_owner",
+    "m052_creative_works",
 ]
 
 

@@ -2185,6 +2185,35 @@ class BillingSettlement(Base):
 # 创作者文件与内容管理
 # 文件夹只负责组织，资产的身份/关联由 entity_type/entity_id 决定。
 # =====================================================================
+class CreativeWork(Base):
+    """创作中心的统一作品元数据。
+
+    作品是四个创作场景共享的“作品入口”，不复制世界、人物或章节内容；
+    world_ids / character_ids 只保存引用，具体创作仍由各产品工作台承载。
+    """
+
+    __tablename__ = "creative_works"
+
+    id = Column(String, primary_key=True, index=True, default=_uuid)
+    owner_user_id = Column(String, nullable=False, index=True)
+    scene = Column(String, nullable=False, index=True)  # game/literature/companion/diary
+    title = Column(String, nullable=False)
+    summary = Column(Text, default="")
+    category = Column(String, default="")
+    status = Column(String, default="draft", nullable=False, index=True)  # draft/in_progress/completed/archived
+    cover_url = Column(String, default="")
+    world_ids = Column(JSON, default=list)
+    character_ids = Column(JSON, default=list)
+    settings = Column(JSON, default=dict)
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now)
+
+    __table_args__ = (
+        Index("ix_creative_works_owner_scene", "owner_user_id", "scene", "updated_at"),
+        Index("ix_creative_works_owner_status", "owner_user_id", "status", "updated_at"),
+    )
+
+
 class CreatorFolder(Base):
     __tablename__ = "creator_folders"
 

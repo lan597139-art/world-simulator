@@ -28,6 +28,7 @@ from journal import router as journal_router
 from ai_grants import router as ai_grants_router
 from community import router as community_router
 from community_social import router as community_social_router
+from creative_works import router as creative_works_router
 from products import router as products_router
 from settings import router as settings_router
 from billing import router as billing_router, record_ai_usage
@@ -168,6 +169,7 @@ for router in (
     settings_router,
     billing_router,
     community_social_router,
+    creative_works_router,
 ):
     app.include_router(router)
 

@@ -22,7 +22,7 @@ import type { AuthUser } from '../api/auth'
 import { API_ORIGIN } from '../api/config'
 import { resolveMediaUrl } from '../api/media'
 import { listStories as listStoryProjects } from '../api/storyline'
-import { listStories, type StoryItem } from '../api/writing'
+import { listWorks, type CreativeWork } from '../api/creativeWorks'
 import { updateUserDisplayName } from '../api/users'
 import { getAllWorlds } from '../services/worldService'
 import './../styles/user-center.css'
@@ -73,10 +73,10 @@ function copy(lang: Lang) {
         worksShowcase: '作品展示',
         achievements: '创作成就',
         allWorks: '查看全部作品',
-        noWorks: '还没有作品，写作会出现在这里。',
+        noWorks: '还没有作品，从创作中心创建第一部作品。',
         builtWorlds: '已建立世界',
         shapedCharacters: '塑造人物',
-        finishedWorks: '完成作品',
+        finishedWorks: '作品',
         storyProjects: '故事项目',
         follows: '我的关注',
         following: '关注',
@@ -175,10 +175,10 @@ function copy(lang: Lang) {
         worksShowcase: 'Selected works',
         achievements: 'Achievements',
         allWorks: 'View all works',
-        noWorks: 'No works yet. Writing will appear here.',
+        noWorks: 'No works yet. Create your first one in the creation center.',
         builtWorlds: 'Worlds built',
         shapedCharacters: 'Characters shaped',
-        finishedWorks: 'Works finished',
+        finishedWorks: 'Works',
         storyProjects: 'Story projects',
         follows: 'Following',
         following: 'Following',
@@ -300,7 +300,7 @@ export default function UserCenterPage({
   const [counts, setCounts] = useState<Counts>({
     worlds: null, characters: null, storylines: null, templates: 0, works: null,
   })
-  const [works, setWorks] = useState<StoryItem[] | null>(null)
+  const [works, setWorks] = useState<CreativeWork[] | null>(null)
   const [profile, setProfile] = useState<LocalProfile>(() => readLocalProfile(user?.id || 'local'))
   const [profileOpen, setProfileOpen] = useState(false)
   const [displayName, setDisplayName] = useState(user?.display_name || '')
@@ -339,7 +339,7 @@ export default function UserCenterPage({
       })
       .catch(() => undefined)
 
-    void listStories()
+    void listWorks()
       .then((rows) => {
         if (cancelled || !Array.isArray(rows)) return
         const sorted = [...rows].sort((a, b) => String(b.updated_at || '').localeCompare(String(a.updated_at || '')))
@@ -527,10 +527,12 @@ export default function UserCenterPage({
                 <div className="uc-work-list">
                   {works.slice(0, 3).map((work) => (
                     <button type="button" className="uc-work-row" key={work.id} onClick={onOpenWorks}>
-                      <span className="uc-work-icon"><BookOpen aria-hidden="true" strokeWidth={1.6} /></span>
+                      <span className={`uc-work-cover${work.cover_url ? '' : ' is-empty'}`}>
+                        {work.cover_url ? <img src={resolveMediaUrl(work.cover_url)} alt="" loading="lazy" /> : <BookOpen aria-hidden="true" strokeWidth={1.5} />}
+                      </span>
                       <span className="uc-work-copy">
                         <strong>{work.title}</strong>
-                        <span>{work.status === 'published' ? text.workPublished : text.workDraft}</span>
+                        <span>{work.status === 'completed' ? (lang === 'zh' ? '已完成' : 'Completed') : work.status === 'in_progress' ? (lang === 'zh' ? '创作中' : 'In progress') : work.status === 'archived' ? (lang === 'zh' ? '已归档' : 'Archived') : text.workDraft}</span>
                       </span>
                       <ArrowUpRight className="uc-row-arrow" aria-hidden="true" strokeWidth={1.8} />
                     </button>

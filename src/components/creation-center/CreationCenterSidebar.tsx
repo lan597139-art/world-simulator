@@ -3,6 +3,7 @@ import {
   Cloud,
   Compass,
   Gamepad2,
+  BookOpen,
   IdCard,
   MessagesSquare,
   FolderKanban,
@@ -25,6 +26,7 @@ export type HomeNavTarget =
   | 'yunbao'
   | 'business'
   | 'assets'
+  | 'works'
   | 'settings'
 
 type Lang = 'zh' | 'en'
@@ -41,7 +43,7 @@ type NavGroup = {
   items: NavItem[]
 }
 
-function groups(lang: Lang, active: 'home' | 'identity' | 'community' | 'community-social' | 'ai-interaction' | 'game-experience' | 'content-store' | 'business' | 'assets'): NavGroup[] {
+function groups(lang: Lang, active: 'home' | 'identity' | 'community' | 'community-social' | 'ai-interaction' | 'game-experience' | 'content-store' | 'business' | 'assets' | 'works'): NavGroup[] {
   return [
     {
       label: lang === 'zh' ? '个人空间' : 'Personal Space',
@@ -64,6 +66,7 @@ function groups(lang: Lang, active: 'home' | 'identity' | 'community' | 'communi
       label: lang === 'zh' ? '创作管理' : 'Creation Management',
       items: [
         { target: 'assets', label: lang === 'zh' ? '创作者资产库' : 'Creator Assets', icon: FolderKanban },
+        { target: 'works', label: lang === 'zh' ? '我的作品' : 'My Works', icon: BookOpen, active: active === 'works' },
       ],
     },
     {
@@ -86,7 +89,7 @@ export default function CreationCenterSidebar({
   canAccessYunbao = false,
 }: {
   lang: Lang
-  active: 'home' | 'identity' | 'community' | 'community-social' | 'ai-interaction' | 'game-experience' | 'content-store' | 'business' | 'assets'
+  active: 'home' | 'identity' | 'community' | 'community-social' | 'ai-interaction' | 'game-experience' | 'content-store' | 'business' | 'assets' | 'works'
   onNavigate: (target: HomeNavTarget) => void
   onToggleLang: () => void
   onCollapse: () => void

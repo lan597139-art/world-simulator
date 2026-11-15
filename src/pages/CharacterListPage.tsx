@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import CharacterBuildingPage from './CharacterBuildingPage';
 import CharacterBiographyModal from '../components/CharacterBiographyModal'
+import { resolveMediaUrl } from '../api/media'
 import { YunbaoCard, YunbaoProfilePanel } from '../components/YunbaoProfile';
 
 export default function CharacterListPage({
@@ -174,12 +175,26 @@ export default function CharacterListPage({
             onClick={() => { if (!readOnly) openEditor(char.id) }}
             style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', cursor: 'pointer' }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
-              <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--text-main)' }}>{char.name || '未命名人物'}</h3>
-              <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>点击卡片编辑</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                <div style={{
+                  width: '46px', height: '54px', flex: '0 0 auto', overflow: 'hidden',
+                  display: 'grid', placeItems: 'center', borderRadius: '10px',
+                  border: '1px solid var(--card-border)',
+                  background: 'var(--primary-color-muted, rgba(128,128,128,.12))',
+                  color: 'var(--text-muted)', fontSize: '18px', fontWeight: 650,
+                }}>
+                  {char.basic_profile?.avatar
+                    ? <img src={resolveMediaUrl(char.basic_profile.avatar)} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : (char.name || '?').slice(0, 1)}
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{char.name || '未命名人物'}</h3>
+                  <p style={{ margin: '3px 0 0', fontSize: '11px', color: 'var(--text-muted)' }}>ID: {char.id}</p>
+                </div>
+              </div>
+              <span style={{ fontSize: '10px', color: 'var(--text-muted)', flex: '0 0 auto' }}>点击卡片编辑</span>
             </div>
-            
-            <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)' }}>ID: {char.id}</p>
             
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
               {char.persona_type === 'self' && (
