@@ -15,7 +15,7 @@
 
 | 项目 | 结果 | 证据 |
 | --- | --- | --- |
-| 前端生产构建 | 通过 | `vite build` 退出 0；产物 `dist/assets/index-*.js`（Vercel 产物 `index-CYtd7EIr.js` / CSS `index-BYuilfjf.css`，已包含本轮修复） |
+| 前端生产构建 | 通过 | `vite build` 退出 0；产物 `dist/assets/index-*.js`（Vercel 产物 `index-D8CVJNb5.js` / CSS `index-BkMJ4qcv.css`，已包含本轮修复） |
 | TypeScript | 通过 | `tsc --noEmit` 退出 0 |
 | 现有认证回归 | 13/13 通过 | `backend/tests/smoke_auth.py` |
 | 全量后端回归 | 690/690 通过 | `backend/tests/run_all.sh`，25 个套件 |
