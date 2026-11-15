@@ -648,7 +648,7 @@ export default function SettingsPage({
                   <div className="settings-background-row">
                     <input
                       style={input}
-                      placeholder="https://… 或 /uploads/…"
+                      placeholder="https://…（上传后自动填入）"
                       value={appearance.background_url}
                       onChange={(e) => updateAppearance({ background_url: e.target.value })}
                     />

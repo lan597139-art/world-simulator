@@ -210,18 +210,19 @@ html[data-glass="low"] { --glass-blur: 14px; --glass-saturate: 120%; }
 html[data-glass="high"] { --glass-blur: 56px; --glass-saturate: 200%; }
 html[data-glass="solid"] { --glass-opacity: 0.96; --glass-blur: 0px; }
 
-body::after {
-  content: "";
+#app-background {
   position: fixed;
-  inset: -3%;
+  inset: -4%;
   z-index: -2;
   pointer-events: none;
   background-image: var(--ws-bg-image);
   background-size: cover;
   background-position: center;
+  background-repeat: no-repeat;
   filter: blur(var(--ws-bg-blur));
   opacity: var(--ws-bg-opacity);
-  transform: scale(1.04);
+  transform: scale(1.05);
+  transition: opacity 180ms ease, filter 180ms ease;
 }
 
 body::before {

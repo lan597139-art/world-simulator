@@ -24,7 +24,8 @@ button {
 .app-shell {
   display: flex;
   min-height: 100vh;
-  background: var(--bg-color);
+  background: transparent;
+  isolation: isolate;
 }
 
 /* Sidebar */
@@ -37,7 +38,9 @@ button {
   flex-direction: column;
   width: 248px;
   padding: 25px 17px 18px;
-  background: #171d29;
+  background: rgba(23, 29, 41, 0.86);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+  backdrop-filter: blur(24px) saturate(150%);
   color: #f1f3f7;
   transition: width 220ms ease, padding 220ms ease, visibility 0s linear 0s;
 }

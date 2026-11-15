@@ -26,6 +26,7 @@ import CreatorAssetsPage from './pages/CreatorAssetsPage'
 import TrashPage from './pages/TrashPage'
 import JournalPage from './pages/JournalPage'
 import { authLogout, type AuthUser } from './api/auth'
+import { resolveMediaUrl } from './api/media'
 import { AUTH_USER_KEY } from './api/authToken'
 import TimeMachinePage from './pages/TimeMachinePage'
 import AIAssistantPanel from './components/AIAssistantPanel'
@@ -778,7 +779,7 @@ export default function App() {
   )
 
   return (
-    <div className="app-shell" style={{ display: 'flex', height: '100vh', overflow: 'hidden', backgroundColor: 'var(--bg-color)' }}>
+    <div className="app-shell" style={{ display: 'flex', height: '100vh', overflow: 'hidden', backgroundColor: 'transparent' }}>
       
       {(isGlobalShell || isProductWorkspace) && (
         <CreationCenterSidebar
@@ -792,7 +793,7 @@ export default function App() {
         />
       )}
 
-      <aside className={`sidebar${sidebarCollapsed ? ' is-collapsed' : ''}`} style={{ width: sidebarCollapsed ? 0 : 260, height: '100%', padding: sidebarCollapsed ? 0 : undefined, minWidth: 0, overflow: 'hidden', backgroundColor: 'var(--sidebar-bg)', backdropFilter: 'blur(40px) saturate(180%)', borderRight: sidebarCollapsed ? 'none' : '1px solid var(--card-border)', display: isGlobalShell || isProductWorkspace ? 'none' : 'flex', flexDirection: 'column' }}>
+      <aside className={`sidebar${sidebarCollapsed ? ' is-collapsed' : ''}`} style={{ width: sidebarCollapsed ? 0 : 260, height: '100%', padding: sidebarCollapsed ? 0 : undefined, minWidth: 0, overflow: 'hidden', backdropFilter: 'blur(40px) saturate(180%)', borderRight: sidebarCollapsed ? 'none' : '1px solid var(--card-border)', display: isGlobalShell || isProductWorkspace ? 'none' : 'flex', flexDirection: 'column' }}>
         
         <div className="brand" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div className="brand-mark" style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'var(--sidebar-text)', color: 'var(--sidebar-bg)', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 'bold', fontSize: '20px' }}>W</div>
@@ -927,7 +928,7 @@ export default function App() {
         </button>
       )}
 
-      <main className="main-area" style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-color)', overflow: 'hidden', marginLeft: sidebarCollapsed ? 0 : 260 }}>
+      <main className="main-area" style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: 'transparent', overflow: 'hidden', marginLeft: sidebarCollapsed ? 0 : 260 }}>
         {isYunbaoWorkspace && (
           <>
             <header className="yb-pinned-nav">
@@ -1030,7 +1031,11 @@ export default function App() {
                         <span className="status-dot" style={{ width: '6px', height: '6px', borderRadius: '50%', background: backendStatus === 'connected' ? '#10b981' : '#ef4444' }} />
                         {backendStatus === 'connected' ? '后端已连接' : '后端未连接'}
                       </span>
-                      <div className="avatar" style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--text-main)', color: 'var(--bg-color)', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 'bold' }}>U</div>
+                      <div className="avatar" style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--text-main)', color: 'var(--bg-color)', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 'bold', overflow: 'hidden' }}>
+                        {authUser?.avatar_url
+                          ? <img src={resolveMediaUrl(authUser.avatar_url)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          : (authUser?.display_name || authUser?.username || 'U').slice(0, 1)}
+                      </div>
                     </div>
                   </header>
                 )

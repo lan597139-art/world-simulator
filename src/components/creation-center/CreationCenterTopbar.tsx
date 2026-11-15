@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { ArrowLeft, Bell, BookOpen, Bot, ChevronDown, Cloud, Gamepad2, LogOut, NotebookPen, Plus, Search, Settings, UserRound } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { AuthUser } from '../../api/auth'
+import { resolveMediaUrl } from '../../api/media'
 import type { ProductKey } from '../../product/types'
 
 type Lang = 'zh' | 'en'
@@ -51,6 +52,7 @@ export default function CreationCenterTopbar({
   const worldRef = useRef<HTMLDivElement>(null)
   const displayName = user?.display_name || (lang === 'zh' ? '本地用户' : 'Local user')
   const initial = displayName.trim().charAt(0).toUpperCase() || 'U'
+  const avatarUrl = user?.avatar_url ? resolveMediaUrl(user.avatar_url) : ''
 
   useEffect(() => {
     if (!panel && !worldOpen) return
@@ -246,7 +248,7 @@ export default function CreationCenterTopbar({
             aria-expanded={panel === 'profile'}
             onClick={() => setPanel(panel === 'profile' ? null : 'profile')}
           >
-            <span className="cc-avatar">{initial}</span>
+            <span className={`cc-avatar${avatarUrl ? ' has-image' : ''}`}>{avatarUrl ? <img src={avatarUrl} alt="" /> : initial}</span>
             <span className="cc-profile-copy">
               <strong>{displayName}</strong>
               <span>{lang === 'zh' ? '个人空间' : 'Personal space'}</span>

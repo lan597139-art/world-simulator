@@ -15,7 +15,7 @@
 
 | 项目 | 结果 | 证据 |
 | --- | --- | --- |
-| 前端生产构建 | 通过 | `vite build` 退出 0；产物 `dist/assets/index-CzrBMqhm.js`（Vercel 产物 `index-COYiq0V2.js`） |
+| 前端生产构建 | 通过 | `vite build` 退出 0；产物 `dist/assets/index-CFjSZ11H.js`（Vercel 产物待最新部署确认） |
 | TypeScript | 通过 | `tsc --noEmit` 退出 0 |
 | 现有认证回归 | 13/13 通过 | `backend/tests/smoke_auth.py` |
 | 全量后端回归 | 690/690 通过 | `backend/tests/run_all.sh`，25 个套件 |
@@ -37,6 +37,10 @@
 | 生产静态上传 | 通过 | `api.psyengine.top` 上传 PNG，`/uploads/...` 返回 200 `image/png` |
 | 生产最新后端 | 通过 | Fly 机器 version 4；组织创建/删除、认证状态、CORS 均正常 |
 | 生产 UI E2E | 通过 | `app.psyengine.top` 测试账号登录：3 个密码框眼睛图标、背景/模糊/透明度/辉光面板均渲染；账号与邀请码已清理 |
+| 全局背景图 | 通过 | 真实 `#app-background` 固定层 + `.app-shell/.main-area` 透明；本地红/棋盘背景截图像素采样可见，侧栏 86% 透明 + blur |
+| 液态玻璃 | 通过（支持 WebGL2 的浏览器） | 4 个创作场景卡片各挂载 canvas，`data-liquid-glass="webgl"`；无 WebGL2 时保留 CSS 毛玻璃兜底 |
+| 头像同步 | 通过 | 顶栏/用户与身份中心优先渲染 `avatar_url`，`AuthUser` 同步写回 `ws.authUser`；测试上传头像后刷新仍显示 |
+| 悬浮按钮拖拽 | 通过 | AI 云宝按钮 pointer 拖拽、视口边界限制、`ws.assistant.fab.position.v1` 持久化，拖拽不误触打开 |
 
 ## 尚未完成 / 需要账号或凭据
 

@@ -172,7 +172,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   if (phase === 'ready') return <>{children}</>
   if (phase === 'loading') {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-color)', color: 'var(--text-muted)' }}>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', color: 'var(--text-muted)' }}>
         正在连接账号服务…
       </div>
     )
@@ -190,7 +190,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
         : '公开访问 · 使用用户名或邮箱登录'
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', background: 'var(--bg-color)' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', background: 'transparent' }}>
       <div className="glass-card" style={{ width: '420px', maxWidth: '100%', padding: '26px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div style={{ width: '38px', height: '38px', borderRadius: '9px', background: 'var(--text-main)', color: 'var(--bg-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '20px' }}>W</div>

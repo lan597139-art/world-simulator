@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import type { AuthUser } from '../api/auth'
 import { API_ORIGIN } from '../api/config'
+import { resolveMediaUrl } from '../api/media'
 import { listStories as listStoryProjects } from '../api/storyline'
 import { listStories, type StoryItem } from '../api/writing'
 import { updateUserDisplayName } from '../api/users'
@@ -361,6 +362,7 @@ export default function UserCenterPage({
 
   const displayNameValue = user?.display_name || (lang === 'zh' ? '本地用户' : 'Local user')
   const initial = displayNameValue.trim().charAt(0).toUpperCase() || 'U'
+  const avatarUrl = user?.avatar_url ? resolveMediaUrl(user.avatar_url) : ''
   const joined = user?.created_at
     ? new Date(user.created_at).toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' })
     : '—'
@@ -445,7 +447,7 @@ export default function UserCenterPage({
             <span>{joined}</span>
           </div>
           <div className="uc-profile-body">
-            <div className="uc-avatar-large">{initial}</div>
+            <div className={`uc-avatar-large${avatarUrl ? ' has-image' : ''}`}>{avatarUrl ? <img src={avatarUrl} alt="" /> : initial}</div>
             <div className="uc-profile-heading">
               <div className="uc-name-row">
                 <h2>{displayNameValue}</h2>
@@ -701,7 +703,7 @@ export default function UserCenterPage({
             </div>
             <div className="uc-form">
               <div className="uc-avatar-edit">
-                <span className="uc-avatar-large small">{displayName.trim().charAt(0).toUpperCase() || initial}</span>
+                <span className={`uc-avatar-large small${avatarUrl ? ' has-image' : ''}`}>{avatarUrl ? <img src={avatarUrl} alt="" /> : displayName.trim().charAt(0).toUpperCase() || initial}</span>
                 <span>{text.avatar}<small>{text.avatarNote}</small></span>
               </div>
               <label>

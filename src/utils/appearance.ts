@@ -1,3 +1,5 @@
+import { resolveMediaUrl } from '../api/media'
+
 export type Appearance = {
   background_url: string
   background_blur: number
@@ -49,7 +51,7 @@ export function saveAppearance(appearance: Appearance): void {
 
 export function applyAppearance(appearance: Appearance): void {
   const root = document.documentElement
-  const image = appearance.background_url.trim()
+  const image = resolveMediaUrl(appearance.background_url.trim())
   root.style.setProperty('--ws-bg-image', image ? `url(${JSON.stringify(image)})` : 'none')
   root.style.setProperty('--ws-bg-blur', `${appearance.background_blur}px`)
   root.style.setProperty('--ws-bg-opacity', `${appearance.background_opacity / 100}`)

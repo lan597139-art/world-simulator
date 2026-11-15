@@ -40,6 +40,38 @@ type ChatMessage = {
 }
 
 const STORAGE_PREFIX = 'ws.assistant.chat.v2'
+const FAB_POSITION_KEY = 'ws.assistant.fab.position.v1'
+const FAB_SIZE = 56
+const FAB_MARGIN = 8
+
+type FabPosition = { left: number; top: number }
+
+function clampFabPosition(position: FabPosition): FabPosition {
+  const maxLeft = Math.max(FAB_MARGIN, window.innerWidth - FAB_SIZE - FAB_MARGIN)
+  const maxTop = Math.max(FAB_MARGIN, window.innerHeight - FAB_SIZE - FAB_MARGIN)
+  return {
+    left: Math.min(Math.max(FAB_MARGIN, position.left), maxLeft),
+    top: Math.min(Math.max(FAB_MARGIN, position.top), maxTop),
+  }
+}
+
+function readFabPosition(): FabPosition | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = localStorage.getItem(FAB_POSITION_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    if (typeof parsed?.left !== 'number' || typeof parsed?.top !== 'number') return null
+    return clampFabPosition({ left: parsed.left, top: parsed.top })
+  } catch {
+    return null
+  }
+}
+
+function saveFabPosition(position: FabPosition) {
+  try { localStorage.setItem(FAB_POSITION_KEY, JSON.stringify(position)) } catch { /* ignore */ }
+}
+
 
 const PAGE_LABELS: Record<string, string> = {
   home: '选择产品',
@@ -237,12 +269,24 @@ export default function AIAssistantPanel({
   )
   const [yunbao, setYunbao] = useState<YunbaoProfile | null>(null)
   const [threadId, setThreadId] = useState('')
+  const [fabPosition, setFabPosition] = useState<FabPosition | null>(readFabPosition)
+  const [fabDragging, setFabDragging] = useState(false)
+  const fabDragRef = useRef<{ pointerId: number; startX: number; startY: number; left: number; top: number; moved: boolean } | null>(null)
+  const fabDraggedRef = useRef(false)
   const [stateBusy, setStateBusy] = useState('')
   const listRef = useRef<HTMLDivElement | null>(null)
   const inputRef = useRef<HTMLTextAreaElement | null>(null)
   const panelRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => { saveMessages(messages, 'yunbao') }, [messages])
+
+  useEffect(() => {
+    if (!fabPosition) return
+    const onResize = () => setFabPosition((current) => (current ? clampFabPosition(current) : current))
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [fabPosition])
+
 
   useEffect(() => {
     const handler = () => {
@@ -597,10 +641,13 @@ export default function AIAssistantPanel({
   // 关闭态悬浮按钮外壳
   const shell: CSSProperties = {
     position: 'fixed',
-    right: '22px',
-    bottom: '22px',
+    ...(fabPosition
+      ? { left: `${fabPosition.left}px`, top: `${fabPosition.top}px`, right: 'auto', bottom: 'auto' }
+      : { right: '22px', bottom: '22px' }),
     zIndex: 1400,
     fontFamily: 'inherit',
+    touchAction: 'none',
+    userSelect: 'none',
   }
 
   // 打开态外壳：宽屏停靠为右侧栏（主内容区自动收窄，不遮挡页面）；窄屏回退为悬浮层。
@@ -640,20 +687,73 @@ export default function AIAssistantPanel({
           type="button"
           data-ai-assistant
           onClick={() => {
+            if (fabDraggedRef.current) {
+              fabDraggedRef.current = false
+              return
+            }
             setOpen(true)
             setUnread(false)
           }}
-          title="打开云宝"
+          onPointerDown={(event) => {
+            if (event.button !== 0) return
+            const rect = event.currentTarget.getBoundingClientRect()
+            fabDragRef.current = {
+              pointerId: event.pointerId,
+              startX: event.clientX,
+              startY: event.clientY,
+              left: rect.left,
+              top: rect.top,
+              moved: false,
+            }
+            fabDraggedRef.current = false
+            event.currentTarget.setPointerCapture(event.pointerId)
+          }}
+          onPointerMove={(event) => {
+            const drag = fabDragRef.current
+            if (!drag || drag.pointerId !== event.pointerId) return
+            const dx = event.clientX - drag.startX
+            const dy = event.clientY - drag.startY
+            if (!drag.moved && Math.hypot(dx, dy) < 4) return
+            drag.moved = true
+            fabDraggedRef.current = true
+            setFabDragging(true)
+            setFabPosition(clampFabPosition({ left: drag.left + dx, top: drag.top + dy }))
+          }}
+          onPointerUp={(event) => {
+            const drag = fabDragRef.current
+            if (!drag || drag.pointerId !== event.pointerId) return
+            if (drag.moved) {
+              const position = clampFabPosition({
+                left: drag.left + event.clientX - drag.startX,
+                top: drag.top + event.clientY - drag.startY,
+              })
+              setFabPosition(position)
+              saveFabPosition(position)
+              // click 事件紧随 pointerup；先让本次 click 被忽略，再清理标记。
+              window.setTimeout(() => { fabDraggedRef.current = false }, 0)
+            }
+            fabDragRef.current = null
+            setFabDragging(false)
+            if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+              event.currentTarget.releasePointerCapture(event.pointerId)
+            }
+          }}
+          onPointerCancel={() => {
+            fabDragRef.current = null
+            fabDraggedRef.current = false
+            setFabDragging(false)
+          }}
+          title="打开云宝（可拖动）"
           style={{
             ...shell,
-            width: '56px',
-            height: '56px',
+            width: `${FAB_SIZE}px`,
+            height: `${FAB_SIZE}px`,
             borderRadius: '18px',
             border: '1px solid var(--card-border)',
             background: 'linear-gradient(145deg, var(--primary-color), color-mix(in srgb, var(--primary-color) 62%, #111 38%))',
             color: 'var(--primary-text)',
-            cursor: 'pointer',
-            boxShadow: '0 12px 30px rgba(0,0,0,0.28)',
+            cursor: fabDragging ? 'grabbing' : 'grab',
+            boxShadow: fabDragging ? '0 18px 40px rgba(0,0,0,0.34)' : '0 12px 30px rgba(0,0,0,0.28)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
