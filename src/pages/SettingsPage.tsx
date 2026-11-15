@@ -35,6 +35,7 @@ import {
   type SettingsPreferences,
   type SettingsPrivacy,
 } from '../api/settings'
+import { uploadMedia, resolveMediaUrl } from '../api/media'
 import InviteCodesPanel from '../components/settings/InviteCodesPanel'
 import LocalWorkspacePanel from '../components/settings/LocalWorkspacePanel'
 import '../styles/settings.css'
@@ -157,6 +158,12 @@ export default function SettingsPage({
   const [skin, setSkin] = useState(() => localStorage.getItem('ws.ui.skin') || 'default')
   const [glass, setGlass] = useState(() => localStorage.getItem('ws.ui.glass') || 'medium')
   const [passwords, setPasswords] = useState({ current_password: '', new_password: '', confirm: '' })
+  
+  // 密码可见性状态
+  const [showCurrentPwd, setShowCurrentPwd] = useState(false)
+  const [showNewPwd, setShowNewPwd] = useState(false)
+  const [showConfirmPwd, setShowConfirmPwd] = useState(false)
+
   const [busy, setBusy] = useState('')
   const [error, setError] = useState('')
   const [flash, setFlash] = useState('')
@@ -418,9 +425,57 @@ export default function SettingsPage({
 
               <Panel title="修改密码" subtitle="修改后其他设备会被退出登录，当前浏览器保持登录。">
                 <div className="settings-three-col">
-                  <Field label="当前密码"><input style={input} type="password" value={passwords.current_password} onChange={(e) => setPasswords((p) => ({ ...p, current_password: e.target.value }))} /></Field>
-                  <Field label="新密码"><input style={input} type="password" value={passwords.new_password} onChange={(e) => setPasswords((p) => ({ ...p, new_password: e.target.value }))} /></Field>
-                  <Field label="确认新密码"><input style={input} type="password" value={passwords.confirm} onChange={(e) => setPasswords((p) => ({ ...p, confirm: e.target.value }))} /></Field>
+                  <Field label="当前密码">
+                    <div style={{ position: 'relative', width: '100%', display: 'flex', alignItems: 'center' }}>
+                      <input style={{ ...input, paddingRight: 36 }} type={showCurrentPwd ? 'text' : 'password'} value={passwords.current_password} onChange={(e) => setPasswords((p) => ({ ...p, current_password: e.target.value }))} />
+                      <button 
+                        type="button" 
+                        onClick={(e) => { e.preventDefault(); setShowCurrentPwd(!showCurrentPwd); }} 
+                        style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, zIndex: 10 }} 
+                        title={showCurrentPwd ? "隐藏密码" : "显示密码"}
+                      >
+                        {showCurrentPwd ? (
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/></svg>
+                        ) : (
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                        )}
+                      </button>
+                    </div>
+                  </Field>
+                  <Field label="新密码">
+                    <div style={{ position: 'relative', width: '100%', display: 'flex', alignItems: 'center' }}>
+                      <input style={{ ...input, paddingRight: 36 }} type={showNewPwd ? 'text' : 'password'} value={passwords.new_password} onChange={(e) => setPasswords((p) => ({ ...p, new_password: e.target.value }))} />
+                      <button 
+                        type="button" 
+                        onClick={(e) => { e.preventDefault(); setShowNewPwd(!showNewPwd); }} 
+                        style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, zIndex: 10 }} 
+                        title={showNewPwd ? "隐藏密码" : "显示密码"}
+                      >
+                        {showNewPwd ? (
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/></svg>
+                        ) : (
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                        )}
+                      </button>
+                    </div>
+                  </Field>
+                  <Field label="确认新密码">
+                    <div style={{ position: 'relative', width: '100%', display: 'flex', alignItems: 'center' }}>
+                      <input style={{ ...input, paddingRight: 36 }} type={showConfirmPwd ? 'text' : 'password'} value={passwords.confirm} onChange={(e) => setPasswords((p) => ({ ...p, confirm: e.target.value }))} />
+                      <button 
+                        type="button" 
+                        onClick={(e) => { e.preventDefault(); setShowConfirmPwd(!showConfirmPwd); }} 
+                        style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, zIndex: 10 }} 
+                        title={showConfirmPwd ? "隐藏密码" : "显示密码"}
+                      >
+                        {showConfirmPwd ? (
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/></svg>
+                        ) : (
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                        )}
+                      </button>
+                    </div>
+                  </Field>
                 </div>
                 <button type="button" style={primary} disabled={busy === 'password'} onClick={() => void submitPassword()}><KeyRound size={14} /> {busy === 'password' ? '更新中…' : '更新密码'}</button>
               </Panel>
