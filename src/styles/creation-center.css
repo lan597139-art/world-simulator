@@ -849,6 +849,7 @@ button.cc-status-chip:hover {
   border: 1px solid var(--card-border);
   border-radius: 22px;
   /* WebGL 挂载后由 LiquidGlass 覆盖为透明；不支持时保留 CSS 毛玻璃兜底。 */
+  background: var(--card-bg);
   background: color-mix(in srgb, var(--card-bg) 78%, transparent);
   -webkit-backdrop-filter: blur(18px) saturate(150%);
   backdrop-filter: blur(18px) saturate(150%);

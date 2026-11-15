@@ -15,7 +15,7 @@
 
 | 项目 | 结果 | 证据 |
 | --- | --- | --- |
-| 前端生产构建 | 通过 | `vite build` 退出 0；产物 `dist/assets/index-CFjSZ11H.js`（Vercel 产物待最新部署确认） |
+| 前端生产构建 | 通过 | `vite build` 退出 0；产物 `dist/assets/index-*.js`（Vercel 产物 `index-CYtd7EIr.js` / CSS `index-BYuilfjf.css`，已包含本轮修复） |
 | TypeScript | 通过 | `tsc --noEmit` 退出 0 |
 | 现有认证回归 | 13/13 通过 | `backend/tests/smoke_auth.py` |
 | 全量后端回归 | 690/690 通过 | `backend/tests/run_all.sh`，25 个套件 |
@@ -44,7 +44,7 @@
 
 ## 尚未完成 / 需要账号或凭据
 
-1. **Vercel 冗余项目清理**：当前 GitHub 同一提交仍触发 `world-simulator-elht`、`world-simulator-czq2`、`world-simulator-j9gr`、`world-simulator` 四个项目部署；`app.psyengine.top` 已正确绑定 `world-simulator-elht`，线上产物也已更新，但其余三个项目需在 Vercel 控制台删除，避免以后再次出现“构建成功但域名不更新”。本环境没有 Vercel 登录凭据，无法代为删除。
+1. **Vercel 冗余项目清理**：最新提交在 GitHub 上只显示一个 `Vercel` 检查，`app.psyengine.top` 已更新到本轮产物；若 Vercel 控制台仍保留 `world-simulator-czq2`、`world-simulator-j9gr`、`world-simulator`，请删除，只保留 `world-simulator-elht`。本环境没有 Vercel 登录凭据，无法代为删除。
 2. **Fly 不休眠限制**：`fly.toml` 已改为 `auto_stop_machines = "off"`、`min_machines_running = 1`，机器当前为 started。若 Fly 账户未绑卡，平台仍可能强制停机；彻底消除 5 分钟休眠需要绑定付款方式或换常在线托管。
 3. **真实邮件**：`WS_EMAIL_MODE=smtp` 需要 SMTP 主机、账号、发件人；当前线上为 `off`，`dev` 仅日志验证码。
 4. **对象存储**：当前线上使用 `/data/uploads` 持久卷；如迁移到 S3/R2，需要 bucket、endpoint、AK/SK、公开域名。
