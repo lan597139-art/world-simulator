@@ -158,3 +158,119 @@ html[data-reduce-motion="true"] *, html[data-reduce-motion="true"] *::before, ht
   .settings-background-row { flex-wrap: wrap; }
   .settings-background-row input { flex-basis: 100%; }
 }
+
+/* 官方背景库：6 个内置场景，缩略图直接反映玻璃下的背景明暗。 */
+.settings-official-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.settings-official-tile {
+  position: relative;
+  min-height: 96px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  background-color: var(--bg-color);
+  background-size: cover;
+  background-position: center;
+  color: #fff;
+  cursor: pointer;
+  text-align: left;
+  isolation: isolate;
+  transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
+}
+.settings-official-tile::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, rgba(0,0,0,.04) 20%, rgba(0,0,0,.58) 100%);
+}
+.settings-official-tile:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--text-main) 38%, var(--card-border));
+  box-shadow: 0 10px 22px rgba(0,0,0,.16);
+}
+.settings-official-tile.is-selected {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 22%, transparent);
+}
+.settings-official-copy {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-shadow: 0 1px 8px rgba(0,0,0,.5);
+}
+.settings-official-copy strong { font-size: 11px; font-weight: 650; color: #fff; }
+.settings-official-copy small { font-size: 8px; letter-spacing: .08em; color: rgba(255,255,255,.8); }
+.settings-official-tile > svg {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 3px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.9);
+  color: #111;
+}
+@media (max-width: 620px) {
+  .settings-official-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .settings-official-tile { min-height: 88px; }
+}
+
+/* 材质示例：让“毛玻璃 / 液态玻璃”的分工在设置页直接可见。 */
+.settings-material-demo {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+  padding: 12px;
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  background:
+    radial-gradient(60% 90% at 20% 20%, color-mix(in srgb, var(--ambient-a) 70%, transparent), transparent 70%),
+    radial-gradient(55% 80% at 85% 75%, color-mix(in srgb, var(--ambient-b) 65%, transparent), transparent 72%),
+    var(--bg-color);
+}
+.settings-material-card {
+  padding: 14px 13px;
+  border-radius: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 82px;
+  justify-content: flex-end;
+}
+.settings-material-card span {
+  font-size: 7.5px;
+  letter-spacing: .16em;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+.settings-material-card strong { font-size: 11.5px; color: var(--text-main); }
+.settings-material-card small { font-size: 8.5px; color: var(--text-muted); line-height: 1.5; }
+.settings-material-card.is-frost {
+  background: color-mix(in srgb, var(--glass-frost-bg) 82%, transparent);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(20px) saturate(135%);
+  -webkit-backdrop-filter: blur(20px) saturate(135%);
+  box-shadow: inset 0 1px 0 var(--glass-rim);
+}
+.settings-material-card.is-liquid {
+  background: color-mix(in srgb, var(--glass-liquid-bg) 76%, transparent);
+  border: 1px solid color-mix(in srgb, var(--glass-rim) 62%, var(--glass-border));
+  backdrop-filter: blur(38px) saturate(175%);
+  -webkit-backdrop-filter: blur(38px) saturate(175%);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--glass-rim) 90%, transparent),
+    0 12px 30px rgba(0,0,0,.14),
+    0 0 24px rgba(120,150,255,.10);
+}
+@media (max-width: 560px) {
+  .settings-material-demo { grid-template-columns: 1fr; }
+}

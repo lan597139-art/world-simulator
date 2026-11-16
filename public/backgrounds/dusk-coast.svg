@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000">
+<defs>
+<linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#131c33"/><stop offset=".5" stop-color="#38466c"/><stop offset=".78" stop-color="#b27483"/><stop offset="1" stop-color="#e8b58d"/></linearGradient>
+<linearGradient id="sea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#252f4a"/><stop offset="1" stop-color="#0d1424"/></linearGradient>
+<linearGradient id="sun" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe6bd"/><stop offset="1" stop-color="#e89c73"/></linearGradient>
+</defs>
+<rect width="1600" height="1000" fill="url(#sky)"/>
+<circle cx="1040" cy="560" r="92" fill="url(#sun)" opacity=".9"/>
+<ellipse cx="1040" cy="560" rx="300" ry="70" fill="#ffd2a8" opacity=".18"/>
+<rect y="650" width="1600" height="350" fill="url(#sea)"/>
+<g stroke="#f7d9bc" stroke-width="2" opacity=".28"><path d="M980 690 H1120"/><path d="M930 730 H1180"/><path d="M1010 775 H1100"/><path d="M900 820 H1220"/></g>
+<path d="M0 650 C250 630 420 680 640 660 C880 638 1120 690 1600 650 L1600 1000 L0 1000Z" fill="#0b1220" opacity=".62"/>
+</svg>

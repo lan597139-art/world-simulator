@@ -23,6 +23,7 @@ import {
   UserRound,
 } from 'lucide-react'
 import type { AuthUser } from '../api/auth'
+import { OFFICIAL_BACKGROUNDS } from '../data/officialBackgrounds'
 import {
   changePassword,
   exportSettingsData,
@@ -669,6 +670,32 @@ export default function SettingsPage({
                     <div className="settings-background-preview" style={{ backgroundImage: `url(${JSON.stringify(resolveMediaUrl(appearance.background_url))})` }} />
                   )}
                 </Field>
+                <Field
+                  label={tr(lang, '官方背景库', 'Official backgrounds')}
+                  hint={tr(lang, '内置场景，可直接使用；上传图片仍会覆盖当前背景。', 'Built-in scenes; an uploaded image still overrides the current background.')}
+                >
+                  <div className="settings-official-grid">
+                    {OFFICIAL_BACKGROUNDS.map((background) => {
+                      const selected = appearance.background_url === background.url
+                      return (
+                        <button
+                          key={background.key}
+                          type="button"
+                          className={`settings-official-tile${selected ? ' is-selected' : ''}`}
+                          style={{ backgroundImage: `url(${JSON.stringify(background.url)})` }}
+                          onClick={() => updateAppearance({ background_url: background.url })}
+                          aria-pressed={selected}
+                        >
+                          <span className="settings-official-copy">
+                            <strong>{lang === 'zh' ? background.nameZh : background.nameEn}</strong>
+                            <small>{lang === 'zh' ? background.categoryZh : background.categoryEn}</small>
+                          </span>
+                          {selected && <Check size={14} aria-hidden="true" />}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </Field>
                 <Field label={tr(lang, '背景图透明度', 'Background opacity')} hint={`${appearance.background_opacity}%`}>
                   <input className="settings-range" type="range" min={0} max={100} value={appearance.background_opacity} onChange={(e) => updateAppearance({ background_opacity: Number(e.target.value) })} />
                 </Field>
@@ -687,6 +714,18 @@ export default function SettingsPage({
               </div>
               <div className="settings-inline-note"><SlidersHorizontal size={14} /> {tr(lang, '主题、皮肤、背景与玻璃细节会应用到整个工作区；正文大小主要影响阅读型页面。', 'Theme, skin, background and glass apply across the workspace; reading size mainly affects reading pages.')}</div>
               <div className="settings-inline-note"><Layers size={14} /> {tr(lang, '毛玻璃用于导航、侧栏、普通卡片与弹窗；液态玻璃只用于首页场景卡和登录等重点入口。', 'Frosted glass is used for navigation, sidebars, regular cards and dialogs; liquid glass is reserved for scene cards and key entry points.')}</div>
+              <div className="settings-material-demo" aria-label={tr(lang, '材质示例', 'Material examples')}>
+                <div className="settings-material-card is-frost">
+                  <span>FROSTED</span>
+                  <strong>{tr(lang, '毛玻璃 · 常规容器', 'Frosted · regular containers')}</strong>
+                  <small>{tr(lang, '导航、侧栏、卡片、弹窗', 'Navigation, sidebars, cards, dialogs')}</small>
+                </div>
+                <div className="settings-material-card is-liquid">
+                  <span>LIQUID</span>
+                  <strong>{tr(lang, '液态玻璃 · 重点入口', 'Liquid · key entry points')}</strong>
+                  <small>{tr(lang, '场景卡、登录、核心视觉', 'Scene cards, sign-in, hero visuals')}</small>
+                </div>
+              </div>
             </Panel>
           )}
 

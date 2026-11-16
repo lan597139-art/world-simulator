@@ -974,6 +974,7 @@ export default function App() {
                   {group.items.map((item) => (
                     <button
                       key={item.key}
+                      className={`sidebar-nav-item${activePage === item.key ? ' is-active' : ''}`}
                       onClick={() => {
                         setWritingSeedEventIds([])
                         navigate(item.key)
@@ -1053,6 +1054,7 @@ export default function App() {
               </nav>
             </header>
             <YunbaoGroupNav
+              lang={lang}
               activePage={activePage}
               hidden={navAutoHidden}
               onNavigate={(page) => navigate(page as PageKey)}

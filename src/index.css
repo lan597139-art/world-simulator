@@ -261,9 +261,9 @@ html[data-theme="light"] option { background-color: #FFFFFF !important; color: #
   --glass-radius: 24px;
   --glass-glow: 0.05;
   --glass-highlight: rgba(255, 255, 255, 0.35);
-  --ambient-a: rgba(140, 170, 255, 0.16);
-  --ambient-b: rgba(255, 180, 220, 0.11);
-  --ambient-c: rgba(120, 230, 210, 0.08);
+  --ambient-a: rgba(120, 158, 255, 0.24);
+  --ambient-b: rgba(255, 168, 214, 0.17);
+  --ambient-c: rgba(96, 226, 204, 0.13);
   --motion-duration: 0.22s;
   --ws-bg-image: none;
   --ws-bg-blur: 18px;
@@ -273,9 +273,9 @@ html[data-theme="light"] option { background-color: #FFFFFF !important; color: #
 html[data-theme="dark"] {
   --glass-glow: 0.32;
   --glass-highlight: rgba(255, 255, 255, 0.12);
-  --ambient-a: rgba(72, 106, 190, 0.20);
-  --ambient-b: rgba(150, 72, 130, 0.13);
-  --ambient-c: rgba(52, 130, 120, 0.10);
+  --ambient-a: rgba(80, 120, 220, 0.30);
+  --ambient-b: rgba(166, 78, 146, 0.19);
+  --ambient-c: rgba(56, 150, 136, 0.15);
 }
 
 /* 皮肤：极简、极光、暖砂。后续设置页只需切换 data-skin。 */
@@ -327,7 +327,7 @@ body::before {
     radial-gradient(38% 42% at 82% 30%, var(--ambient-b), transparent 72%),
     radial-gradient(46% 40% at 52% 88%, var(--ambient-c), transparent 70%);
   filter: blur(18px);
-  opacity: calc(0.55 * var(--glass-opacity));
+  opacity: calc(0.82 * var(--glass-opacity));
 }
 
 #root {

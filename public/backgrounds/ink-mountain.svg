@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000">
+<defs>
+<linearGradient id="paper" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6f2e8"/><stop offset="1" stop-color="#ded7c8"/></linearGradient>
+<linearGradient id="ink1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9aa19f" stop-opacity=".65"/><stop offset="1" stop-color="#5b625f" stop-opacity=".2"/></linearGradient>
+<linearGradient id="ink2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4c5350" stop-opacity=".85"/><stop offset="1" stop-color="#2f3432" stop-opacity=".3"/></linearGradient>
+<filter id="blur"><feGaussianBlur stdDeviation="8"/></filter>
+</defs>
+<rect width="1600" height="1000" fill="url(#paper)"/>
+<circle cx="1230" cy="210" r="82" fill="#b7543f" opacity=".7"/>
+<path d="M0 700 C180 520 330 560 480 430 C620 310 760 430 900 540 C1050 660 1180 600 1320 500 C1440 415 1520 470 1600 520 L1600 1000 L0 1000Z" fill="url(#ink1)" filter="url(#blur)"/>
+<path d="M0 840 C220 700 350 760 520 640 C690 520 800 610 940 700 C1090 795 1230 730 1380 650 C1470 602 1540 640 1600 670 L1600 1000 L0 1000Z" fill="url(#ink2)" filter="url(#blur)"/>
+<path d="M0 930 C260 860 460 920 700 850 C940 780 1180 880 1600 810 L1600 1000 L0 1000Z" fill="#262b29" opacity=".8"/>
+</svg>

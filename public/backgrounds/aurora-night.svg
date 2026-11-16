@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000">
+<defs>
+<linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#040b17"/><stop offset=".7" stop-color="#0a1b2c"/><stop offset="1" stop-color="#102b32"/></linearGradient>
+<linearGradient id="a1" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#43e6b5" stop-opacity="0"/><stop offset=".45" stop-color="#43e6b5" stop-opacity=".55"/><stop offset="1" stop-color="#5f8bff" stop-opacity="0"/></linearGradient>
+<linearGradient id="a2" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8b6cff" stop-opacity="0"/><stop offset=".5" stop-color="#8b6cff" stop-opacity=".35"/><stop offset="1" stop-color="#4be0c2" stop-opacity="0"/></linearGradient>
+<filter id="soft"><feGaussianBlur stdDeviation="30"/></filter>
+</defs>
+<rect width="1600" height="1000" fill="url(#sky)"/>
+<path d="M-100 430 C250 220 480 390 760 260 C1030 140 1300 330 1700 190" stroke="url(#a1)" stroke-width="120" fill="none" filter="url(#soft)"/>
+<path d="M-80 590 C280 380 560 560 860 420 C1120 300 1370 480 1680 340" stroke="url(#a2)" stroke-width="80" fill="none" filter="url(#soft)"/>
+<g fill="#dcecff"><circle cx="180" cy="140" r="2"/><circle cx="340" cy="220" r="1.5"/><circle cx="520" cy="110" r="2"/><circle cx="760" cy="180" r="1.4"/><circle cx="980" cy="120" r="2.2"/><circle cx="1220" cy="210" r="1.7"/><circle cx="1410" cy="130" r="1.8"/><circle cx="1520" cy="260" r="1.4"/></g>
+<path d="M0 870 L280 760 L520 860 L760 740 L1050 880 L1300 770 L1600 860 L1600 1000 L0 1000Z" fill="#050d15"/>
+</svg>

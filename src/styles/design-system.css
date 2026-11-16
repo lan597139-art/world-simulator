@@ -376,3 +376,61 @@ html[data-theme="dark"] [style^="color: #aaa"],
 html[data-theme="dark"] [style^="color: #bbb"] {
   color: var(--text-muted) !important;
 }
+
+/* 侧边栏当前模块：左侧高光条 + 内描边，解决深色侧栏选中态不明显。 */
+.sidebar-nav-item {
+  position: relative;
+  isolation: isolate;
+}
+.sidebar-nav-item::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 9px;
+  bottom: 9px;
+  width: 2px;
+  border-radius: 99px;
+  background: var(--sidebar-text);
+  opacity: 0;
+  transform: scaleY(.45);
+  transition: opacity .16s ease, transform .16s ease;
+}
+.sidebar-nav-item.is-active::before { opacity: .9; transform: scaleY(1); }
+.sidebar-nav-item.is-active {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--sidebar-text) 10%, transparent);
+}
+.sidebar-nav-item:hover { background: rgba(128,128,128,.12) !important; }
+
+/* 旧页面内联灰色：补上“其他属性之后才声明 color”的常见情况。 */
+html[data-theme="dark"] [style*="; color: rgb(102, 102, 102)"],
+html[data-theme="dark"] [style*="; color: rgb(119, 119, 119)"],
+html[data-theme="dark"] [style*="; color: rgb(136, 136, 136)"],
+html[data-theme="dark"] [style*="; color: rgb(153, 153, 153)"],
+html[data-theme="dark"] [style*="; color: rgb(170, 170, 170)"],
+html[data-theme="dark"] [style*="; color: rgb(187, 187, 187)"],
+html[data-theme="dark"] [style*=";color: rgb(102, 102, 102)"],
+html[data-theme="dark"] [style*=";color: rgb(119, 119, 119)"],
+html[data-theme="dark"] [style*=";color: rgb(136, 136, 136)"],
+html[data-theme="dark"] [style*=";color: rgb(153, 153, 153)"],
+html[data-theme="dark"] [style*=";color: rgb(170, 170, 170)"],
+html[data-theme="dark"] [style*=";color: rgb(187, 187, 187)"] {
+  color: var(--text-muted) !important;
+}
+
+/* 全局侧栏（创作中心）当前模块同样使用左侧高光条。 */
+.cc-nav-item { position: relative; }
+.cc-nav-item.active::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 10px;
+  bottom: 10px;
+  width: 2px;
+  border-radius: 99px;
+  background: var(--sidebar-text);
+  opacity: .9;
+}
+.cc-nav-item.active {
+  background: rgba(255,255,255,.12) !important;
+  border-color: rgba(255,255,255,.16) !important;
+}
