@@ -63,6 +63,7 @@ MODULES = [
     "m051_trash_owner",
     "m052_creative_works",
     "m053_spirit_economy",
+    "m054_comic_works",
 ]
 
 

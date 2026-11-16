@@ -30,6 +30,7 @@ from community import router as community_router
 from community_social import router as community_social_router
 from creative_works import router as creative_works_router
 from spirit_economy import router as spirit_economy_router, ensure_spirit_catalog
+from comic_works import router as comic_works_router
 from products import router as products_router
 from settings import router as settings_router
 from billing import router as billing_router, record_ai_usage
@@ -172,6 +173,7 @@ for router in (
     community_social_router,
     creative_works_router,
     spirit_economy_router,
+    comic_works_router,
 ):
     app.include_router(router)
 

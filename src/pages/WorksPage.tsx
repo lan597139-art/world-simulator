@@ -26,6 +26,7 @@ import {
 import { API_ORIGIN } from '../api/config'
 import { listCharacters } from '../api/structure'
 import { recordMediaAsset, resolveMediaUrl, uploadMedia } from '../api/media'
+import ComicWorkbenchPage from './ComicWorkbenchPage'
 import {
   createWork,
   deleteWork,
@@ -173,6 +174,7 @@ export default function WorksPage({
   const [statusFilter, setStatusFilter] = useState<WorkStatus | 'all'>('all')
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<CreativeWork | null>(null)
+  const [comicWork, setComicWork] = useState<CreativeWork | null>(null)
   const [editor, setEditor] = useState<{ mode: 'create' | 'edit'; work?: CreativeWork } | null>(null)
   const [form, setForm] = useState<FormState>(emptyForm('game'))
   const [formError, setFormError] = useState('')
@@ -356,8 +358,17 @@ export default function WorksPage({
   }
 
   const openWorkScene = (work: CreativeWork) => {
+    if (work.scene === 'comic') {
+      setSelected(null)
+      setComicWork(work)
+      return
+    }
     const preferredWorld = work.world_ids.find((id) => worldById.get(id)?.product_scene === work.scene) || work.world_ids[0]
     onOpenScene(work.scene, preferredWorld)
+  }
+
+  if (comicWork) {
+    return <ComicWorkbenchPage work={comicWork} lang={lang} onBack={() => { setComicWork(null); void load() }} />
   }
 
   return (
@@ -615,7 +626,7 @@ export default function WorksPage({
               </section>
 
               <div className="cw-detail-actions">
-                <button type="button" className="cw-primary-button" onClick={() => openWorkScene(selected)}><ArrowUpRight size={13} /> {t.openSpace}</button>
+                <button type="button" className="cw-primary-button" onClick={() => openWorkScene(selected)}><ArrowUpRight size={13} /> {selected.scene === 'comic' ? (lang === 'zh' ? '打开漫画工作台' : 'Open comic workbench') : t.openSpace}</button>
                 {onOpenNarrative && selected.world_ids.length > 0 && (selected.scene === 'game' || selected.scene === 'literature') && (
                   <div className="cw-narrative-actions">
                     <button type="button" className="cw-secondary-button" onClick={() => onOpenNarrative(selected.scene, selected.world_ids.find((id) => worldById.get(id)?.product_scene === selected.scene) || selected.world_ids[0], 'storyline')}>

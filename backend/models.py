@@ -2276,6 +2276,48 @@ class CreativeWork(Base):
     )
 
 
+class ComicChapter(Base):
+    __tablename__ = "comic_chapters"
+    __table_args__ = (Index("ix_comic_chapters_work_order", "work_id", "order_index"),)
+
+    id = Column(String, primary_key=True, default=_uuid)
+    work_id = Column(String, ForeignKey("creative_works.id", ondelete="CASCADE"), nullable=False, index=True)
+    title = Column(String, nullable=False)
+    summary = Column(Text, default="")
+    order_index = Column(Integer, default=0, nullable=False)
+    status = Column(String, default="draft", nullable=False)
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now)
+
+
+class ComicPage(Base):
+    __tablename__ = "comic_pages"
+    __table_args__ = (Index("ix_comic_pages_chapter_order", "chapter_id", "order_index"),)
+
+    id = Column(String, primary_key=True, default=_uuid)
+    work_id = Column(String, ForeignKey("creative_works.id", ondelete="CASCADE"), nullable=False, index=True)
+    chapter_id = Column(String, ForeignKey("comic_chapters.id", ondelete="CASCADE"), nullable=False, index=True)
+    image_url = Column(String, nullable=False)
+    caption = Column(Text, default="")
+    kind = Column(String, default="page", nullable=False)
+    order_index = Column(Integer, default=0, nullable=False)
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now)
+
+
+class ComicAsset(Base):
+    __tablename__ = "comic_assets"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    work_id = Column(String, ForeignKey("creative_works.id", ondelete="CASCADE"), nullable=False, index=True)
+    kind = Column(String, default="illustration", nullable=False)
+    title = Column(String, nullable=False)
+    file_url = Column(String, nullable=False)
+    mime_type = Column(String, default="")
+    file_size = Column(Integer, default=0)
+    created_at = Column(DateTime, default=_now)
+
+
 class CreatorFolder(Base):
     __tablename__ = "creator_folders"
 

@@ -4,10 +4,12 @@ import { EditorContent, useEditor } from '@tiptap/react'
 import { BubbleMenu } from '@tiptap/react/menus'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
+import Image from '@tiptap/extension-image'
 import type { Editor } from '@tiptap/core'
 import * as writingApi from '../api/writing'
 import type { DraftItem, StoryItem, WritingToolPatch } from '../api/writing'
 import { API_ORIGIN } from '../api/config'
+import { recordMediaAsset, uploadMedia } from '../api/media'
 import WritingToolbox from '../components/writing/WritingToolbox'
 import type { ToolSelection } from '../components/writing/WritingToolbox'
 import WritingReview from '../components/writing/WritingReview'
@@ -17,9 +19,23 @@ import WritingStats from '../components/writing/WritingStats'
 import SensitiveWords from '../components/writing/SensitiveWords'
 import VolumeTree from '../components/writing/VolumeTree'
 import { TypewriterFocus } from '../editor/typewriter'
+import { saveLocalDraft } from '../services/localContent'
 import { getWritingTree } from '../api/writingVolumes'
 import type { WritingChapter, WritingVolume } from '../api/writingVolumes'
 import '../styles/product-workspace.css'
+
+const AlignedImage = Image.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      align: {
+        default: 'center',
+        parseHTML: (element: HTMLElement) => element.getAttribute('data-align') || 'center',
+        renderHTML: (attributes: Record<string, unknown>) => ({ 'data-align': attributes.align || 'center' }),
+      },
+    }
+  },
+})
 
 type Mode = 'architect' | 'explorer'
 type ReviewTool = 'reader_sim' | 'release_check'
@@ -253,6 +269,7 @@ export default function WritingPage({
   const [treeLoading, setTreeLoading] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saveState, setSaveState] = useState<SaveState>('saved')
+  const [imageBusy, setImageBusy] = useState(false)
   const [words, setWords] = useState(0)
   const [events, setEvents] = useState<any[]>([])
   const [modalOpen, setModalOpen] = useState(false)
@@ -373,6 +390,7 @@ export default function WritingPage({
   const suppressRef = useRef(false)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const selectionRange = useRef<{ from: number; to: number } | null>(null)
+  const imageInputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
     currentRef.current = current
@@ -438,6 +456,7 @@ export default function WritingPage({
       Placeholder.configure({
         placeholder: '从这里开始写。可以是一句对白、一个场景，或一段还没想好去哪里的开头……',
       }),
+      AlignedImage.configure({ inline: false, allowBase64: false, HTMLAttributes: { class: 'ws-inline-image' } }),
       TypewriterFocus,
     ],
     content: '<p></p>',
@@ -458,6 +477,44 @@ export default function WritingPage({
   useEffect(() => {
     editorRef.current = editor || null
   }, [editor])
+
+  const insertImages = useCallback(async (files: File[]) => {
+    if (!editor) return
+    const images = files.filter((file) => file.type.startsWith('image/'))
+    if (!images.length) return
+    setImageBusy(true)
+    try {
+      for (const file of images) {
+        const uploaded = await uploadMedia(file)
+        editor.chain().focus().setImage({ src: uploaded.file_url, alt: file.name.replace(/\.[^.]+$/, '') }).run()
+        await recordMediaAsset({
+          title: `正文插图 · ${file.name.replace(/\.[^.]+$/, '')}`,
+          fileUrl: uploaded.file_url,
+          mimeType: uploaded.mime_type,
+          fileSize: uploaded.file_size,
+          description: '写作正文插图',
+        }).catch(() => undefined)
+      }
+      setToast(images.length > 1 ? `已插入 ${images.length} 张图片` : '图片已插入正文')
+    } catch (error: any) {
+      setToast(String(error?.message || error))
+    } finally {
+      setImageBusy(false)
+    }
+  }, [editor])
+
+  const setImageAlign = (align: 'left' | 'center' | 'right') => {
+    if (!editor?.isActive('image')) { setToast('先点选正文里的图片'); return }
+    editor.chain().focus().updateAttributes('image', { align }).run()
+  }
+
+  const editImageCaption = () => {
+    if (!editor?.isActive('image')) { setToast('先点选正文里的图片'); return }
+    const currentAlt = String(editor.getAttributes('image').alt || '')
+    const next = window.prompt('图片说明（图注）', currentAlt)
+    if (next === null) return
+    editor.chain().focus().updateAttributes('image', { alt: next.trim() }).run()
+  }
 
   const loadDrafts = useCallback(async (storyId: string) => {
     try {
@@ -1297,6 +1354,13 @@ export default function WritingPage({
               <span style={{ width: '1px', height: '16px', background: 'var(--card-border)', margin: '0 4px' }} />
               <ToolbarBtn label="↶" title="撤销" onClick={() => editor?.chain().focus().undo().run()} />
               <ToolbarBtn label="↷" title="重做" onClick={() => editor?.chain().focus().redo().run()} />
+              <span style={{ width: '1px', height: '16px', background: 'var(--card-border)', margin: '0 4px' }} />
+              <button type="button" title="插入图片（也可粘贴或拖入）" disabled={imageBusy} onClick={() => imageInputRef.current?.click()} style={{ padding: '5px 8px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)', fontSize: '11px', cursor: imageBusy ? 'wait' : 'pointer' }}>{imageBusy ? '上传中…' : '＋ 图片'}</button>
+              <ToolbarBtn label="左" title="图片左对齐" onClick={() => setImageAlign('left')} />
+              <ToolbarBtn label="中" title="图片居中" onClick={() => setImageAlign('center')} />
+              <ToolbarBtn label="右" title="图片右对齐" onClick={() => setImageAlign('right')} />
+              <ToolbarBtn label="图注" title="编辑图片说明" onClick={editImageCaption} />
+              <input ref={imageInputRef} type="file" accept="image/*" multiple hidden onChange={(event) => { const files = event.target.files ? [...event.target.files] : []; if (files.length) void insertImages(files); event.target.value = '' }} />
               <div style={{ flex: 1 }} />
               <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
                 {current.mode === 'architect' ? '推演正文可直接精修' : '选中文字可提取或 AI 辅助'}
@@ -1376,6 +1440,14 @@ export default function WritingPage({
                 style={{ padding: '28px clamp(22px, 5vw, 60px) 80px' }}
                 onMouseMove={handleEditorHover}
                 onMouseLeave={() => setHoverCard(null)}
+                onPaste={(event) => {
+                  const files = [...event.clipboardData.files].filter((file) => file.type.startsWith('image/'))
+                  if (files.length) { event.preventDefault(); void insertImages(files) }
+                }}
+                onDrop={(event) => {
+                  const files = [...event.dataTransfer.files].filter((file) => file.type.startsWith('image/'))
+                  if (files.length) { event.preventDefault(); void insertImages(files) }
+                }}
               >
                 <EditorContent editor={editor} />
               </div>

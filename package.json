@@ -16,6 +16,7 @@
     "@fontsource-variable/geist": "^5.3.0",
     "@tailwindcss/vite": "^4.3.5",
     "@tiptap/extension-bubble-menu": "^3.33.0",
+    "@tiptap/extension-image": "^3.33.0",
     "@tiptap/extension-placeholder": "^3.33.0",
     "@tiptap/pm": "^3.33.0",
     "@tiptap/react": "^3.33.0",

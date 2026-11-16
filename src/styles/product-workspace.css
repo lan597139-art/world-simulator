@@ -4843,3 +4843,21 @@
 .slx-picker-event strong { font-size: 10.5px; font-weight: 580; }
 .slx-picker-event span { font-size: 8px; color: var(--text-muted); line-height: 1.5; }
 .slx-picker-empty { padding: 28px 12px; text-align: center; font-size: 9px; color: var(--text-muted); }
+
+/* H1 图文混排：正文图片随 HTML 保存，支持对齐、图注与响应式宽度。 */
+.ws-prose img.ws-inline-image,
+.ws-prose img {
+  display: block;
+  max-width: min(100%, 720px);
+  height: auto;
+  margin: 18px auto;
+  border-radius: 10px;
+  border: 1px solid var(--card-border);
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.06);
+}
+.ws-prose img[data-align="left"] { margin-left: 0; margin-right: auto; }
+.ws-prose img[data-align="center"] { margin-left: auto; margin-right: auto; }
+.ws-prose img[data-align="right"] { margin-left: auto; margin-right: 0; }
+.ws-prose img.ProseMirror-selectednode { outline: 2px solid var(--primary-color); outline-offset: 3px; }
+.ws-prose figure.ws-image-figure { margin: 18px 0; }
+.ws-prose figure.ws-image-figure figcaption { margin-top: 6px; color: var(--text-muted); font-size: 11px; text-align: center; }
