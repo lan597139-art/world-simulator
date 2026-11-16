@@ -344,7 +344,7 @@ function GeographyPanel({ worldId, onError }: { worldId: string; onError: (msg: 
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 340px', gap: '16px', height: '100%' }}>
-      <div style={{ ...card, padding: '14px', overflow: 'auto' }}>
+      <div className="ws-glass-surface" style={{ ...card, padding: '14px', overflow: 'auto' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
           <div>
             <div style={{ fontSize: '14px', color: 'var(--text-main)' }}>地理树</div>
@@ -389,7 +389,7 @@ function GeographyPanel({ worldId, onError }: { worldId: string; onError: (msg: 
         ))}
       </div>
 
-      <div style={{ ...card, padding: '16px', overflow: 'auto' }}>
+      <div className="ws-glass-surface" style={{ ...card, padding: '16px', overflow: 'auto' }}>
         <div style={{ fontSize: '14px', color: 'var(--text-main)', marginBottom: '4px' }}>
           {selected ? `编辑：${selected.name}` : '新增地点'}
         </div>
@@ -756,7 +756,7 @@ function OrganizationPanel({ worldId, onError }: { worldId: string; onError: (ms
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '240px minmax(0, 1fr) 320px', gap: '16px', height: '100%' }}>
-      <div style={{ ...card, padding: '14px', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+      <div className="ws-glass-surface" style={{ ...card, padding: '14px', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         <div style={{ fontSize: '14px', color: 'var(--text-main)', marginBottom: '10px' }}>组织</div>
         <div style={{ flex: 1, overflow: 'auto' }}>
           {orgs.length === 0 && <Empty text="尚无组织" />}
@@ -808,7 +808,7 @@ function OrganizationPanel({ worldId, onError }: { worldId: string; onError: (ms
         </div>
       </div>
 
-      <div style={{ ...card, padding: '14px', overflow: 'auto' }}>
+      <div className="ws-glass-surface" style={{ ...card, padding: '14px', overflow: 'auto' }}>
         {!tree ? (
           <Empty text="选择或创建一个组织" />
         ) : (
@@ -933,7 +933,7 @@ function OrganizationPanel({ worldId, onError }: { worldId: string; onError: (ms
         )}
       </div>
 
-      <div style={{ ...card, padding: '16px', overflow: 'auto' }}>
+      <div className="ws-glass-surface" style={{ ...card, padding: '16px', overflow: 'auto' }}>
         <div style={{ fontSize: '14px', color: 'var(--text-main)', marginBottom: '12px' }}>编辑与新增</div>
 
         <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '6px' }}>组织资料</div>
@@ -1197,7 +1197,7 @@ function RulesPanel({ worldId, onError }: { worldId: string; onError: (msg: stri
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 340px', gap: '16px', height: '100%' }}>
-      <div style={{ ...card, padding: '14px', overflow: 'auto' }}>
+      <div className="ws-glass-surface" style={{ ...card, padding: '14px', overflow: 'auto' }}>
         <div style={{ fontSize: '14px', color: 'var(--text-main)', marginBottom: '10px' }}>世界规则</div>
         {rules.length === 0 && <Empty text="还没有规则" />}
         {rules.map((rule) => (
@@ -1220,7 +1220,7 @@ function RulesPanel({ worldId, onError }: { worldId: string; onError: (msg: stri
           </div>
         ))}
       </div>
-      <div style={{ ...card, padding: '16px' }}>
+      <div className="ws-glass-surface" style={{ ...card, padding: '16px' }}>
         <div style={{ fontSize: '14px', color: 'var(--text-main)', marginBottom: '12px' }}>新增规则</div>
         <Field label="名称">
           <input style={inputStyle} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
@@ -1320,7 +1320,7 @@ function TimePanel({ worldId, onError }: { worldId: string; onError: (msg: strin
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 340px', gap: '16px', height: '100%' }}>
-      <div style={{ ...card, padding: '18px' }}>
+      <div className="ws-glass-surface" style={{ ...card, padding: '18px' }}>
         <div style={{ fontSize: '14px', color: 'var(--text-main)', marginBottom: '12px' }}>世界时间</div>
         {!ts ? (
           <Empty text="加载中" />
@@ -1363,7 +1363,7 @@ function TimePanel({ worldId, onError }: { worldId: string; onError: (msg: strin
         )}
       </div>
 
-      <div style={{ ...card, padding: '16px', overflow: 'auto' }}>
+      <div className="ws-glass-surface" style={{ ...card, padding: '16px', overflow: 'auto' }}>
         <div style={{ fontSize: '14px', color: 'var(--text-main)', marginBottom: '12px' }}>时代</div>
         {eras.length === 0 && <Empty text="还没有时代记录" />}
         {eras.map((era) => (
@@ -1429,7 +1429,7 @@ function SocietyPanel({ worldId, onError }: { worldId: string; onError: (msg: st
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 340px', gap: '16px', height: '100%' }}>
-      <div style={{ ...card, padding: '14px', overflow: 'auto' }}>
+      <div className="ws-glass-surface" style={{ ...card, padding: '14px', overflow: 'auto' }}>
         <div style={{ fontSize: '14px', color: 'var(--text-main)', marginBottom: '10px' }}>社会实体</div>
         {societies.length === 0 && <Empty text="国家 / 文明等社会实体放这里" />}
         {societies.map((society) => (
@@ -1464,7 +1464,7 @@ function SocietyPanel({ worldId, onError }: { worldId: string; onError: (msg: st
         ))}
       </div>
 
-      <div style={{ ...card, padding: '16px', overflow: 'auto' }}>
+      <div className="ws-glass-surface" style={{ ...card, padding: '16px', overflow: 'auto' }}>
         <div style={{ fontSize: '14px', color: 'var(--text-main)', marginBottom: '12px' }}>新增</div>
         <Field label="社会实体名称">
           <input style={inputStyle} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
@@ -1585,7 +1585,7 @@ function ResourcesPanel({ worldId, onError }: { worldId: string; onError: (msg: 
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 340px', gap: '16px', height: '100%' }}>
-      <div style={{ ...card, padding: '14px', overflow: 'auto' }}>
+      <div className="ws-glass-surface" style={{ ...card, padding: '14px', overflow: 'auto' }}>
         <div style={{ fontSize: '14px', color: 'var(--text-main)', marginBottom: '10px' }}>资源</div>
         {resources.length === 0 && <Empty text="还没有资源" />}
         {resources.map((resource) => (
@@ -1604,7 +1604,7 @@ function ResourcesPanel({ worldId, onError }: { worldId: string; onError: (msg: 
         ))}
       </div>
 
-      <div style={{ ...card, padding: '16px', overflow: 'auto' }}>
+      <div className="ws-glass-surface" style={{ ...card, padding: '16px', overflow: 'auto' }}>
         <div style={{ fontSize: '14px', color: 'var(--text-main)', marginBottom: '12px' }}>新增资源</div>
         <Field label="名称">
           <input style={inputStyle} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
@@ -1923,7 +1923,7 @@ function NodesPanel({
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 340px', gap: '16px', height: '100%' }}>
-      <div style={{ ...card, padding: '14px', overflow: 'auto' }}>
+      <div className="ws-glass-surface" style={{ ...card, padding: '14px', overflow: 'auto' }}>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '10px' }}>
           <div style={{ fontSize: '14px', color: 'var(--text-main)' }}>
             {branch === 'world_profile' ? '世界基础目录' : '人物与群体目录'}
@@ -1936,7 +1936,7 @@ function NodesPanel({
         {roots.map((node) => renderNode(node, 0))}
       </div>
 
-      <div style={{ ...card, padding: '16px', overflow: 'auto' }}>
+      <div className="ws-glass-surface" style={{ ...card, padding: '16px', overflow: 'auto' }}>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '12px' }}>
           <div style={{ fontSize: '14px', color: 'var(--text-main)' }}>
             {selected ? `编辑节点：${selected.name}` : '新增目录节点'}
@@ -2213,7 +2213,7 @@ function DraftPanel({ worldId, onError }: { worldId: string; onError: (msg: stri
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '18px', maxWidth: '860px' }}>
         {drafts.length === 0 && (
-          <div style={{ ...card, padding: '34px', textAlign: 'center', fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.9 }}>
+          <div className="ws-glass-surface" style={{ ...card, padding: '34px', textAlign: 'center', fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.9 }}>
             还没有草稿。<br />
             去 08 写作工作台写一章，点“解析本章”，提取结果会出现在这里。
           </div>

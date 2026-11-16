@@ -672,6 +672,7 @@ export default function RelationshipsPage({
 
       {/* 视图控制条：放大 / 缩小 / 自动旋转 / 转速 / 重置 */}
       <div
+        className="ws-glass-surface"
         style={{
           position: 'absolute',
           right: '20px',

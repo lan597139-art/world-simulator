@@ -190,7 +190,7 @@ export default function WorldDataPage({ worldId }: { worldId?: string }) {
         )}
       </div>
 
-      <div style={{ flex: 1, position: 'relative', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--card-border)', background: 'var(--bg-color)' }}>
+      <div className="ws-glass-surface ws-map-surface" style={{ flex: 1, position: 'relative', borderRadius: '12px', overflow: 'hidden' }}>
         
         {activeTab === 'map' && (
           <>
@@ -260,7 +260,7 @@ export default function WorldDataPage({ worldId }: { worldId?: string }) {
             )}
 
             {/* ✅ 悬浮表单面板 (全面UI升级) */}
-            <div style={{ 
+            <div className="ws-glass-surface" style={{
               position: 'absolute', top: '20px', width: '340px', zIndex: 20,
               ...(isLeftSide ? { right: '20px' } : { left: '20px' }),
               background: 'var(--card-bg)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
@@ -375,7 +375,7 @@ export default function WorldDataPage({ worldId }: { worldId?: string }) {
             </div>
 
             {!isPanelOpen && (
-              <button onClick={() => setIsPanelOpen(true)} style={{ 
+              <button onClick={() => setIsPanelOpen(true)} style={{
                 position: 'absolute', top: '20px', zIndex: 20, 
                 ...(isLeftSide ? { right: '20px' } : { left: '20px' }),
                 padding: '10px 16px', background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, color: 'var(--text-main)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' 
@@ -411,7 +411,7 @@ export default function WorldDataPage({ worldId }: { worldId?: string }) {
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
               {organizations.map(org => (
-                <div key={org.id} style={{ padding: '16px', background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div key={org.id} className="ws-glass-surface" style={{ padding: '16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div>
                     <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '15px' }}>{org.name}</div>
                     <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '8px', lineHeight: 1.5 }}>{org.description || '暂无描述'}</div>

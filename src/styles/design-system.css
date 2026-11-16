@@ -434,3 +434,82 @@ html[data-theme="dark"] [style*=";color: rgb(187, 187, 187)"] {
   background: rgba(255,255,255,.12) !important;
   border-color: rgba(255,255,255,.16) !important;
 }
+
+/* ==========================================================================
+   专业模块统一材质：同一透明度、同一模糊、同一描边。
+   世界管理 / 世界建设 / 人物管理 / 聊天 / 结构 / 设定 / 关系 / 事件 /
+   时间线 / 模拟 / 故事线都必须使用这一套，不再逐页猜 rgba。
+   ========================================================================== */
+html {
+  --workspace-glass-alpha: .76;
+  --workspace-glass-bg: color-mix(
+    in srgb,
+    var(--glass-frost-bg) calc(var(--workspace-glass-alpha) * 100%),
+    transparent
+  );
+  --workspace-glass-blur: blur(22px) saturate(140%);
+  --workspace-glass-border: 1px solid var(--glass-border);
+  --workspace-glass-shadow: 0 1px 0 var(--glass-rim) inset, 0 10px 28px rgba(0, 0, 0, .07);
+}
+html[data-custom-background="true"] { --workspace-glass-alpha: .84; }
+html[data-bg-tone="vivid"] { --workspace-glass-alpha: .9; }
+html[data-bg-tone="detail"] { --workspace-glass-alpha: .88; }
+html[data-bg-tone="dark"] { --workspace-glass-alpha: .84; }
+
+/* 常规玻璃卡也走同一档，避免 70% / 90% / 100% 混用。 */
+.glass-card,
+.glass-frost,
+.glass-panel {
+  background: var(--workspace-glass-bg) !important;
+  -webkit-backdrop-filter: var(--workspace-glass-blur) !important;
+  backdrop-filter: var(--workspace-glass-blur) !important;
+  border-color: var(--glass-border) !important;
+}
+
+.ws-glass-surface,
+.sim-panel,
+.sim-console,
+.slx-canvas-wrap,
+.slx-node,
+.tlx-page,
+.tlx-head,
+.tlx-controls,
+.tlx-canvas,
+.tlx-item {
+  background: var(--workspace-glass-bg) !important;
+  -webkit-backdrop-filter: var(--workspace-glass-blur) !important;
+  backdrop-filter: var(--workspace-glass-blur) !important;
+  border: var(--workspace-glass-border) !important;
+  box-shadow: var(--workspace-glass-shadow) !important;
+}
+
+/* 大型画布本身保持轻玻璃，内部条目统一同一档，不再有纯实色块。 */
+.tlx-page,
+.slx-canvas-wrap {
+  border-radius: 14px;
+}
+.tlx-canvas,
+.slx-canvas {
+  background: transparent !important;
+}
+.slx-node {
+  border-radius: 10px !important;
+}
+.sim-panel,
+.sim-console {
+  border-radius: 12px !important;
+}
+.ws-map-surface {
+  background: var(--workspace-glass-bg) !important;
+  -webkit-backdrop-filter: var(--workspace-glass-blur) !important;
+  backdrop-filter: var(--workspace-glass-blur) !important;
+  border: var(--workspace-glass-border) !important;
+}
+
+/* 统一材质不能吞掉选中态。 */
+.slx-node.is-selected,
+.slx-node:hover {
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--primary-color) 38%, transparent),
+    var(--workspace-glass-shadow) !important;
+}
