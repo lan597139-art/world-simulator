@@ -62,6 +62,7 @@ MODULES = [
     "m050_avatar_url",
     "m051_trash_owner",
     "m052_creative_works",
+    "m053_spirit_economy",
 ]
 
 

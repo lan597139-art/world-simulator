@@ -2077,6 +2077,68 @@ class CommunityNotification(Base):
 # =====================================================================
 # 商业与服务中心：账户、会员、订单、流水、AI 用量、创作者结算
 # =====================================================================
+class SpiritAccount(Base):
+    """用户灵果账户；余额只允许服务端交易变更。"""
+
+    __tablename__ = "spirit_accounts"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    user_id = Column(String, unique=True, nullable=False, index=True)
+    fruit_balance = Column(Integer, default=0, nullable=False)
+    developer_exempt = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now)
+
+
+class SpiritPlantType(Base):
+    """灵植目录：世界灵植 / OC 灵植及兑换价格。"""
+
+    __tablename__ = "spirit_plant_types"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    key = Column(String, unique=True, nullable=False, index=True)
+    name = Column(String, nullable=False)
+    category = Column(String, nullable=False, index=True)
+    description = Column(Text, default="")
+    price_fruit = Column(Integer, default=60, nullable=False)
+    unit = Column(String, default="株")
+    sort_order = Column(Integer, default=0, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now)
+
+
+class SpiritInventory(Base):
+    __tablename__ = "spirit_inventory"
+    __table_args__ = (UniqueConstraint("user_id", "plant_type_id", name="ux_spirit_inventory_user_plant"),)
+
+    id = Column(String, primary_key=True, default=_uuid)
+    user_id = Column(String, nullable=False, index=True)
+    plant_type_id = Column(String, ForeignKey("spirit_plant_types.id", ondelete="CASCADE"), nullable=False, index=True)
+    quantity = Column(Integer, default=0, nullable=False)
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now)
+
+
+class SpiritTransaction(Base):
+    __tablename__ = "spirit_transactions"
+    __table_args__ = (Index("ix_spirit_transactions_user_time", "user_id", "created_at"),)
+
+    id = Column(String, primary_key=True, default=_uuid)
+    user_id = Column(String, nullable=False, index=True)
+    kind = Column(String, nullable=False, index=True)
+    fruit_amount = Column(Integer, default=0, nullable=False)
+    plant_type_id = Column(String, nullable=True)
+    plant_quantity = Column(Integer, default=0, nullable=False)
+    balance_after = Column(Integer, default=0, nullable=False)
+    counterparty_user_id = Column(String, nullable=True)
+    ref_type = Column(String, default="")
+    ref_id = Column(String, default="")
+    note = Column(Text, default="")
+    meta = Column(JSON, default=dict)
+    created_at = Column(DateTime, default=_now)
+
+
 class BillingAccount(Base):
     __tablename__ = "billing_accounts"
 

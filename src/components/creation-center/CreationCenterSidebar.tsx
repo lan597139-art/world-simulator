@@ -11,6 +11,7 @@ import {
   Settings,
   ShoppingBag,
   Sparkles,
+  Sprout,
   Users,
   type LucideIcon,
 } from 'lucide-react'
@@ -25,6 +26,7 @@ export type HomeNavTarget =
   | 'content-store'
   | 'yunbao'
   | 'business'
+  | 'spirit-economy'
   | 'assets'
   | 'works'
   | 'settings'
@@ -43,7 +45,7 @@ type NavGroup = {
   items: NavItem[]
 }
 
-function groups(lang: Lang, active: 'home' | 'identity' | 'community' | 'community-social' | 'ai-interaction' | 'game-experience' | 'content-store' | 'business' | 'assets' | 'works'): NavGroup[] {
+function groups(lang: Lang, active: 'home' | 'identity' | 'community' | 'community-social' | 'ai-interaction' | 'game-experience' | 'content-store' | 'business' | 'spirit-economy' | 'assets' | 'works'): NavGroup[] {
   return [
     {
       label: lang === 'zh' ? '个人空间' : 'Personal Space',
@@ -72,6 +74,7 @@ function groups(lang: Lang, active: 'home' | 'identity' | 'community' | 'communi
     {
       label: lang === 'zh' ? '账户服务' : 'Account Services',
       items: [
+        { target: 'spirit-economy', label: lang === 'zh' ? '灵果资源' : 'Spirit Resources', icon: Sprout, active: active === 'spirit-economy' },
         { target: 'business', label: lang === 'zh' ? '商业与服务中心' : 'Business & Services', icon: BriefcaseBusiness, active: active === 'business' },
       ],
     },
@@ -89,7 +92,7 @@ export default function CreationCenterSidebar({
   canAccessYunbao = false,
 }: {
   lang: Lang
-  active: 'home' | 'identity' | 'community' | 'community-social' | 'ai-interaction' | 'game-experience' | 'content-store' | 'business' | 'assets' | 'works'
+  active: 'home' | 'identity' | 'community' | 'community-social' | 'ai-interaction' | 'game-experience' | 'content-store' | 'business' | 'spirit-economy' | 'assets' | 'works'
   onNavigate: (target: HomeNavTarget) => void
   onToggleLang: () => void
   onCollapse: () => void

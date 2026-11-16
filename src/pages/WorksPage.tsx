@@ -10,6 +10,7 @@ import {
   ImagePlus,
   Link2,
   NotebookPen,
+  PanelsTopLeft,
   Pencil,
   PenLine,
   Plus,
@@ -49,6 +50,7 @@ type StatusCopy = { label: string; short: string }
 const SCENES: SceneMeta[] = [
   { key: 'game', label: '游戏创作', short: '游戏', description: '游戏世界、规则、角色与多结局剧情。', icon: Gamepad2, tone: '#4f7cff' },
   { key: 'literature', label: '文学创作', short: '文学', description: '小说、故事、章节与文学人物。', icon: BookOpen, tone: '#2f9e6f' },
+  { key: 'comic', label: '漫画创作', short: '漫画', description: '漫画作品、章节、页面与连续画格。', icon: PanelsTopLeft, tone: '#d4674f' },
   { key: 'companion', label: '虚拟角色', short: '角色', description: '角色设定、长期关系与互动体验。', icon: Sparkles, tone: '#8b5cf6' },
   { key: 'diary', label: '日记与传记', short: '日记', description: '日记、人生经历、回忆录与传记。', icon: NotebookPen, tone: '#c08a2e' },
 ]
@@ -152,11 +154,13 @@ export default function WorksPage({
   userName,
   onOpenScene,
   onOpenNarrative,
+  initialScene,
 }: {
   lang: Lang
   userName?: string
   onOpenScene: (scene: WorkScene, worldId?: string) => void
   onOpenNarrative?: (scene: WorkScene, worldId: string, page: 'storyline' | 'writing') => void
+  initialScene?: WorkScene | null
 }) {
   const t = copy[lang]
   const [works, setWorks] = useState<CreativeWork[]>([])
@@ -165,7 +169,7 @@ export default function WorksPage({
   const [characters, setCharacters] = useState<CharacterLite[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [sceneFilter, setSceneFilter] = useState<WorkScene | 'all'>('all')
+  const [sceneFilter, setSceneFilter] = useState<WorkScene | 'all'>(initialScene || 'all')
   const [statusFilter, setStatusFilter] = useState<WorkStatus | 'all'>('all')
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<CreativeWork | null>(null)
@@ -201,6 +205,7 @@ export default function WorksPage({
   }
 
   useEffect(() => { void load() }, [])
+  useEffect(() => { if (initialScene) setSceneFilter(initialScene) }, [initialScene])
 
   const worldById = useMemo(() => new Map(worlds.map((world) => [world.id, world])), [worlds])
   const characterById = useMemo(() => new Map(characters.map((character) => [character.id, character])), [characters])

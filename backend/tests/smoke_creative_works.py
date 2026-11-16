@@ -1,4 +1,4 @@
-"""阶段 C：创作中心统一作品元数据、封面引用与四场景分类。"""
+"""阶段 C/G：创作中心统一作品元数据、封面引用与五场景分类。"""
 
 import uuid
 
@@ -56,6 +56,7 @@ def run():
 
     scene_payloads = {
         "game": "世界观",
+        "comic": "条漫",
         "companion": "AI 角色",
         "diary": "日记",
     }
@@ -69,7 +70,7 @@ def run():
             scene_ids.append(response.json()["id"])
 
     summary = client.get("/api/creative-works/summary")
-    check("作品统计覆盖四个场景", summary.status_code == 200 and all(summary.json()["by_scene"][scene] >= 1 for scene in ("game", "literature", "companion", "diary")), summary.text)
+    check("作品统计覆盖五个场景", summary.status_code == 200 and all(summary.json()["by_scene"][scene] >= 1 for scene in ("game", "literature", "comic", "companion", "diary")), summary.text)
 
     updated = client.patch(f"/api/creative-works/{work_id}", json={
         "title": "星海旧梦 · 第二版",

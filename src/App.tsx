@@ -53,6 +53,7 @@ import ContentStorePage from './pages/ContentStorePage'
 import SettingsPage from './pages/SettingsPage'
 import BillingCenterPage from './pages/BillingCenterPage'
 import WorksPage from './pages/WorksPage'
+import SpiritEconomyPage from './pages/SpiritEconomyPage'
 import type { WorkScene } from './api/creativeWorks'
 import { getSettings } from './api/settings'
 import { applyExperience } from './utils/experience'
@@ -67,6 +68,7 @@ type PageKey =
   | 'settings'
   | 'community-social'
   | 'business'
+  | 'spirit-economy'
   | 'ai-center'
   | 'game-center'
   | 'content-store'
@@ -159,6 +161,7 @@ function pageLabel(key: PageKey, dict: Record<string, string>): string {
     settings: '设置中心',
     'community-social': '社区社交',
     business: '商业与服务中心',
+    'spirit-economy': '灵果资源',
     yunbao: '云宝工作台',
     memories: '记忆管理',
     'companion-runtime': '人格运行',
@@ -185,11 +188,11 @@ const initialPage: PageKey = hasWorkbenchLink
 const WORLD_FREE_PAGES: PageKey[] = [
   'home', 'user-center', 'community', 'community-social', 'business', 'settings', 'ai-center', 'game-center', 'content-store', 'workspace-home', 'overview', 'world-management', 'world-building', 'diary', 'archive', 'trash',
   'information-sources', 'personas', 'yunbao-seed', 'memories', 'companion-runtime', 'yunbao',
-  'creator-assets', 'works',
+  'creator-assets', 'works', 'spirit-economy',
 ]
 
 function isGlobalPage(page: PageKey): boolean {
-  return page === 'home' || page === 'user-center' || page === 'community' || page === 'community-social' || page === 'business' || page === 'settings' || page === 'ai-center' || page === 'game-center' || page === 'content-store' || page === 'creator-assets' || page === 'works'
+  return page === 'home' || page === 'user-center' || page === 'community' || page === 'community-social' || page === 'business' || page === 'spirit-economy' || page === 'settings' || page === 'ai-center' || page === 'game-center' || page === 'content-store' || page === 'creator-assets' || page === 'works'
 }
 
 function readStoredAuthUser(): AuthUser | null {
@@ -216,6 +219,7 @@ export default function App() {
   const navigationProductConfig = useMemo(() => navigationConfig(productConfig), [productConfig])
   const [selectedWorldId, setSelectedWorldId] = useState<string | null>(null) // 用于建设页
   const [creatingWorld, setCreatingWorld] = useState(false)
+  const [worksEntryScene, setWorksEntryScene] = useState<WorkScene | null>(null)
   const [lang, setLang] = useState<Language>('zh')
   const dict = t[lang]
 
@@ -396,6 +400,18 @@ export default function App() {
     }
   }
 
+  const handleCreationScene = (scene: WorkScene) => {
+    if (scene === 'comic') {
+      setWorksEntryScene('comic')
+      setActivePage('works')
+      setNavStack([])
+      window.setTimeout(() => document.querySelector('.cc-page-scroll')?.scrollTo({ top: 0 }), 0)
+      return
+    }
+    setWorksEntryScene(null)
+    void switchProduct(scene)
+  }
+
   const switchProduct = async (nextKey: ProductKey) => {
     const next = productByKey(productMatrix.products, nextKey)
     setProductError('')
@@ -415,6 +431,11 @@ export default function App() {
   }
 
   const openWorkSpace = (scene: WorkScene, worldId?: string) => {
+    if (scene === 'comic') {
+      setWorksEntryScene('comic')
+      setActivePage('works')
+      return
+    }
     const next = productByKey(productMatrix.products, scene)
     storeProduct(scene)
     setProduct(scene)
@@ -474,6 +495,7 @@ export default function App() {
       return
     }
     if (target === 'works') {
+      setWorksEntryScene(null)
       setNavStack([])
       setFocusCharacterId(null)
       setFocusYunbao(false)
@@ -508,6 +530,14 @@ export default function App() {
       setFocusCharacterId(null)
       setFocusYunbao(false)
       setActivePage('community-social')
+      window.setTimeout(() => document.querySelector('.cc-page-scroll')?.scrollTo({ top: 0 }), 0)
+      return
+    }
+    if (target === 'spirit-economy') {
+      setNavStack([])
+      setFocusCharacterId(null)
+      setFocusYunbao(false)
+      setActivePage('spirit-economy')
       window.setTimeout(() => document.querySelector('.cc-page-scroll')?.scrollTo({ top: 0 }), 0)
       return
     }
@@ -565,7 +595,7 @@ export default function App() {
   const handleOpenAsset = (asset: CreationAssetKey) => {
     if (asset === 'worlds') openProductPage('game', 'world-management')
     else if (asset === 'characters') openProductPage('game', 'character-management')
-    else setActivePage('works')
+    else { setWorksEntryScene(null); setActivePage('works') }
   }
 
   const ensureAssetWorld = (): boolean => {
@@ -585,6 +615,7 @@ export default function App() {
       return
     }
     if (target === 'works') {
+      setWorksEntryScene(null)
       setActivePage('works')
       return
     }
@@ -700,7 +731,7 @@ export default function App() {
       window.history.replaceState(null, '', window.location.pathname)
       return
     }
-    if (activePage === 'user-center' || activePage === 'community' || activePage === 'community-social' || activePage === 'business' || activePage === 'settings' || activePage === 'ai-center' || activePage === 'game-center' || activePage === 'content-store') {
+    if (activePage === 'user-center' || activePage === 'community' || activePage === 'community-social' || activePage === 'business' || activePage === 'spirit-economy' || activePage === 'settings' || activePage === 'ai-center' || activePage === 'game-center' || activePage === 'content-store') {
       window.history.replaceState(null, '', `${window.location.pathname}?page=${activePage}`)
       return
     }
@@ -814,9 +845,10 @@ export default function App() {
   const isSettings = activePage === 'settings'
   const isCommunitySocial = activePage === 'community-social'
   const isBusiness = activePage === 'business'
+  const isSpirit = activePage === 'spirit-economy'
   const isCreatorAssets = activePage === 'creator-assets'
   const isWorks = activePage === 'works'
-  const isGlobalShell = isHome || isUserCenter || isCommunity || isCommunitySocial || isBusiness || isSettings || isAiCenter || isGameCenter || isContentStore || isCreatorAssets || isWorks
+  const isGlobalShell = isHome || isUserCenter || isCommunity || isCommunitySocial || isBusiness || isSpirit || isSettings || isAiCenter || isGameCenter || isContentStore || isCreatorAssets || isWorks
   const isProductWorkspace = !isGlobalShell && usesWorkspaceShell(product)
   const isYunbaoWorkspace = isProductWorkspace && product === 'yunbao'
   const topbarWorlds = allWorldsList.filter(
@@ -829,7 +861,7 @@ export default function App() {
       {(isGlobalShell || isProductWorkspace) && (
         <CreationCenterSidebar
           lang={lang}
-          active={isUserCenter ? 'identity' : isCommunity ? 'community' : isCommunitySocial ? 'community-social' : isBusiness ? 'business' : isAiCenter ? 'ai-interaction' : isGameCenter ? 'game-experience' : isContentStore ? 'content-store' : isCreatorAssets ? 'assets' : isWorks ? 'works' : 'home'}
+          active={isUserCenter ? 'identity' : isCommunity ? 'community' : isCommunitySocial ? 'community-social' : isBusiness ? 'business' : isSpirit ? 'spirit-economy' : isAiCenter ? 'ai-interaction' : isGameCenter ? 'game-experience' : isContentStore ? 'content-store' : isCreatorAssets ? 'assets' : isWorks ? 'works' : 'home'}
           onNavigate={handleHomeNav}
           onToggleLang={() => setLang(lang === 'zh' ? 'en' : 'zh')}
           onCollapse={() => setSidebarCollapsed(true)}
@@ -1008,7 +1040,7 @@ export default function App() {
                 (isProductWorkspace || isGlobalShell) ? (
                     <CreationCenterTopbar
                       lang={lang}
-                      page={isProductWorkspace ? 'workspace' : isUserCenter ? 'identity' : isCommunity ? 'community' : isCommunitySocial ? 'community-social' : isBusiness ? 'business' : isAiCenter ? 'ai-center' : isGameCenter ? 'game-center' : isContentStore ? 'content-store' : isCreatorAssets ? 'assets' : isWorks ? 'works' : 'home'}
+                      page={isProductWorkspace ? 'workspace' : isUserCenter ? 'identity' : isCommunity ? 'community' : isCommunitySocial ? 'community-social' : isBusiness ? 'business' : isSpirit ? 'spirit-economy' : isAiCenter ? 'ai-center' : isGameCenter ? 'game-center' : isContentStore ? 'content-store' : isCreatorAssets ? 'assets' : isWorks ? 'works' : 'home'}
                       productLabel={isProductWorkspace ? productConfig.label : undefined}
                       productKey={isProductWorkspace ? product : undefined}
                       currentWorldName={isProductWorkspace ? (productConfig.auto_workspace ? productConfig.workspace_name || currentWorldName : currentWorldName) : undefined}
@@ -1117,7 +1149,7 @@ export default function App() {
           {activePage === 'home' ? (
             <CreationCenterPage
               lang={lang}
-              onOpenScene={(key) => void switchProduct(key)}
+              onOpenScene={handleCreationScene}
               onOpenTool={handleOpenTool}
               onOpenAsset={handleOpenAsset}
             />
@@ -1250,12 +1282,15 @@ export default function App() {
             <WorldDataPage worldId={currentWorldId} />
           ) : activePage === 'world-structure' ? (
             <WorldStructurePage worldId={currentWorldId} worldName={currentWorldName} />
+          ) : activePage === 'spirit-economy' ? (
+            <SpiritEconomyPage lang={lang} user={authUser} onBack={() => setActivePage('home')} />
           ) : activePage === 'works' ? (
             <WorksPage
               lang={lang}
               userName={authUser?.display_name || authUser?.username || ''}
               onOpenScene={openWorkSpace}
               onOpenNarrative={openWorkNarrative}
+              initialScene={worksEntryScene}
             />
           ) : activePage === 'creator-assets' ? (
             <CreatorAssetsPage worldId={currentWorldId} />

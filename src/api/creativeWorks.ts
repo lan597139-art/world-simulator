@@ -2,7 +2,7 @@ import { API_ORIGIN } from './config'
 
 const BASE = `${API_ORIGIN}/api`
 
-export type WorkScene = 'game' | 'literature' | 'companion' | 'diary'
+export type WorkScene = 'game' | 'literature' | 'comic' | 'companion' | 'diary'
 export type WorkStatus = 'draft' | 'in_progress' | 'completed' | 'archived'
 
 export interface CreativeWork {
@@ -30,6 +30,7 @@ export interface WorkSummary {
 export const SCENE_CATEGORIES: Record<WorkScene, string[]> = {
   game: ['世界观', '角色扮演', '剧情互动', '模拟经营', '其他'],
   literature: ['长篇小说', '短篇小说', '系列作品', '同人创作', '其他'],
+  comic: ['长篇漫画', '短篇漫画', '条漫', '分镜稿', '其他'],
   companion: ['AI 角色', '陪伴角色', '群像角色', '其他'],
   diary: ['日记', '人物传记', '回忆录', '人生记录', '其他'],
 }
