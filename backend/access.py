@@ -90,14 +90,34 @@ def is_owner_request(request: Request, db: Session) -> bool:
     return bool(user and user.is_owner)
 
 
-def world_readable(world: models.World, user_id: str) -> bool:
-    return bool(world.is_official or (not world.owner_id and user_id == "local") or world.owner_id == user_id)
+def world_role(world: models.World, user_id: str, db: Session | None = None) -> str:
+    """返回 owner / editor / viewer / none。不接受未响应的邀请。"""
+    if not world.owner_id and user_id == "local":
+        return "owner"
+    if world.owner_id == user_id:
+        return "owner"
+    if not db:
+        return "none"
+    row = (
+        db.query(models.WorldCollaborator)
+        .filter(
+            models.WorldCollaborator.world_id == world.id,
+            models.WorldCollaborator.user_id == user_id,
+            models.WorldCollaborator.status == "accepted",
+        )
+        .first()
+    )
+    if not row:
+        return "none"
+    return row.role if row.role in {"editor", "viewer"} else "viewer"
 
 
-def world_writable(world: models.World, user_id: str) -> bool:
-    if world.owner_id:
-        return world.owner_id == user_id
-    return user_id == "local"
+def world_readable(world: models.World, user_id: str, db: Session | None = None) -> bool:
+    return bool(world.is_official or world_role(world, user_id, db) != "none")
+
+
+def world_writable(world: models.World, user_id: str, db: Session | None = None) -> bool:
+    return world_role(world, user_id, db) in {"owner", "editor"}
 
 
 def get_world_for_request(
@@ -114,10 +134,10 @@ def get_world_for_request(
             return None
         raise HTTPException(status_code=404, detail="世界不存在")
     user_id = current_user_id(request)
-    if not world_readable(world, user_id):
+    if not world_readable(world, user_id, db):
         # 不泄露其他用户世界的存在性
         raise HTTPException(status_code=404, detail="世界不存在")
-    if write and not world_writable(world, user_id):
+    if write and not world_writable(world, user_id, db):
         raise HTTPException(status_code=403, detail="官方演示世界为只读")
     return world
 
@@ -135,6 +155,12 @@ def accessible_world_ids(db: Session, request: Request) -> list[str]:
             models.World.owner_id == user_id,
             models.World.is_official.is_(True),
             (models.World.owner_id.is_(None) & (user_id == "local")),
+            models.World.id.in_(
+                db.query(models.WorldCollaborator.world_id).filter(
+                    models.WorldCollaborator.user_id == user_id,
+                    models.WorldCollaborator.status == "accepted",
+                )
+            ),
         ),
     ).all()
     return [world_id for (world_id,) in rows]
@@ -195,22 +221,22 @@ def guard_request_world(request: Request, user_id: str, db: Session) -> JSONResp
                 entity_world = str(getattr(entity, "world_id", "") or "")
                 if entity_world:
                     entity_world_row = db.query(models.World).filter(models.World.id == entity_world).first()
-                    if not entity_world_row or not world_readable(entity_world_row, user_id):
+                    if not entity_world_row or not world_readable(entity_world_row, user_id, db):
                         return JSONResponse(status_code=404, content={"detail": "内容不存在"})
-                    if request.method not in {"GET", "HEAD", "OPTIONS"} and not world_writable(entity_world_row, user_id):
+                    if request.method not in {"GET", "HEAD", "OPTIONS"} and not world_writable(entity_world_row, user_id, db):
                         return JSONResponse(status_code=403, content={"detail": "官方演示世界为只读"})
                 else:
                     entity_owner = str(getattr(entity, "owner_user_id", "") or "")
                     if entity_owner != user_id and not (not entity_owner and user_id == "local"):
                         return JSONResponse(status_code=404, content={"detail": "内容不存在"})
             return None
-    if not world_id or world_id in {"public"}:
+    if not world_id or world_id in {"public", "import"}:
         return None
     world = db.query(models.World).filter(models.World.id == world_id).first()
     if not world or world.deleted_at is not None:
         return JSONResponse(status_code=404, content={"detail": "世界不存在"})
-    if not world_readable(world, user_id):
+    if not world_readable(world, user_id, db):
         return JSONResponse(status_code=404, content={"detail": "世界不存在"})
-    if request.method not in {"GET", "HEAD", "OPTIONS"} and not world_writable(world, user_id):
+    if request.method not in {"GET", "HEAD", "OPTIONS"} and not world_writable(world, user_id, db):
         return JSONResponse(status_code=403, content={"detail": "官方演示世界为只读"})
     return None

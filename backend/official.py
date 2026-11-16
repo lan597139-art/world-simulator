@@ -4,10 +4,11 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 import models
+from access import is_owner_request
 from database import get_db
 from world_lifecycle import import_world, restore_world
 
@@ -101,7 +102,9 @@ def ensure_official_world(db: Session) -> models.World | None:
 
 
 @router.post("/api/worlds/{world_id}/reset-official")
-def reset_official_world(world_id: str, db: Session = Depends(get_db)):
+def reset_official_world(world_id: str, request: Request, db: Session = Depends(get_db)):
+    if not is_owner_request(request, db):
+        raise HTTPException(status_code=403, detail="只有开发者可以重置官方演示世界")
     world = db.query(models.World).filter(models.World.id == world_id).first()
     if not world:
         raise HTTPException(status_code=404, detail="世界不存在")

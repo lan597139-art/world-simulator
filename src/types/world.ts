@@ -23,6 +23,7 @@ export interface World {
   updatedAt: string
 
   is_official?: boolean
+  access_role?: 'owner' | 'editor' | 'viewer' | 'none'
 
   official_key?: string | null
 

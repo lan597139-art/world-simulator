@@ -40,6 +40,7 @@ class WorldResponse(WorldBase):
     updatedAt: str
     is_product_workspace: Optional[bool] = False
     is_official: Optional[bool] = False
+    access_role: Optional[str] = "owner"
     official_key: Optional[str] = None
     archived_at: Optional[datetime] = None
     deleted_at: Optional[datetime] = None

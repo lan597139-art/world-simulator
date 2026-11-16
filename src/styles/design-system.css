@@ -635,3 +635,7 @@ html[data-bg-tone="dark"] { --workspace-glass-alpha: .84; }
 .rel-universe canvas {
   background: transparent !important;
 }
+
+/* 协作邀请与旋转图标 */
+@keyframes ws-spin { to { transform: rotate(360deg); } }
+.ws-spin { animation: ws-spin .9s linear infinite; }

@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { getAllWorlds, deleteWorld } from '../services/worldService'
 import { API_ORIGIN } from '../api/config'
 import type { World } from '../types/world'
+import WorldCollaborationDialog from '../components/collaboration/WorldCollaborationDialog'
+import WorldInvitesPanel from '../components/collaboration/WorldInvitesPanel'
 
 export default function WorldsPage({
   onEnterWorld,
@@ -20,6 +22,9 @@ export default function WorldsPage({
 }) {
   const [worlds, setWorlds] = useState<World[]>([])
   const [loading, setLoading] = useState(true)
+  const [collabWorld, setCollabWorld] = useState<{ id: string; name: string } | null>(null)
+  const [importing, setImporting] = useState(false)
+  const importRef = useRef<HTMLInputElement>(null)
 
   const loadWorlds = async () => {
     try {
@@ -103,18 +108,72 @@ export default function WorldsPage({
     }
   }
 
+
+  const importWorld = async (file: File) => {
+    setImporting(true)
+    try {
+      const text = await file.text()
+      const payload = JSON.parse(text)
+      const token = localStorage.getItem('ws.authToken')
+      const response = await fetch(`${API_ORIGIN}/api/worlds/import`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ ...payload, target_product: product }),
+      })
+      const body = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(body.detail || `HTTP ${response.status}`)
+      await loadWorlds()
+      const counts = body.counts || {}
+      alert(lang === 'zh'
+        ? `导入完成：${body.name}\n人物 ${counts.characters || 0} · 事件 ${counts.events || 0} · 关系 ${counts.relationships || 0} · 地点 ${counts.locations || 0} · 组织 ${counts.organizations || 0} · 故事 ${counts.stories || 0} · 资源 ${counts.resources || 0}`
+        : `Import complete: ${body.name}\nCharacters ${counts.characters || 0} · Events ${counts.events || 0} · Relationships ${counts.relationships || 0} · Locations ${counts.locations || 0} · Organizations ${counts.organizations || 0} · Stories ${counts.stories || 0} · Resources ${counts.resources || 0}`)
+    } catch (error) {
+      alert(lang === 'zh' ? `导入失败：${String(error)}` : `Import failed: ${String(error)}`)
+    } finally {
+      setImporting(false)
+      if (importRef.current) importRef.current.value = ''
+    }
+  }
+
   if (loading) return <div style={{ padding: '2rem', color: 'var(--text-main)' }}>Loading...</div>
 
   return (
     <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       
+      <WorldInvitesPanel lang={lang} onAccepted={() => void loadWorlds()} />
+
       <div style={{ display: 'flex', gap: '7px', marginBottom: '1.25rem', flexWrap: 'wrap', alignItems: 'center' }}>
         <span style={{ padding: '5px 10px', fontSize: '11px', borderRadius: '14px', background: 'var(--text-main)', color: 'var(--bg-color)' }}>
           {lang === 'zh' ? '当前产品：' : 'Current product: '}{sceneLabels[product]}
         </span>
-        <span style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.6 }}>
+        <span style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.6, flex: '1 1 260px' }}>
           {lang === 'zh' ? '世界列表已按产品隔离，只显示本产品自己的世界；其他产品数据不会混入。' : 'Worlds are isolated by product; only this product’s worlds appear here.'}
         </span>
+        {!readOnly && (
+          <>
+            <button
+              type="button"
+              onClick={() => importRef.current?.click()}
+              disabled={importing}
+              style={{ padding: '7px 13px', borderRadius: '9px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)', cursor: importing ? 'wait' : 'pointer', fontSize: '11px' }}
+            >
+              {importing ? (lang === 'zh' ? '导入中…' : 'Importing…') : (lang === 'zh' ? '导入世界包' : 'Import world')}
+            </button>
+            <input
+              ref={importRef}
+              type="file"
+              accept="application/json,.json"
+              hidden
+              onChange={(event) => {
+                const file = event.target.files?.[0]
+                if (file) void importWorld(file)
+              }}
+            />
+          </>
+        )}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '24px' }}>
@@ -137,7 +196,11 @@ export default function WorldsPage({
         )}
 
         {/* 👇 原本的世界列表 👇 */}
-        {filteredWorlds.map(w => (
+        {filteredWorlds.map(w => {
+          const role = w.access_role || 'owner'
+          const canEdit = role === 'owner' || role === 'editor'
+          const isOwner = role === 'owner'
+          return (
           <div 
             key={w.id} 
             className="glass-card" 
@@ -166,7 +229,7 @@ export default function WorldsPage({
             )}
 
             <div style={{ display: 'flex', gap: '8px', marginTop: 'auto', paddingTop: '16px', flexWrap: 'wrap' }}>
-              {!readOnly && (
+              {!readOnly && canEdit && (
               <button
                 onClick={(e) => { e.stopPropagation(); onOpenWorldBuilding(w.id); }}
                 style={{
@@ -182,6 +245,19 @@ export default function WorldsPage({
               </button>
               )}
 
+              {!readOnly && isOwner && !w.is_official && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setCollabWorld({ id: w.id, name: w.name }); }}
+                  style={{
+                    flex: 1, padding: '10px',
+                    background: 'transparent', color: 'var(--text-main)',
+                    border: '1px solid var(--card-border)', borderRadius: '8px', cursor: 'pointer'
+                  }}
+                >
+                  {lang === 'zh' ? '协作' : 'Collaborators'}
+                </button>
+              )}
+
               <button
                 onClick={(e) => { e.stopPropagation(); void exportWorld(w.id, w.name); }}
                 style={{
@@ -193,7 +269,7 @@ export default function WorldsPage({
                 {lang === 'zh' ? '导出' : 'Export'}
               </button>
 
-              {!readOnly && (
+              {!readOnly && isOwner && (
               <button
                 onClick={(e) => { e.stopPropagation(); handleArchive(w.id); }}
                 disabled={Boolean(w.is_official)}
@@ -208,7 +284,7 @@ export default function WorldsPage({
               </button>
               )}
               
-              {!readOnly && (w.is_official ? (
+              {!readOnly && isOwner && (w.is_official ? (
                 <button
                   onClick={(e) => { e.stopPropagation(); void handleResetOfficial(w.id, w.name); }}
                   style={{
@@ -233,7 +309,8 @@ export default function WorldsPage({
               ))}
             </div>
           </div>
-        ))}
+          )
+        })}
 
         {filteredWorlds.length === 0 && readOnly && (
           <div className="glass-card" style={{ padding: '3rem', color: 'var(--text-muted)', gridColumn: '1 / -1', textAlign: 'center', borderStyle: 'dashed' }}>
@@ -241,6 +318,15 @@ export default function WorldsPage({
           </div>
         )}
       </div>
+
+      {collabWorld && (
+        <WorldCollaborationDialog
+          worldId={collabWorld.id}
+          worldName={collabWorld.name}
+          lang={lang}
+          onClose={() => setCollabWorld(null)}
+        />
+      )}
     </div>
   )
 }

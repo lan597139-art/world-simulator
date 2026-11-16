@@ -41,6 +41,8 @@ def global_notifications(
         page = "community-social"
         if row.type in {"system", "account", "spirit"}:
             page = "settings"
+        if row.type == "world_collaboration":
+            page = "world-management"
         items.append({
             "id": row.id,
             "type": row.type or "system",

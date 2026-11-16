@@ -164,6 +164,26 @@ class WorldSettings(Base):
     updated_at = Column(DateTime, default=_now)
 
 
+class WorldCollaborator(Base):
+    """世界协作成员。owner 不在表中；只有 accepted 才拥有读写权限。"""
+
+    __tablename__ = "world_collaborators"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    world_id = Column(String, ForeignKey("worlds.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(String, nullable=False, index=True)
+    role = Column(String, default="viewer", nullable=False)  # editor / viewer
+    status = Column(String, default="pending", nullable=False, index=True)  # pending / accepted / declined
+    invited_by = Column(String, nullable=False)
+    created_at = Column(DateTime, default=_now)
+    responded_at = Column(DateTime)
+
+    __table_args__ = (
+        UniqueConstraint("world_id", "user_id", name="uq_world_collaborator_user"),
+        Index("ix_world_collaborators_user_status", "user_id", "status"),
+    )
+
+
 class SchemaMigration(Base):
     __tablename__ = "schema_migrations"
 

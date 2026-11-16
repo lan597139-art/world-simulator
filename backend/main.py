@@ -11,6 +11,7 @@ import models
 import schemas
 from ai_engine import reset_request_ai_config, set_request_ai_config
 from database import IS_SQLITE, SessionLocal, engine, get_db
+from access import world_role
 from migrations.runner import run_migrations
 
 # 领域路由
@@ -75,6 +76,7 @@ from storage import upload_root
 from platform_tools import router as platform_tools_router
 from moderation import router as moderation_router
 from portability import router as portability_router
+from collaboration import router as collaboration_router
 
 # SQLite 保留增量迁移；PostgreSQL 新库直接由模型建表，避免执行 SQLite 专用 DDL。
 models.Base.metadata.create_all(bind=engine)
@@ -186,6 +188,7 @@ for router in (
 app.include_router(platform_tools_router)
 app.include_router(moderation_router)
 app.include_router(portability_router)
+app.include_router(collaboration_router)
 
 # 官方演示世界：首次启动自动内置；已存在则仅锁定，不覆盖用户当前数据。
 try:
@@ -218,8 +221,10 @@ def _current_user_id(request: Request) -> str:
     return str(getattr(request.state, "user_id", None) or "local")
 
 
-def _owned(world: models.World, request: Request):
-    if world.owner_id and world.owner_id != _current_user_id(request):
+def _owned(world: models.World, request: Request, db: Session | None = None):
+    if world.is_official:
+        return
+    if world_role(world, _current_user_id(request), db) == "none":
         raise HTTPException(status_code=404, detail="World not found")
 
 
@@ -231,12 +236,22 @@ def get_worlds(request: Request, product_scene: Optional[str] = None,
     )
     if not include_workspace:
         query = query.filter(models.World.is_product_workspace.is_(False))
+    user_id = _current_user_id(request)
+    collaborator_worlds = db.query(models.WorldCollaborator.world_id).filter(
+        models.WorldCollaborator.user_id == user_id,
+        models.WorldCollaborator.status == "accepted",
+    )
     query = query.filter(
-        (models.World.owner_id == _current_user_id(request)) | (models.World.is_official.is_(True))
+        (models.World.owner_id == user_id)
+        | (models.World.is_official.is_(True))
+        | (models.World.id.in_(collaborator_worlds))
     )
     if product_scene:
         query = query.filter(models.World.product_scene == product_scene)
-    return query.order_by(models.World.updatedAt.desc()).all()
+    worlds = query.order_by(models.World.updatedAt.desc()).all()
+    for world in worlds:
+        world.access_role = world_role(world, user_id, db)
+    return worlds
 
 
 @app.get("/api/worlds/{world_id}", response_model=schemas.WorldResponse)
@@ -244,7 +259,8 @@ def get_world(world_id: str, request: Request, db: Session = Depends(get_db)):
     world = db.query(models.World).filter(models.World.id == world_id).first()
     if not world or world.deleted_at is not None:
         raise HTTPException(status_code=404, detail="World not found")
-    _owned(world, request)
+    _owned(world, request, db)
+    world.access_role = world_role(world, _current_user_id(request), db)
     return world
 
 
@@ -292,7 +308,9 @@ def update_world(world_id: str, world: schemas.WorldUpdate, request: Request, db
     db_world = db.query(models.World).filter(models.World.id == world_id).first()
     if not db_world:
         raise HTTPException(status_code=404, detail="World not found")
-    _owned(db_world, request)
+    _owned(db_world, request, db)
+    if world_role(db_world, _current_user_id(request), db) != "owner":
+        raise HTTPException(status_code=403, detail="只有世界创建者可以修改世界本体")
 
     changes = world.model_dump(exclude_unset=True)
     new_scene = changes.get("product_scene")
@@ -315,7 +333,9 @@ def delete_world(world_id: str, request: Request, db: Session = Depends(get_db))
     db_world = db.query(models.World).filter(models.World.id == world_id).first()
     if not db_world or db_world.deleted_at is not None:
         raise HTTPException(status_code=404, detail="World not found")
-    _owned(db_world, request)
+    _owned(db_world, request, db)
+    if world_role(db_world, _current_user_id(request), db) != "owner":
+        raise HTTPException(status_code=403, detail="只有世界创建者可以删除世界")
     if db_world.is_official:
         raise HTTPException(status_code=409, detail="官方演示世界已锁定，不能删除；可使用“重置演示世界”。")
     from trash_service import trash_world

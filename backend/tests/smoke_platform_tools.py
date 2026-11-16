@@ -78,6 +78,13 @@ def main_test():
     body = export.json() if export.status_code == 200 else {}
     check("世界可导出", export.status_code == 200 and body.get("format") == "world-simulator/world" and body.get("world", {}).get("id") == world_id, export.text[:300])
 
+    imported = client.post("/api/worlds/import", headers=headers, json={**body, "target_product": "game"})
+    imported_body = imported.json() if imported.status_code == 200 else {}
+    new_id = imported_body.get("world_id")
+    check("世界包可导入", imported.status_code == 200 and bool(new_id) and new_id != world_id, imported.text[:300])
+    check("导入后世界可读取", client.get(f"/api/worlds/{new_id}", headers=headers).status_code == 200 if new_id else False)
+    check("错误世界包被拒绝", client.post("/api/worlds/import", headers=headers, json={"format": "other", "world": {"name": "x"}}).status_code == 422)
+
     print(f"\n===== {passed} passed, {failed} failed")
     raise SystemExit(1 if failed else 0)
 
