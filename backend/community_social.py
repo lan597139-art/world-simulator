@@ -16,6 +16,7 @@ import models
 from auth import current_user
 from database import get_db
 from settings import DEFAULT_PRIVACY, _settings
+from social_core import blocked_between
 
 router = APIRouter(tags=["community-social"])
 
@@ -444,6 +445,8 @@ def follow(user_id: str, request: Request, db: Session = Depends(get_db)):
     target = _user(db, user_id)
     if target.id == viewer.id:
         raise HTTPException(status_code=422, detail="不能关注自己")
+    if blocked_between(db, viewer.id, target.id):
+        raise HTTPException(status_code=403, detail="你们之间已拉黑，无法关注")
     if not _privacy(db, target.id).get("allow_follow", True):
         raise HTTPException(status_code=403, detail="对方未开放关注")
     existing = db.query(models.CommunityFollow).filter(
@@ -792,6 +795,8 @@ def create_friend_request(payload: dict, request: Request, db: Session = Depends
     target = _user(db, str(payload.get("user_id") or ""))
     if target.id == viewer.id:
         raise HTTPException(status_code=422, detail="不能添加自己为好友")
+    if blocked_between(db, viewer.id, target.id):
+        raise HTTPException(status_code=403, detail="你们之间已拉黑，无法发送好友申请")
     if not _privacy(db, target.id).get("allow_friend_requests", True):
         raise HTTPException(status_code=403, detail="对方未开放好友申请")
     if _friendship(db, viewer.id, target.id):

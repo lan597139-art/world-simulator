@@ -62,10 +62,13 @@ import {
   type SocialUser,
   type TopicDetail,
 } from '../api/communitySocial'
+import SocialDynamicsPanel from '../components/social/SocialDynamicsPanel'
+import SocialMessagesPanel from '../components/social/SocialMessagesPanel'
+import SocialProfileSheet from '../components/social/SocialProfileSheet'
 import '../styles/community-social.css'
 
 type Lang = 'zh' | 'en'
-type Tab = 'feed' | 'topics' | 'groups' | 'people' | 'friends'
+type Tab = 'feed' | 'dynamics' | 'topics' | 'groups' | 'people' | 'friends' | 'messages'
 
 const input: CSSProperties = {
   width: '100%', boxSizing: 'border-box', padding: '9px 11px', borderRadius: 8,
@@ -152,6 +155,8 @@ export default function CommunitySocialPage({
   onBack: () => void
 }) {
   const [tab, setTab] = useState<Tab>('feed')
+  const [socialProfileId, setSocialProfileId] = useState('')
+  const [messagePeerId, setMessagePeerId] = useState('')
   const [overview, setOverview] = useState<SocialOverview | null>(null)
   const [feedScope, setFeedScope] = useState<'following' | 'friends' | 'all'>('following')
   const [feed, setFeed] = useState<FeedItem[]>([])
@@ -374,10 +379,12 @@ export default function CommunitySocialPage({
   const unread = notifications.filter((item) => !item.read).length || overview?.counts.unread_notifications || 0
   const tabs: { key: Tab; zh: string; en: string; icon: ReactNode }[] = [
     { key: 'feed', zh: '社区动态', en: 'Feed', icon: <Compass size={14} /> },
+    { key: 'dynamics', zh: '个人动态', en: 'Posts', icon: <Sparkles size={14} /> },
     { key: 'topics', zh: '讨论交流', en: 'Discussions', icon: <MessageCircle size={14} /> },
     { key: 'groups', zh: '兴趣小组', en: 'Groups', icon: <Users size={14} /> },
     { key: 'people', zh: '关注与发现', en: 'People', icon: <HeartHandshake size={14} /> },
     { key: 'friends', zh: '好友', en: 'Friends', icon: <UserPlus size={14} /> },
+    { key: 'messages', zh: '私信', en: 'Messages', icon: <Send size={14} /> },
   ]
 
   const peopleRows = useMemo(() => searchResults ? searchResults.users : people, [people, searchResults])
@@ -458,6 +465,24 @@ export default function CommunitySocialPage({
             </div>
           </aside>
         </section>
+      )}
+
+      {tab === 'dynamics' && (
+        <SocialDynamicsPanel
+          lang={lang}
+          currentUserId={currentUserId}
+          onOpenProfile={setSocialProfileId}
+          onOpenMessages={(userId) => { setMessagePeerId(userId); setTab('messages') }}
+        />
+      )}
+
+      {tab === 'messages' && (
+        <SocialMessagesPanel
+          lang={lang}
+          initialPeerId={messagePeerId || undefined}
+          onOpenProfile={setSocialProfileId}
+          onPeerConsumed={() => setMessagePeerId('')}
+        />
       )}
 
       {tab === 'topics' && (
@@ -555,7 +580,11 @@ export default function CommunitySocialPage({
                   <div className="cs-person-card" key={friend.id}>
                     <Avatar user={friend} size={38} />
                     <div style={{ flex: 1 }}><strong className="cs-person-name">{friend.display_name || friend.username}</strong><span>@{friend.username} · 好友于 {formatDate(friend.friends_since)}</span></div>
-                    <button type="button" style={danger} disabled={busy === `remove:${friend.id}`} onClick={() => void removeFriend(friend)}>删除好友</button>
+                    <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                      <button type="button" style={tiny} onClick={() => setSocialProfileId(friend.id)}>主页</button>
+                      <button type="button" style={tiny} onClick={() => { setMessagePeerId(friend.id); setTab('messages') }}>私信</button>
+                      <button type="button" style={danger} disabled={busy === `remove:${friend.id}`} onClick={() => void removeFriend(friend)}>删除好友</button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -580,6 +609,15 @@ export default function CommunitySocialPage({
             </div>
           </aside>
         </div>
+      )}
+
+      {socialProfileId && (
+        <SocialProfileSheet
+          userId={socialProfileId}
+          lang={lang}
+          onClose={() => setSocialProfileId('')}
+          onMessage={(userId) => { setSocialProfileId(''); setMessagePeerId(userId); setTab('messages') }}
+        />
       )}
 
       {notificationsOpen && (

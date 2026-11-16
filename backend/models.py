@@ -1926,6 +1926,69 @@ class CommunityFavorite(Base):
 # =====================================================================
 # 内容社区社交：讨论 / 小组 / 关注 / 好友 / 动态通知
 # =====================================================================
+class SocialPost(Base):
+    __tablename__ = "social_posts"
+    __table_args__ = (Index("ix_social_posts_author_time", "author_id", "created_at"),)
+
+    id = Column(String, primary_key=True, default=_uuid)
+    author_id = Column(String, nullable=False, index=True)
+    body = Column(Text, default="")
+    media_urls = Column(JSON, default=list)
+    channels = Column(JSON, default=list)
+    visibility = Column(String, default="public", nullable=False, index=True)
+    work_id = Column(String, nullable=True)
+    world_id = Column(String, nullable=True)
+    character_id = Column(String, nullable=True)
+    story_id = Column(String, nullable=True)
+    created_at = Column(DateTime, default=_now, index=True)
+    updated_at = Column(DateTime, default=_now)
+
+
+class SocialPostLike(Base):
+    __tablename__ = "social_post_likes"
+    __table_args__ = (UniqueConstraint("post_id", "user_id", name="uq_social_post_like"),)
+
+    id = Column(String, primary_key=True, default=_uuid)
+    post_id = Column(String, ForeignKey("social_posts.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(String, nullable=False, index=True)
+    created_at = Column(DateTime, default=_now)
+
+
+class SocialPostComment(Base):
+    __tablename__ = "social_post_comments"
+    __table_args__ = (Index("ix_social_comments_post_time", "post_id", "created_at"),)
+
+    id = Column(String, primary_key=True, default=_uuid)
+    post_id = Column(String, ForeignKey("social_posts.id", ondelete="CASCADE"), nullable=False, index=True)
+    author_id = Column(String, nullable=False, index=True)
+    parent_id = Column(String, nullable=True)
+    body = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=_now)
+
+
+class SocialBlock(Base):
+    __tablename__ = "social_blocks"
+    __table_args__ = (UniqueConstraint("blocker_id", "blocked_id", name="uq_social_block"),)
+
+    id = Column(String, primary_key=True, default=_uuid)
+    blocker_id = Column(String, nullable=False, index=True)
+    blocked_id = Column(String, nullable=False, index=True)
+    created_at = Column(DateTime, default=_now)
+
+
+class DirectMessage(Base):
+    __tablename__ = "direct_messages"
+    __table_args__ = (Index("ix_direct_messages_pair", "sender_id", "recipient_id", "created_at"),)
+
+    id = Column(String, primary_key=True, default=_uuid)
+    sender_id = Column(String, nullable=False, index=True)
+    recipient_id = Column(String, nullable=False, index=True)
+    body = Column(Text, default="")
+    image_url = Column(String)
+    read_at = Column(DateTime)
+    created_at = Column(DateTime, default=_now)
+
+
 class CommunityTopic(Base):
     __tablename__ = "community_topics"
 
