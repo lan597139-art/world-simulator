@@ -9,7 +9,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import func
@@ -256,3 +256,48 @@ def list_invites(request: Request, db: Session = Depends(get_db)):
         .all()
     )
     return {"items": [_row(db, row) for row in rows]}
+
+
+# ---------------------------------------------------------------------------
+# 协作在线状态：心跳 45 秒内视为在线；世界所有可读成员都能看到。
+# ---------------------------------------------------------------------------
+
+def _presence_payload(db: Session, world: models.World, user_id: str) -> dict:
+    cutoff = datetime.utcnow() - timedelta(seconds=45)
+    rows = (
+        db.query(models.WorldPresence)
+        .filter(models.WorldPresence.world_id == world.id, models.WorldPresence.last_seen_at >= cutoff)
+        .order_by(models.WorldPresence.last_seen_at.desc())
+        .all()
+    )
+    users = []
+    for row in rows:
+        users.append({**_user_brief(db, row.user_id), "last_seen_at": _iso(row.last_seen_at)})
+    return {"online": users, "count": len(users), "window_seconds": 45, "self": user_id}
+
+
+@router.post("/worlds/{world_id}/presence")
+def heartbeat_presence(world_id: str, request: Request, db: Session = Depends(get_db)):
+    world = get_world_for_request(db, world_id, request)
+    user_id = current_user_id(request)
+    if world_role(world, user_id, db) == "none":
+        raise HTTPException(status_code=403, detail="无权查看该世界的协作状态")
+    row = db.query(models.WorldPresence).filter(
+        models.WorldPresence.world_id == world.id,
+        models.WorldPresence.user_id == user_id,
+    ).first()
+    if row:
+        row.last_seen_at = datetime.utcnow()
+    else:
+        db.add(models.WorldPresence(world_id=world.id, user_id=user_id))
+    db.commit()
+    return _presence_payload(db, world, user_id)
+
+
+@router.get("/worlds/{world_id}/presence")
+def get_presence(world_id: str, request: Request, db: Session = Depends(get_db)):
+    world = get_world_for_request(db, world_id, request)
+    user_id = current_user_id(request)
+    if world_role(world, user_id, db) == "none":
+        raise HTTPException(status_code=403, detail="无权查看该世界的协作状态")
+    return _presence_payload(db, world, user_id)

@@ -178,6 +178,23 @@ async def auth_middleware(request: Request, call_next):
                 detail = "Yunbao Workspace is owner-editable; this account is read-only"
             return JSONResponse(status_code=403, content={"detail": detail})
         request.state.user_id = user.id
+        from sanctions import active_sanction
+        ban = active_sanction(db, user.id, "ban")
+        appeal_path = path.startswith("/api/account/sanctions")
+        if ban and not appeal_path and path not in {"/api/auth/logout", "/api/auth/status", "/api/client-errors"}:
+            until = f"，解除时间 {ban.expires_at.strftime('%Y-%m-%d %H:%M')} UTC" if ban.expires_at else ""
+            detail = f"账号已被封禁{until}；你可以在账户治理记录中提交申诉"
+            if request.headers.get("accept-language", "").lower().startswith("en"):
+                detail = f"Account banned{until}. You can appeal from account sanction records."
+            return JSONResponse(status_code=403, content={"detail": detail, "sanction_id": ban.id})
+        mute = active_sanction(db, user.id, "mute")
+        mute_prefixes = ("/api/community", "/api/community-social", "/api/social", "/api/creative-works", "/api/reports")
+        if mute and request.method not in {"GET", "HEAD", "OPTIONS"} and path.startswith(mute_prefixes):
+            until = f"，解除时间 {mute.expires_at.strftime('%Y-%m-%d %H:%M')} UTC" if mute.expires_at else ""
+            detail = f"账号处于禁言状态{until}，暂时不能发布社区内容"
+            if request.headers.get("accept-language", "").lower().startswith("en"):
+                detail = f"Account muted{until}; posting is temporarily disabled."
+            return JSONResponse(status_code=403, content={"detail": detail, "sanction_id": mute.id})
         blocked = guard_request_world(request, user.id, db)
         if blocked is not None:
             return blocked

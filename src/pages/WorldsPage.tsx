@@ -109,27 +109,59 @@ export default function WorldsPage({
   }
 
 
+  const exportPackage = async (worldId: string, name: string) => {
+    try {
+      const token = localStorage.getItem('ws.authToken')
+      const response = await fetch(`${API_ORIGIN}/api/worlds/${worldId}/export-package`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `${name || 'world'}-package.zip`
+      link.click()
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      alert(lang === 'zh' ? `完整包导出失败：${String(error)}` : `Package export failed: ${String(error)}`)
+    }
+  }
+
   const importWorld = async (file: File) => {
     setImporting(true)
     try {
-      const text = await file.text()
-      const payload = JSON.parse(text)
       const token = localStorage.getItem('ws.authToken')
-      const response = await fetch(`${API_ORIGIN}/api/worlds/import`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ ...payload, target_product: product }),
-      })
+      const isZip = /\.zip$/i.test(file.name)
+      let response: Response
+      if (isZip) {
+        const form = new FormData()
+        form.append('file', file)
+        form.append('target_product', product)
+        response = await fetch(`${API_ORIGIN}/api/worlds/import-package`, {
+          method: 'POST',
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          body: form,
+        })
+      } else {
+        const text = await file.text()
+        const payload = JSON.parse(text)
+        response = await fetch(`${API_ORIGIN}/api/worlds/import`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ ...payload, target_product: product }),
+        })
+      }
       const body = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(body.detail || `HTTP ${response.status}`)
       await loadWorlds()
       const counts = body.counts || {}
       alert(lang === 'zh'
-        ? `导入完成：${body.name}\n人物 ${counts.characters || 0} · 事件 ${counts.events || 0} · 关系 ${counts.relationships || 0} · 地点 ${counts.locations || 0} · 组织 ${counts.organizations || 0} · 故事 ${counts.stories || 0} · 资源 ${counts.resources || 0}`
-        : `Import complete: ${body.name}\nCharacters ${counts.characters || 0} · Events ${counts.events || 0} · Relationships ${counts.relationships || 0} · Locations ${counts.locations || 0} · Organizations ${counts.organizations || 0} · Stories ${counts.stories || 0} · Resources ${counts.resources || 0}`)
+        ? `导入完成：${body.name}\n人物 ${counts.characters || 0} · 事件 ${counts.events || 0} · 关系 ${counts.relationships || 0} · 地点 ${counts.locations || 0} · 组织 ${counts.organizations || 0} · 故事 ${counts.stories || 0} · 资源 ${counts.resources || 0}${body.media ? ` · 媒体 ${body.media}` : ''}`
+        : `Import complete: ${body.name}\nCharacters ${counts.characters || 0} · Events ${counts.events || 0} · Relationships ${counts.relationships || 0} · Locations ${counts.locations || 0} · Organizations ${counts.organizations || 0} · Stories ${counts.stories || 0} · Resources ${counts.resources || 0}${body.media ? ` · Media ${body.media}` : ''}`)
     } catch (error) {
       alert(lang === 'zh' ? `导入失败：${String(error)}` : `Import failed: ${String(error)}`)
     } finally {
@@ -165,7 +197,7 @@ export default function WorldsPage({
             <input
               ref={importRef}
               type="file"
-              accept="application/json,.json"
+              accept="application/json,.json,application/zip,.zip"
               hidden
               onChange={(event) => {
                 const file = event.target.files?.[0]
@@ -267,6 +299,17 @@ export default function WorldsPage({
                 }}
               >
                 {lang === 'zh' ? '导出' : 'Export'}
+              </button>
+
+              <button
+                onClick={(e) => { e.stopPropagation(); void exportPackage(w.id, w.name); }}
+                style={{
+                  flex: 1, padding: '10px',
+                  background: 'transparent', color: 'var(--text-main)',
+                  border: '1px solid var(--card-border)', borderRadius: '8px', cursor: 'pointer'
+                }}
+              >
+                {lang === 'zh' ? '含媒体包' : 'With media'}
               </button>
 
               {!readOnly && isOwner && (

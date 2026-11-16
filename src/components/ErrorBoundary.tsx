@@ -1,5 +1,6 @@
 import { Component } from 'react'
 import type { ErrorInfo, ReactNode } from 'react'
+import { reportRenderFailure } from '../utils/errorReporting'
 
 interface Props {
   children: ReactNode
@@ -22,6 +23,7 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error('页面渲染失败', error, info)
+    reportRenderFailure(error, info.componentStack || '')
   }
 
   reset = () => {

@@ -87,9 +87,17 @@ def main_test():
     r = client.patch(f"/api/world-collaborators/{invite_id}", headers=owner_h, json={"role": "viewer"})
     check("创建者可以调整角色", r.status_code == 200 and r.json().get("item", {}).get("role") == "viewer", r.text[:300])
 
+    owner_beat = client.post(f"/api/worlds/{world_id}/presence", headers=owner_h, json={})
+    editor_beat = client.post(f"/api/worlds/{world_id}/presence", headers=editor_h, json={})
+    check("协作在线心跳可用", owner_beat.status_code == 200 and editor_beat.status_code == 200, editor_beat.text[:300])
+    presence = client.get(f"/api/worlds/{world_id}/presence", headers=owner_h)
+    ids = {item["id"] for item in presence.json().get("online", [])} if presence.status_code == 200 else set()
+    check("在线列表包含双方", len(ids) >= 2, presence.text[:300])
+
     r = client.delete(f"/api/world-collaborators/{invite_id}", headers=owner_h)
     check("创建者可以移除成员", r.status_code == 200)
     check("移除后立即失去访问", client.get(f"/api/worlds/{world_id}", headers=editor_h).status_code == 404)
+    check("移除后不能上报在线", client.post(f"/api/worlds/{world_id}/presence", headers=editor_h, json={}).status_code == 404)
 
     print(f"\n===== {passed} passed, {failed} failed")
     raise SystemExit(1 if failed else 0)

@@ -2,10 +2,12 @@ import { useCallback, useEffect, useState } from 'react'
 import { Check, Copy, Loader2, Shield, UserPlus, Users, X } from 'lucide-react'
 import {
   inviteWorldCollaborator,
+  heartbeatWorldPresence,
   listWorldCollaborators,
   removeWorldCollaborator,
   updateWorldCollaborator,
   type CollaboratorList,
+  type PresencePayload,
   type WorldCollaborator,
 } from '../../api/collaboration'
 
@@ -32,6 +34,8 @@ const statusLabel = (lang: string, status: string) => (
       : copy(lang, '已拒绝', 'Declined')
 )
 
+const isOnline = (presence: PresencePayload | null, userId: string) => Boolean(presence?.online.some((item) => item.id === userId))
+
 export default function WorldCollaborationDialog({ worldId, worldName, lang, onClose }: Props) {
   const [data, setData] = useState<CollaboratorList | null>(null)
   const [loading, setLoading] = useState(true)
@@ -40,6 +44,7 @@ export default function WorldCollaborationDialog({ worldId, worldName, lang, onC
   const [notice, setNotice] = useState('')
   const [username, setUsername] = useState('')
   const [role, setRole] = useState<'editor' | 'viewer'>('viewer')
+  const [presence, setPresence] = useState<PresencePayload | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -54,6 +59,21 @@ export default function WorldCollaborationDialog({ worldId, worldName, lang, onC
   }, [worldId])
 
   useEffect(() => { void load() }, [load])
+
+  useEffect(() => {
+    let live = true
+    const beat = async () => {
+      try {
+        const payload = await heartbeatWorldPresence(worldId)
+        if (live) setPresence(payload)
+      } catch {
+        // 在线状态失败不应影响成员管理。
+      }
+    }
+    void beat()
+    const timer = window.setInterval(beat, 15000)
+    return () => { live = false; window.clearInterval(timer) }
+  }, [worldId])
 
   const invite = async () => {
     const name = username.trim().replace(/^@/, '')
@@ -129,6 +149,10 @@ export default function WorldCollaborationDialog({ worldId, worldName, lang, onC
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: '10px', letterSpacing: '.14em', color: 'var(--text-muted)' }}>COLLABORATION</div>
             <h2 style={{ margin: '4px 0 0', fontSize: '20px', color: 'var(--text-main)' }}>{worldName}</h2>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', marginTop: '6px', fontSize: '10px', color: 'var(--text-muted)' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: presence?.count ? '#22c55e' : 'var(--text-muted)', boxShadow: presence?.count ? '0 0 0 3px rgba(34,197,94,.14)' : 'none' }} />
+              {copy(lang, `当前在线 ${presence?.count || 0} 人`, `${presence?.count || 0} online`)}
+            </div>
             <p style={{ margin: '6px 0 0', fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.6 }}>
               {copy(
                 lang,
@@ -154,7 +178,10 @@ export default function WorldCollaborationDialog({ worldId, worldName, lang, onC
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px', borderRadius: '12px', border: '1px solid var(--card-border)', background: 'rgba(128,128,128,.06)' }}>
               <Shield size={16} color="var(--primary-color)" />
               <div style={{ flex: 1 }}>
-                <strong style={{ fontSize: '13px', color: 'var(--text-main)' }}>{data.owner.name}</strong>
+                <strong style={{ fontSize: '13px', color: 'var(--text-main)' }}>
+                  {isOnline(presence, data.owner.id) && <span style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e', marginRight: '5px', verticalAlign: '1px' }} />}
+                  {data.owner.name}
+                </strong>
                 <span style={{ marginLeft: '8px', fontSize: '10px', color: 'var(--text-muted)' }}>@{data.owner.username}</span>
               </div>
               <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{roleLabel(lang, 'owner')}</span>
@@ -207,11 +234,14 @@ export default function WorldCollaborationDialog({ worldId, worldName, lang, onC
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {data.items.map((member) => (
                     <div key={member.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '11px', border: '1px solid var(--card-border)' }}>
-                      <div style={{ width: '30px', height: '30px', borderRadius: '50%', display: 'grid', placeItems: 'center', background: 'rgba(128,128,128,.12)', color: 'var(--text-main)', fontSize: '12px', overflow: 'hidden' }}>
+                      <div style={{ width: '30px', height: '30px', borderRadius: '50%', display: 'grid', placeItems: 'center', background: 'rgba(128,128,128,.12)', color: 'var(--text-main)', fontSize: '12px', overflow: 'hidden', boxShadow: isOnline(presence, member.user.id) ? '0 0 0 2px #22c55e' : 'none' }}>
                         {member.user.avatar ? <img src={member.user.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : member.user.name.slice(0, 1)}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <strong style={{ display: 'block', fontSize: '12px', color: 'var(--text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{member.user.name}</strong>
+                        <strong style={{ display: 'block', fontSize: '12px', color: 'var(--text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {isOnline(presence, member.user.id) && <span style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e', marginRight: '5px', verticalAlign: '1px' }} />}
+                          {member.user.name}
+                        </strong>
                         <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>@{member.user.username} · {statusLabel(lang, member.status)}</span>
                       </div>
                       {data.can_manage ? (

@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 import models
 from auth import current_user
 from database import get_db
+from sanctions import target_author_id
 
 router = APIRouter()
 
@@ -18,6 +19,8 @@ REASONS = {"spam", "harassment", "illegal", "adult", "misinformation", "other"}
 
 def _row(row: models.ContentReport, db: Session):
     reporter = db.query(models.AppUser).filter(models.AppUser.id == row.reporter_id).first()
+    author_id = target_author_id(db, row.target_type, row.target_id)
+    author = db.query(models.AppUser).filter(models.AppUser.id == author_id).first() if author_id else None
     return {
         "id": row.id,
         "target_type": row.target_type,
@@ -26,6 +29,7 @@ def _row(row: models.ContentReport, db: Session):
         "detail": row.detail or "",
         "status": row.status,
         "reporter": {"id": reporter.id, "name": reporter.display_name or reporter.username} if reporter else None,
+        "target_author": {"id": author.id, "name": author.display_name or author.username} if author else None,
         "resolution_note": row.resolution_note or "",
         "created_at": row.created_at.isoformat() if row.created_at else None,
         "resolved_at": row.resolved_at.isoformat() if row.resolved_at else None,

@@ -1172,7 +1172,7 @@ export default function App() {
               云宝工作台当前为只读访问。你可以查看世界、人物、日记与创作数据；所有编辑、删除与状态切换仅限开发者「兰哆哆」。
             </div>
           )}
-          <ErrorBoundary onReset={() => setActivePage(usesWorkspaceShell(product) ? 'workspace-home' : productConfig.home as PageKey)}>
+          <ErrorBoundary key={`${product}:${activePage}:${currentWorldId}`} onReset={() => setActivePage(usesWorkspaceShell(product) ? 'workspace-home' : productConfig.home as PageKey)}>
           {activePage === 'home' ? (
             <CreationCenterPage
               lang={lang}

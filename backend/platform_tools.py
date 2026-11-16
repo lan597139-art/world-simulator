@@ -39,7 +39,7 @@ def global_notifications(
     items = []
     for row in rows:
         page = "community-social"
-        if row.type in {"system", "account", "spirit"}:
+        if row.type in {"system", "account", "spirit", "moderation", "moderation_appeal"}:
             page = "settings"
         if row.type == "world_collaboration":
             page = "world-management"

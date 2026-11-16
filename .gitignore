@@ -40,3 +40,4 @@ backend/uploads/
 
 # OS
 .DS_Store
+backend/backups/

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import {
+  Activity,
   AlertCircle,
   Bell,
   Check,
@@ -24,7 +25,8 @@ import {
   UserRound,
 } from 'lucide-react'
 import type { AuthUser } from '../api/auth'
-import { OFFICIAL_BACKGROUNDS } from '../data/officialBackgrounds'
+import { OFFICIAL_BACKGROUNDS, isOfficialBackground } from '../data/officialBackgrounds'
+import OfficialAssetPicker from '../components/media/OfficialAssetPicker'
 import {
   changePassword,
   exportSettingsData,
@@ -42,15 +44,23 @@ import {
 } from '../api/settings'
 import { uploadMedia, resolveMediaUrl } from '../api/media'
 import { listAdminReports, resolveReport, type ContentReport } from '../api/moderation'
+import { sanctionReport, type SanctionAction } from '../api/sanctions'
+import AdminMonitoringPanel from '../components/settings/AdminMonitoringPanel'
+import AccountSanctionsPanel from '../components/settings/AccountSanctionsPanel'
+import AdminSanctionsPanel from '../components/settings/AdminSanctionsPanel'
 import InviteCodesPanel from '../components/settings/InviteCodesPanel'
 import LocalWorkspacePanel from '../components/settings/LocalWorkspacePanel'
 import '../styles/settings.css'
+import '../styles/admin-monitoring.css'
+import '../styles/admin-sanctions.css'
+import '../styles/admin-backups.css'
+import '../styles/account-sanctions.css'
 import { applyExperience } from '../utils/experience'
 import { DEFAULT_APPEARANCE, applyAppearance, loadAppearance, saveAppearance, type Appearance } from '../utils/appearance'
 import { tr } from '../i18n'
 
 type Lang = 'zh' | 'en'
-type Section = 'profile' | 'account' | 'privacy' | 'notifications' | 'experience' | 'data' | 'moderation' | 'about'
+type Section = 'profile' | 'account' | 'privacy' | 'notifications' | 'experience' | 'data' | 'moderation' | 'monitoring' | 'about'
 
 const SECTIONS: { key: Section; zh: string; en: string; descZh: string; descEn: string; icon: ReactNode }[] = [
   { key: 'profile', zh: '个人资料与偏好', en: 'Profile & preferences', descZh: '昵称、简介与公开形象', descEn: 'Name, bio and public identity', icon: <UserRound size={17} strokeWidth={1.6} /> },
@@ -60,6 +70,7 @@ const SECTIONS: { key: Section; zh: string; en: string; descZh: string; descEn: 
   { key: 'experience', zh: '使用体验', en: 'Experience', descZh: '语言、主题、密度与动效', descEn: 'Language, theme, density and motion', icon: <SlidersHorizontal size={17} strokeWidth={1.6} /> },
   { key: 'data', zh: '数据与存储', en: 'Data & storage', descZh: '统计、导出与本地缓存', descEn: 'Stats, export and local cache', icon: <Database size={17} strokeWidth={1.6} /> },
   { key: 'moderation', zh: '内容治理', en: 'Moderation', descZh: '举报审核队列与处理记录', descEn: 'Reports, review queue and decisions', icon: <Flag size={17} strokeWidth={1.6} /> },
+  { key: 'monitoring', zh: '运行监控', en: 'Monitoring', descZh: '前端渲染错误与运行状态', descEn: 'Client render errors and runtime status', icon: <Activity size={17} strokeWidth={1.6} /> },
   { key: 'about', zh: '关于与帮助', en: 'About & help', descZh: '版本、后端状态与文档', descEn: 'Version, backend status and docs', icon: <Info size={17} strokeWidth={1.6} /> },
 ]
 
@@ -181,6 +192,8 @@ export default function SettingsPage({
   const [flash, setFlash] = useState('')
   const [reports, setReports] = useState<ContentReport[]>([])
   const [reportBusy, setReportBusy] = useState('')
+  const [sanctionVersion, setSanctionVersion] = useState(0)
+  const [officialOpen, setOfficialOpen] = useState(false)
 
   useEffect(() => {
     if (section !== 'moderation' || !user?.is_owner) return
@@ -422,7 +435,7 @@ export default function SettingsPage({
 
       <div className="settings-layout">
         <nav className="settings-nav" aria-label={tr(lang, "设置分类", "Settings sections")}>
-          {SECTIONS.map((item) => (
+          {SECTIONS.filter((item) => (item.key !== 'moderation' && item.key !== 'monitoring') || user?.is_owner).map((item) => (
             <button
               key={item.key}
               type="button"
@@ -477,6 +490,7 @@ export default function SettingsPage({
 
           {section === 'account' && (
             <>
+              <AccountSanctionsPanel lang={lang} />
               <Panel title={tr(lang, '账户与安全', 'Account & security')} subtitle={tr(lang, '查看账号身份、管理登录会话，并修改本地密码。', 'Review your identity, manage sessions and change your local password.')} aside={<span className={`settings-badge ${data.profile.is_owner ? 'is-owner' : ''}`}>{data.profile.is_owner ? tr(lang, '开发者账号', 'Owner account') : tr(lang, '普通账号', 'Member account')}</span>}>
                 <div className="settings-kv-grid">
                   <div><span>{tr(lang, '用户名', 'Username')}</span><strong>@{data.profile.username}</strong></div>
@@ -688,26 +702,17 @@ export default function SettingsPage({
                   label={tr(lang, '官方背景库', 'Official backgrounds')}
                   hint={tr(lang, '内置场景，可直接使用；上传图片仍会覆盖当前背景。', 'Built-in scenes; an uploaded image still overrides the current background.')}
                 >
-                  <div className="settings-official-grid">
-                    {OFFICIAL_BACKGROUNDS.map((background) => {
-                      const selected = appearance.background_url === background.url
-                      return (
-                        <button
-                          key={background.key}
-                          type="button"
-                          className={`settings-official-tile${selected ? ' is-selected' : ''}`}
-                          style={{ backgroundImage: `url(${JSON.stringify(background.url)})` }}
-                          onClick={() => updateAppearance({ background_url: background.url })}
-                          aria-pressed={selected}
-                        >
-                          <span className="settings-official-copy">
-                            <strong>{lang === 'zh' ? background.nameZh : background.nameEn}</strong>
-                            <small>{lang === 'zh' ? background.categoryZh : background.categoryEn}</small>
-                          </span>
-                          {selected && <Check size={14} aria-hidden="true" />}
-                        </button>
-                      )
-                    })}
+                  <button type="button" style={{ ...ghost, width: '100%', justifyContent: 'flex-start' }} onClick={() => setOfficialOpen(true)}>
+                    <ImagePlus size={15} />
+                    {tr(lang, `打开官方素材库（${OFFICIAL_BACKGROUNDS.length} 张照片/插画）`, `Open official library (${OFFICIAL_BACKGROUNDS.length} photos/illustrations)`)}
+                  </button>
+                  <div className="settings-official-current">
+                    {isOfficialBackground(appearance.background_url)
+                      ? (() => {
+                          const current = OFFICIAL_BACKGROUNDS.find((item) => item.url === appearance.background_url)
+                          return current ? <><strong>{lang === 'zh' ? current.nameZh : current.nameEn}</strong><span>{current.kind === 'photo' ? tr(lang, '官方照片', 'Official photo') : tr(lang, '官方插画', 'Official illustration')} · {current.credit || tr(lang, '站内素材', 'Built-in')}</span></> : null
+                        })()
+                      : <span>{tr(lang, '当前使用自定义图片或未设置官方素材。', 'Using a custom image or no official asset.')}</span>}
                   </div>
                 </Field>
                 <Field label={tr(lang, '背景图透明度', 'Background opacity')} hint={`${appearance.background_opacity}%`}>
@@ -715,6 +720,17 @@ export default function SettingsPage({
                 </Field>
                 <Field label={tr(lang, '背景图模糊度', 'Background blur')} hint={`${appearance.background_blur}px`}>
                   <input className="settings-range" type="range" min={0} max={40} value={appearance.background_blur} onChange={(e) => updateAppearance({ background_blur: Number(e.target.value) })} />
+                </Field>
+                <Field label={tr(lang, '背景焦点 / 裁切', 'Background focal point / crop')} hint={tr(lang, '照片会以该位置为中心裁切', 'Photos crop around this point')}>
+                  <div className="settings-focus-grid">
+                    {([
+                      ['left top', '↖'], ['center top', '↑'], ['right top', '↗'],
+                      ['left center', '←'], ['center', '•'], ['right center', '→'],
+                      ['left bottom', '↙'], ['center bottom', '↓'], ['right bottom', '↘'],
+                    ] as [string, string][]).map(([value, icon]) => (
+                      <button key={value} type="button" className={appearance.background_position === value ? 'is-active' : ''} onClick={() => updateAppearance({ background_position: value })} aria-label={value}>{icon}</button>
+                    ))}
+                  </div>
                 </Field>
                 <Field label={tr(lang, '玻璃模糊度', 'Glass blur')} hint={`${appearance.glass_blur}px`}>
                   <input className="settings-range" type="range" min={0} max={72} value={appearance.glass_blur} onChange={(e) => updateAppearance({ glass_blur: Number(e.target.value) })} />
@@ -765,6 +781,7 @@ export default function SettingsPage({
                           <span style={{ display: 'block', marginTop: 3, color: 'var(--text-muted)', fontSize: 10, wordBreak: 'break-all' }}>
                             {item.target_id}
                           </span>
+                          {item.target_author && <span style={{ display: 'block', marginTop: 3, color: 'var(--text-muted)', fontSize: 10 }}>{tr(lang, '作者：', 'Author: ')}{item.target_author.name}</span>}
                           {item.detail && <p style={{ margin: '6px 0 0', color: 'var(--text-main)', fontSize: 11, lineHeight: 1.6 }}>{item.detail}</p>}
                           <small style={{ display: 'block', marginTop: 5, color: 'var(--text-muted)', fontSize: 9 }}>
                             {item.reporter?.name || '匿名'} · {item.created_at ? new Date(item.created_at).toLocaleString() : ''}
@@ -800,10 +817,41 @@ export default function SettingsPage({
                           </button>
                         </div>
                       </div>
+                      {item.target_author && (
+                        <div style={{ display: 'flex', gap: 6, marginTop: 10, paddingTop: 9, borderTop: '1px solid var(--card-border)', flexWrap: 'wrap' }}>
+                          {([
+                            ['warning', tr(lang, '警告', 'Warn'), 0],
+                            ['mute', tr(lang, '禁言 24h', 'Mute 24h'), 24],
+                            ['ban', tr(lang, '封禁 72h', 'Ban 72h'), 72],
+                          ] as [SanctionAction, string, number][]).map(([action, label, hours]) => (
+                            <button
+                              key={action}
+                              type="button"
+                              disabled={reportBusy === item.id}
+                              style={{ ...primary, background: 'transparent', color: action === 'ban' ? 'var(--danger-color)' : 'var(--text-main)', padding: '5px 9px', fontSize: 10 }}
+                              onClick={() => {
+                                const reason = window.prompt(tr(lang, '处置原因（会通知对方）', 'Reason (the user is notified)'), item.detail || '')
+                                if (reason === null) return
+                                setReportBusy(item.id)
+                                void sanctionReport(item.id, { action, reason: reason || item.detail || item.reason, ...(hours ? { hours } : {}) })
+                                  .then(() => {
+                                    setReports((prev) => prev.filter((row) => row.id !== item.id))
+                                    setSanctionVersion((value) => value + 1)
+                                  })
+                                  .catch((err) => window.alert(String(err?.message || err)))
+                                  .finally(() => setReportBusy(''))
+                              }}
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
               )}
+              <AdminSanctionsPanel lang={lang} refreshKey={sanctionVersion} />
             </Panel>
           )}
 
@@ -831,6 +879,10 @@ export default function SettingsPage({
             </>
           )}
 
+          {section === 'monitoring' && user?.is_owner && (
+            <AdminMonitoringPanel lang={lang} />
+          )}
+
           {section === 'about' && (
             <>
               <Panel title={tr(lang, '关于世界模拟器', 'About World Simulator')} subtitle={tr(lang, '一个把世界、人物、叙事与云宝工作台放在同一处的本地创作系统。', 'A local creation system bringing worlds, characters, narrative and Yunbao together.')}>
@@ -856,6 +908,14 @@ export default function SettingsPage({
           )}
         </div>
       </div>
+      <OfficialAssetPicker
+        open={officialOpen}
+        lang={lang}
+        selectedUrl={appearance.background_url}
+        onClose={() => setOfficialOpen(false)}
+        onSelect={(url) => updateAppearance({ background_url: url })}
+        title={tr(lang, '选择界面背景', 'Choose a background')}
+      />
     </div>
   )
 }

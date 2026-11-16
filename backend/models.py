@@ -164,6 +164,18 @@ class WorldSettings(Base):
     updated_at = Column(DateTime, default=_now)
 
 
+class WorldPresence(Base):
+    """世界协作在线状态；单独建表，避免给已有协作表加列。"""
+
+    __tablename__ = "world_presence"
+    __table_args__ = (UniqueConstraint("world_id", "user_id", name="uq_world_presence_user"),)
+
+    id = Column(String, primary_key=True, default=_uuid)
+    world_id = Column(String, index=True)
+    user_id = Column(String, index=True)
+    last_seen_at = Column(DateTime, default=_now, index=True)
+
+
 class WorldCollaborator(Base):
     """世界协作成员。owner 不在表中；只有 accepted 才拥有读写权限。"""
 
@@ -2165,6 +2177,42 @@ class CommunityNotification(Base):
     __table_args__ = (
         Index("ix_community_notifications_user_time", "user_id", "created_at"),
     )
+
+
+class UserSanction(Base):
+    """平台治理：警告、禁言、封禁与申诉撤销记录。"""
+
+    __tablename__ = "user_sanctions"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    user_id = Column(String, index=True)
+    action = Column(String, default="warning", index=True)
+    reason = Column(Text, default="")
+    report_id = Column(String, default="")
+    created_by = Column(String, default="")
+    starts_at = Column(DateTime, default=_now)
+    expires_at = Column(DateTime, nullable=True)
+    revoked_at = Column(DateTime, nullable=True)
+    revoked_by = Column(String, default="")
+    revoke_note = Column(Text, default="")
+    appeal_note = Column(Text, default="")
+    appealed_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=_now, index=True)
+
+
+class ClientError(Base):
+    """前端运行时错误，用于正式服渲染失败排查。"""
+
+    __tablename__ = "client_errors"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    user_id = Column(String, index=True)
+    message = Column(Text, default="")
+    stack = Column(Text, default="")
+    url = Column(String, default="")
+    page = Column(String, default="")
+    user_agent = Column(String, default="")
+    created_at = Column(DateTime, default=_now, index=True)
 
 
 class ContentReport(Base):

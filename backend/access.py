@@ -230,13 +230,17 @@ def guard_request_world(request: Request, user_id: str, db: Session) -> JSONResp
                     if entity_owner != user_id and not (not entity_owner and user_id == "local"):
                         return JSONResponse(status_code=404, content={"detail": "内容不存在"})
             return None
-    if not world_id or world_id in {"public", "import"}:
+    if not world_id or world_id in {"public", "import", "import-package"}:
         return None
     world = db.query(models.World).filter(models.World.id == world_id).first()
     if not world or world.deleted_at is not None:
         return JSONResponse(status_code=404, content={"detail": "世界不存在"})
     if not world_readable(world, user_id, db):
         return JSONResponse(status_code=404, content={"detail": "世界不存在"})
-    if request.method not in {"GET", "HEAD", "OPTIONS"} and not world_writable(world, user_id, db):
+    if (
+        request.method not in {"GET", "HEAD", "OPTIONS"}
+        and not path.endswith("/presence")
+        and not world_writable(world, user_id, db)
+    ):
         return JSONResponse(status_code=403, content={"detail": "官方演示世界为只读"})
     return None

@@ -8,8 +8,10 @@ import './styles/design-system.css'
 import AuthGate from './components/AuthGate'
 import { installApiOriginBridge } from './api/config'
 import { applyAppearance, loadAppearance } from './utils/appearance'
+import { installErrorReporting } from './utils/errorReporting'
 
 installApiOriginBridge()
+installErrorReporting()
 applyAppearance(loadAppearance())
 
 createRoot(document.getElementById('root')!).render(

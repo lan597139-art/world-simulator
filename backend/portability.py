@@ -1,11 +1,19 @@
 """世界数据导出：把用户自己的世界资产打包为可迁移 JSON。"""
+import io
+import json
+import re
+import uuid
+import zipfile
 from datetime import date, datetime
+from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
+from fastapi.responses import Response
 from sqlalchemy import inspect
 from sqlalchemy.orm import Session
 
 import models
+import storage
 from auth import current_user
 from database import get_db
 
@@ -129,9 +137,7 @@ def _remap(value, maps: dict[str, dict[str, str]]):
     return value
 
 
-@router.post("/api/worlds/import")
-def import_world(payload: dict, request: Request, db: Session = Depends(get_db)):
-    user = current_user(request, db)
+def import_world_payload(payload: dict, user: models.AppUser, db: Session):
     if payload.get("format") != "world-simulator/world":
         raise HTTPException(status_code=422, detail="不是世界模拟器导出的世界包")
     source_world = payload.get("world") or {}
@@ -450,3 +456,128 @@ def import_world(payload: dict, request: Request, db: Session = Depends(get_db))
             "resources": len(maps["resources"]),
         },
     }
+
+
+@router.post("/api/worlds/import")
+def import_world(payload: dict, request: Request, db: Session = Depends(get_db)):
+    user = current_user(request, db)
+    return import_world_payload(payload, user, db)
+
+
+# ---------------------------------------------------------------------------
+# 含媒体的 ZIP 世界包：world.json + media/*，导入时自动落盘并回填 URL。
+# ---------------------------------------------------------------------------
+
+MEDIA_RE = re.compile(r"/uploads/([A-Za-z0-9_.\-/]+)")
+MAX_ZIP_BYTES = 300 * 1024 * 1024
+
+
+def _walk_strings(value):
+    if isinstance(value, str):
+        yield value
+    elif isinstance(value, list):
+        for item in value:
+            yield from _walk_strings(item)
+    elif isinstance(value, dict):
+        for item in value.values():
+            yield from _walk_strings(item)
+
+
+def _media_urls(payload) -> dict[str, str]:
+    urls: dict[str, str] = {}
+    for text in _walk_strings(payload):
+        for match in MEDIA_RE.finditer(text):
+            relative = match.group(1).strip("/")
+            if relative and ".." not in Path(relative).parts:
+                urls[f"/uploads/{relative}"] = relative
+    return urls
+
+
+def _safe_member(name: str) -> bool:
+    path = Path(name)
+    return not path.is_absolute() and ".." not in path.parts
+
+
+@router.get("/api/worlds/{world_id}/export-package")
+def export_world_package(world_id: str, request: Request, db: Session = Depends(get_db)):
+    payload = export_world(world_id, request, db)
+    media = _media_urls(payload)
+    root = storage.upload_root()
+    buffer = io.BytesIO()
+    manifest = {"format": "world-simulator/world-package", "version": 1, "media": {}}
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+        for index, (url, relative) in enumerate(sorted(media.items())):
+            source = root / relative
+            if not source.is_file():
+                continue
+            suffix = Path(relative).suffix[:12]
+            archive = f"media/{index:04d}{suffix}"
+            zf.write(source, archive)
+            manifest["media"][url] = archive
+        zf.writestr("world.json", json.dumps(payload, ensure_ascii=False))
+        zf.writestr("manifest.json", json.dumps(manifest, ensure_ascii=False, indent=2))
+    data = buffer.getvalue()
+    filename = f"{payload['world'].get('name') or 'world'}-package.zip"
+    return Response(
+        content=data,
+        media_type="application/zip",
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{__import__('urllib.parse').parse.quote(filename)}"},
+    )
+
+
+@router.post("/api/worlds/import-package")
+async def import_world_package(request: Request, file: UploadFile = File(...), target_product: str = Form(""), db: Session = Depends(get_db)):
+    user = current_user(request, db)
+    data = await file.read()
+    if len(data) > MAX_ZIP_BYTES:
+        raise HTTPException(status_code=413, detail="世界包超过 300MB 上限")
+    try:
+        zf = zipfile.ZipFile(io.BytesIO(data))
+    except zipfile.BadZipFile as exc:
+        raise HTTPException(status_code=422, detail="世界包不是有效的 ZIP") from exc
+    names = zf.namelist()
+    if not all(_safe_member(name) for name in names):
+        raise HTTPException(status_code=422, detail="世界包包含不安全的路径")
+    json_name = "world.json" if "world.json" in names else next((name for name in names if name.endswith(".json") and name != "manifest.json"), "")
+    if not json_name:
+        raise HTTPException(status_code=422, detail="世界包缺少 world.json")
+    try:
+        payload = json.loads(zf.read(json_name).decode("utf-8"))
+    except (ValueError, UnicodeDecodeError) as exc:
+        raise HTTPException(status_code=422, detail="world.json 解析失败") from exc
+    manifest = {}
+    if "manifest.json" in names:
+        try:
+            manifest = json.loads(zf.read("manifest.json").decode("utf-8"))
+        except (ValueError, UnicodeDecodeError):
+            manifest = {}
+    media_map: dict[str, str] = {}
+    target_root = storage.upload_root() / "creator_assets"
+    extracted = 0
+    for original_url, archive in (manifest.get("media") or {}).items():
+        archive = str(archive)
+        if archive not in names or not _safe_member(archive):
+            continue
+        suffix = Path(archive).suffix[:12]
+        target_name = f"imported-{uuid.uuid4().hex}{suffix}"
+        (target_root / target_name).write_bytes(zf.read(archive))
+        media_map[str(original_url)] = f"/uploads/creator_assets/{target_name}"
+        extracted += 1
+
+    def replace(value):
+        if isinstance(value, str):
+            for old, new in media_map.items():
+                value = value.replace(old, new)
+            return value
+        if isinstance(value, list):
+            return [replace(item) for item in value]
+        if isinstance(value, dict):
+            return {key: replace(item) for key, item in value.items()}
+        return value
+
+    payload = replace(payload)
+    if target_product:
+        payload["target_product"] = target_product
+    result = import_world_payload(payload, user, db)
+    result["media"] = extracted
+    return result

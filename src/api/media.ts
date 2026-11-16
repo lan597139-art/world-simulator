@@ -3,7 +3,7 @@ import { API_ORIGIN } from './config'
 export function resolveMediaUrl(url: string | undefined | null): string {
   if (!url) return ''
   // 平台内置背景随前端发布，不能错误地拼到后端域名。
-  if (url.startsWith('/backgrounds/')) return url
+  if (url.startsWith('/backgrounds/') || url.startsWith('/official-photos/')) return url
   return url.startsWith('/') ? `${API_ORIGIN}${url}` : url
 }
 

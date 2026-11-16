@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch"; 
+import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
+import OfficialAssetPicker from '../components/media/OfficialAssetPicker';
 
 // ✅ 预设地形与气候数据
 const TERRAIN_PRESETS = ['平原', '山地', '丘陵', '森林', '沙漠', '沼泽', '水域', '冰川', '盆地', '城市建筑群'];
@@ -12,6 +13,7 @@ export default function WorldDataPage({ worldId }: { worldId?: string }) {
   const [organizations, setOrganizations] = useState<any[]>([]);
   const [worldInfo, setWorldInfo] = useState<any>(null);
   const [mapUrlInput, setMapUrlInput] = useState('');
+  const [officialOpen, setOfficialOpen] = useState(false);
 
   const [locForm, setLocForm] = useState({ 
     name: '', description: '', terrain: '', climate: '', nation: '', x: 50, y: 50,
@@ -185,6 +187,7 @@ export default function WorldDataPage({ worldId }: { worldId?: string }) {
               📁 上传底图
               <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} />
             </label>
+            <button type="button" onClick={() => setOfficialOpen(true)} style={{ padding: '6px 12px', background: 'transparent', color: 'var(--text-main)', border: '1px solid var(--card-border)', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, fontSize: '12px' }}>官方图库</button>
             <button onClick={handleSaveMapUrl} style={{ padding: '6px 16px', background: 'var(--primary-color)', color: 'var(--primary-text)', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, fontSize: '12px' }}>应用</button>
           </div>
         )}
@@ -424,6 +427,14 @@ export default function WorldDataPage({ worldId }: { worldId?: string }) {
         )}
       </div>
 
+      <OfficialAssetPicker
+        open={officialOpen}
+        lang="zh"
+        selectedUrl={mapUrlInput}
+        onClose={() => setOfficialOpen(false)}
+        onSelect={(url) => setMapUrlInput(url)}
+        title="选择世界地图底图"
+      />
     </div>
   );
 }

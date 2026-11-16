@@ -29,6 +29,7 @@ export type ContentReport = {
   detail: string
   status: 'pending' | 'resolved' | 'dismissed'
   reporter?: { id: string; name: string } | null
+  target_author?: { id: string; name: string } | null
   resolution_note: string
   created_at?: string | null
   resolved_at?: string | null

@@ -274,3 +274,10 @@ html[data-reduce-motion="true"] *, html[data-reduce-motion="true"] *::before, ht
 @media (max-width: 560px) {
   .settings-material-demo { grid-template-columns: 1fr; }
 }
+
+/* 官方素材库与背景焦点 */
+.settings-official-current{display:flex;flex-direction:column;gap:3px;margin-top:8px;padding:8px 10px;border:1px solid var(--card-border);border-radius:9px;background:var(--workspace-glass-bg);font-size:10px;color:var(--text-muted)}
+.settings-official-current strong{font-size:11px;color:var(--text-main)}
+.settings-focus-grid{display:grid;grid-template-columns:repeat(3,38px);gap:5px}
+.settings-focus-grid button{width:38px;height:34px;border:1px solid var(--card-border);border-radius:7px;background:var(--card-bg);color:var(--text-muted);cursor:pointer;font-size:14px;line-height:1}
+.settings-focus-grid button.is-active{background:var(--text-main);color:var(--bg-color);border-color:var(--text-main)}

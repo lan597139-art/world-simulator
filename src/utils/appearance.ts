@@ -2,6 +2,7 @@ import { resolveMediaUrl } from '../api/media'
 
 export type Appearance = {
   background_url: string
+  background_position: string
   background_blur: number
   background_opacity: number
   glass_blur: number
@@ -13,6 +14,7 @@ const STORAGE_KEY = 'ws.ui.appearance'
 
 export const DEFAULT_APPEARANCE: Appearance = {
   background_url: '',
+  background_position: 'center',
   background_blur: 18,
   background_opacity: 26,
   glass_blur: 28,
@@ -32,6 +34,7 @@ export function loadAppearance(): Appearance {
     const parsed = JSON.parse(raw) as Partial<Appearance>
     return {
       background_url: typeof parsed.background_url === 'string' ? parsed.background_url.slice(0, 2000) : '',
+      background_position: typeof parsed.background_position === 'string' ? parsed.background_position.slice(0, 40) : DEFAULT_APPEARANCE.background_position,
       background_blur: clamp(parsed.background_blur, 0, 40, DEFAULT_APPEARANCE.background_blur),
       background_opacity: clamp(parsed.background_opacity, 0, 100, DEFAULT_APPEARANCE.background_opacity),
       glass_blur: clamp(parsed.glass_blur, 0, 72, DEFAULT_APPEARANCE.glass_blur),
@@ -106,6 +109,7 @@ export function applyAppearance(appearance: Appearance): void {
   const root = document.documentElement
   const image = resolveMediaUrl(appearance.background_url.trim())
   root.style.setProperty('--ws-bg-image', image ? `url(${JSON.stringify(image)})` : 'none')
+  root.style.setProperty('--ws-bg-position', appearance.background_position || 'center')
   root.style.setProperty('--ws-bg-blur', `${appearance.background_blur}px`)
   root.style.setProperty('--ws-bg-opacity', `${appearance.background_opacity / 100}`)
   root.style.setProperty('--glass-blur', `${appearance.glass_blur}px`)

@@ -75,6 +75,9 @@ from creator_assets import router as creator_assets_router
 from storage import upload_root
 from platform_tools import router as platform_tools_router
 from moderation import router as moderation_router
+from observability import router as observability_router
+from sanctions import router as sanctions_router
+from backups import router as backups_router
 from portability import router as portability_router
 from collaboration import router as collaboration_router
 
@@ -189,6 +192,9 @@ app.include_router(platform_tools_router)
 app.include_router(moderation_router)
 app.include_router(portability_router)
 app.include_router(collaboration_router)
+app.include_router(observability_router)
+app.include_router(sanctions_router)
+app.include_router(backups_router)
 
 # 官方演示世界：首次启动自动内置；已存在则仅锁定，不覆盖用户当前数据。
 try:

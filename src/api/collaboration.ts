@@ -70,3 +70,27 @@ export const respondToWorldInvite = (collaboratorId: string, action: 'accept' | 
 
 export const listWorldInvites = () =>
   request<{ items: WorldCollaborator[] }>('/collaboration/invites')
+
+export type PresenceUser = {
+  id: string
+  username: string
+  name: string
+  avatar: string
+  last_seen_at?: string
+}
+
+export type PresencePayload = {
+  online: PresenceUser[]
+  count: number
+  window_seconds: number
+  self: string
+}
+
+export const heartbeatWorldPresence = (worldId: string) =>
+  request<PresencePayload>(`/worlds/${encodeURIComponent(worldId)}/presence`, {
+    method: 'POST',
+    body: '{}',
+  })
+
+export const getWorldPresence = (worldId: string) =>
+  request<PresencePayload>(`/worlds/${encodeURIComponent(worldId)}/presence`)
