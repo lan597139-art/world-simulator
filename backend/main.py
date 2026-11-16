@@ -29,7 +29,7 @@ from ai_grants import router as ai_grants_router
 from community import router as community_router
 from community_social import router as community_social_router
 from creative_works import router as creative_works_router
-from spirit_economy import router as spirit_economy_router, ensure_spirit_catalog
+from spirit_economy import router as spirit_economy_router, ensure_spirit_catalog, ensure_reward_rules, consume_for_creation
 from comic_works import router as comic_works_router
 from social_core import router as social_core_router
 from i18n_errors import localized_http_exception_handler
@@ -38,7 +38,7 @@ from products import router as products_router
 from settings import router as settings_router
 from billing import router as billing_router, record_ai_usage
 from information_sources import router as information_sources_router
-from auth import auth_disabled, router as auth_router, auth_middleware
+from auth import auth_disabled, current_user, router as auth_router, auth_middleware
 from geography import router as geography_router
 from orgs import router as orgs_router
 from events import router as event_router
@@ -186,6 +186,7 @@ try:
     with SessionLocal() as db:
         ensure_official_world(db)
         ensure_spirit_catalog(db)
+        ensure_reward_rules(db)
         ensure_official_storyline(db)
         seed_official_tree(db)
         seed_official_axis_objects(db)
@@ -248,6 +249,11 @@ def create_world(world: schemas.WorldCreate, request: Request, db: Session = Dep
         raise HTTPException(status_code=422, detail="product_scene 只能是 game/literature/companion/diary/yunbao")
     if product_scene in {"companion", "diary"}:
         raise HTTPException(status_code=403, detail="AI 伴侣/日记与传记不开放世界管理，不能创建普通世界")
+    user = current_user(request, db)
+    charge = consume_for_creation(
+        db, user, action="world_create", plant_key="world_seed",
+        idempotency_key=request.headers.get("idempotency-key") or request.headers.get("x-idempotency-key"),
+    )
     now = datetime.utcnow().isoformat()
     db_world = models.World(
         name=world.name,
@@ -265,6 +271,9 @@ def create_world(world: schemas.WorldCreate, request: Request, db: Session = Dep
     )
     db.add(db_world)
     db.flush()
+    charged = db.query(models.SpiritTransaction).filter(models.SpiritTransaction.id == charge["transaction_id"]).first()
+    if charged:
+        charged.ref_id = db_world.id
     seed_world(db, db_world.id)
     db.commit()
     db.refresh(db_world)

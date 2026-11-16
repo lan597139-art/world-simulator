@@ -7,6 +7,8 @@ import models
 from database import get_db
 from reference_guard import assert_not_referenced
 import access
+from auth import current_user
+from spirit_economy import consume_for_creation
 
 router = APIRouter()
 
@@ -39,6 +41,7 @@ def get_characters(world_id: str, request: Request, db: Session = Depends(get_db
 @router.post("/api/characters")
 def create_character(char_data: dict, request: Request, db: Session = Depends(get_db)):
     user_id = access.current_user_id(request)
+    idempotency_key = str(char_data.pop("idempotency_key", "") or request.headers.get("idempotency-key") or request.headers.get("x-idempotency-key") or "")
     char_data.pop("owner_user_id", None)
     bound_world = str(char_data.get("world_id") or "")
     if bound_world:
@@ -60,8 +63,16 @@ def create_character(char_data: dict, request: Request, db: Session = Depends(ge
         if exists:
             raise HTTPException(status_code=409, detail="该世界已存在自我人物")
         char_data["owner_user_id"] = user_id
+    charge = consume_for_creation(
+        db, current_user(request, db), action="oc_create", plant_key="oc_seed",
+        idempotency_key=idempotency_key,
+    )
     new_char = models.Character(**char_data)
     db.add(new_char)
+    db.flush()
+    charged = db.query(models.SpiritTransaction).filter(models.SpiritTransaction.id == charge["transaction_id"]).first()
+    if charged:
+        charged.ref_id = new_char.id
     db.commit()
     db.refresh(new_char)
     return new_char

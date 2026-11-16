@@ -1151,7 +1151,8 @@ useEffect(() => {
         thought_imprints: individualData,
         life_history: { ...historyData, events: updatedEvents }, // 使用同步后的数据
         initial_state: { initialData, initialGoals, initialRelations, initialResources },
-        persona_type: personaType
+        persona_type: personaType,
+        ...(characterId && characterId !== 'new' ? {} : { idempotency_key: crypto.randomUUID() }),
       };
 
       const url = characterId && characterId !== 'new' 

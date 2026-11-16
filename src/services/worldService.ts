@@ -22,13 +22,19 @@ export async function createWorld(data: {
   type: WorldType
   background: string
   product_scene?: string
-}): Promise<World> {
+}, idempotencyKey?: string): Promise<World> {
   const res = await fetch(`${API_BASE_URL}/worlds`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}),
+    },
     body: JSON.stringify(data)
   });
-  if (!res.ok) throw new Error("创建世界失败");
+  if (!res.ok) {
+    const payload = await res.json().catch(() => ({}));
+    throw new Error(payload.detail || `创建世界失败 (${res.status})`);
+  }
   return await res.json();
 }
 

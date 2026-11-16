@@ -95,3 +95,72 @@ export const adjustSpiritFruit = (payload: { user_id: string; amount: number; no
     method: 'POST',
     body: JSON.stringify(payload),
   })
+
+export type SpiritRewardRule = {
+  id: string
+  key: string
+  name: string
+  description: string
+  category: string
+  fruit_amount: number
+  plant_type_id?: string | null
+  plant_name?: string
+  plant_quantity: number
+  claim_mode: 'once' | 'daily' | 'event' | string
+  condition: { type?: string }
+  enabled: boolean
+  daily_limit: number
+  total_limit: number
+  cooldown_seconds: number
+  condition_ready?: boolean
+  can_claim?: boolean
+  claim_status?: {
+    claimed: boolean
+    claimed_count: number
+    claimed_today: number
+    daily_remaining: number | null
+    total_remaining: number | null
+    cooldown_until: string | null
+    claim_key: string
+    last_claimed_at: string | null
+  }
+}
+
+export type SpiritAdminOverview = {
+  accounts: Array<{
+    user_id: string
+    username: string
+    display_name: string
+    fruit_balance: number
+    developer_exempt: boolean
+    is_owner: boolean
+    updated_at: string | null
+  }>
+  rules: SpiritRewardRule[]
+  plants: SpiritPlant[]
+  transactions: SpiritTransaction[]
+}
+
+export const getSpiritRewards = () => request<{ items: SpiritRewardRule[] }>('/api/spirit/rewards')
+
+export const claimSpiritReward = (key: string, claimKey?: string) =>
+  request<{ status: string; claim: { fruit_amount: number; plant_quantity: number }; account: SpiritSummary['account']; rule: SpiritRewardRule }>(
+    `/api/spirit/rewards/${encodeURIComponent(key)}/claim`,
+    { method: 'POST', body: JSON.stringify(claimKey ? { claim_key: claimKey } : {}) },
+  )
+
+export const getSpiritAdminOverview = (q = '') =>
+  request<SpiritAdminOverview>(`/api/spirit/admin/overview?q=${encodeURIComponent(q)}`)
+
+export const updateSpiritRewardRule = (id: string, payload: Partial<SpiritRewardRule> & { condition?: { type?: string } }) =>
+  request<SpiritRewardRule>(`/api/spirit/admin/rewards/${id}`, { method: 'PATCH', body: JSON.stringify(payload) })
+
+export const updateSpiritPlant = (id: string, payload: { price_fruit?: number; is_active?: boolean; name?: string; description?: string }) =>
+  request<SpiritPlant>(`/api/spirit/admin/plants/${id}`, { method: 'PATCH', body: JSON.stringify(payload) })
+
+export const createSpiritRewardRule = (payload: {
+  key: string; name: string; description?: string; category?: string
+  fruit_amount?: number; claim_mode?: string; condition?: { type?: string }
+  daily_limit?: number; total_limit?: number; enabled?: boolean
+}) =>
+  request<SpiritRewardRule>('/api/spirit/admin/rewards', { method: 'POST', body: JSON.stringify(payload) })

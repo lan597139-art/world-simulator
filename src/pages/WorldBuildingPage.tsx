@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { initializeWorldBuildingConfig, getWorldBuildingConfig } from '../services/worldBuildingService'
 import { getWorldById } from '../services/worldService'
 import { createWorld, updateWorld, deleteWorld } from '../services/worldService'
@@ -552,6 +552,8 @@ export default function WorldBuildingPage({ worldId, onBack, onSaved, lang, prod
     })
   }, [worldId])
 
+  const createKeyRef = useRef('')
+
   if (!config) return <div style={{ padding: '2rem' }}>Loading...</div>
 
   const handleSingle = (field: string, val: string) => setConfig({ ...config, selections: { ...config.selections, [field]: [val] } })
@@ -574,14 +576,20 @@ export default function WorldBuildingPage({ worldId, onBack, onSaved, lang, prod
       // 👇 修改：用 worldId 来判断是新建还是更新，而不是 inputId
       let savedWorld: any = null
       if (!worldId) {
-        // 如果是新建，调用后端生成 UUID
-        savedWorld = await createWorld({
-          name: worldName,
-          description: 'Custom World',
-          type: 'fiction',
-          background: backgroundStr,
-          product_scene: product
-        })
+        // 同一次提交复用幂等键，双击不会重复创建或重复扣灵植。
+        const key = createKeyRef.current || crypto.randomUUID()
+        createKeyRef.current = key
+        try {
+          savedWorld = await createWorld({
+            name: worldName,
+            description: 'Custom World',
+            type: 'fiction',
+            background: backgroundStr,
+            product_scene: product
+          }, key)
+        } finally {
+          createKeyRef.current = ''
+        }
       } else {
         // 如果是编辑现有世界，用 worldId 去更新
         await updateWorld(worldId, {
@@ -603,7 +611,7 @@ export default function WorldBuildingPage({ worldId, onBack, onSaved, lang, prod
 
     } catch (error) {
       console.error("保存失败:", error)
-      alert("保存失败，请查看控制台")
+      alert(lang === 'zh' ? `保存失败：${(error as Error)?.message || error}` : `Save failed: ${(error as Error)?.message || error}`)
     }
   }
 

@@ -2202,6 +2202,65 @@ class SpiritTransaction(Base):
     created_at = Column(DateTime, default=_now)
 
 
+class SpiritRewardRule(Base):
+    """D2 奖励规则：由站长配置，领取由服务端校验条件与限制。"""
+
+    __tablename__ = "spirit_reward_rules"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    key = Column(String, unique=True, nullable=False, index=True)
+    name = Column(String, nullable=False)
+    description = Column(Text, default="")
+    category = Column(String, default="event", nullable=False, index=True)
+    fruit_amount = Column(Integer, default=0, nullable=False)
+    plant_type_id = Column(String, nullable=True)
+    plant_quantity = Column(Integer, default=0, nullable=False)
+    claim_mode = Column(String, default="once", nullable=False)  # once/daily/event
+    condition = Column(JSON, default=dict)
+    enabled = Column(Boolean, default=True, nullable=False)
+    daily_limit = Column(Integer, default=1, nullable=False)
+    total_limit = Column(Integer, default=1, nullable=False)
+    cooldown_seconds = Column(Integer, default=0, nullable=False)
+    starts_at = Column(DateTime)
+    ends_at = Column(DateTime)
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now)
+
+
+class SpiritRewardClaim(Base):
+    __tablename__ = "spirit_reward_claims"
+    __table_args__ = (
+        UniqueConstraint("rule_id", "user_id", "claim_key", name="uq_spirit_reward_claim"),
+        Index("ix_spirit_reward_claims_user_time", "user_id", "created_at"),
+    )
+
+    id = Column(String, primary_key=True, default=_uuid)
+    rule_id = Column(String, ForeignKey("spirit_reward_rules.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(String, nullable=False, index=True)
+    claim_key = Column(String, nullable=False)
+    fruit_amount = Column(Integer, default=0, nullable=False)
+    plant_type_id = Column(String, nullable=True)
+    plant_quantity = Column(Integer, default=0, nullable=False)
+    created_at = Column(DateTime, default=_now)
+
+
+class SpiritOperation(Base):
+    """D5 创建消耗幂等记录：同一用户、动作、客户端键只处理一次。"""
+
+    __tablename__ = "spirit_operations"
+    __table_args__ = (
+        UniqueConstraint("user_id", "operation", "idempotency_key", name="uq_spirit_operation_key"),
+        Index("ix_spirit_operations_user_time", "user_id", "created_at"),
+    )
+
+    id = Column(String, primary_key=True, default=_uuid)
+    user_id = Column(String, nullable=False, index=True)
+    operation = Column(String, nullable=False)
+    idempotency_key = Column(String, nullable=False)
+    result = Column(JSON, default=dict)
+    created_at = Column(DateTime, default=_now)
+
+
 class BillingAccount(Base):
     __tablename__ = "billing_accounts"
 

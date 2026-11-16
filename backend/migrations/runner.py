@@ -65,6 +65,7 @@ MODULES = [
     "m053_spirit_economy",
     "m054_comic_works",
     "m055_social_core",
+    "m056_spirit_rewards",
 ]
 
 
