@@ -81,6 +81,8 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     localAuth: tr(lang, '（当前后端已关闭鉴权，仅用于本地测试）', ' (authentication is disabled for local testing)'),
     language: tr(lang, '切换到英文', 'Switch to Chinese'),
   }
+  useEffect(() => { applyDocumentLanguage(lang) }, [lang])
+
   const enter = async () => {
     try { await updateSettings({ preferences: { language: lang } }) } catch { /* 离线仍进入 */ }
     setPhase('ready')
