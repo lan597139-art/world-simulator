@@ -247,7 +247,9 @@ def get_worlds(request: Request, product_scene: Optional[str] = None,
         | (models.World.id.in_(collaborator_worlds))
     )
     if product_scene:
-        query = query.filter(models.World.product_scene == product_scene)
+        query = query.filter(
+            (models.World.product_scene == product_scene) | (models.World.is_official.is_(True))
+        )
     worlds = query.order_by(models.World.updatedAt.desc()).all()
     for world in worlds:
         world.access_role = world_role(world, user_id, db)

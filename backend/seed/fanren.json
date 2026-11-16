@@ -16,7 +16,8 @@
   "archived_at": null,
   "deleted_at": null,
   "is_official": true,
-  "official_key": "fanren"
+  "official_key": "fanren",
+  "product_scene": "game"
  },
  "tables": {
   "character_biographies": [

@@ -66,6 +66,9 @@ def ensure_official_world(db: Session) -> models.World | None:
         if not existing.owner_id:
             existing.owner_id = "local"
             changed = True
+        if not existing.product_scene:
+            existing.product_scene = "game"
+            changed = True
         if changed:
             db.commit()
         _backfill_official_participants(db, existing.id)
@@ -78,6 +81,8 @@ def ensure_official_world(db: Session) -> models.World | None:
         named.deleted_at = None
         if not named.owner_id:
             named.owner_id = "local"
+        if not named.product_scene:
+            named.product_scene = "game"
         db.commit()
         _backfill_official_participants(db, named.id)
         return named
@@ -96,6 +101,8 @@ def ensure_official_world(db: Session) -> models.World | None:
         world.archived_at = None
         if not world.owner_id:
             world.owner_id = "local"
+        if not world.product_scene:
+            world.product_scene = "game"
         db.commit()
         _backfill_official_participants(db, world.id)
     return world
@@ -123,6 +130,7 @@ def reset_official_world(world_id: str, request: Request, db: Session = Depends(
     world = db.query(models.World).filter(models.World.id == world_id).first()
     world.is_official = True
     world.official_key = OFFICIAL_KEY
+    world.product_scene = world.product_scene or "game"
     world.deleted_at = None
     world.archived_at = None
     db.commit()

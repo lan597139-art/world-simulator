@@ -86,7 +86,7 @@ export default function WorldsPage({
   const sceneLabels: Record<string, string> = lang === 'zh'
     ? { game: '游戏创作', literature: '文学创作', companion: 'AI 伴侣', diary: '日记与传记', yunbao: '云宝工作台' }
     : { game: 'Game Creation', literature: 'Literature', companion: 'AI Companion', diary: 'Diary & Biography', yunbao: 'Yunbao Workspace' }
-  const filteredWorlds = worlds.filter((w) => w.product_scene === product && (product === 'yunbao' || !w.is_product_workspace))
+  const filteredWorlds = worlds.filter((w) => (w.is_official || w.product_scene === product) && (product === 'yunbao' || !w.is_product_workspace))
 
   const exportWorld = async (worldId: string, name: string) => {
     try {
