@@ -39,6 +39,13 @@ export type InviteCode = {
   revoked_at: string | null
   created_at: string | null
   last_used_at: string | null
+  kind: 'normal' | 'special' | 'developer'
+  batch: string
+  scope: string
+  reward_fruit: number
+  reward_plant_type_id: string | null
+  reward_plant_quantity: number
+  inviter_reward_fruit: number
 }
 
 const BASE = `${API_ORIGIN}/api`
@@ -118,17 +125,22 @@ export async function authLogout() {
   localStorage.removeItem(AUTH_USER_KEY)
 }
 
-export async function listInvites() {
-  return request<{ items: InviteCode[] }>('/auth/invites')
+export async function listInvites(batch = '') {
+  return request<{ items: InviteCode[]; batches: string[] }>(`/auth/invites?batch=${encodeURIComponent(batch)}`)
 }
 
-export async function createInvite(payload: { label?: string; max_uses?: number; expires_days?: number }) {
+export async function createInvite(payload: {
+  label?: string; max_uses?: number; expires_days?: number
+  kind?: 'normal' | 'special' | 'developer'; batch?: string
+  reward_fruit?: number; inviter_reward_fruit?: number
+  reward_plant_type_id?: string; reward_plant_quantity?: number
+}) {
   return request<{ code: string; invite: InviteCode }>('/auth/invites', {
     method: 'POST', body: JSON.stringify(payload),
   })
 }
 
-export async function updateInvite(id: string, payload: { label?: string; revoked?: boolean }) {
+export async function updateInvite(id: string, payload: { label?: string; revoked?: boolean; kind?: string; batch?: string; reward_fruit?: number; inviter_reward_fruit?: number; max_uses?: number }) {
   return request<{ invite: InviteCode }>(`/auth/invites/${id}`, {
     method: 'PATCH', body: JSON.stringify(payload),
   })

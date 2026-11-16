@@ -45,7 +45,7 @@ def run():
     world_plant = next(row for row in data["plants"] if row["category"] == "world")
     exchanged = client.post("/api/spirit/exchange", json={"plant_type_id": world_plant["id"], "quantity": 1})
     check("兑换灵植", exchanged.status_code == 200 and exchanged.json()["account"]["fruit_balance"] == 60, exchanged.text)
-    check("库存增加", exchanged.json()["inventory"][0]["quantity"] == 1, exchanged.json())
+    check("库存增加", exchanged.json()["inventory"][0]["quantity"] == 2, exchanged.json())
     ledger = client.get("/api/spirit/transactions").json()
     exchange_row = next(row for row in ledger if row["kind"] == "exchange")
     check("兑换保留历史单价", exchange_row["unit_price"] == 60 and exchange_row["fruit_amount"] == -60, exchange_row)

@@ -46,6 +46,12 @@ MAX_GIFT = 100000
 
 REWARD_CATALOG = (
     {
+        "key": "registration_bonus", "name": "注册奖励", "description": "新账号初始化时自动发放。",
+        "category": "registration", "fruit_amount": 120, "claim_mode": "once",
+        "condition": {"type": "registration"}, "daily_limit": 1, "total_limit": 1,
+        "sort_order": 0,
+    },
+    {
         "key": "daily_checkin", "name": "每日签到", "description": "每天登录后领取一次灵果。",
         "category": "community", "fruit_amount": 10, "claim_mode": "daily",
         "condition": {"type": "daily_checkin"}, "daily_limit": 1, "total_limit": 0,
@@ -77,7 +83,7 @@ REWARD_CATALOG = (
     },
 )
 
-ALLOWED_CONDITIONS = {"daily_checkin", "profile_complete", "has_work", "has_world", "has_post", "manual"}
+ALLOWED_CONDITIONS = {"registration", "daily_checkin", "profile_complete", "has_work", "has_world", "has_post", "manual"}
 
 
 def _now() -> datetime:
@@ -346,9 +352,13 @@ def _ensure_account(db: Session, user: models.AppUser, starter: bool = True, com
     account = db.query(models.SpiritAccount).filter(models.SpiritAccount.user_id == user.id).first()
     if account:
         return account
+    rule = db.query(models.SpiritRewardRule).filter(models.SpiritRewardRule.key == "registration_bonus").first()
+    bonus = STARTER_FRUIT
+    if rule is not None:
+        bonus = max(0, int(rule.fruit_amount)) if rule.enabled else 0
     account = models.SpiritAccount(
         user_id=user.id,
-        fruit_balance=STARTER_FRUIT if starter else 0,
+        fruit_balance=bonus if starter else 0,
         developer_exempt=bool(user.is_owner),
     )
     db.add(account)
@@ -359,16 +369,95 @@ def _ensure_account(db: Session, user: models.AppUser, starter: bool = True, com
             kind="reward",
             fruit_amount=account.fruit_balance,
             balance_after=account.fruit_balance,
-            note="初始灵果",
-            ref_type="account",
-            ref_id="starter",
+            note="注册奖励" if rule is not None else "初始灵果",
+            ref_type="reward" if rule is not None else "account",
+            ref_id=rule.id if rule is not None else "starter",
         ))
+        if rule is not None:
+            db.add(models.SpiritRewardClaim(
+                rule_id=rule.id, user_id=user.id, claim_key="registration",
+                fruit_amount=account.fruit_balance,
+            ))
+    if starter:
+        # 新手灵植：保证注册后可立即各创建一次世界与 OC；数量固定，不占灵果余额。
+        for plant_key in ("world_seed", "oc_seed"):
+            plant = db.query(models.SpiritPlantType).filter(models.SpiritPlantType.key == plant_key).first()
+            if not plant:
+                continue
+            db.add(models.SpiritInventory(user_id=user.id, plant_type_id=plant.id, quantity=1))
+            db.add(models.SpiritTransaction(
+                user_id=user.id, kind="reward", fruit_amount=0,
+                plant_type_id=plant.id, plant_quantity=1,
+                balance_after=account.fruit_balance,
+                note="新手灵植", ref_type="account", ref_id="starter_plant",
+            ))
     if commit:
         db.commit()
         db.refresh(account)
     else:
         db.flush()
     return account
+
+
+def grant_invite_rewards(db: Session, invite: models.InviteCode, user_id: str) -> dict:
+    """D3：注册成功后按邀请码发放邀请人/被邀请人奖励；同一兑换只发一次。"""
+    redemption = db.query(models.InviteRedemption).filter(
+        models.InviteRedemption.invite_id == invite.id,
+        models.InviteRedemption.user_id == user_id,
+    ).first()
+    if not redemption or redemption.reward_granted_at is not None:
+        return {"granted": False}
+    user = db.query(models.AppUser).filter(models.AppUser.id == user_id).first()
+    if not user:
+        return {"granted": False}
+    now = _now()
+    granted = {"granted": True, "fruit": 0, "plant_quantity": 0, "inviter_fruit": 0}
+    account = _ensure_account(db, user, commit=False)
+    if invite.reward_fruit:
+        account.fruit_balance += int(invite.reward_fruit)
+        account.updated_at = now
+        granted["fruit"] = int(invite.reward_fruit)
+        db.add(models.SpiritTransaction(
+            user_id=user.id, kind="reward", fruit_amount=int(invite.reward_fruit),
+            balance_after=account.fruit_balance, ref_type="invite", ref_id=invite.id,
+            note="邀请码注册奖励", meta={"invite_kind": invite.kind, "batch": invite.batch},
+        ))
+    if invite.reward_plant_quantity and invite.reward_plant_type_id:
+        plant = db.query(models.SpiritPlantType).filter(models.SpiritPlantType.id == invite.reward_plant_type_id).first()
+        if plant:
+            inventory = db.query(models.SpiritInventory).filter(
+                models.SpiritInventory.user_id == user.id,
+                models.SpiritInventory.plant_type_id == plant.id,
+            ).first()
+            if not inventory:
+                inventory = models.SpiritInventory(user_id=user.id, plant_type_id=plant.id, quantity=0)
+                db.add(inventory)
+            inventory.quantity += int(invite.reward_plant_quantity)
+            inventory.updated_at = now
+            granted["plant_quantity"] = int(invite.reward_plant_quantity)
+            db.add(models.SpiritTransaction(
+                user_id=user.id, kind="reward", fruit_amount=0,
+                plant_type_id=plant.id, plant_quantity=int(invite.reward_plant_quantity),
+                balance_after=account.fruit_balance, ref_type="invite", ref_id=invite.id,
+                note="邀请码灵植奖励", meta={"invite_kind": invite.kind, "batch": invite.batch},
+            ))
+    if invite.inviter_reward_fruit and invite.created_by and invite.created_by != user.id:
+        inviter = db.query(models.AppUser).filter(models.AppUser.id == invite.created_by).first()
+        if inviter and inviter.is_active:
+            inviter_account = _ensure_account(db, inviter, commit=False)
+            inviter_account.fruit_balance += int(invite.inviter_reward_fruit)
+            inviter_account.updated_at = now
+            granted["inviter_fruit"] = int(invite.inviter_reward_fruit)
+            db.add(models.SpiritTransaction(
+                user_id=inviter.id, kind="reward", fruit_amount=int(invite.inviter_reward_fruit),
+                balance_after=inviter_account.fruit_balance, counterparty_user_id=user.id,
+                ref_type="invite", ref_id=invite.id,
+                note="邀请新用户奖励", meta={"invite_kind": invite.kind, "batch": invite.batch},
+            ))
+    redemption.reward_fruit = int(invite.reward_fruit)
+    redemption.reward_granted_at = now
+    db.flush()
+    return granted
 
 
 def _plant_json(row: models.SpiritPlantType) -> dict:
@@ -644,7 +733,7 @@ def _rule_admin_json(db: Session, row: models.SpiritRewardRule) -> dict:
 def spirit_rewards(request: Request, db: Session = Depends(get_db)):
     user = _user(request, db)
     ensure_reward_rules(db)
-    rows = db.query(models.SpiritRewardRule).order_by(models.SpiritRewardRule.created_at.asc()).all()
+    rows = db.query(models.SpiritRewardRule).filter(models.SpiritRewardRule.key != "registration_bonus").order_by(models.SpiritRewardRule.created_at.asc()).all()
     items = []
     for row in rows:
         data = _rule_json(db, row, user.id)
@@ -819,6 +908,35 @@ def update_reward_rule(rule_id: str, payload: dict, request: Request, db: Sessio
     db.commit()
     db.refresh(row)
     return _rule_json(db, row)
+
+
+@router.post("/api/spirit/admin/plants")
+def create_spirit_plant(payload: dict, request: Request, db: Session = Depends(get_db)):
+    _owner(request, db)
+    key = str(payload.get("key") or "").strip().lower()
+    if not key or len(key) > 50 or not key.replace("_", "").isalnum():
+        raise HTTPException(status_code=422, detail="灵植 key 只能包含字母、数字和下划线")
+    if db.query(models.SpiritPlantType).filter(models.SpiritPlantType.key == key).first():
+        raise HTTPException(status_code=409, detail="灵植 key 已存在")
+    category = str(payload.get("category") or "world").strip()
+    if category not in {"world", "oc"}:
+        raise HTTPException(status_code=422, detail="灵植分类只能是 world/oc")
+    try:
+        price = int(payload.get("price_fruit") or 60)
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=422, detail="兑换价格必须是整数")
+    if price < 1 or price > 100000:
+        raise HTTPException(status_code=422, detail="兑换价格超出允许范围")
+    row = models.SpiritPlantType(
+        key=key, name=str(payload.get("name") or key)[:80],
+        category=category, description=str(payload.get("description") or "")[:500],
+        price_fruit=price, unit=str(payload.get("unit") or "株")[:20],
+        sort_order=int(payload.get("sort_order") or 100), is_active=True,
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return _plant_json(row)
 
 
 @router.patch("/api/spirit/admin/plants/{plant_id}")

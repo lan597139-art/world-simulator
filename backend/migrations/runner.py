@@ -66,6 +66,7 @@ MODULES = [
     "m054_comic_works",
     "m055_social_core",
     "m056_spirit_rewards",
+    "m057_invite_tiers",
 ]
 
 

@@ -79,6 +79,13 @@ class InviteCode(Base):
     created_by = Column(String, nullable=False)
     max_uses = Column(Integer, default=1, nullable=False)
     used_count = Column(Integer, default=0, nullable=False)
+    kind = Column(String, default="normal", nullable=False)  # normal/special/developer
+    batch = Column(String, default="", nullable=False, index=True)
+    scope = Column(String, default="registration", nullable=False)
+    reward_fruit = Column(Integer, default=0, nullable=False)
+    reward_plant_type_id = Column(String, nullable=True)
+    reward_plant_quantity = Column(Integer, default=0, nullable=False)
+    inviter_reward_fruit = Column(Integer, default=0, nullable=False)
     expires_at = Column(DateTime)
     revoked_at = Column(DateTime)
     created_at = Column(DateTime, default=_now)
@@ -87,11 +94,14 @@ class InviteCode(Base):
 
 class InviteRedemption(Base):
     __tablename__ = "invite_redemptions"
+    __table_args__ = (UniqueConstraint("invite_id", "user_id", name="ux_invite_redemption"),)
 
     id = Column(String, primary_key=True, default=_uuid)
     invite_id = Column(String, ForeignKey("invite_codes.id", ondelete="CASCADE"), nullable=False, index=True)
     user_id = Column(String, nullable=False, index=True)
     redeemed_at = Column(DateTime, default=_now)
+    reward_fruit = Column(Integer, default=0, nullable=False)
+    reward_granted_at = Column(DateTime)
 
 
 class PendingRegistration(Base):

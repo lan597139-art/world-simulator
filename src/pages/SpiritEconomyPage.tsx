@@ -186,6 +186,22 @@ export default function SpiritEconomyPage({
     }
   }
 
+  const saveRuleFruit = async (ruleId: string, value: string) => {
+    const amount = Number(value)
+    if (!Number.isFinite(amount) || amount < 0) return
+    setBusy(`rule-amount:${ruleId}`)
+    setError('')
+    try {
+      const updated = await updateSpiritRewardRule(ruleId, { fruit_amount: Math.trunc(amount) })
+      setAdmin((prev) => prev ? { ...prev, rules: prev.rules.map((row) => row.id === updated.id ? updated : row) } : prev)
+      setFlash(zh ? `${updated.name} 奖励已更新` : `${updated.name} reward updated`)
+    } catch (err) {
+      setError(String((err as Error)?.message || err))
+    } finally {
+      setBusy('')
+    }
+  }
+
   const savePlantPrice = async (plantId: string, value: string) => {
     const price = Number(value)
     if (!Number.isFinite(price) || price < 1) return
@@ -427,7 +443,8 @@ export default function SpiritEconomyPage({
               <div className="spirit-admin-list">
                 {(admin?.rules || []).map((rule) => (
                   <div key={rule.id} className="spirit-admin-row">
-                    <div><strong>{rule.name}</strong><span>{rule.key} · {rule.fruit_amount} {zh ? '灵果' : 'fruit'} · {rule.claim_mode}</span></div>
+                    <div><strong>{rule.name}</strong><span>{rule.key} · {rule.claim_mode}</span></div>
+                    <label className="spirit-admin-price"><input type="number" min={0} defaultValue={rule.fruit_amount} disabled={busy === `rule-amount:${rule.id}`} onBlur={(event) => { if (Number(event.target.value) !== rule.fruit_amount) void saveRuleFruit(rule.id, event.target.value) }} /><span>{zh ? '灵果' : 'fruit'}</span></label>
                     <button type="button" className={`spirit-admin-toggle ${rule.enabled ? 'is-on' : ''}`} disabled={busy === `rule:${rule.id}`} onClick={() => void toggleRule(rule)}>
                       {rule.enabled ? (zh ? '已启用' : 'Enabled') : (zh ? '已停用' : 'Disabled')}
                     </button>

@@ -241,6 +241,9 @@ def _consume_invite(db: Session, invite: models.InviteCode, user_id: str) -> Non
     if not updated:
         raise HTTPException(status_code=409, detail="邀请码已被用完，请联系开发者获取新邀请码")
     db.add(models.InviteRedemption(invite_id=invite.id, user_id=user_id))
+    db.flush()
+    from spirit_economy import grant_invite_rewards
+    grant_invite_rewards(db, invite, user_id)
 
 
 def _verification_code() -> str:
@@ -654,22 +657,57 @@ def _invite_row(invite: models.InviteCode) -> dict:
         "revoked_at": invite.revoked_at.isoformat() if invite.revoked_at else None,
         "created_at": invite.created_at.isoformat() if invite.created_at else None,
         "last_used_at": invite.last_used_at.isoformat() if invite.last_used_at else None,
+        "kind": invite.kind or "normal",
+        "batch": invite.batch or "",
+        "scope": invite.scope or "registration",
+        "reward_fruit": invite.reward_fruit or 0,
+        "reward_plant_type_id": invite.reward_plant_type_id,
+        "reward_plant_quantity": invite.reward_plant_quantity or 0,
+        "inviter_reward_fruit": invite.inviter_reward_fruit or 0,
     }
 
 
+def _invite_int(payload: dict, key: str, default: int = 0, minimum: int = 0, maximum: int = 1000000) -> int:
+    try:
+        value = int(payload.get(key, default) or default)
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=422, detail=f"{key} 必须是整数")
+    return max(minimum, min(maximum, value))
+
+
 @router.get("/api/auth/invites")
-def list_invites(request: Request, db: Session = Depends(get_db)):
+def list_invites(batch: str = "", request: Request = None, db: Session = Depends(get_db)):
     _require_owner(request, db)
-    rows = db.query(models.InviteCode).order_by(models.InviteCode.created_at.desc()).all()
-    return {"items": [_invite_row(row) for row in rows]}
+    all_rows = db.query(models.InviteCode).order_by(models.InviteCode.created_at.desc()).all()
+    batches = sorted({row.batch for row in all_rows if row.batch})
+    selected = batch.strip()
+    rows = [row for row in all_rows if not selected or row.batch == selected]
+    return {"items": [_invite_row(row) for row in rows], "batches": batches}
 
 
 @router.post("/api/auth/invites")
 def create_invite(payload: dict, request: Request, db: Session = Depends(get_db)):
     owner = _require_owner(request, db)
-    max_uses = max(1, min(int(payload.get("max_uses") or 1), 1000))
-    expires_days = int(payload.get("expires_days") or 0)
+    kind = str(payload.get("kind") or "normal").strip().lower()
+    if kind not in {"normal", "special", "developer"}:
+        raise HTTPException(status_code=422, detail="邀请码类型只能是 normal/special/developer")
+    scope = str(payload.get("scope") or "registration").strip().lower()
+    if scope != "registration":
+        raise HTTPException(status_code=422, detail="当前仅支持注册范围")
+    max_uses = _invite_int(payload, "max_uses", 1, 1, 1000)
+    expires_days = _invite_int(payload, "expires_days", 0, 0, 3650)
     label = str(payload.get("label") or "").strip()[:120]
+    batch = str(payload.get("batch") or "").strip()[:80]
+    reward_fruit = _invite_int(payload, "reward_fruit", 0, 0, 1000000)
+    inviter_reward_fruit = _invite_int(payload, "inviter_reward_fruit", 0, 0, 1000000)
+    plant_type_id = str(payload.get("reward_plant_type_id") or "").strip() or None
+    plant_quantity = _invite_int(payload, "reward_plant_quantity", 0, 0, 1000)
+    if plant_quantity and not plant_type_id:
+        raise HTTPException(status_code=422, detail="灵植奖励需要选择灵植类型")
+    if plant_type_id:
+        plant = db.query(models.SpiritPlantType).filter(models.SpiritPlantType.id == plant_type_id).first()
+        if not plant:
+            raise HTTPException(status_code=422, detail="灵植类型不存在")
     raw = "".join(secrets.choice(INVITE_ALPHABET) for _ in range(12))
     display = f"WS-{raw[:4]}-{raw[4:8]}-{raw[8:12]}"
     invite = models.InviteCode(
@@ -679,6 +717,13 @@ def create_invite(payload: dict, request: Request, db: Session = Depends(get_db)
         created_by=owner.id,
         max_uses=max_uses,
         used_count=0,
+        kind=kind,
+        batch=batch,
+        scope=scope,
+        reward_fruit=reward_fruit,
+        reward_plant_type_id=plant_type_id,
+        reward_plant_quantity=plant_quantity,
+        inviter_reward_fruit=inviter_reward_fruit,
         expires_at=datetime.utcnow() + timedelta(days=expires_days) if expires_days > 0 else None,
     )
     db.add(invite)
@@ -695,6 +740,24 @@ def update_invite(invite_id: str, payload: dict, request: Request, db: Session =
         raise HTTPException(status_code=404, detail="邀请码不存在")
     if "label" in payload:
         invite.label = str(payload.get("label") or "").strip()[:120]
+    if "kind" in payload:
+        kind = str(payload.get("kind") or "").strip().lower()
+        if kind not in {"normal", "special", "developer"}:
+            raise HTTPException(status_code=422, detail="邀请码类型只能是 normal/special/developer")
+        invite.kind = kind
+    if "batch" in payload:
+        invite.batch = str(payload.get("batch") or "").strip()[:80]
+    if "reward_fruit" in payload:
+        invite.reward_fruit = _invite_int(payload, "reward_fruit", 0, 0, 1000000)
+    if "inviter_reward_fruit" in payload:
+        invite.inviter_reward_fruit = _invite_int(payload, "inviter_reward_fruit", 0, 0, 1000000)
+    if "reward_plant_quantity" in payload:
+        invite.reward_plant_quantity = _invite_int(payload, "reward_plant_quantity", 0, 0, 1000)
+    if "reward_plant_type_id" in payload:
+        invite.reward_plant_type_id = str(payload.get("reward_plant_type_id") or "").strip() or None
+    if "max_uses" in payload:
+        used = invite.used_count or 0
+        invite.max_uses = _invite_int(payload, "max_uses", invite.max_uses, max(1, used), 1000)
     if payload.get("revoked") is True:
         invite.revoked_at = datetime.utcnow()
     elif payload.get("revoked") is False:
