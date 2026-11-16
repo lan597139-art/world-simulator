@@ -150,7 +150,7 @@ export default function WorldsPage({
           {lang === 'zh' ? '当前产品：' : 'Current product: '}{sceneLabels[product]}
         </span>
         <span style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.6, flex: '1 1 260px' }}>
-          {lang === 'zh' ? '世界列表已按产品隔离，只显示本产品自己的世界；其他产品数据不会混入。' : 'Worlds are isolated by product; only this product’s worlds appear here.'}
+          {lang === 'zh' ? '世界列表按产品隔离；官方演示世界始终保留，其余只显示本产品自己的世界。' : 'Worlds are isolated by product; the official demo stays visible, other products do not mix in.'}
         </span>
         {!readOnly && (
           <>
