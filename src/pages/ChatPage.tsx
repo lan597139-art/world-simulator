@@ -65,6 +65,8 @@ export default function ChatPage({ worldId, product = 'game' }: {
   const [tone, setTone] = useState('')
   const [stance, setStance] = useState('')
   const [displayName, setDisplayName] = useState('')
+  const [listening, setListening] = useState(false)
+  const recognitionRef = useRef<any>(null)
   const bottomRef = useRef<HTMLDivElement | null>(null)
 
   const characterName = useMemo(() => {
@@ -73,6 +75,10 @@ export default function ChatPage({ worldId, product = 'game' }: {
   }, [characters])
 
   const loadThreads = () => worldId && api.listThreads(worldId).then(setThreads).catch((error) => setLog(String(error.message || error)))
+
+  useEffect(() => () => {
+    recognitionRef.current?.stop?.()
+  }, [])
 
   useEffect(() => {
     if (!worldId) return
