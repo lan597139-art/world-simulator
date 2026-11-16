@@ -60,6 +60,7 @@ import { applyDocumentLanguage, hasStoredLanguage, loadLanguage, saveLanguage, t
 import { applyExperience } from './utils/experience'
 import { ensureProductWorkspace, fetchProductMatrix } from './api/productConfig'
 import { FALLBACK_MATRIX, getStoredProduct, navigationConfig, productByKey, storeProduct, YUNBAO_HIDDEN_PAGES } from './product/products'
+import { localizedProduct, NAV_GROUP_EN, PAGE_LABELS_EN } from './product/labels'
 import type { ProductConfig, ProductKey, ProductMatrix } from './product/types'
 
 type PageKey = 
@@ -132,7 +133,8 @@ export const t = {
   }
 }
 
-function pageLabel(key: PageKey, dict: Record<string, string>): string {
+function pageLabel(key: PageKey, dict: Record<string, string>, lang: string): string {
+  if (lang === 'en') return PAGE_LABELS_EN[key] || dict[key] || key
   const map: Partial<Record<PageKey, string>> = {
     'user-center': '用户与身份中心 / 个人管理',
     community: '内容社区 / 发现',
@@ -699,7 +701,7 @@ export default function App() {
     void ensureProductWorkspace(product).then((world) => {
       if (!cancelled) applyProductWorld(world)
     }).catch((error) => {
-      if (!cancelled) setProductError(error?.message || `${productConfig.label}工作空间创建失败`)
+      if (!cancelled) setProductError(error?.message || lang === 'zh' ? `${productConfig.label}工作空间创建失败` : `${localizedProduct(productConfig.key, productConfig.label).label} workspace creation failed`)
     })
     return () => { cancelled = true }
   }, [product, productConfig.auto_workspace, allWorldsList.length, activePage])
@@ -742,7 +744,7 @@ export default function App() {
   useEffect(() => {
     setAssistantPage({
       page: activePage,
-      label: pageLabel(activePage, dict),
+      label: pageLabel(activePage, dict, lang),
       worldId: currentWorldId || '',
       worldName: currentWorldName || '',
     })
@@ -892,13 +894,13 @@ export default function App() {
         />
       )}
 
-      <aside className={`sidebar${sidebarCollapsed ? ' is-collapsed' : ''}`} style={{ width: sidebarCollapsed ? 0 : 260, height: '100%', padding: sidebarCollapsed ? 0 : undefined, minWidth: 0, overflow: 'hidden', backdropFilter: 'blur(40px) saturate(180%)', borderRight: sidebarCollapsed ? 'none' : '1px solid var(--card-border)', display: isGlobalShell || isProductWorkspace ? 'none' : 'flex', flexDirection: 'column' }}>
+      <aside className={`sidebar app-sidebar${sidebarCollapsed ? ' is-collapsed' : ''}`} style={{ width: sidebarCollapsed ? 0 : 260, height: '100%', padding: sidebarCollapsed ? 0 : undefined, minWidth: 0, overflow: 'hidden', backdropFilter: 'blur(40px) saturate(180%)', borderRight: sidebarCollapsed ? 'none' : '1px solid var(--card-border)', display: isGlobalShell || isProductWorkspace ? 'none' : 'flex', flexDirection: 'column' }}>
         
         <div className="brand" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div className="brand-mark" style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'var(--sidebar-text)', color: 'var(--sidebar-bg)', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 'bold', fontSize: '20px' }}>W</div>
           <div className="brand-text" style={{ display: 'flex', flexDirection: 'column' }}>
             <strong style={{ fontSize: '16px', color: 'var(--sidebar-text)' }}>{lang === 'zh' ? '世界模拟器' : 'World Sim'}</strong>
-            <span style={{ fontSize: '10px', color: 'var(--sidebar-text-muted)', textTransform: 'uppercase' }}>{isHome ? 'Choose Product' : 'World Simulator'}</span>
+            <span style={{ fontSize: '10px', color: 'var(--sidebar-text-muted)', textTransform: 'uppercase' }}>{isHome ? (lang === 'zh' ? '选择产品' : 'Choose Product') : 'World Simulator'}</span>
           </div>
           <button
             type="button"
@@ -913,7 +915,7 @@ export default function App() {
 
         {isHome ? (
           <nav className="navigation" style={{ flex: 1, overflowY: 'auto', padding: '0 1rem' }}>
-            <div style={{ fontSize: 10, letterSpacing: '0.12em', color: 'var(--sidebar-text-muted)', padding: '0 0.5rem 10px' }}>四大创作产品</div>
+            <div style={{ fontSize: 10, letterSpacing: '0.12em', color: 'var(--sidebar-text-muted)', padding: '0 0.5rem 10px' }}>{lang === 'zh' ? '四大创作产品' : 'Four creation products'}</div>
             {productMatrix.products.filter((item) => item.key !== 'yunbao').map((item) => (
               <button
                 key={item.key}
@@ -930,8 +932,8 @@ export default function App() {
               >
                 <span style={{ fontSize: 19, lineHeight: 1.3 }}>{item.icon}</span>
                 <span style={{ minWidth: 0 }}>
-                  <strong style={{ display: 'block', fontSize: 13 }}>{item.label}</strong>
-                  <span style={{ display: 'block', marginTop: 3, fontSize: 9.5, lineHeight: 1.55, color: 'var(--sidebar-text-muted)' }}>{item.description}</span>
+                  <strong style={{ display: 'block', fontSize: 13 }}>{lang === 'zh' ? item.label : localizedProduct(item.key, item.label).label}</strong>
+                  <span style={{ display: 'block', marginTop: 3, fontSize: 9.5, lineHeight: 1.55, color: 'var(--sidebar-text-muted)' }}>{lang === 'zh' ? item.description : localizedProduct(item.key, item.label, item.description).description}</span>
                 </span>
               </button>
             ))}
@@ -944,13 +946,13 @@ export default function App() {
                 onClick={() => { setNavStack([]); setActivePage('home') }}
                 style={{ width: '100%', padding: '8px 10px', background: 'rgba(128,128,128,0.07)', color: 'var(--text-main)', border: '1px solid var(--card-border)', borderRadius: 8, cursor: 'pointer', fontSize: 11, textAlign: 'left', display: 'flex', gap: 8 }}
               >
-                <span>←</span> 返回产品主页
+                <span>←</span> {lang === 'zh' ? '返回产品主页' : 'Back to products'}
               </button>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 9, padding: '7px 9px', borderRadius: 9, border: '1px solid var(--card-border)', background: 'rgba(128,128,128,0.08)' }}>
                 <span style={{ fontSize: 16 }}>{productConfig.icon}</span>
                 <span style={{ minWidth: 0 }}>
-                  <strong style={{ display: 'block', fontSize: 11.5, color: 'var(--sidebar-text)' }}>{productConfig.label}</strong>
-                  <span style={{ display: 'block', fontSize: 9, color: 'var(--sidebar-text-muted)' }}>当前工作台 · 仅显示本产品功能</span>
+                  <strong style={{ display: 'block', fontSize: 11.5, color: 'var(--sidebar-text)' }}>{lang === 'zh' ? productConfig.label : localizedProduct(productConfig.key, productConfig.label).label}</strong>
+                  <span style={{ display: 'block', fontSize: 9, color: 'var(--sidebar-text-muted)' }}>{lang === 'zh' ? '当前工作台 · 仅显示本产品功能' : 'Current workspace · product-only modules'}</span>
                 </span>
               </div>
               {productError && <div style={{ marginTop: 6, fontSize: 9.5, color: 'var(--danger-color)', lineHeight: 1.5 }}>{productError}</div>}
@@ -960,7 +962,7 @@ export default function App() {
             {currentWorldId && !productConfig.auto_workspace && (
               <div style={{ padding: '0 1rem', marginBottom: '1rem' }}>
                 <button onClick={handleExitWorld} style={{ width: '100%', padding: '10px', background: 'rgba(128,128,128,0.1)', color: 'var(--text-main)', border: '1px solid var(--card-border)', borderRadius: '8px', cursor: 'pointer', fontSize: 12, textAlign: 'left', display: 'flex', gap: '8px' }}>
-                  <span>←</span> 退出当前世界
+                  <span>←</span> {lang === 'zh' ? '退出当前世界' : 'Leave this world'}
                 </button>
               </div>
             )}
@@ -968,7 +970,7 @@ export default function App() {
             <nav className="navigation" style={{ flex: 1, overflowY: 'auto', padding: '0 1rem' }}>
               {navigation.map((group) => (
                 <div className="nav-group" key={group.title} style={{ marginBottom: '1.5rem' }}>
-                  <div className="nav-group-title" style={{ fontSize: '11px', color: 'var(--sidebar-text-muted)', marginBottom: '0.5rem', paddingLeft: '0.5rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{group.title}</div>
+                  <div className="nav-group-title" style={{ fontSize: '11px', color: 'var(--sidebar-text-muted)', marginBottom: '0.5rem', paddingLeft: '0.5rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{lang === 'zh' ? group.title : (NAV_GROUP_EN[group.title] || group.title)}</div>
                   {group.items.map((item) => (
                     <button
                       key={item.key}
@@ -986,7 +988,7 @@ export default function App() {
                       }}
                     >
                       <span className="nav-icon">{item.icon}</span>
-                      <span>{item.label}</span>
+                      <span>{lang === 'zh' ? item.label : pageLabel(item.key, dict, lang)}</span>
                     </button>
                   ))}
                 </div>
@@ -1000,7 +1002,7 @@ export default function App() {
             {dict.switchLang}
           </button>
           <button onClick={() => { void authLogout().then(() => window.location.reload()) }} style={{ width: '100%', padding: '7px', background: 'transparent', color: 'var(--sidebar-text-muted)', border: '1px solid var(--card-border)', borderRadius: '8px', cursor: 'pointer', marginBottom: '0.8rem', fontSize: '11px' }}>
-            退出登录
+            {lang === 'zh' ? '退出登录' : 'Sign out'}
           </button>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px', color: 'var(--sidebar-text-muted)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -1063,7 +1065,7 @@ export default function App() {
                     <CreationCenterTopbar
                       lang={lang}
                       page={isProductWorkspace ? 'workspace' : isUserCenter ? 'identity' : isCommunity ? 'community' : isCommunitySocial ? 'community-social' : isBusiness ? 'business' : isSpirit ? 'spirit-economy' : isAiCenter ? 'ai-center' : isGameCenter ? 'game-center' : isContentStore ? 'content-store' : isCreatorAssets ? 'assets' : isWorks ? 'works' : 'home'}
-                      productLabel={isProductWorkspace ? productConfig.label : undefined}
+                      productLabel={isProductWorkspace ? (lang === 'zh' ? productConfig.label : localizedProduct(productConfig.key, productConfig.label).label) : undefined}
                       productKey={isProductWorkspace ? product : undefined}
                       currentWorldName={isProductWorkspace ? (productConfig.auto_workspace ? productConfig.workspace_name || currentWorldName : currentWorldName) : undefined}
                       currentWorldId={isProductWorkspace ? currentWorldId : undefined}
@@ -1081,36 +1083,36 @@ export default function App() {
                       onLogout={() => { void authLogout().then(() => window.location.reload()) }}
                               />
                 ) : (
-                  <header className="topbar" style={{ height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2rem', borderBottom: '1px solid var(--card-border)' }}>
+                  <header className="topbar app-topbar" style={{ height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2rem', borderBottom: '1px solid var(--card-border)' }}>
                     <div className="breadcrumb" style={{ fontSize: '13px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}>
                       {isHome ? (
                         <>
-                          <strong style={{ color: 'var(--text-main)', fontSize: 14 }}>选择产品</strong>
+                          <strong style={{ color: 'var(--text-main)', fontSize: 14 }}>{lang === 'zh' ? '选择产品' : 'Choose product'}</strong>
                           <span style={{ margin: '0 8px' }}>/</span>
-                          <span>四大创作产品 · 云宝独立工作台</span>
+                          <span>{lang === 'zh' ? '四大创作产品 · 云宝独立工作台' : 'Four products · Yunbao workspace'}</span>
                         </>
                       ) : (
                         <>
                           <button
                             type="button"
                             onClick={goBack}
-                            title="返回上一页"
+                            title={lang === 'zh' ? '返回上一页' : 'Back'}
                             style={{ marginRight: '12px', padding: '5px 10px', borderRadius: '7px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)', cursor: 'pointer', fontSize: '12px' }}
                           >
-                            ← 返回
+                            {lang === 'zh' ? '← 返回' : '← Back'}
                           </button>
                           {currentWorldId ? (
                             <>
                               <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 8, border: '1px solid var(--card-border)', marginRight: 8 }}>{productConfig.icon} {productConfig.short}</span>
                               <span style={{ color: 'var(--primary-color)', fontWeight: 600 }}>[{currentWorldName}]</span>
                               <span style={{ margin: '0 8px' }}>/</span>
-                              <strong style={{ color: 'var(--text-main)' }}>{pageLabel(activePage, dict)}</strong>
+                              <strong style={{ color: 'var(--text-main)' }}>{pageLabel(activePage, dict, lang)}</strong>
                             </>
                           ) : (
                             <>
                               <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 8, border: '1px solid var(--card-border)', marginRight: 8 }}>{productConfig.icon} {productConfig.short}</span>
                               <span>{dict.workbench}</span><span style={{ margin: '0 8px' }}>/</span>
-                              <strong style={{ color: 'var(--text-main)' }}>{pageLabel(activePage, dict)}</strong>
+                              <strong style={{ color: 'var(--text-main)' }}>{pageLabel(activePage, dict, lang)}</strong>
                             </>
                           )}
                         </>
@@ -1120,7 +1122,7 @@ export default function App() {
                       <button
                         type="button"
                         onClick={() => setAiAccessOpen(true)}
-                        title="填写自己的 API Key，避免消耗站长额度"
+                        title={lang === 'zh' ? '填写自己的 API Key，避免消耗站长额度' : 'Use your own API key instead of the owner quota'}
                         style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 9px', borderRadius: '7px', border: '1px solid var(--card-border)', background: hasPersonalAi ? 'rgba(128,128,128,0.12)' : 'transparent', color: 'var(--text-main)', fontSize: '11px', cursor: 'pointer' }}
                       >
                         <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: hasPersonalAi ? '#10b981' : 'var(--text-muted)' }} />
@@ -1128,7 +1130,7 @@ export default function App() {
                       </button>
                       <span className="workspace-status" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <span className="status-dot" style={{ width: '6px', height: '6px', borderRadius: '50%', background: backendStatus === 'connected' ? '#10b981' : '#ef4444' }} />
-                        {backendStatus === 'connected' ? '后端已连接' : '后端未连接'}
+                        {backendStatus === 'connected' ? lang === 'zh' ? '后端已连接' : 'Backend connected' : lang === 'zh' ? '后端未连接' : 'Backend offline'}
                       </span>
                       <div className="avatar" style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--text-main)', color: 'var(--bg-color)', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 'bold', overflow: 'hidden' }}>
                         {authUser?.avatar_url
@@ -1382,7 +1384,7 @@ export default function App() {
            ) : activePage === 'timeline' ? (
            <UnifiedTimelinePage worldId={currentWorldId} worldName={currentWorldName} mode={productConfig.modes.timeline} />
           ) : (
-            <div style={{ padding: '2rem', color: 'var(--text-main)' }}><h1>开发中</h1></div>
+            <div style={{ padding: '2rem', color: 'var(--text-main)' }}><h1>{lang === 'zh' ? '开发中' : 'In development'}</h1></div>
           )}
           </ErrorBoundary>
             </div>
@@ -1439,10 +1441,10 @@ function OverviewPage({
       <section className="page-heading" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <div className="eyebrow" style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>
-            {productConfig.icon} {productConfig.label} · {dict.dashboard}
+            {productConfig.icon} {lang === 'zh' ? productConfig.label : localizedProduct(productConfig.key, productConfig.label).label} · {dict.dashboard}
           </div>
-          <h1 style={{ margin: 0, color: 'var(--text-main)', fontSize: '24px' }}>{productConfig.label}工作台</h1>
-          <p style={{ margin: '8px 0 0', color: 'var(--text-muted)', fontSize: '14px', maxWidth: 760, lineHeight: 1.7 }}>{productConfig.description}</p>
+          <h1 style={{ margin: 0, color: 'var(--text-main)', fontSize: '24px' }}>{lang === 'zh' ? productConfig.label : localizedProduct(productConfig.key, productConfig.label).label}{lang === 'zh' ? '工作台' : ' Workspace'}</h1>
+          <p style={{ margin: '8px 0 0', color: 'var(--text-muted)', fontSize: '14px', maxWidth: 760, lineHeight: 1.7 }}>{lang === 'zh' ? productConfig.description : localizedProduct(productConfig.key, productConfig.label, productConfig.description).description}</p>
         </div>
         <button className="primary-button" type="button" onClick={() => onNavigate('world-management')} style={{ padding: '0.75rem 1.5rem', background: 'var(--text-main)', color: 'var(--bg-color)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>
           {dict.createWorld}
@@ -1497,7 +1499,7 @@ function OverviewPage({
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', alignItems: 'center' }}>
                     <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text-main)' }}>{ev.name}</div>
-                    <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>编辑 →</span>
+                    <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{lang === 'zh' ? '编辑 →' : 'Edit →'}</span>
                   </div>
                 </div>
               ))}

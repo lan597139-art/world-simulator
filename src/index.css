@@ -11,13 +11,18 @@
   --card-shadow: 0 10px 34px rgba(0, 0, 0, 0.06);
 
   --text-main: #1d1d1f;
-  --text-muted: #5f5f66;
+  --text-muted: #4b4b52;
 
   /* 统一的主色（黑白主调） */
   --primary-color: #1d1d1f;
   --primary-hover: #000000;
   --primary-text: #ffffff;
   --danger-color: #b42318;
+  --success-strong: #1f6b4d;
+  --warning-strong: #7a4f12;
+  --danger-strong: #9c2f2f;
+  --info-strong: #315f8a;
+  --purple-strong: #5b3f96;
 
   /* F1 字体与排版层级：英文 Geist、中文 Noto Sans SC，均本地安装。 */
   --font-sans: "Geist Variable", "Noto Sans SC Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
@@ -47,7 +52,17 @@
   /* 兼容旧页面的语义别名，避免各页面各自猜颜色。 */
   --text-primary: var(--text-main);
   --text-secondary: var(--text-muted);
-  --text-tertiary: color-mix(in srgb, var(--text-muted) 76%, var(--bg-color));
+  --text-tertiary: var(--text-muted);
+  --text-faint: #62626a;
+  --text-disabled: #7a7a82;
+  --text-on-accent: #ffffff;
+  --surface-solid: #ffffff;
+  --glass-frost-bg: #ffffff;
+  --glass-liquid-bg: #fbfbfd;
+  --glass-frost-blur: 20px;
+  --glass-liquid-blur: 42px;
+  --glass-border: rgba(0, 0, 0, 0.12);
+  --glass-rim: rgba(255, 255, 255, 0.5);
   --surface-raised: var(--card-bg);
   --field-bg: rgba(255, 255, 255, 0.82);
   --field-border: rgba(0, 0, 0, 0.16);
@@ -68,13 +83,26 @@
     --card-border: rgba(255, 255, 255, 0.16);
     --card-shadow: 0 10px 38px rgba(0, 0, 0, 0.42);
 
-    --text-main: #f2f2f4;
-    --text-muted: #a1a1a6;
+    --text-main: #f4f4f6;
+    --text-muted: #bbbbc2;
+    --text-faint: #9a9aa2;
+    --text-disabled: #8a8a92;
+    --surface-solid: #1c1c1e;
+    --glass-frost-bg: #1c1c1e;
+    --glass-liquid-bg: #202024;
+    --glass-frost-blur: 24px;
+    --glass-border: rgba(255, 255, 255, 0.17);
+    --glass-rim: rgba(255, 255, 255, 0.13);
 
     --primary-color: #f2f2f4;
     --primary-hover: #ffffff;
     --primary-text: #1d1d1f;
     --danger-color: #ff6961;
+    --success-strong: #7ad6a8;
+    --warning-strong: #e5bb76;
+    --danger-strong: #ff9189;
+    --info-strong: #9fc3ff;
+    --purple-strong: #c4a7ff;
     --field-bg: rgba(44, 44, 46, 0.9);
     --field-border: rgba(255, 255, 255, 0.22);
     --focus-ring: rgba(255, 255, 255, 0.24);
@@ -92,11 +120,16 @@ html[data-theme="light"] {
   --card-border: rgba(0, 0, 0, 0.11);
   --card-shadow: 0 10px 34px rgba(0, 0, 0, 0.06);
   --text-main: #1d1d1f;
-  --text-muted: #5f5f66;
+  --text-muted: #4b4b52;
   --primary-color: #1d1d1f;
   --primary-hover: #000000;
   --primary-text: #ffffff;
   --danger-color: #b42318;
+  --success-strong: #1f6b4d;
+  --warning-strong: #7a4f12;
+  --danger-strong: #9c2f2f;
+  --info-strong: #315f8a;
+  --purple-strong: #5b3f96;
   --field-bg: rgba(255, 255, 255, 0.82);
   --field-border: rgba(0, 0, 0, 0.16);
   --focus-ring: color-mix(in srgb, #1d1d1f 22%, transparent);
@@ -111,12 +144,25 @@ html[data-theme="dark"] {
   --card-bg: rgba(28, 28, 30, 0.88);
   --card-border: rgba(255, 255, 255, 0.16);
   --card-shadow: 0 10px 38px rgba(0, 0, 0, 0.42);
-  --text-main: #f2f2f4;
-  --text-muted: #a1a1a6;
+  --text-main: #f4f4f6;
+  --text-muted: #bbbbc2;
+  --text-faint: #9a9aa2;
+  --text-disabled: #8a8a92;
+  --surface-solid: #1c1c1e;
+  --glass-frost-bg: #1c1c1e;
+  --glass-liquid-bg: #202024;
+  --glass-frost-blur: 24px;
+  --glass-border: rgba(255, 255, 255, 0.17);
+  --glass-rim: rgba(255, 255, 255, 0.13);
   --primary-color: #f2f2f4;
   --primary-hover: #ffffff;
   --primary-text: #1d1d1f;
   --danger-color: #ff6961;
+  --success-strong: #7ad6a8;
+  --warning-strong: #e5bb76;
+  --danger-strong: #ff9189;
+  --info-strong: #9fc3ff;
+  --purple-strong: #c4a7ff;
   --field-bg: rgba(44, 44, 46, 0.9);
   --field-border: rgba(255, 255, 255, 0.22);
   --focus-ring: rgba(255, 255, 255, 0.24);

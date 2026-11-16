@@ -53,6 +53,20 @@ const categoryLabels: Record<string, { zh: string; en: string }> = {
   oc: { zh: 'OC 灵植', en: 'OC plant' },
 }
 
+const plantEnglish: Record<string, { name: string; description: string; unit: string }> = {
+  world_seed: { name: 'World Seed', description: 'Base plant used to create and expand worlds.', unit: 'plants' },
+  oc_seed: { name: 'Persona Seed', description: 'Base plant used to create OCs and character identities.', unit: 'plants' },
+}
+
+function plantText(plant: { key: string; name: string; unit: string; description?: string }, lang: Lang) {
+  const english = lang === 'en' ? plantEnglish[plant.key] : null
+  return {
+    name: english?.name || plant.name,
+    description: english?.description || plant.description || '',
+    unit: english?.unit || plant.unit,
+  }
+}
+
 function formatDate(value: string, lang: Lang) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return value
@@ -296,8 +310,8 @@ export default function SpiritEconomyPage({
             {summary.inventory.map((item) => (
               <article key={item.plant_type_id} className={`spirit-plant-card is-${item.category}`}>
                 <div className="spirit-plant-icon">{item.category === 'world' ? <Sprout size={20} /> : <Leaf size={20} />}</div>
-                <div><span>{categoryLabels[item.category]?.[lang] || item.category}</span><strong>{item.name}</strong></div>
-                <b>{item.quantity}<small>{item.unit}</small></b>
+                <div><span>{categoryLabels[item.category]?.[lang] || item.category}</span><strong>{plantText(item, lang).name}</strong></div>
+                <b>{item.quantity}{lang === 'zh' ? '' : ' '}<small>{plantText(item, lang).unit}</small></b>
               </article>
             ))}
           </div>
@@ -329,8 +343,8 @@ export default function SpiritEconomyPage({
                     <span className={`spirit-category is-${plant.category}`}>{categoryLabels[plant.category]?.[lang] || plant.category}</span>
                     <span className="spirit-owned">{zh ? '持有' : 'Held'} {owned}</span>
                   </div>
-                  <h3>{plant.name}</h3>
-                  <p>{plant.description}</p>
+                  <h3>{plantText(plant, lang).name}</h3>
+                  <p>{plantText(plant, lang).description}</p>
                   <div className="spirit-price"><strong>{plant.price_fruit}</strong><span>{zh ? '灵果 / 株' : 'fruit / plant'}</span></div>
                   <div className="spirit-buy">
                     <div className="spirit-qty">
@@ -338,7 +352,7 @@ export default function SpiritEconomyPage({
                       <input aria-label={zh ? '兑换数量' : 'Quantity'} type="number" min={1} max={99} value={count} onChange={(event) => setQuantity((prev) => ({ ...prev, [plant.id]: Math.max(1, Math.min(99, Number(event.target.value) || 1)) }))} />
                       <button type="button" onClick={() => setQuantity((prev) => ({ ...prev, [plant.id]: Math.min(99, count + 1) }))}>+</button>
                     </div>
-                    <button type="button" className="spirit-primary" disabled={!affordable || busy === `exchange:${plant.id}`} onClick={() => void exchange(plant.id, plant.name)}>
+                    <button type="button" className="spirit-primary" disabled={!affordable || busy === `exchange:${plant.id}`} onClick={() => void exchange(plant.id, plantText(plant, lang).name)}>
                       {busy === `exchange:${plant.id}` ? (zh ? '兑换中…' : 'Exchanging…') : `${zh ? '兑换' : 'Exchange'} · ${plant.price_fruit * count}`}
                     </button>
                   </div>
@@ -457,7 +471,7 @@ export default function SpiritEconomyPage({
               <div className="spirit-admin-list">
                 {(admin?.plants || []).map((plant) => (
                   <div key={plant.id} className="spirit-admin-row">
-                    <div><strong>{plant.name}</strong><span>{plant.key} · {plant.category}</span></div>
+                    <div><strong>{plantText(plant, lang).name}</strong><span>{plant.key} · {plant.category}</span></div>
                     <label className="spirit-admin-price"><input type="number" min={1} defaultValue={plant.price_fruit} onBlur={(event) => { if (Number(event.target.value) !== plant.price_fruit) void savePlantPrice(plant.id, event.target.value) }} /><span>{zh ? '灵果' : 'fruit'}</span></label>
                   </div>
                 ))}

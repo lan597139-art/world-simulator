@@ -44,7 +44,7 @@
 .cm-button { padding: 5px 8px; border: 1px solid var(--card-border); background: color-mix(in srgb, var(--card-bg) 55%, transparent); color: var(--text-main); }
 .cm-button:hover { border-color: color-mix(in srgb, var(--primary-color) 40%, var(--card-border)); }
 .cm-text-button { padding: 4px 5px; border: 0; background: transparent; color: var(--text-muted); }
-.cm-text-button:hover { color: #d96868; }
+.cm-text-button:hover { color: var(--danger-strong); }
 .cm-portrait-block { flex: 1; min-width: 0; }
 .cm-portrait-grid {
   display: grid;
@@ -109,7 +109,7 @@
   border-radius: 6px;
   background: color-mix(in srgb, #d96868 7%, transparent);
   font-size: 8.5px;
-  color: #d96868;
+  color: var(--danger-strong);
 }
 @media (max-width: 640px) {
   .cm-card { padding: 16px; }

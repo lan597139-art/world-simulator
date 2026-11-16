@@ -4,16 +4,16 @@
 .comic-back:hover { color: var(--text-primary); }
 .comic-title { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1; }
 .comic-title > img, .comic-title > span { width: 48px; height: 48px; flex: none; border-radius: 12px; object-fit: cover; }
-.comic-title > span { display: grid; place-items: center; background: color-mix(in srgb, #d4674f 12%, var(--card-bg)); color: #b34d3b; }
+.comic-title > span { display: grid; place-items: center; background: color-mix(in srgb, #d4674f 12%, var(--card-bg)); color: var(--danger-strong); }
 .comic-title div { min-width: 0; }
-.comic-title small { color: #b34d3b; font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+.comic-title small { color: var(--danger-strong); font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
 .comic-title h1 { margin: 2px 0 1px; font-size: 21px; letter-spacing: -.03em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .comic-title p { margin: 0; max-width: 660px; color: var(--text-secondary); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .comic-head-actions { display: flex; align-items: center; gap: 7px; }
 .comic-stat { display: inline-flex; align-items: center; gap: 4px; padding: 5px 8px; border: 1px solid var(--card-border); border-radius: 8px; color: var(--text-secondary); font-size: 11px; background: var(--card-bg); }
 .comic-head-actions > button { width: 31px; height: 31px; display: grid; place-items: center; border: 1px solid var(--card-border); border-radius: 8px; background: var(--card-bg); color: var(--text-secondary); cursor: pointer; }
 .comic-alert { display: flex; align-items: center; gap: 7px; margin-bottom: 10px; padding: 9px 12px; border-radius: 10px; font-size: 12px; }
-.comic-alert.is-error { color: #9c2f2f; background: color-mix(in srgb, #d9534f 11%, var(--card-bg)); border: 1px solid color-mix(in srgb, #d9534f 28%, var(--card-border)); }
+.comic-alert.is-error { color: var(--danger-strong); background: color-mix(in srgb, #d9534f 11%, var(--card-bg)); border: 1px solid color-mix(in srgb, #d9534f 28%, var(--card-border)); }
 .comic-alert.is-ok { color: #1f6b4d; background: color-mix(in srgb, #2f9e6f 11%, var(--card-bg)); border: 1px solid color-mix(in srgb, #2f9e6f 26%, var(--card-border)); }
 .comic-alert button { margin-left: auto; border: 0; background: transparent; color: inherit; cursor: pointer; }
 
@@ -35,7 +35,7 @@
 .comic-chapter.is-active .comic-chapter-tools, .comic-chapter:hover .comic-chapter-tools { display: flex; }
 .comic-chapter-tools button { width: 19px; height: 19px; display: grid; place-items: center; border: 0; border-radius: 5px; background: transparent; color: var(--text-secondary); cursor: pointer; padding: 0; }
 .comic-chapter-tools button:hover { background: color-mix(in srgb, var(--text-primary) 7%, transparent); color: var(--text-primary); }
-.comic-chapter-tools button.is-danger:hover { color: #b34d3b; }
+.comic-chapter-tools button.is-danger:hover { color: var(--danger-strong); }
 .comic-add-chapter { display: flex; gap: 4px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--card-border); }
 .comic-add-chapter input { min-width: 0; flex: 1; height: 30px; border: 1px solid var(--card-border); border-radius: 7px; background: transparent; color: var(--text-primary); padding: 0 7px; font-family: inherit; font-size: 11px; }
 .comic-add-chapter button { width: 30px; height: 30px; display: grid; place-items: center; border: 0; border-radius: 7px; background: var(--text-primary); color: var(--card-bg); cursor: pointer; }
@@ -66,7 +66,7 @@
 .comic-page-tools { display: flex; align-items: center; gap: 1px; margin-top: 6px; padding-top: 5px; border-top: 1px solid var(--card-border); }
 .comic-page-tools button, .comic-page-tool-label { width: 24px; height: 22px; display: grid; place-items: center; border: 0; border-radius: 5px; background: transparent; color: var(--text-secondary); cursor: pointer; padding: 0; }
 .comic-page-tools button:hover, .comic-page-tool-label:hover { background: color-mix(in srgb, var(--text-primary) 6%, transparent); color: var(--text-primary); }
-.comic-page-tools button.is-danger:hover { color: #b34d3b; }
+.comic-page-tools button.is-danger:hover { color: var(--danger-strong); }
 .comic-page-tools button:disabled { opacity: .3; cursor: not-allowed; }
 
 .comic-asset-actions { display: flex; align-items: center; gap: 6px; }
@@ -80,7 +80,7 @@
 .comic-asset-tools { display: flex; gap: 4px; padding: 3px 6px 7px; }
 .comic-asset-tools button { min-height: 23px; display: inline-flex; align-items: center; justify-content: center; gap: 3px; flex: 1; border: 1px solid var(--card-border); border-radius: 6px; background: transparent; color: var(--text-primary); font-size: 9.5px; cursor: pointer; }
 .comic-asset-tools button.is-danger { flex: none; width: 24px; color: var(--text-secondary); }
-.comic-asset-tools button.is-danger:hover { color: #b34d3b; }
+.comic-asset-tools button.is-danger:hover { color: var(--danger-strong); }
 
 .comic-preview-switch { display: inline-flex; gap: 2px; padding: 2px; border-radius: 7px; background: color-mix(in srgb, var(--text-primary) 5%, transparent); }
 .comic-preview-switch button { border: 0; border-radius: 5px; padding: 5px 8px; background: transparent; color: var(--text-secondary); font-size: 10px; cursor: pointer; }

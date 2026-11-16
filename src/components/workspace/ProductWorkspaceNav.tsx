@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { ArrowUpRight, MoreHorizontal } from 'lucide-react'
 import type { ProductConfig, ProductKey } from '../../product/types'
+import { PAGE_LABELS_EN } from '../../product/labels'
 
 type Lang = 'zh' | 'en'
 
@@ -37,7 +38,8 @@ export default function ProductWorkspaceNav({
       const page = item.page === 'overview' || (product === 'yunbao' && item.page === 'yunbao') ? 'workspace-home' : item.page
       if (page === 'workspace-home' || primaryNav.some((row) => row.page === page)) continue
       const target = SAFETY_PAGES.has(page) ? safetyNav : primaryNav
-      target.push({ page, label: cleanLabel(item.label) })
+      const fallback = cleanLabel(item.label)
+      target.push({ page, label: lang === 'zh' ? fallback : (PAGE_LABELS_EN[page as keyof typeof PAGE_LABELS_EN] || fallback) })
     }
   }
 

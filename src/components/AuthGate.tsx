@@ -285,7 +285,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
       >
         {zh ? 'EN' : '中文'}
       </button>
-      <div className="glass-card" style={{ width: '420px', maxWidth: '100%', padding: '26px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      <div className="glass-card glass-liquid" style={{ width: '420px', maxWidth: '100%', padding: '26px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div style={{ width: '38px', height: '38px', borderRadius: '9px', background: 'var(--text-main)', color: 'var(--bg-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '20px' }}>W</div>
           <div>

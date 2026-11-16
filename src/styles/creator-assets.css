@@ -380,7 +380,7 @@
 }
 .ca-status-draft { background: rgba(128, 128, 128, 0.12); color: var(--text-muted); }
 .ca-status-published { background: rgba(16, 185, 129, 0.12); color: #059669; }
-.ca-status-archived { background: rgba(245, 158, 11, 0.12); color: #b45309; }
+.ca-status-archived { background: rgba(245, 158, 11, 0.12); color: var(--warning-strong); }
 .ca-status-deleted { background: rgba(255, 59, 48, 0.1); color: var(--danger-color); }
 .ca-vis-private { background: rgba(128, 128, 128, 0.09); color: var(--text-muted); }
 .ca-vis-scoped { background: rgba(59, 130, 246, 0.1); color: #2563eb; }
@@ -458,7 +458,7 @@
   border-radius: 10px;
   background: rgba(245, 158, 11, 0.07);
 }
-.ca-ref-warning > div { display: flex; align-items: center; gap: 5px; color: #b45309; font-size: 10px; }
+.ca-ref-warning > div { display: flex; align-items: center; gap: 5px; color: var(--warning-strong); font-size: 10px; }
 .ca-ref-warning p { margin: 5px 0 0; font-size: 9.5px; line-height: 1.5; color: var(--text-muted); }
 .ca-ref-warning ul { margin: 6px 0 0; padding-left: 15px; font-size: 9px; line-height: 1.55; color: var(--text-muted); }
 

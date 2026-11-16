@@ -232,3 +232,147 @@ html[data-lang="en"] .markdown-body {
 .invite-create-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) 105px 110px 100px 100px 85px 85px auto; gap: 8px; align-items: end; margin-bottom: 12px; }
 @media (max-width: 900px) { .invite-create-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } .invite-create-grid button { grid-column: 1 / -1; } }
 @media (max-width: 560px) { .invite-create-grid { grid-template-columns: 1fr 1fr; } }
+
+/* ==========================================================================
+   F2/F3/F4 视觉系统补齐：文字语义、材质分工、背景可读性
+   ========================================================================== */
+
+html {
+  --text-faint: #62626a;
+  --text-disabled: #7a7a82;
+  --glass-readability-floor: 0.78;
+  --bg-scrim: #f5f5f7;
+  --bg-scrim-strength: 0;
+}
+
+html[data-theme="dark"] {
+  --text-faint: #9a9aa2;
+  --text-disabled: #8a8a92;
+  --bg-scrim: #0e0e10;
+}
+
+html[data-custom-background="true"] { --glass-readability-floor: 0.84; }
+html[data-bg-tone="vivid"] { --glass-readability-floor: 0.9; --bg-scrim-strength: 0.24; }
+html[data-bg-tone="detail"] { --glass-readability-floor: 0.88; --bg-scrim-strength: 0.3; }
+html[data-bg-tone="dark"] { --glass-readability-floor: 0.86; --bg-scrim-strength: 0.12; }
+
+#app-background::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: var(--bg-scrim);
+  opacity: calc(var(--ws-bg-opacity) * var(--bg-scrim-strength));
+}
+
+.text-faint, .text-secondary { color: var(--text-faint); }
+.text-disabled, [aria-disabled="true"] { color: var(--text-disabled); }
+[class*="hint"], [class*="Hint"], small, figcaption {
+  color: var(--text-muted);
+}
+html[data-theme="dark"] [class*="hint"],
+html[data-theme="dark"] small,
+html[data-theme="dark"] figcaption {
+  color: var(--text-muted);
+}
+
+/* 毛玻璃：常规容器。稳定、低折射、足够着色，文字永远在背景之上。 */
+.glass-frost,
+.glass-card,
+.glass-panel,
+.app-topbar,
+.cc-topbar {
+  background: color-mix(
+    in srgb,
+    var(--glass-frost-bg) calc(max(var(--glass-opacity), var(--glass-readability-floor)) * 100%),
+    transparent
+  ) !important;
+  -webkit-backdrop-filter: blur(var(--glass-frost-blur, 20px)) saturate(135%) !important;
+  backdrop-filter: blur(var(--glass-frost-blur, 20px)) saturate(135%) !important;
+  border-color: var(--glass-border) !important;
+  box-shadow: 0 1px 0 var(--glass-rim) inset, 0 8px 26px rgba(0, 0, 0, 0.07) !important;
+}
+.glass-card::after,
+.glass-panel::after {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--glass-rim) 55%, transparent), transparent 34%) !important;
+  opacity: 0.32 !important;
+}
+
+/* 液态玻璃：只用于重点视觉组件，不参与普通卡片。 */
+.glass-liquid {
+  background: color-mix(
+    in srgb,
+    var(--glass-liquid-bg) calc(max(var(--glass-opacity), var(--glass-readability-floor)) * 100%),
+    transparent
+  ) !important;
+  -webkit-backdrop-filter: blur(var(--glass-liquid-blur, 42px)) saturate(170%) !important;
+  backdrop-filter: blur(var(--glass-liquid-blur, 42px)) saturate(170%) !important;
+  border: 1px solid color-mix(in srgb, var(--glass-rim) 55%, var(--glass-border)) !important;
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--glass-rim) 85%, transparent) inset,
+    0 0 0 1px color-mix(in srgb, var(--text-main) 5%, transparent),
+    0 18px 46px rgba(0, 0, 0, 0.14),
+    0 0 34px rgba(120, 150, 255, calc(var(--glass-glow) * 0.45)) !important;
+}
+.glass-liquid::after {
+  background:
+    linear-gradient(135deg,
+      color-mix(in srgb, var(--glass-rim) 74%, transparent),
+      transparent 28%,
+      transparent 74%,
+      color-mix(in srgb, var(--glass-rim) 35%, transparent)) !important;
+  opacity: 0.42 !important;
+}
+
+/* 长文本、表格、复杂数据：不使用玻璃，保证阅读稳定。 */
+.ws-prose,
+.reading-body,
+.article-body,
+.markdown-body,
+table,
+.spirit-admin-ledger,
+.settings-session-list {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  background-color: var(--surface-solid, var(--card-bg)) !important;
+}
+.ws-prose,
+.reading-body,
+.article-body,
+.markdown-body { color: var(--text-main); }
+
+.app-topbar {
+  border-bottom: 1px solid var(--glass-border) !important;
+}
+
+/* 侧边栏是反色导航，不跟随内容卡片的浅色 tint；否则浅色主题会白底白字。 */
+.app-sidebar,
+.cc-sidebar {
+  background: color-mix(
+    in srgb,
+    var(--sidebar-bg) calc(max(var(--glass-opacity), var(--glass-readability-floor)) * 100%),
+    transparent
+  ) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(140%) !important;
+  backdrop-filter: blur(24px) saturate(140%) !important;
+  border-right: 1px solid color-mix(in srgb, var(--sidebar-text) 14%, transparent) !important;
+  color: var(--sidebar-text);
+}
+.app-sidebar { border-right: 1px solid var(--glass-border) !important; }
+
+/* 深色模式兜底：页面里常见的旧灰色内联文字统一抬到可辨识层级。
+   选择器只匹配 color 属性，不碰 background-color。 */
+html[data-theme="dark"] [style^="color: rgb(102, 102, 102)"],
+html[data-theme="dark"] [style^="color: rgb(119, 119, 119)"],
+html[data-theme="dark"] [style^="color: rgb(136, 136, 136)"],
+html[data-theme="dark"] [style^="color: rgb(153, 153, 153)"],
+html[data-theme="dark"] [style^="color: rgb(170, 170, 170)"],
+html[data-theme="dark"] [style^="color: rgb(187, 187, 187)"],
+html[data-theme="dark"] [style^="color: #666"],
+html[data-theme="dark"] [style^="color: #777"],
+html[data-theme="dark"] [style^="color: #888"],
+html[data-theme="dark"] [style^="color: #999"],
+html[data-theme="dark"] [style^="color: #aaa"],
+html[data-theme="dark"] [style^="color: #bbb"] {
+  color: var(--text-muted) !important;
+}

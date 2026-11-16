@@ -49,6 +49,59 @@ export function saveAppearance(appearance: Appearance): void {
   } catch { /* private mode */ }
 }
 
+let backgroundToneToken = 0
+
+/** 采样自定义背景的亮度/色彩/细节，给毛玻璃一个可读性下限。 */
+function analyzeBackgroundTone(url: string): void {
+  const token = ++backgroundToneToken
+  const root = document.documentElement
+  const image = new Image()
+  image.decoding = 'async'
+  image.onload = () => {
+    if (token !== backgroundToneToken) return
+    try {
+      const canvas = document.createElement('canvas')
+      canvas.width = 32
+      canvas.height = 32
+      const context = canvas.getContext('2d', { willReadFrequently: true })
+      if (!context) return
+      context.drawImage(image, 0, 0, 32, 32)
+      const pixels = context.getImageData(0, 0, 32, 32).data
+      let luminance = 0
+      let saturation = 0
+      let luminanceSquared = 0
+      const count = pixels.length / 4
+      for (let index = 0; index < pixels.length; index += 4) {
+        const r = pixels[index] / 255
+        const g = pixels[index + 1] / 255
+        const b = pixels[index + 2] / 255
+        const luma = 0.2126 * r + 0.7152 * g + 0.0722 * b
+        luminance += luma
+        luminanceSquared += luma * luma
+        const maximum = Math.max(r, g, b)
+        const minimum = Math.min(r, g, b)
+        saturation += maximum === 0 ? 0 : (maximum - minimum) / maximum
+      }
+      luminance /= count
+      saturation /= count
+      const variance = Math.max(0, luminanceSquared / count - luminance * luminance)
+      let tone = 'mid'
+      if (variance > 0.026) tone = 'detail'
+      else if (saturation > 0.36) tone = 'vivid'
+      else if (luminance < 0.3) tone = 'dark'
+      else if (luminance > 0.72) tone = 'light'
+      root.dataset.bgTone = tone
+    } catch {
+      // 远程图片可能污染 canvas；无法采样时采用更保守的玻璃下限。
+      root.dataset.bgTone = 'detail'
+    }
+  }
+  image.onerror = () => {
+    if (token === backgroundToneToken) delete root.dataset.bgTone
+  }
+  image.src = url
+}
+
 export function applyAppearance(appearance: Appearance): void {
   const root = document.documentElement
   const image = resolveMediaUrl(appearance.background_url.trim())
@@ -59,4 +112,9 @@ export function applyAppearance(appearance: Appearance): void {
   root.style.setProperty('--glass-opacity', `${appearance.glass_opacity / 100}`)
   root.style.setProperty('--glass-glow', `${appearance.glow / 100}`)
   root.dataset.customBackground = image ? 'true' : 'false'
+  if (image) analyzeBackgroundTone(image)
+  else {
+    backgroundToneToken += 1
+    delete root.dataset.bgTone
+  }
 }

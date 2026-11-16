@@ -49,7 +49,8 @@ export default function WorldsPage({
   }
 
   const handleArchive = async (id: string) => {
-    if (!window.confirm('把这个世界封存到归档库？\n\n归档后不会出现在世界列表，也不能继续推演，可随时恢复。')) return
+    const message = lang === 'zh' ? '把这个世界封存到归档库？\n\n归档后不会出现在世界列表，也不能继续推演，可随时恢复。' : 'Archive this world?\n\nIt will leave the world list and pause simulation, but can be restored anytime.'
+    if (!window.confirm(message)) return
     try {
       const res = await fetch(`http://127.0.0.1:8000/api/archive/world/${id}`, { method: 'POST' })
       const body = await res.json().catch(() => ({}))
@@ -61,19 +62,24 @@ export default function WorldsPage({
   }
 
   const handleResetOfficial = async (id: string, name: string) => {
-    if (!window.confirm(`重置官方演示世界「${name}」？\n\n会清空当前演示数据，恢复为内置初始状态。其他世界不受影响。`)) return
+    const message = lang === 'zh'
+      ? `重置官方演示世界「${name}」？\n\n会清空当前演示数据，恢复为内置初始状态。其他世界不受影响。`
+      : `Reset the official demo world "${name}"?\n\nCurrent demo data will be replaced by the built-in initial state. Other worlds are unaffected.`
+    if (!window.confirm(message)) return
     try {
       const res = await fetch(`http://127.0.0.1:8000/api/worlds/${id}/reset-official`, { method: 'POST' })
       const body = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(body.detail || `HTTP ${res.status}`)
-      alert('演示世界已重置。')
+      alert(lang === 'zh' ? '演示世界已重置。' : 'Official demo world reset.')
       loadWorlds()
     } catch (err: any) {
-      alert(`重置失败：${err.message || err}`)
+      alert(lang === 'zh' ? `重置失败：${err.message || err}` : `Reset failed: ${err.message || err}`)
     }
   }
 
-  const sceneLabels: Record<string, string> = { game: '游戏创作', literature: '文学创作', companion: 'AI 伴侣', diary: '日记与传记', yunbao: '云宝工作台' }
+  const sceneLabels: Record<string, string> = lang === 'zh'
+    ? { game: '游戏创作', literature: '文学创作', companion: 'AI 伴侣', diary: '日记与传记', yunbao: '云宝工作台' }
+    : { game: 'Game Creation', literature: 'Literature', companion: 'AI Companion', diary: 'Diary & Biography', yunbao: 'Yunbao Workspace' }
   const filteredWorlds = worlds.filter((w) => w.product_scene === product && (product === 'yunbao' || !w.is_product_workspace))
 
   if (loading) return <div style={{ padding: '2rem', color: 'var(--text-main)' }}>Loading...</div>
@@ -83,10 +89,10 @@ export default function WorldsPage({
       
       <div style={{ display: 'flex', gap: '7px', marginBottom: '1.25rem', flexWrap: 'wrap', alignItems: 'center' }}>
         <span style={{ padding: '5px 10px', fontSize: '11px', borderRadius: '14px', background: 'var(--text-main)', color: 'var(--bg-color)' }}>
-          当前产品：{sceneLabels[product]}
+          {lang === 'zh' ? '当前产品：' : 'Current product: '}{sceneLabels[product]}
         </span>
         <span style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.6 }}>
-          世界列表已按产品隔离，只显示本产品自己的世界；其他产品数据不会混入。
+          {lang === 'zh' ? '世界列表已按产品隔离，只显示本产品自己的世界；其他产品数据不会混入。' : 'Worlds are isolated by product; only this product’s worlds appear here.'}
         </span>
       </div>
 
@@ -105,7 +111,7 @@ export default function WorldsPage({
             }}
           >
             <div style={{ fontSize: '36px', color: 'var(--text-main)', lineHeight: 1, fontWeight: 300 }}>+</div>
-            <div style={{ fontSize: '15px', color: 'var(--text-main)', fontWeight: 500 }}>创建新世界</div>
+            <div style={{ fontSize: '15px', color: 'var(--text-main)', fontWeight: 500 }}>{lang === 'zh' ? '创建新世界' : 'Create new world'}</div>
           </div>
         )}
 
@@ -122,7 +128,7 @@ export default function WorldsPage({
               <h3 style={{ margin: 0, fontSize: '20px', color: 'var(--text-main)', fontWeight: 600 }}>{w.name}</h3>
               {w.is_official && (
                 <span style={{ padding: '3px 8px', borderRadius: '20px', background: 'rgba(128,128,128,0.14)', border: '1px solid var(--card-border)', color: 'var(--text-muted)', fontSize: '9px', fontWeight: 600 }}>
-                  官方演示 · 锁定
+                  {lang === 'zh' ? '官方演示 · 锁定' : 'Official demo · Locked'}
                 </span>
               )}
               {w.product_scene && (
@@ -131,10 +137,10 @@ export default function WorldsPage({
                 </span>
               )}
             </div>
-            <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)', flex: 1, lineHeight: 1.6 }}>{w.description || '暂无世界简介。'}</p>
+            <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)', flex: 1, lineHeight: 1.6 }}>{w.description || (lang === 'zh' ? '暂无世界简介。' : 'No world description yet.')}</p>
             {w.is_official && (
               <p style={{ margin: 0, fontSize: '10px', color: 'var(--text-muted)', lineHeight: 1.6 }}>
-                内置《凡人修仙传》演示世界，不可删除；可随时一键恢复初始状态。
+                {lang === 'zh' ? '内置《凡人修仙传》演示世界，不可删除；可随时一键恢复初始状态。' : 'Built-in demo world. It cannot be deleted and can be reset to its initial state at any time.'}
               </p>
             )}
 
@@ -179,7 +185,7 @@ export default function WorldsPage({
                     border: '1px solid var(--card-border)', borderRadius: '8px', cursor: 'pointer'
                   }}
                 >
-                  重置演示
+                  {lang === 'zh' ? '重置演示' : 'Reset demo'}
                 </button>
               ) : (
                 <button

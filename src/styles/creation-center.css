@@ -1392,3 +1392,33 @@ button.cc-status-chip:hover {
   .cc-scenes-grid { grid-template-columns: 1fr; }
   .cc-recent-grid { grid-template-columns: 1fr; }
 }
+
+/* 手机宽度：顶栏只保留返回、页面名、提醒与个人入口，避免搜索和状态条把内容挤出屏幕。 */
+@media (max-width: 700px) {
+  .cc-topbar {
+    gap: 7px;
+    padding: 0 14px;
+  }
+  .cc-search,
+  .cc-status-chip.backend {
+    display: none;
+  }
+  .cc-status-chip {
+    max-width: 96px;
+    padding: 0 7px;
+    font-size: 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .cc-top-right {
+    gap: 4px;
+    min-width: 0;
+  }
+  .cc-topbar .cc-back span,
+  .cc-breadcrumb span:not(.cc-breadcrumb-sep) {
+    max-width: 110px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}

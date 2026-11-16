@@ -266,8 +266,8 @@
 .ng-entity.is-location rect { stroke: #d08437; }
 .ng-entity.is-organization rect { stroke: #8b5cf6; }
 
-.ng-entity.is-character { color: #2f9e6f; }
-.ng-entity.is-location { color: #d08437; }
+.ng-entity.is-character { color: var(--success-strong); }
+.ng-entity.is-location { color: var(--warning-strong); }
 .ng-entity.is-organization { color: #8b5cf6; }
 
 .ng-entity-link {

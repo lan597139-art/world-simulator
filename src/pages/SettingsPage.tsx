@@ -9,6 +9,7 @@ import {
   ImagePlus,
   Info,
   KeyRound,
+  Layers,
   LockKeyhole,
   LogOut,
   MonitorSmartphone,
@@ -685,6 +686,7 @@ export default function SettingsPage({
                 </Field>
               </div>
               <div className="settings-inline-note"><SlidersHorizontal size={14} /> {tr(lang, '主题、皮肤、背景与玻璃细节会应用到整个工作区；正文大小主要影响阅读型页面。', 'Theme, skin, background and glass apply across the workspace; reading size mainly affects reading pages.')}</div>
+              <div className="settings-inline-note"><Layers size={14} /> {tr(lang, '毛玻璃用于导航、侧栏、普通卡片与弹窗；液态玻璃只用于首页场景卡和登录等重点入口。', 'Frosted glass is used for navigation, sidebars, regular cards and dialogs; liquid glass is reserved for scene cards and key entry points.')}</div>
             </Panel>
           )}
 

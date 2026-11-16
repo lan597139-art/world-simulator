@@ -56,6 +56,18 @@ const SCENES: SceneMeta[] = [
   { key: 'diary', label: '日记与传记', short: '日记', description: '日记、人生经历、回忆录与传记。', icon: NotebookPen, tone: '#c08a2e' },
 ]
 
+const SCENES_EN: Record<WorkScene, Pick<SceneMeta, 'label' | 'short' | 'description'>> = {
+  game: { label: 'Game Creation', short: 'Game', description: 'Game worlds, rules, characters and branching stories.' },
+  literature: { label: 'Literature', short: 'Literature', description: 'Novels, stories, chapters and literary characters.' },
+  comic: { label: 'Comic Creation', short: 'Comic', description: 'Comic works, chapters, pages and sequential panels.' },
+  companion: { label: 'Virtual Companion', short: 'Companion', description: 'Character settings, long-term bonds and interaction.' },
+  diary: { label: 'Diary & Biography', short: 'Diary', description: 'Journals, life events, memoirs and biography.' },
+}
+
+function localizedScenes(lang: Lang): SceneMeta[] {
+  return SCENES.map((scene) => lang === 'zh' ? scene : { ...scene, ...SCENES_EN[scene.key] })
+}
+
 const STATUSES: Array<{ key: WorkStatus; zh: string; en: string; icon: LucideIcon }> = [
   { key: 'draft', zh: '草稿', en: 'Draft', icon: Clock3 },
   { key: 'in_progress', zh: '创作中', en: 'In progress', icon: Pencil },
@@ -221,7 +233,8 @@ export default function WorksPage({
     })
   }, [works, sceneFilter, statusFilter, query])
 
-  const activeScene = sceneFilter === 'all' ? null : SCENES.find((scene) => scene.key === sceneFilter) || null
+  const scenes = localizedScenes(lang)
+  const activeScene = sceneFilter === 'all' ? null : scenes.find((scene) => scene.key === sceneFilter) || null
   const sceneCounts = summary?.by_scene || ({} as Record<WorkScene, number>)
 
   const openCreate = (scene: WorkScene = activeScene?.key || 'game') => {
@@ -394,7 +407,7 @@ export default function WorksPage({
           <span className="cw-scene-pill-icon"><Link2 size={13} /></span>
           <span><strong>{t.all}</strong><small>{summary?.total ?? works.length}</small></span>
         </button>
-        {SCENES.map((scene) => {
+        {scenes.map((scene) => {
           const Icon = scene.icon
           return (
             <button key={scene.key} type="button" className={`cw-scene-pill${sceneFilter === scene.key ? ' is-active' : ''}`} onClick={() => setSceneFilter(scene.key)} role="tab" aria-selected={sceneFilter === scene.key}>
@@ -449,7 +462,7 @@ export default function WorksPage({
             <span>{activeScene?.description || t.manageHint}</span>
           </button>
           {visible.map((work) => {
-            const scene = SCENES.find((item) => item.key === work.scene) || SCENES[0]
+            const scene = scenes.find((item) => item.key === work.scene) || scenes[0]
             const Icon = scene.icon
             const status = statusMeta(work.status, lang)
             const linkedWorlds = work.world_ids.map((id) => worldById.get(id)).filter(Boolean) as WorldLite[]
@@ -499,7 +512,7 @@ export default function WorksPage({
                   const scene = event.target.value as WorkScene
                   setForm({ ...form, scene, category: SCENE_CATEGORIES[scene][0] })
                 }}>
-                  {SCENES.map((scene) => <option key={scene.key} value={scene.key}>{scene.label}</option>)}
+                  {scenes.map((scene) => <option key={scene.key} value={scene.key}>{scene.label}</option>)}
                 </select>
               </label>
 
@@ -525,7 +538,7 @@ export default function WorksPage({
               <div className="cw-field cw-field-wide">
                 <span>{t.coverField}</span>
                 <div className="cw-cover-upload">
-                  <div className="cw-cover-preview" style={{ '--cw-tone': SCENES.find((scene) => scene.key === form.scene)?.tone } as React.CSSProperties}>
+                  <div className="cw-cover-preview" style={{ '--cw-tone': scenes.find((scene) => scene.key === form.scene)?.tone } as React.CSSProperties}>
                     {form.cover_url ? <img src={resolveMediaUrl(form.cover_url)} alt={t.cover} /> : <ImagePlus size={24} strokeWidth={1.3} />}
                   </div>
                   <div className="cw-cover-actions">
@@ -597,7 +610,7 @@ export default function WorksPage({
             </div>
             <div className="cw-detail-body">
               <div className="cw-detail-kicker">
-                <span>{SCENES.find((scene) => scene.key === selected.scene)?.label || selected.scene}</span>
+                <span>{scenes.find((scene) => scene.key === selected.scene)?.label || selected.scene}</span>
                 <span className={`cw-detail-status is-${selected.status}`}>{statusMeta(selected.status, lang).label}</span>
               </div>
               <h2 id="cw-detail-title">{selected.title}</h2>
