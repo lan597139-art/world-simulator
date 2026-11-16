@@ -32,6 +32,8 @@ from creative_works import router as creative_works_router
 from spirit_economy import router as spirit_economy_router, ensure_spirit_catalog
 from comic_works import router as comic_works_router
 from social_core import router as social_core_router
+from i18n_errors import localized_http_exception_handler
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from products import router as products_router
 from settings import router as settings_router
 from billing import router as billing_router, record_ai_usage

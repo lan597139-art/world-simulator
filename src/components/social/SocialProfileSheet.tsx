@@ -18,10 +18,10 @@ import '../../styles/social-core.css'
 
 type Lang = 'zh' | 'en'
 
-function fmt(value: string | null | undefined): string {
+function fmt(value: string | null | undefined, lang: Lang): string {
   if (!value) return ''
   const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })
+  return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', { month: '2-digit', day: '2-digit' })
 }
 
 export default function SocialProfileSheet({
@@ -118,7 +118,7 @@ export default function SocialProfileSheet({
                       <article className="sc-profile-post" key={post.id}>
                         <p>{post.body}</p>
                         {post.media_urls.length > 0 && <div className="sc-profile-media">{post.media_urls.slice(0, 3).map((url) => <img key={url} src={resolveMediaUrl(url)} alt="" />)}</div>}
-                        <time>{fmt(post.created_at)}</time>
+                        <time>{fmt(post.created_at, lang)}</time>
                       </article>
                     ))}
                   </section>

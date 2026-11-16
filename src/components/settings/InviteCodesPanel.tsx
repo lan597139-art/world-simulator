@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Check, Copy, Plus, RefreshCw, Ticket, XCircle } from 'lucide-react'
 import { createInvite, listInvites, updateInvite, type InviteCode } from '../../api/auth'
+import { tr, type Lang } from '../../i18n'
 
 const card: React.CSSProperties = {
   border: '1px solid var(--card-border)', borderRadius: 14, background: 'var(--card-bg)',
@@ -24,16 +25,15 @@ const ghost: React.CSSProperties = {
 const dangerGhost: React.CSSProperties = { ...ghost, color: 'var(--danger-color)' }
 const label: React.CSSProperties = { display: 'block', fontSize: 10, color: 'var(--text-muted)', marginBottom: 4 }
 
-function formatDate(value: string | null) {
-  if (!value) return '长期有效'
+function formatDate(value: string | null, lang: Lang) {
+  if (!value) return tr(lang, '长期有效', 'No expiry')
   try { return new Date(value).toLocaleString() } catch { return value }
 }
 
-const STATUS_LABELS: Record<InviteCode['status'], string> = {
-  active: '可用', revoked: '已停用', expired: '已过期', exhausted: '已用完',
-}
-
-export default function InviteCodesPanel() {
+export default function InviteCodesPanel({ lang = 'zh' }: { lang?: Lang }) {
+  const STATUS_LABELS: Record<InviteCode['status'], string> = {
+    active: tr(lang, '可用', 'Active'), revoked: tr(lang, '已停用', 'Revoked'), expired: tr(lang, '已过期', 'Expired'), exhausted: tr(lang, '已用完', 'Used up'),
+  }
   const [items, setItems] = useState<InviteCode[]>([])
   const [labelText, setLabelText] = useState('')
   const [maxUses, setMaxUses] = useState(1)
@@ -72,7 +72,7 @@ export default function InviteCodesPanel() {
   }
 
   const revoke = async (invite: InviteCode) => {
-    if (!window.confirm(`停用邀请码 ${invite.code_prefix}…？已注册用户不受影响。`)) return
+    if (!window.confirm(tr(lang, `停用邀请码 ${invite.code_prefix}…？已注册用户不受影响。`, `Revoke invite ${invite.code_prefix}…? Existing users are unaffected.`))) return
     setBusy(`revoke-${invite.id}`); setError('')
     try {
       await updateInvite(invite.id, { revoked: true })
@@ -86,21 +86,21 @@ export default function InviteCodesPanel() {
     <section style={card}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
         <div>
-          <h2 style={{ margin: 0, fontSize: 17, letterSpacing: '-0.01em' }}>邀请码与公开注册</h2>
+          <h2 style={{ margin: 0, fontSize: 17, letterSpacing: '-0.01em' }}>{tr(lang, '邀请码与公开注册', 'Invite codes & registration')}</h2>
           <p style={{ margin: '5px 0 0', fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.7 }}>
-            邀请码只在服务端校验，注册成功时原子消耗。前端隐藏不能替代服务端验证。
+            {tr(lang, '邀请码只在服务端校验，注册成功时原子消耗。前端隐藏不能替代服务端验证。', 'Invite codes are verified server-side and consumed atomically on success.')}
           </p>
         </div>
-        <button type="button" style={ghost} onClick={() => void load()}><RefreshCw size={13} /> 刷新</button>
+        <button type="button" style={ghost} onClick={() => void load()}><RefreshCw size={13} /> {tr(lang, '刷新', 'Refresh')}</button>
       </div>
 
       {error && <div style={{ marginBottom: 10, fontSize: 11, color: 'var(--danger-color)' }}>{error}</div>}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.4fr) 90px 90px auto', gap: 8, alignItems: 'end', marginBottom: 12 }}>
-        <label><span style={label}>备注</span><input style={input} value={labelText} onChange={(e) => setLabelText(e.target.value)} placeholder="例如：第一批内测" /></label>
-        <label><span style={label}>可用次数</span><input style={input} type="number" min={1} max={1000} value={maxUses} onChange={(e) => setMaxUses(Math.max(1, Math.min(1000, Number(e.target.value) || 1)))} /></label>
-        <label><span style={label}>有效天数</span><input style={input} type="number" min={0} max={3650} value={expiresDays} onChange={(e) => setExpiresDays(Math.max(0, Number(e.target.value) || 0))} /></label>
-        <button type="button" style={primary} disabled={busy === 'create'} onClick={() => void create()}><Plus size={14} /> {busy === 'create' ? '生成中…' : '生成邀请码'}</button>
+        <label><span style={label}>{tr(lang, '备注', 'Label')}</span><input style={input} value={labelText} onChange={(e) => setLabelText(e.target.value)} placeholder={tr(lang, "例如：第一批内测", "e.g. first beta")} /></label>
+        <label><span style={label}>{tr(lang, '可用次数', 'Max uses')}</span><input style={input} type="number" min={1} max={1000} value={maxUses} onChange={(e) => setMaxUses(Math.max(1, Math.min(1000, Number(e.target.value) || 1)))} /></label>
+        <label><span style={label}>{tr(lang, '有效天数', 'Valid days')}</span><input style={input} type="number" min={0} max={3650} value={expiresDays} onChange={(e) => setExpiresDays(Math.max(0, Number(e.target.value) || 0))} /></label>
+        <button type="button" style={primary} disabled={busy === 'create'} onClick={() => void create()}><Plus size={14} /> {busy === 'create' ? tr(lang, '生成中…', 'Creating…') : tr(lang, '生成邀请码', 'Create invite')}</button>
       </div>
 
       {newCode && (
@@ -110,26 +110,26 @@ export default function InviteCodesPanel() {
             <strong style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 14, letterSpacing: '0.03em' }}>{newCode}</strong>
             <button type="button" style={ghost} onClick={async () => {
               try { await navigator.clipboard.writeText(newCode); setCopied(true) } catch { setCopied(false) }
-            }}>{copied ? <Check size={13} /> : <Copy size={13} />} {copied ? '已复制' : '复制'}</button>
+            }}>{copied ? <Check size={13} /> : <Copy size={13} />} {copied ? tr(lang, '已复制', 'Copied') : tr(lang, '复制', 'Copy')}</button>
           </div>
-          <p style={{ margin: '5px 0 0', fontSize: 10, color: 'var(--text-muted)' }}>明文只显示这一次；服务端只保存哈希。</p>
+          <p style={{ margin: '5px 0 0', fontSize: 10, color: 'var(--text-muted)' }}>{tr(lang, '明文只显示这一次；服务端只保存哈希。', 'The plaintext is shown once; only a hash is stored.')}</p>
         </div>
       )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {items.length === 0 && <div style={{ fontSize: 11, color: 'var(--text-muted)', padding: '8px 0' }}>还没有邀请码。生成一个后即可让新用户注册。</div>}
+        {items.length === 0 && <div style={{ fontSize: 11, color: 'var(--text-muted)', padding: '8px 0' }}>{tr(lang, '还没有邀请码。生成一个后即可让新用户注册。', 'No invite codes yet. Create one to let new users register.')}</div>}
         {items.map((invite) => (
           <div key={invite.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 10px', border: '1px solid var(--card-border)', borderRadius: 9, flexWrap: 'wrap' }}>
             <Ticket size={14} />
             <div style={{ minWidth: 0, flex: 1 }}>
               <strong style={{ display: 'block', fontSize: 11 }}>{invite.code_prefix}•••••••• {invite.label ? `· ${invite.label}` : ''}</strong>
               <span style={{ display: 'block', marginTop: 2, fontSize: 9.5, color: 'var(--text-muted)' }}>
-                {invite.used_count}/{invite.max_uses} 次 · {STATUS_LABELS[invite.status]} · {formatDate(invite.expires_at)}
+                {invite.used_count}/{invite.max_uses} {tr(lang, '次', 'uses')} · {STATUS_LABELS[invite.status]} · {formatDate(invite.expires_at, lang)}
               </span>
             </div>
             {invite.status === 'active' && (
               <button type="button" style={dangerGhost} disabled={busy === `revoke-${invite.id}`} onClick={() => void revoke(invite)}>
-                <XCircle size={12} /> 停用
+                <XCircle size={12} /> {tr(lang, '停用', 'Revoke')}
               </button>
             )}
           </div>

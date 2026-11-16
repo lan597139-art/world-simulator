@@ -55,7 +55,8 @@ import BillingCenterPage from './pages/BillingCenterPage'
 import WorksPage from './pages/WorksPage'
 import SpiritEconomyPage from './pages/SpiritEconomyPage'
 import type { WorkScene } from './api/creativeWorks'
-import { getSettings } from './api/settings'
+import { getSettings, updateSettings } from './api/settings'
+import { applyDocumentLanguage, hasStoredLanguage, loadLanguage, saveLanguage, type Lang } from './i18n'
 import { applyExperience } from './utils/experience'
 import { ensureProductWorkspace, fetchProductMatrix } from './api/productConfig'
 import { FALLBACK_MATRIX, getStoredProduct, navigationConfig, productByKey, storeProduct, YUNBAO_HIDDEN_PAGES } from './product/products'
@@ -220,8 +221,19 @@ export default function App() {
   const [selectedWorldId, setSelectedWorldId] = useState<string | null>(null) // 用于建设页
   const [creatingWorld, setCreatingWorld] = useState(false)
   const [worksEntryScene, setWorksEntryScene] = useState<WorkScene | null>(null)
-  const [lang, setLang] = useState<Language>('zh')
+  const [lang, setLang] = useState<Language>(() => loadLanguage())
   const dict = t[lang]
+
+  const changeLanguage = (next: Lang) => {
+    setLang(next)
+    saveLanguage(next)
+    applyDocumentLanguage(next)
+    void updateSettings({ preferences: { language: next } }).catch(() => { /* 离线时仍保留本地语言 */ })
+  }
+
+  useEffect(() => {
+    applyDocumentLanguage(lang)
+  }, [lang])
 
   // ✅ 核心状态：当前所在的世界
   const [currentWorldId, setCurrentWorldId] = useState<string>(initialWorldId)
@@ -317,7 +329,17 @@ export default function App() {
       .then((settings) => {
         if (!alive) return
         applyExperience(settings.preferences)
-        if (settings.preferences.language !== lang) setLang(settings.preferences.language)
+        if (hasStoredLanguage()) {
+          // 用户在登录页或侧边栏显式选择过语言；本地选择优先，并同步到账号。
+          if (settings.preferences.language !== lang) {
+            void updateSettings({ preferences: { language: lang } }).catch(() => { /* 离线保留本地 */ })
+          }
+        } else if (settings.preferences.language !== lang) {
+          setLang(settings.preferences.language)
+          saveLanguage(settings.preferences.language)
+        } else {
+          saveLanguage(lang)
+        }
       })
       .catch(() => { /* 设置读取失败不阻塞工作区 */ })
     return () => { alive = false }
@@ -863,7 +885,7 @@ export default function App() {
           lang={lang}
           active={isUserCenter ? 'identity' : isCommunity ? 'community' : isCommunitySocial ? 'community-social' : isBusiness ? 'business' : isSpirit ? 'spirit-economy' : isAiCenter ? 'ai-interaction' : isGameCenter ? 'game-experience' : isContentStore ? 'content-store' : isCreatorAssets ? 'assets' : isWorks ? 'works' : 'home'}
           onNavigate={handleHomeNav}
-          onToggleLang={() => setLang(lang === 'zh' ? 'en' : 'zh')}
+          onToggleLang={() => changeLanguage(lang === 'zh' ? 'en' : 'zh')}
           onCollapse={() => setSidebarCollapsed(true)}
           collapsed={sidebarCollapsed}
           canAccessYunbao={Boolean(authUser?.is_owner)}
@@ -974,7 +996,7 @@ export default function App() {
         )}
 
         <div className="sidebar-footer" style={{ padding: '1.5rem', borderTop: '1px solid var(--card-border)' }}>
-          <button onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')} style={{ width: '100%', padding: '10px', background: 'rgba(128, 128, 128, 0.1)', color: 'var(--sidebar-text)', border: '1px solid var(--card-border)', borderRadius: '8px', cursor: 'pointer', marginBottom: '0.6rem', fontSize: '13px' }}>
+          <button onClick={() => changeLanguage(lang === 'zh' ? 'en' : 'zh')} style={{ width: '100%', padding: '10px', background: 'rgba(128, 128, 128, 0.1)', color: 'var(--sidebar-text)', border: '1px solid var(--card-border)', borderRadius: '8px', cursor: 'pointer', marginBottom: '0.6rem', fontSize: '13px' }}>
             {dict.switchLang}
           </button>
           <button onClick={() => { void authLogout().then(() => window.location.reload()) }} style={{ width: '100%', padding: '7px', background: 'transparent', color: 'var(--sidebar-text-muted)', border: '1px solid var(--card-border)', borderRadius: '8px', cursor: 'pointer', marginBottom: '0.8rem', fontSize: '11px' }}>
@@ -1169,7 +1191,7 @@ export default function App() {
               lang={lang}
               user={authUser}
               onUserUpdated={handleUserUpdated}
-              onLangChange={(next) => setLang(next)}
+              onLangChange={(next) => changeLanguage(next)}
               onOpenAiSettings={() => setAiAccessOpen(true)}
               onLogout={() => { void authLogout().then(() => window.location.reload()) }}
             />

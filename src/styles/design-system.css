@@ -215,3 +215,16 @@ html[data-reduce-motion="true"] *::after {
   html { font-size: 14.5px; }
   .ws-prose, .reading-body, .article-body, .markdown-body { font-size: 16px; line-height: 1.85; }
 }
+
+/* I：英文界面使用拉丁排版，阅读区回退到衬线字体。 */
+html[data-lang="en"] {
+  --font-serif: Georgia, "Times New Roman", "Noto Serif SC", serif;
+}
+html[data-lang="en"] body { letter-spacing: 0; }
+html[data-lang="en"] .ws-prose,
+html[data-lang="en"] .reading-body,
+html[data-lang="en"] .article-body,
+html[data-lang="en"] .markdown-body {
+  font-family: var(--font-serif);
+  letter-spacing: 0;
+}

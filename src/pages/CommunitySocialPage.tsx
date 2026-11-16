@@ -393,10 +393,10 @@ export default function CommunitySocialPage({
     <div className="cs-page">
       <header className="cs-hero">
         <div>
-          <button type="button" style={ghost} onClick={onBack}><ArrowLeft size={14} /> 返回创作中心</button>
+          <button type="button" style={ghost} onClick={onBack}><ArrowLeft size={14} /> {lang === 'zh' ? '返回创作中心' : 'Back to Creation Center'}</button>
           <span className="cs-kicker">COMMUNITY SOCIAL</span>
-          <h1>社区社交</h1>
-          <p>讨论、兴趣小组、关注、好友与动态，让创作者之间的交流真正发生。</p>
+          <h1>{lang === 'zh' ? '社区社交' : 'Community Social'}</h1>
+          <p>{lang === 'zh' ? '讨论、兴趣小组、关注、好友与动态，让创作者之间的交流真正发生。' : 'Discussions, groups, follows, friends and posts — where creators actually meet.'}</p>
         </div>
         <div className="cs-hero-side">
           <div className="cs-stat-row">
@@ -413,7 +413,7 @@ export default function CommunitySocialPage({
       {error && <div className="cs-message is-error">{error}<button type="button" style={tiny} onClick={() => setError('')}>关闭</button></div>}
       {flash && <div className="cs-message is-ok"><Check size={14} /> {flash}</div>}
 
-      <nav className="cs-tabs" aria-label="社区社交分类">
+      <nav className="cs-tabs" aria-label={lang === 'zh' ? '社区社交分类' : 'Community sections'}>
         {tabs.map((item) => (
           <button key={item.key} type="button" className={`cs-tab ${tab === item.key ? 'is-active' : ''}`} onClick={() => { setTab(item.key); setSearchResults(null); setError('') }}>
             {item.icon}<span>{lang === 'zh' ? item.zh : item.en}</span>

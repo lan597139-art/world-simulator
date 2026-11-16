@@ -7,6 +7,7 @@
  */
 import { loadAiSettings } from './aiSettings'
 import { getAuthToken } from './authToken'
+import { loadLanguage } from '../i18n'
 
 export const LEGACY_API_ORIGIN = 'http://127.0.0.1:8000'
 
@@ -71,8 +72,20 @@ function withYunbaoHeader(url: string, init?: RequestInit): RequestInit | undefi
   }
 }
 
+function withLanguageHeader(url: string, init?: RequestInit): RequestInit | undefined {
+  try {
+    const path = new URL(url, window.location.origin).pathname
+    if (!path.startsWith('/api/')) return init
+    const headers = new Headers(init?.headers)
+    headers.set('Accept-Language', loadLanguage() === 'zh' ? 'zh-CN' : 'en')
+    return { ...init, headers }
+  } catch {
+    return init
+  }
+}
+
 function withRequestHeaders(url: string, init?: RequestInit): RequestInit | undefined {
-  return withAuthHeader(url, withYunbaoHeader(url, withAiHeaders(url, init)))
+  return withLanguageHeader(url, withAuthHeader(url, withYunbaoHeader(url, withAiHeaders(url, init))))
 }
 
 export function installApiOriginBridge() {

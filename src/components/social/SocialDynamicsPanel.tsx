@@ -12,11 +12,11 @@ import '../../styles/social-core.css'
 
 type Lang = 'zh' | 'en'
 
-function fmt(value: string | null): string {
+function fmt(value: string | null, lang: Lang): string {
   if (!value) return ''
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return ''
-  return date.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+  return date.toLocaleString(lang === 'zh' ? 'zh-CN' : 'en-US', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 
 function channelLabel(channel: string, lang: Lang): string {
@@ -170,7 +170,7 @@ export default function SocialDynamicsPanel({
           <header className="sc-post-head">
             <button type="button" className="sc-author" onClick={() => post.author && onOpenProfile(post.author.id)}>
               <span className={`sc-avatar${post.author?.avatar ? ' has-image' : ''}`}>{post.author?.avatar ? <img src={resolveMediaUrl(post.author.avatar)} alt="" /> : (post.author?.display_name || '?').slice(0, 1)}</span>
-              <span><strong>{post.author?.display_name || post.author?.username}</strong><small>@{post.author?.username} · {fmt(post.created_at)}</small></span>
+              <span><strong>{post.author?.display_name || post.author?.username}</strong><small>@{post.author?.username} · {fmt(post.created_at, lang)}</small></span>
             </button>
             <div className="sc-post-badges">
               {post.channels.map((item) => <span key={item}>{channelLabel(item, lang)}</span>)}

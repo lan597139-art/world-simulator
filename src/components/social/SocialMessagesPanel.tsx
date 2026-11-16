@@ -10,11 +10,11 @@ import '../../styles/social-core.css'
 
 type Lang = 'zh' | 'en'
 
-function fmt(value: string | null): string {
+function fmt(value: string | null, lang: Lang): string {
   if (!value) return ''
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return ''
-  return date.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+  return date.toLocaleString(lang === 'zh' ? 'zh-CN' : 'en-US', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 
 function toAuthor(friend: Friend): SocialAuthor {
@@ -148,7 +148,7 @@ export default function SocialMessagesPanel({
                   <div className="sc-bubble">
                     {message.body && <p>{message.body}</p>}
                     {message.image_url && <a href={resolveMediaUrl(message.image_url)} target="_blank" rel="noreferrer"><img src={resolveMediaUrl(message.image_url)} alt="" /></a>}
-                    <time>{fmt(message.created_at)}{message.is_mine && message.read_at ? (lang === 'zh' ? ' · 已读' : ' · Read') : ''}</time>
+                    <time>{fmt(message.created_at, lang)}{message.is_mine && message.read_at ? (lang === 'zh' ? ' · 已读' : ' · Read') : ''}</time>
                   </div>
                 </div>
               ))}

@@ -21,6 +21,7 @@ from sqlalchemy.orm import Session
 import models
 from database import SessionLocal, get_db
 from users import LOCAL_USER_ID, ensure_local_user
+from i18n_errors import english_detail
 from access import guard_request_world
 
 router = APIRouter(tags=["auth"])
@@ -162,14 +163,20 @@ async def auth_middleware(request: Request, call_next):
     try:
         user = user_from_token(db, token)
         if not user:
-            return JSONResponse(status_code=401, content={"detail": "登录已失效，请重新登录"})
+            detail = "登录已失效，请重新登录"
+            if request.headers.get("accept-language", "").lower().startswith("en"):
+                detail = english_detail(detail, 401)
+            return JSONResponse(status_code=401, content={"detail": detail})
         if (
             request.headers.get("x-yunbao-workspace") == "1"
             and request.method not in {"GET", "HEAD", "OPTIONS"}
             and not user.is_owner
             and not (request.method == "POST" and request.url.path == "/api/products/yunbao/workspace")
         ):
-            return JSONResponse(status_code=403, content={"detail": "云宝工作台仅开发者可编辑，当前账号为只读"})
+            detail = "云宝工作台仅开发者可编辑，当前账号为只读"
+            if request.headers.get("accept-language", "").lower().startswith("en"):
+                detail = "Yunbao Workspace is owner-editable; this account is read-only"
+            return JSONResponse(status_code=403, content={"detail": detail})
         request.state.user_id = user.id
         blocked = guard_request_world(request, user.id, db)
         if blocked is not None:
