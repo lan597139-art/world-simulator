@@ -1,5 +1,4 @@
 import type { SettingsPreferences } from '../api/settings'
-import { applyAppearance, loadAppearance } from './appearance'
 
 export function applyExperience(preferences: SettingsPreferences) {
   const root = document.documentElement
@@ -13,6 +12,5 @@ export function applyExperience(preferences: SettingsPreferences) {
     const glass = localStorage.getItem('ws.ui.glass') || 'medium'
     if (glass === 'medium') delete root.dataset.glass
     else root.dataset.glass = glass
-    applyAppearance(loadAppearance())
   } catch { /* private mode */ }
 }

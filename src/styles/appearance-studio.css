@@ -1,0 +1,765 @@
+
+/* 自动文字颜色的主题变量：切换明暗主题时无需重新应用外观。 */
+:root {
+  --ws-auto-text: #111114;
+  --ws-auto-text-muted: #3a3a42;
+  --ws-auto-text-faint: #565660;
+}
+html[data-theme="dark"] {
+  --ws-auto-text: #f7f7f9;
+  --ws-auto-text-muted: #d8d8df;
+  --ws-auto-text-faint: #b9b9c2;
+}
+@media (prefers-color-scheme: dark) {
+  html[data-theme="system"] {
+    --ws-auto-text: #f7f7f9;
+    --ws-auto-text-muted: #d8d8df;
+    --ws-auto-text-faint: #b9b9c2;
+  }
+}
+/* ==========================================================================
+   外观工作台：每个页面独立保存的玻璃 / 文字 / 字体外观。
+   - 玻璃目标通过 html[data-glass-targets~="..."] 精确作用；
+   - 所有透明度都带可读性下限，避免浅色或彩色背景下出现“看不清”；
+   - 悬浮面板不参与卡片规则，避免自我递归。
+   ========================================================================== */
+
+:root {
+  --ws-studio-panel-bg: color-mix(in srgb, var(--glass-frost-bg) 88%, transparent);
+  --ws-studio-panel-border: color-mix(in srgb, var(--glass-rim) 38%, var(--glass-border));
+  --ws-studio-muted: color-mix(in srgb, var(--text-muted) 88%, transparent);
+}
+
+/* --------------------------------------------------------------------------
+   1. 毛玻璃目标
+   -------------------------------------------------------------------------- */
+
+html[data-glass-targets~="nav"] :is(.app-sidebar, .cc-sidebar) {
+  background-color: color-mix(
+    in srgb,
+    var(--sidebar-bg) calc(max(var(--ws-g-nav-opacity), var(--ws-readability-floor)) * 1%),
+    transparent
+  ) !important;
+  background-image:
+    linear-gradient(135deg, color-mix(in srgb, var(--ambient-a) calc(var(--ws-g-nav-gradient) * 1.2%), transparent), transparent 58%),
+    linear-gradient(180deg, color-mix(in srgb, var(--primary-color) calc(var(--ws-g-nav-tint) * 0.18%), transparent), transparent) !important;
+  -webkit-backdrop-filter:
+    blur(calc(var(--ws-g-nav-blur) + (var(--ws-g-nav-frost) * 0.35px)))
+    saturate(calc(100% + (var(--ws-g-nav-refraction) * 0.9%))) !important;
+  backdrop-filter:
+    blur(calc(var(--ws-g-nav-blur) + (var(--ws-g-nav-frost) * 0.35px)))
+    saturate(calc(100% + (var(--ws-g-nav-refraction) * 0.9%))) !important;
+  border-color: color-mix(in srgb, #fff calc(var(--ws-g-nav-border) * 1%), var(--glass-border)) !important;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, calc(var(--ws-g-nav-border) * 0.008)) inset,
+    0 0 calc(var(--ws-g-nav-thickness) * 0.45px) rgba(255, 255, 255, calc(var(--ws-g-nav-border) * 0.004)) inset,
+    0 0 0 1px rgba(255, 86, 170, calc(var(--ws-g-nav-dispersion) * 0.004)),
+    0 0 22px rgba(90, 190, 255, calc(var(--ws-g-nav-dispersion) * 0.012)) !important;
+}
+
+html[data-glass-targets~="nav"] :is(.app-topbar, .cc-topbar, .yb-pinned-nav) {
+  background-color: color-mix(
+    in srgb,
+    var(--glass-frost-bg) calc(max(var(--ws-g-nav-opacity), var(--ws-readability-floor)) * 1%),
+    transparent
+  ) !important;
+  background-image:
+    linear-gradient(135deg, color-mix(in srgb, var(--ambient-a) calc(var(--ws-g-nav-gradient) * 1.2%), transparent), transparent 58%),
+    linear-gradient(180deg, color-mix(in srgb, var(--primary-color) calc(var(--ws-g-nav-tint) * 0.18%), transparent), transparent) !important;
+  -webkit-backdrop-filter:
+    blur(calc(var(--ws-g-nav-blur) + (var(--ws-g-nav-frost) * 0.35px)))
+    saturate(calc(100% + (var(--ws-g-nav-refraction) * 0.9%))) !important;
+  backdrop-filter:
+    blur(calc(var(--ws-g-nav-blur) + (var(--ws-g-nav-frost) * 0.35px)))
+    saturate(calc(100% + (var(--ws-g-nav-refraction) * 0.9%))) !important;
+  border-color: color-mix(in srgb, #fff calc(var(--ws-g-nav-border) * 1%), var(--glass-border)) !important;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, calc(var(--ws-g-nav-border) * 0.008)) inset,
+    0 0 calc(var(--ws-g-nav-thickness) * 0.45px) rgba(255, 255, 255, calc(var(--ws-g-nav-border) * 0.004)) inset,
+    0 0 0 1px rgba(255, 86, 170, calc(var(--ws-g-nav-dispersion) * 0.004)),
+    0 0 22px rgba(90, 190, 255, calc(var(--ws-g-nav-dispersion) * 0.012)) !important;
+}
+
+html[data-glass-targets~="card"] :is(
+  .glass-card, .glass-frost, .glass-panel,
+  .ws-glass-surface, .cc-card, .cw-card,
+  .sim-panel, .sim-console, .slx-canvas-wrap, .slx-node,
+  .tlx-page, .tlx-head, .tlx-controls, .tlx-canvas, .tlx-item,
+  .settings-material-card, .settings-card
+) {
+  background-color: color-mix(
+    in srgb,
+    var(--glass-frost-bg) calc(max(var(--ws-g-card-opacity), var(--ws-readability-floor)) * 1%),
+    transparent
+  ) !important;
+  background-image:
+    linear-gradient(135deg, color-mix(in srgb, var(--ambient-a) calc(var(--ws-g-card-gradient) * 1.2%), transparent), transparent 58%),
+    linear-gradient(180deg, color-mix(in srgb, var(--primary-color) calc(var(--ws-g-card-tint) * 0.18%), transparent), transparent) !important;
+  -webkit-backdrop-filter:
+    blur(calc(var(--ws-g-card-blur) + (var(--ws-g-card-frost) * 0.35px)))
+    saturate(calc(100% + (var(--ws-g-card-refraction) * 0.9%))) !important;
+  backdrop-filter:
+    blur(calc(var(--ws-g-card-blur) + (var(--ws-g-card-frost) * 0.35px)))
+    saturate(calc(100% + (var(--ws-g-card-refraction) * 0.9%))) !important;
+  border-color: color-mix(in srgb, #fff calc(var(--ws-g-card-border) * 1%), var(--glass-border)) !important;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, calc(var(--ws-g-card-border) * 0.008)) inset,
+    0 0 calc(var(--ws-g-card-thickness) * 0.45px) rgba(255, 255, 255, calc(var(--ws-g-card-border) * 0.004)) inset,
+    0 0 0 1px rgba(255, 86, 170, calc(var(--ws-g-card-dispersion) * 0.004)),
+    0 0 22px rgba(90, 190, 255, calc(var(--ws-g-card-dispersion) * 0.012)) !important;
+}
+
+html[data-glass-targets~="modal"] [role="dialog"] > :is(
+  .ws-glass-surface, .glass-card, .glass-panel,
+  div[class*="modal"], section[class*="modal"]
+) {
+  background-color: color-mix(
+    in srgb,
+    var(--glass-frost-bg) calc(max(var(--ws-g-modal-opacity), var(--ws-readability-floor)) * 1%),
+    transparent
+  ) !important;
+  background-image:
+    linear-gradient(135deg, color-mix(in srgb, var(--ambient-a) calc(var(--ws-g-modal-gradient) * 1.2%), transparent), transparent 58%),
+    linear-gradient(180deg, color-mix(in srgb, var(--primary-color) calc(var(--ws-g-modal-tint) * 0.18%), transparent), transparent) !important;
+  -webkit-backdrop-filter:
+    blur(calc(var(--ws-g-modal-blur) + (var(--ws-g-modal-frost) * 0.35px)))
+    saturate(calc(100% + (var(--ws-g-modal-refraction) * 0.9%))) !important;
+  backdrop-filter:
+    blur(calc(var(--ws-g-modal-blur) + (var(--ws-g-modal-frost) * 0.35px)))
+    saturate(calc(100% + (var(--ws-g-modal-refraction) * 0.9%))) !important;
+  border-color: color-mix(in srgb, #fff calc(var(--ws-g-modal-border) * 1%), var(--glass-border)) !important;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, calc(var(--ws-g-modal-border) * 0.008)) inset,
+    0 0 calc(var(--ws-g-modal-thickness) * 0.45px) rgba(255, 255, 255, calc(var(--ws-g-modal-border) * 0.004)) inset,
+    0 0 0 1px rgba(255, 86, 170, calc(var(--ws-g-modal-dispersion) * 0.004)),
+    0 0 26px rgba(90, 190, 255, calc(var(--ws-g-modal-dispersion) * 0.012)) !important;
+}
+
+html[data-glass-targets~="control"] :is(
+  input:not([type="range"]):not([type="checkbox"]):not([type="radio"]),
+  textarea,
+  select
+) {
+  background-color: color-mix(
+    in srgb,
+    var(--field-bg) calc(max(var(--ws-g-control-opacity), var(--ws-readability-floor)) * 1%),
+    transparent
+  ) !important;
+  background-image: linear-gradient(180deg, color-mix(in srgb, var(--primary-color) calc(var(--ws-g-control-tint) * 0.18%), transparent), transparent) !important;
+  -webkit-backdrop-filter: blur(calc(var(--ws-g-control-blur) + (var(--ws-g-control-frost) * 0.25px))) !important;
+  backdrop-filter: blur(calc(var(--ws-g-control-blur) + (var(--ws-g-control-frost) * 0.25px))) !important;
+  border-color: color-mix(in srgb, #fff calc(var(--ws-g-control-border) * 1%), var(--field-border)) !important;
+}
+
+html[data-glass-targets~="liquid"] :is(.glass-liquid, .cc-scene-card[data-liquid-glass="fallback"], .cc-scene-card[data-liquid-glass="pending"]) {
+  background-color: color-mix(
+    in srgb,
+    var(--glass-liquid-bg) calc(max(var(--ws-g-liquid-opacity), var(--ws-readability-floor)) * 1%),
+    transparent
+  ) !important;
+  background-image:
+    linear-gradient(135deg, color-mix(in srgb, var(--ambient-a) calc(var(--ws-g-liquid-gradient) * 1.2%), transparent), transparent 58%),
+    linear-gradient(180deg, color-mix(in srgb, var(--primary-color) calc(var(--ws-g-liquid-tint) * 0.18%), transparent), transparent) !important;
+  -webkit-backdrop-filter:
+    blur(calc(var(--ws-g-liquid-blur) + (var(--ws-g-liquid-frost) * 0.35px)))
+    saturate(calc(100% + (var(--ws-g-liquid-refraction) * 0.7%))) !important;
+  backdrop-filter:
+    blur(calc(var(--ws-g-liquid-blur) + (var(--ws-g-liquid-frost) * 0.35px)))
+    saturate(calc(100% + (var(--ws-g-liquid-refraction) * 0.7%))) !important;
+  border-color: color-mix(in srgb, #fff calc(var(--ws-g-liquid-border) * 1%), var(--glass-border)) !important;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, calc(var(--ws-g-liquid-border) * 0.008)) inset,
+    0 0 calc(var(--ws-g-liquid-thickness) * 0.45px) rgba(255, 255, 255, calc(var(--ws-g-liquid-border) * 0.004)) inset,
+    0 0 0 1px rgba(255, 86, 170, calc(var(--ws-g-liquid-dispersion) * 0.004)),
+    0 0 26px rgba(90, 190, 255, calc(var(--ws-g-liquid-dispersion) * 0.012)) !important;
+}
+
+/* WebGL 场景卡已由 canvas 负责，CSS 只保留文字和交互。 */
+html[data-glass-targets~="liquid"] .cc-scene-card[data-liquid-glass="webgl"] {
+  background: transparent !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* --------------------------------------------------------------------------
+   2. 字体与文字作用域
+   -------------------------------------------------------------------------- */
+
+html[data-text-scopes~="nav"] :is(.app-sidebar, .cc-sidebar, .app-topbar, .cc-topbar, .yb-pinned-nav) {
+  --font-sans: var(--ws-font-family);
+  font-family: var(--ws-font-family) !important;
+}
+html[data-text-scopes~="card"] :is(
+  .glass-card, .glass-frost, .glass-panel, .ws-glass-surface,
+  .cc-card, .cw-card, .sim-panel, .tlx-item
+) {
+  --font-sans: var(--ws-font-family);
+  font-family: var(--ws-font-family) !important;
+}
+html[data-text-scopes~="body"] main {
+  --font-sans: var(--ws-font-family);
+  font-family: var(--ws-font-family) !important;
+}
+
+html[data-text-custom="true"][data-text-scopes~="nav"] :is(.app-sidebar, .cc-sidebar),
+html[data-text-custom="true"][data-text-scopes~="nav"] :is(.app-topbar, .cc-topbar, .yb-pinned-nav) {
+  --sidebar-text: color-mix(in srgb, var(--ws-text-color) calc(var(--ws-text-opacity) * 1%), transparent);
+  --sidebar-text-muted: color-mix(in srgb, var(--ws-text-color) calc(var(--ws-text-opacity) * 0.72%), transparent);
+  --text-main: color-mix(in srgb, var(--ws-text-color) calc(var(--ws-text-opacity) * 1%), transparent);
+  --text-muted: color-mix(in srgb, var(--ws-text-color) calc(var(--ws-text-opacity) * 0.72%), transparent);
+}
+
+html[data-text-custom="true"][data-text-scopes~="card"] :is(
+  .glass-card, .glass-frost, .glass-panel, .ws-glass-surface,
+  .cc-card, .cw-card, .sim-panel, .tlx-item
+) {
+  --text-main: color-mix(in srgb, var(--ws-text-color) calc(var(--ws-text-opacity) * 1%), transparent);
+  --text-muted: color-mix(in srgb, var(--ws-text-color) calc(var(--ws-text-opacity) * 0.72%), transparent);
+  --text-faint: color-mix(in srgb, var(--ws-text-color) calc(var(--ws-text-opacity) * 0.58%), transparent);
+  --text-disabled: color-mix(in srgb, var(--ws-text-color) calc(var(--ws-text-opacity) * 0.44%), transparent);
+  color: var(--text-main);
+}
+
+html[data-text-custom="true"][data-text-scopes~="body"] main {
+  --text-main: color-mix(in srgb, var(--ws-text-color) calc(var(--ws-text-opacity) * 1%), transparent);
+  --text-muted: color-mix(in srgb, var(--ws-text-color) calc(var(--ws-text-opacity) * 0.72%), transparent);
+  --text-faint: color-mix(in srgb, var(--ws-text-color) calc(var(--ws-text-opacity) * 0.58%), transparent);
+  --text-disabled: color-mix(in srgb, var(--ws-text-color) calc(var(--ws-text-opacity) * 0.44%), transparent);
+  color: var(--text-main);
+}
+
+html[data-text-custom="true"] :where(p, li, td, blockquote, .ws-prose, .reading-body, .article-body, .markdown-body) {
+  font-weight: var(--ws-text-weight);
+  font-style: var(--ws-text-italic);
+  letter-spacing: calc(var(--ws-letter-spacing) * 0.01em);
+  line-height: var(--ws-text-line-height);
+  -webkit-text-stroke: calc(var(--ws-text-stroke) * 0.25px) currentColor;
+  text-shadow:
+    0 calc(var(--ws-text-shadow) * 0.04px)
+    calc(var(--ws-text-shadow) * 0.35px)
+    var(--ws-text-shadow-color);
+  transform: translateY(calc(var(--ws-text-offset) * 1px));
+}
+
+/* 文字背景：可调厚度、透明度、模糊与圆角，像一块贴在文字后的液态玻璃。 */
+html[data-text-background="true"][data-text-scopes~="nav"] :is(.sidebar-nav-item, .cc-nav-item) {
+  background: color-mix(
+    in srgb,
+    var(--ws-text-bg-color) calc(var(--ws-text-bg-opacity) * 1%),
+    transparent
+  ) !important;
+  border-radius: calc(var(--ws-text-bg-radius) * 0.6px) !important;
+  padding-block: calc(var(--ws-text-bg-thickness) * 0.28px) !important;
+  -webkit-backdrop-filter: blur(var(--ws-text-bg-blur)) !important;
+  backdrop-filter: blur(var(--ws-text-bg-blur)) !important;
+  box-shadow: 0 1px 0 color-mix(in srgb, #fff 22%, transparent) inset !important;
+}
+html[data-text-background="true"][data-text-scopes~="card"] :is(
+  .glass-card, .glass-frost, .glass-panel, .ws-glass-surface, .cc-card, .cw-card
+) :where(p, li, blockquote, td),
+html[data-text-background="true"][data-text-scopes~="body"] main :where(p, li, blockquote, td) {
+  background: color-mix(
+    in srgb,
+    var(--ws-text-bg-color) calc(var(--ws-text-bg-opacity) * 1%),
+    transparent
+  ) !important;
+  border-radius: calc(var(--ws-text-bg-radius) * 0.6px) !important;
+  padding: calc(var(--ws-text-bg-thickness) * 0.22px) calc(var(--ws-text-bg-thickness) * 0.46px) !important;
+  -webkit-backdrop-filter: blur(var(--ws-text-bg-blur)) !important;
+  backdrop-filter: blur(var(--ws-text-bg-blur)) !important;
+  box-shadow:
+    0 1px 0 color-mix(in srgb, #fff 20%, transparent) inset,
+    0 4px 14px rgba(0, 0, 0, .035) !important;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+/* --------------------------------------------------------------------------
+   3. 悬浮入口和面板
+   -------------------------------------------------------------------------- */
+
+.ws-studio-fab {
+  position: fixed;
+  top: 74px;
+  right: 16px;
+  z-index: 1505;
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--ws-studio-panel-border);
+  background:
+    radial-gradient(circle at 32% 24%, rgba(255,255,255,.48), transparent 32%),
+    color-mix(in srgb, var(--glass-frost-bg) 74%, transparent);
+  color: var(--text-main);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  backdrop-filter: blur(24px) saturate(160%);
+  box-shadow:
+    0 12px 30px rgba(0, 0, 0, .16),
+    0 1px 0 rgba(255, 255, 255, .34) inset,
+    0 0 0 5px color-mix(in srgb, var(--primary-color) 5%, transparent);
+  cursor: pointer;
+  transition: transform .16s ease, box-shadow .16s ease, background .16s ease;
+}
+.ws-studio-fab:hover { transform: translateY(-1px) scale(1.03); }
+.ws-studio-fab.is-open { transform: rotate(8deg); }
+.ws-studio-fab-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  display: grid;
+  place-items: center;
+  border-radius: 99px;
+  border: 2px solid var(--bg-color);
+  background: var(--primary-color);
+  color: var(--primary-text);
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.ws-studio-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1500;
+  background: rgba(0, 0, 0, .05);
+}
+
+.ws-studio-panel {
+  position: fixed;
+  top: 72px;
+  right: 16px;
+  z-index: 1501;
+  width: min(420px, calc(100vw - 24px));
+  max-height: min(790px, calc(100vh - 92px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 22px;
+  border: 1px solid var(--ws-studio-panel-border);
+  background:
+    linear-gradient(150deg, rgba(255,255,255,.18), transparent 38%),
+    var(--ws-studio-panel-bg);
+  color: var(--text-main);
+  -webkit-backdrop-filter: blur(30px) saturate(160%);
+  backdrop-filter: blur(30px) saturate(160%);
+  box-shadow:
+    0 30px 80px rgba(0, 0, 0, .28),
+    0 1px 0 rgba(255, 255, 255, .32) inset,
+    0 0 0 1px color-mix(in srgb, var(--text-main) 5%, transparent);
+  font-family: var(--font-sans);
+  animation: ws-studio-in .18s cubic-bezier(.2,.75,.2,1);
+}
+
+@keyframes ws-studio-in {
+  from { opacity: 0; transform: translateY(-8px) scale(.98); }
+  to { opacity: 1; transform: none; }
+}
+
+.ws-studio-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 16px 16px 13px;
+  border-bottom: 1px solid color-mix(in srgb, var(--text-main) 10%, transparent);
+  flex: 0 0 auto;
+}
+.ws-studio-head-copy { flex: 1; min-width: 0; }
+.ws-studio-eyebrow {
+  font-size: 9px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.ws-studio-title {
+  margin: 3px 0 0;
+  font-size: 17px;
+  line-height: 1.2;
+  font-weight: 650;
+  color: var(--text-main);
+}
+.ws-studio-sub {
+  margin: 5px 0 0;
+  font-size: 10.5px;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+.ws-studio-icon-btn {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--text-main) 12%, transparent);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--text-main) 5%, transparent);
+  color: var(--text-main);
+  cursor: pointer;
+}
+
+.ws-studio-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 14px 16px 10px;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--text-main) 22%, transparent) transparent;
+}
+
+.ws-studio-scope-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--text-main) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--text-main) 9%, transparent);
+}
+.ws-studio-scope-row button {
+  flex: 1;
+  border: 0;
+  border-radius: 9px;
+  padding: 7px 8px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 550;
+  cursor: pointer;
+}
+.ws-studio-scope-row button.is-active {
+  background: var(--primary-color);
+  color: var(--primary-text);
+  box-shadow: 0 5px 12px rgba(0,0,0,.12);
+}
+.ws-studio-page-note {
+  margin: 7px 1px 12px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9.5px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.ws-studio-section-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 2px 0 7px;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: .04em;
+  color: var(--text-muted);
+}
+.ws-studio-chip-row { display: flex; flex-wrap: wrap; gap: 5px; }
+.ws-studio-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid color-mix(in srgb, var(--text-main) 12%, transparent);
+  border-radius: 99px;
+  padding: 5px 9px;
+  background: color-mix(in srgb, var(--text-main) 3%, transparent);
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ws-studio-chip.is-on {
+  border-color: color-mix(in srgb, var(--primary-color) 55%, transparent);
+  background: color-mix(in srgb, var(--primary-color) 12%, transparent);
+  color: var(--text-main);
+}
+.ws-studio-chip.is-on::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--primary-color);
+}
+.ws-studio-mini-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 7px; }
+.ws-studio-mini-actions button {
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 9.5px;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.ws-studio-mini-actions button:hover { color: var(--text-main); }
+
+.ws-studio-presets { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin: 12px 0; }
+.ws-studio-presets button {
+  border: 1px solid color-mix(in srgb, var(--text-main) 10%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--text-main) 4%, transparent);
+  color: var(--text-main);
+  padding: 7px 4px;
+  font-size: 9.5px;
+  cursor: pointer;
+}
+.ws-studio-presets button:hover { border-color: var(--primary-color); }
+
+.ws-studio-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--text-main) 6%, transparent);
+  margin-top: 10px;
+}
+.ws-studio-tabs button {
+  flex: 1;
+  border: 0;
+  border-radius: 8px;
+  padding: 7px 4px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.ws-studio-tabs button.is-active {
+  background: color-mix(in srgb, var(--glass-frost-bg) 88%, transparent);
+  color: var(--text-main);
+  box-shadow: 0 3px 8px rgba(0,0,0,.09), 0 1px 0 rgba(255,255,255,.28) inset;
+}
+
+.ws-studio-tab-body { padding-top: 12px; }
+.ws-studio-field { margin: 0 0 12px; }
+.ws-studio-field-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 5px;
+}
+.ws-studio-field-head label {
+  font-size: 10.5px;
+  font-weight: 550;
+  color: var(--text-main);
+}
+.ws-studio-field-head output {
+  font-size: 9.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+.ws-studio-range {
+  width: 100%;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--primary-color);
+  cursor: pointer;
+}
+.ws-studio-hint {
+  margin: 4px 0 0;
+  font-size: 9px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+.ws-studio-note {
+  padding: 8px 10px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--primary-color) 7%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary-color) 14%, transparent);
+  font-size: 9.5px;
+  line-height: 1.55;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+.ws-studio-font-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+.ws-studio-font-grid button {
+  min-height: 42px;
+  border: 1px solid color-mix(in srgb, var(--text-main) 11%, transparent);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--text-main) 3%, transparent);
+  color: var(--text-main);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 4px;
+}
+.ws-studio-font-grid button.is-active {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 12%, transparent);
+}
+.ws-studio-font-grid strong { font-size: 14px; font-weight: 500; line-height: 1.1; }
+.ws-studio-font-grid span { font-size: 8px; color: var(--text-muted); }
+
+.ws-studio-segment { display: flex; gap: 4px; }
+.ws-studio-segment button {
+  flex: 1;
+  border: 1px solid color-mix(in srgb, var(--text-main) 11%, transparent);
+  border-radius: 8px;
+  padding: 6px 4px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 9.5px;
+  cursor: pointer;
+}
+.ws-studio-segment button.is-active {
+  background: color-mix(in srgb, var(--primary-color) 12%, transparent);
+  border-color: color-mix(in srgb, var(--primary-color) 45%, transparent);
+  color: var(--text-main);
+}
+
+.ws-studio-color-row { display: flex; align-items: center; gap: 7px; }
+.ws-studio-color-row input[type="color"] {
+  width: 38px;
+  height: 30px;
+  padding: 2px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--text-main) 16%, transparent);
+  background: transparent;
+  cursor: pointer;
+}
+.ws-studio-color-row input[type="text"] {
+  flex: 1;
+  min-width: 0;
+  height: 30px;
+  border: 1px solid color-mix(in srgb, var(--text-main) 14%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--text-main) 4%, transparent);
+  color: var(--text-main);
+  padding: 0 8px;
+  font-size: 10px;
+}
+
+.ws-studio-preview {
+  margin: 10px 0 0;
+  padding: 12px;
+  border-radius: 13px;
+  border: 1px solid color-mix(in srgb, var(--text-main) 12%, transparent);
+  background:
+    radial-gradient(90% 120% at 12% 16%, color-mix(in srgb, var(--primary-color) 10%, transparent), transparent 60%),
+    color-mix(in srgb, var(--glass-frost-bg) 62%, transparent);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  overflow: hidden;
+}
+.ws-studio-preview-label {
+  display: block;
+  font-size: 8px;
+  letter-spacing: .14em;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.ws-studio-preview-text {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.45;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ws-studio-preview-sub { margin: 5px 0 0; font-size: 10.5px; line-height: 1.5; opacity: .76; }
+
+.ws-studio-foot {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 11px 16px 13px;
+  border-top: 1px solid color-mix(in srgb, var(--text-main) 10%, transparent);
+  background: color-mix(in srgb, var(--glass-frost-bg) 32%, transparent);
+}
+.ws-studio-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border-radius: 9px;
+  border: 1px solid color-mix(in srgb, var(--text-main) 14%, transparent);
+  background: color-mix(in srgb, var(--text-main) 4%, transparent);
+  color: var(--text-main);
+  padding: 8px 10px;
+  font-size: 10px;
+  cursor: pointer;
+}
+.ws-studio-btn.primary {
+  flex: 1;
+  border-color: var(--primary-color);
+  background: var(--primary-color);
+  color: var(--primary-text);
+  font-weight: 650;
+}
+.ws-studio-btn:disabled { opacity: .45; cursor: not-allowed; }
+.ws-studio-flash {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #15803d;
+  font-size: 9.5px;
+}
+
+@media (max-width: 620px) {
+  .ws-studio-fab { top: 66px; right: 10px; width: 42px; height: 42px; }
+  .ws-studio-panel {
+    top: 60px;
+    right: 8px;
+    left: 8px;
+    width: auto;
+    max-height: calc(100vh - 72px);
+    border-radius: 18px;
+  }
+  .ws-studio-presets { grid-template-columns: repeat(2, 1fr); }
+  .ws-studio-body { padding: 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ws-studio-panel { animation: none; }
+  .ws-studio-fab { transition: none; }
+}
+
+/* 自动对比：跟随当前主题的玻璃底色，浅底黑字、深底白字。 */
+html[data-text-auto="true"][data-text-scopes~="card"] :is(
+  .glass-card, .glass-frost, .glass-panel, .ws-glass-surface,
+  .cc-card, .cw-card, .sim-panel, .tlx-item
+) {
+  --text-main: var(--ws-auto-text) !important;
+  --text-muted: var(--ws-auto-text-muted) !important;
+  --text-faint: var(--ws-auto-text-faint) !important;
+  --text-disabled: color-mix(in srgb, var(--ws-auto-text) 64%, transparent) !important;
+  color: var(--ws-auto-text);
+}
+html[data-text-auto="true"][data-text-scopes~="body"] main {
+  --text-main: var(--ws-auto-text) !important;
+  --text-muted: var(--ws-auto-text-muted) !important;
+  --text-faint: var(--ws-auto-text-faint) !important;
+  --text-disabled: color-mix(in srgb, var(--ws-auto-text) 64%, transparent) !important;
+  color: var(--ws-auto-text);
+}
+
+/* WebGL 场景卡的着色层 / 颜色渐变：位于 Canvas 之上、DOM 内容之下。 */
+html[data-glass-targets~="liquid"] .cc-scene-card {
+  isolation: isolate;
+}
+html[data-glass-targets~="liquid"] .cc-scene-card > * {
+  position: relative;
+  z-index: 1;
+}
+html[data-glass-targets~="liquid"] .cc-scene-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background:
+    linear-gradient(135deg, var(--ambient-a), transparent 62%),
+    linear-gradient(180deg, color-mix(in srgb, var(--primary-color) 12%, transparent), transparent 70%);
+  opacity: calc((var(--ws-g-liquid-gradient) * 0.004) + (var(--ws-g-liquid-tint) * 0.001));
+  mix-blend-mode: screen;
+}

@@ -56,7 +56,7 @@ import '../styles/admin-sanctions.css'
 import '../styles/admin-backups.css'
 import '../styles/account-sanctions.css'
 import { applyExperience } from '../utils/experience'
-import { DEFAULT_APPEARANCE, applyAppearance, loadAppearance, saveAppearance, type Appearance } from '../utils/appearance'
+import { GLASS_TARGETS, applyAppearance, defaultAppearance, loadAppearance, saveAppearance, type Appearance } from '../utils/appearance'
 import { tr } from '../i18n'
 
 type Lang = 'zh' | 'en'
@@ -178,6 +178,7 @@ export default function SettingsPage({
   const [skin, setSkin] = useState(() => localStorage.getItem('ws.ui.skin') || 'default')
   const [glass, setGlass] = useState(() => localStorage.getItem('ws.ui.glass') || 'medium')
   const [appearance, setAppearance] = useState<Appearance>(() => loadAppearance())
+  const appearanceMounted = useRef(false)
   const backgroundUpload = useRef<HTMLInputElement>(null)
   const [backgroundBusy, setBackgroundBusy] = useState(false)
   const [passwords, setPasswords] = useState({ current_password: '', new_password: '', confirm: '' })
@@ -216,12 +217,30 @@ export default function SettingsPage({
   }, [glass])
 
   useEffect(() => {
+    // App/main already applied the current page or global look. Do not overwrite
+    // a page-specific look just because the user opened Settings.
+    if (!appearanceMounted.current) {
+      appearanceMounted.current = true
+      return
+    }
     applyAppearance(appearance)
     saveAppearance(appearance)
   }, [appearance])
 
   const updateAppearance = (patch: Partial<Appearance>) => {
-    setAppearance((current) => ({ ...current, ...patch }))
+    setAppearance((current) => {
+      const next = { ...current, ...patch }
+      const profiles = { ...current.glass_profiles }
+      let touched = false
+      for (const target of GLASS_TARGETS) {
+        const profile = { ...profiles[target] }
+        if (patch.glass_blur !== undefined) { profile.blur = Math.min(50, patch.glass_blur); touched = true }
+        if (patch.glass_opacity !== undefined) { profile.opacity = patch.glass_opacity; touched = true }
+        if (touched) profiles[target] = profile
+      }
+      if (touched) next.glass_profiles = profiles
+      return next
+    })
   }
 
   const chooseGlass = (value: string) => {
@@ -673,7 +692,12 @@ export default function SettingsPage({
                   <strong>{tr(lang, '背景与玻璃细节', 'Background & glass')}</strong>
                   <span>{tr(lang, '全部即时生效，只保存在当前浏览器；上传图片走创作者媒体库。', 'Applied immediately and stored in this browser. Uploads use the creator media library.')}</span>
                 </div>
-                <button type="button" style={ghost} onClick={() => setAppearance({ ...DEFAULT_APPEARANCE })}><RotateCcw size={13} /> {tr(lang, '恢复默认', 'Reset')}</button>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  <button type="button" style={{ ...ghost, borderColor: 'var(--primary-color)', color: 'var(--text-main)' }} onClick={() => window.dispatchEvent(new Event('ws:open-appearance-studio'))}>
+                    <SlidersHorizontal size={13} /> {tr(lang, '打开悬浮调节器', 'Open floating studio')}
+                  </button>
+                  <button type="button" style={ghost} onClick={() => setAppearance(defaultAppearance())}><RotateCcw size={13} /> {tr(lang, '恢复默认', 'Reset')}</button>
+                </div>
               </div>
               <div className="settings-appearance-grid">
                 <Field label={tr(lang, '背景图', 'Background image')} hint={tr(lang, '支持图片 URL，或直接上传到当前账号的媒体库。', 'Use an image URL or upload to your media library.')}>
@@ -742,7 +766,7 @@ export default function SettingsPage({
                   <input className="settings-range" type="range" min={0} max={80} value={appearance.glow} onChange={(e) => updateAppearance({ glow: Number(e.target.value) })} />
                 </Field>
               </div>
-              <div className="settings-inline-note"><SlidersHorizontal size={14} /> {tr(lang, '主题、皮肤、背景与玻璃细节会应用到整个工作区；正文大小主要影响阅读型页面。', 'Theme, skin, background and glass apply across the workspace; reading size mainly affects reading pages.')}</div>
+              <div className="settings-inline-note"><SlidersHorizontal size={14} /> {tr(lang, '主题、皮肤、背景与玻璃细节会应用到整个工作区；右上角悬浮滑杆可为每一页单独保存字体、文字和玻璃材质。', 'Theme, skin, background and glass apply across the workspace; the floating slider at top right saves type, text and glass per page.')}</div>
               <div className="settings-inline-note"><Layers size={14} /> {tr(lang, '毛玻璃用于导航、侧栏、普通卡片与弹窗；液态玻璃只用于首页场景卡和登录等重点入口。', 'Frosted glass is used for navigation, sidebars, regular cards and dialogs; liquid glass is reserved for scene cards and key entry points.')}</div>
               <div className="settings-material-demo" aria-label={tr(lang, '材质示例', 'Material examples')}>
                 <div className="settings-material-card is-frost">

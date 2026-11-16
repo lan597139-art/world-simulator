@@ -374,10 +374,17 @@ def _ensure_account(db: Session, user: models.AppUser, starter: bool = True, com
             ref_id=rule.id if rule is not None else "starter",
         ))
         if rule is not None:
-            db.add(models.SpiritRewardClaim(
-                rule_id=rule.id, user_id=user.id, claim_key="registration",
-                fruit_amount=account.fruit_balance,
-            ))
+            # 账号被清理后重建时，旧的领取记录可能仍在；重复插入会触发唯一约束。
+            existing_claim = db.query(models.SpiritRewardClaim).filter(
+                models.SpiritRewardClaim.rule_id == rule.id,
+                models.SpiritRewardClaim.user_id == user.id,
+                models.SpiritRewardClaim.claim_key == "registration",
+            ).first()
+            if existing_claim is None:
+                db.add(models.SpiritRewardClaim(
+                    rule_id=rule.id, user_id=user.id, claim_key="registration",
+                    fruit_amount=account.fruit_balance,
+                ))
     if starter:
         # 新手灵植：保证注册后可立即各创建一次世界与 OC；数量固定，不占灵果余额。
         for plant_key in ("world_seed", "oc_seed"):

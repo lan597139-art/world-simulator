@@ -30,6 +30,8 @@ import { resolveMediaUrl } from './api/media'
 import { AUTH_USER_KEY } from './api/authToken'
 import TimeMachinePage from './pages/TimeMachinePage'
 import AIAssistantPanel from './components/AIAssistantPanel'
+import AppearanceStudio from './components/appearance/AppearanceStudio'
+import { applyAppearance, appearancePageKey, loadAppearanceForPage } from './utils/appearance'
 import { setAssistantPage } from './api/assistantContext'
 import PersonaPage from './pages/PersonaPage'
 import YunbaoWorkspacePage from './pages/YunbaoWorkspacePage'
@@ -750,6 +752,11 @@ export default function App() {
     })
   }, [activePage, currentWorldId, currentWorldName, lang])
 
+  // 外观按“产品 + 页面 + 世界”独立保存；切换页面立即应用该页配置。
+  useEffect(() => {
+    applyAppearance(loadAppearanceForPage(appearancePageKey(product, activePage, currentWorldId)))
+  }, [product, activePage, currentWorldId])
+
   useEffect(() => {
     if (activePage === 'home') {
       window.history.replaceState(null, '', window.location.pathname)
@@ -1400,6 +1407,11 @@ export default function App() {
         onSaved={() => setHasPersonalAi(hasPersonalAiKey())}
       />
       <AIAssistantPanel product={product} onNavigate={(page) => { if (page === 'personas') openYunbao(); else navigate(page as PageKey) }} onOpenYunbao={openYunbao} />
+      <AppearanceStudio
+        pageKey={appearancePageKey(product, activePage, currentWorldId)}
+        pageName={pageLabel(activePage, dict, lang)}
+        lang={lang}
+      />
     </div>
   )
 }
