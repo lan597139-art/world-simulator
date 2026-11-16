@@ -59,7 +59,23 @@
 - 自动测试覆盖新 UI 的端到端流程
 - 错误监控、定时备份、环境隔离、媒体转码
 
-## 五、验证命令
+## 五、正式服官方演示世界
+
+正式服此前看不到《凡人修仙传》，不是数据缺失，而是：
+
+- 官方世界的 `product_scene` 为 `null`；
+- 世界管理只显示当前产品对应的世界；
+- `/api/worlds?product_scene=game` 又按产品过滤，把官方世界一起过滤掉。
+
+已修复：
+
+- 内置 fixture 与启动补偿把官方世界归入 `game`；
+- `/api/worlds` 在产品筛选时始终保留官方世界；
+- 世界管理列表也始终保留官方演示世界；
+- 正式服 DB 已完成 `product_scene=game` 回填；
+- 用普通非开发者账号在生产验证：game / literature 两个产品都能看到并打开《凡人修仙传》。
+
+## 六、验证命令
 
 ```bash
 cd world-simulator
@@ -74,7 +90,7 @@ PYTHONPATH=. ../venv/bin/python tests/smoke_collaboration.py
 PYTHONPATH=. ../venv/bin/python tests/smoke_portability.py
 ```
 
-## 六、结论
+## 七、结论
 
 第三阶段中“平台联动”的第一层已经打通：搜索、通知、举报、审核、导出、导入、协作、媒体与语音入口均可用。
 但官方照片授权、全站国际化、平台治理动作、媒体打包迁移与实时协作仍不是完成状态，不能标记为“全部完成”。
