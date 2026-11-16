@@ -23,13 +23,51 @@ def load_fixture() -> dict:
     return json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
 
 
+def _backfill_official_participants(db: Session, world_id: str) -> None:
+    """官方数据先于 M020 导入时，把 event_entities 的人物参与方补回 events.participants。"""
+    grouped: dict[str, list[str]] = {}
+    rows = (
+        db.query(models.EventEntity)
+        .filter(
+            models.EventEntity.world_id == world_id,
+            models.EventEntity.category == "participant",
+            models.EventEntity.entity_type == "character",
+        )
+        .order_by(models.EventEntity.created_at)
+        .all()
+    )
+    for row in rows:
+        if not row.entity_id:
+            continue
+        ids = grouped.setdefault(row.event_id, [])
+        if row.entity_id not in ids:
+            ids.append(row.entity_id)
+    if not grouped:
+        return
+    events = db.query(models.Event).filter(models.Event.id.in_(grouped.keys())).all()
+    changed = False
+    for event in events:
+        if not (event.participants or []):
+            event.participants = grouped.get(event.id, [])
+            changed = True
+    if changed:
+        db.commit()
+
+
 def ensure_official_world(db: Session) -> models.World | None:
     """启动时确保官方演示世界存在；已有同名世界则直接标记为官方，不覆盖用户数据。"""
     existing = db.query(models.World).filter(models.World.official_key == OFFICIAL_KEY).first()
     if existing:
+        changed = False
         if not existing.is_official:
             existing.is_official = True
+            changed = True
+        if not existing.owner_id:
+            existing.owner_id = "local"
+            changed = True
+        if changed:
             db.commit()
+        _backfill_official_participants(db, existing.id)
         return existing
 
     named = db.query(models.World).filter(models.World.name == "凡人修仙传").first()
@@ -37,7 +75,10 @@ def ensure_official_world(db: Session) -> models.World | None:
         named.is_official = True
         named.official_key = OFFICIAL_KEY
         named.deleted_at = None
+        if not named.owner_id:
+            named.owner_id = "local"
         db.commit()
+        _backfill_official_participants(db, named.id)
         return named
 
     try:
@@ -52,7 +93,10 @@ def ensure_official_world(db: Session) -> models.World | None:
         world.official_key = OFFICIAL_KEY
         world.deleted_at = None
         world.archived_at = None
+        if not world.owner_id:
+            world.owner_id = "local"
         db.commit()
+        _backfill_official_participants(db, world.id)
     return world
 
 
