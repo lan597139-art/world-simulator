@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getAllWorlds, deleteWorld } from '../services/worldService'
+import { API_ORIGIN } from '../api/config'
 import type { World } from '../types/world'
 
 export default function WorldsPage({
@@ -82,6 +83,26 @@ export default function WorldsPage({
     : { game: 'Game Creation', literature: 'Literature', companion: 'AI Companion', diary: 'Diary & Biography', yunbao: 'Yunbao Workspace' }
   const filteredWorlds = worlds.filter((w) => w.product_scene === product && (product === 'yunbao' || !w.is_product_workspace))
 
+  const exportWorld = async (worldId: string, name: string) => {
+    try {
+      const token = localStorage.getItem('ws.authToken')
+      const response = await fetch(`${API_ORIGIN}/api/worlds/${worldId}/export`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      const data = await response.json()
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `${name || 'world'}-export.json`
+      link.click()
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      alert(lang === 'zh' ? `导出失败：${String(error)}` : `Export failed: ${String(error)}`)
+    }
+  }
+
   if (loading) return <div style={{ padding: '2rem', color: 'var(--text-main)' }}>Loading...</div>
 
   return (
@@ -160,6 +181,17 @@ export default function WorldsPage({
                 {lang === 'zh' ? '编辑' : 'Edit'}
               </button>
               )}
+
+              <button
+                onClick={(e) => { e.stopPropagation(); void exportWorld(w.id, w.name); }}
+                style={{
+                  flex: 1, padding: '10px',
+                  background: 'transparent', color: 'var(--text-main)',
+                  border: '1px solid var(--card-border)', borderRadius: '8px', cursor: 'pointer'
+                }}
+              >
+                {lang === 'zh' ? '导出' : 'Export'}
+              </button>
 
               {!readOnly && (
               <button

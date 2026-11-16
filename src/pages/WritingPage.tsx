@@ -270,6 +270,10 @@ export default function WritingPage({
   const [loading, setLoading] = useState(true)
   const [saveState, setSaveState] = useState<SaveState>('saved')
   const [imageBusy, setImageBusy] = useState(false)
+  const [speechState, setSpeechState] = useState<'idle' | 'playing' | 'paused'>('idle')
+  const [speechRate, setSpeechRate] = useState(() => Number(localStorage.getItem('ws.write.speechRate') || '1'))
+  const [speechVoice, setSpeechVoice] = useState(() => localStorage.getItem('ws.write.speechVoice') || '')
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([])
   const [words, setWords] = useState(0)
   const [events, setEvents] = useState<any[]>([])
   const [modalOpen, setModalOpen] = useState(false)
@@ -477,6 +481,53 @@ export default function WritingPage({
   useEffect(() => {
     editorRef.current = editor || null
   }, [editor])
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
+    const loadVoices = () => setVoices(window.speechSynthesis.getVoices().filter((voice) => /^zh|cmn|Chinese/i.test(`${voice.lang} ${voice.name}`)))
+    loadVoices()
+    window.speechSynthesis.addEventListener('voiceschanged', loadVoices)
+    return () => {
+      window.speechSynthesis.removeEventListener('voiceschanged', loadVoices)
+      window.speechSynthesis.cancel()
+    }
+  }, [])
+
+  useEffect(() => { localStorage.setItem('ws.write.speechRate', String(speechRate)) }, [speechRate])
+  useEffect(() => { localStorage.setItem('ws.write.speechVoice', speechVoice) }, [speechVoice])
+
+  const stopReading = () => {
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel()
+    setSpeechState('idle')
+  }
+
+  const readAloud = () => {
+    if (!('speechSynthesis' in window) || !editor) return
+    if (speechState === 'playing') {
+      window.speechSynthesis.pause()
+      setSpeechState('paused')
+      return
+    }
+    if (speechState === 'paused') {
+      window.speechSynthesis.resume()
+      setSpeechState('playing')
+      return
+    }
+    const { from, to } = editor.state.selection
+    const selected = from !== to ? editor.state.doc.textBetween(from, to, '\n') : ''
+    const text = (selected || editor.getText()).trim()
+    if (!text) return
+    window.speechSynthesis.cancel()
+    const utterance = new SpeechSynthesisUtterance(text.slice(0, 30000))
+    utterance.lang = 'zh-CN'
+    utterance.rate = speechRate
+    const voice = voices.find((item) => item.name === speechVoice)
+    if (voice) utterance.voice = voice
+    utterance.onend = () => setSpeechState('idle')
+    utterance.onerror = () => setSpeechState('idle')
+    window.speechSynthesis.speak(utterance)
+    setSpeechState('playing')
+  }
 
   const insertImages = useCallback(async (files: File[]) => {
     if (!editor) return
@@ -1360,6 +1411,23 @@ export default function WritingPage({
               <ToolbarBtn label="中" title="图片居中" onClick={() => setImageAlign('center')} />
               <ToolbarBtn label="右" title="图片右对齐" onClick={() => setImageAlign('right')} />
               <ToolbarBtn label="图注" title="编辑图片说明" onClick={editImageCaption} />
+              <span style={{ width: '1px', height: '16px', background: 'var(--card-border)', margin: '0 4px' }} />
+              <button type="button" title="朗读正文或选中文字" onClick={readAloud} style={{ padding: '5px 8px', borderRadius: '6px', border: '1px solid var(--card-border)', background: speechState === 'idle' ? 'transparent' : 'var(--text-main)', color: speechState === 'idle' ? 'var(--text-main)' : 'var(--bg-color)', fontSize: '11px', cursor: 'pointer' }}>
+                {speechState === 'playing' ? '⏸ 暂停' : speechState === 'paused' ? '▶ 继续' : '▶ 朗读'}
+              </button>
+              {speechState !== 'idle' && <button type="button" title="停止朗读" onClick={stopReading} style={{ padding: '5px 8px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-muted)', fontSize: '11px', cursor: 'pointer' }}>■ 停止</button>}
+              <select aria-label="朗读语速" value={speechRate} onChange={(event) => setSpeechRate(Number(event.target.value))} style={{ padding: '4px 6px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)', fontSize: '10px' }}>
+                <option value={0.8}>0.8×</option>
+                <option value={1}>1.0×</option>
+                <option value={1.2}>1.2×</option>
+                <option value={1.5}>1.5×</option>
+              </select>
+              {voices.length > 0 && (
+                <select aria-label="朗读音色" value={speechVoice} onChange={(event) => setSpeechVoice(event.target.value)} style={{ maxWidth: 130, padding: '4px 6px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)', fontSize: '10px' }}>
+                  <option value="">默认音色</option>
+                  {voices.map((voice) => <option key={voice.name} value={voice.name}>{voice.name}</option>)}
+                </select>
+              )}
               <input ref={imageInputRef} type="file" accept="image/*" multiple hidden onChange={(event) => { const files = event.target.files ? [...event.target.files] : []; if (files.length) void insertImages(files); event.target.value = '' }} />
               <div style={{ flex: 1 }} />
               <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>

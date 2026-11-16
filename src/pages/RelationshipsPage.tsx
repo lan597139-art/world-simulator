@@ -591,7 +591,7 @@ export default function RelationshipsPage({
   const uniqueRelationTypes = Array.from(new Set(allRelationships.map((rel: any) => rel.relation_type).filter(Boolean))) as string[];
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: 'calc(100vh - 120px)', minHeight: '320px', overflow: 'hidden', background: 'var(--bg-color)' }}>
+    <div className="ws-glass-surface rel-universe" style={{ position: 'relative', width: '100%', height: 'calc(100vh - 120px)', minHeight: '320px', overflow: 'hidden' }}>
       
       {/* 🎯 3D 宇宙星球容器 */}
       <div ref={graphRef} style={{ width: '100%', height: '100%', touchAction: 'none' }} />

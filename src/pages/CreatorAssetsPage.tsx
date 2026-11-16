@@ -27,6 +27,8 @@ import {
   Sparkles,
   Trash2,
   Upload,
+  Video,
+  Music,
   UserRound,
   Users,
   X,
@@ -36,7 +38,7 @@ import { API_ORIGIN } from '../api/config'
 import '../styles/creator-assets.css'
 
 type ViewKey = 'active' | 'archive' | 'trash'
-type AssetType = 'world' | 'character' | 'location' | 'organization' | 'event' | 'story' | 'note' | 'image'
+type AssetType = 'world' | 'character' | 'location' | 'organization' | 'event' | 'story' | 'note' | 'image' | 'video' | 'audio'
 type Status = 'draft' | 'published' | 'archived' | 'deleted'
 type Visibility = 'private' | 'scoped' | 'public'
 
@@ -158,6 +160,8 @@ const TYPE_ICONS: Record<AssetType, LucideIcon> = {
   story: BookOpen,
   note: FileText,
   image: FileImage,
+  video: Video,
+  audio: Music,
 }
 
 const STATUS_LABELS: Record<Status, string> = {
@@ -168,7 +172,7 @@ const VISIBILITY_LABELS: Record<Visibility, string> = {
 }
 const TYPE_LABELS: Record<AssetType, string> = {
   world: '世界', character: '人物', location: '地点', organization: '组织',
-  event: '事件', story: '故事', note: '笔记', image: '图片',
+  event: '事件', story: '故事', note: '笔记', image: '图片', video: '视频', audio: '音频',
 }
 
 function formatDate(value: string | null | undefined) {
@@ -482,12 +486,13 @@ export default function CreatorAssetsPage({ worldId = '' }: { worldId?: string }
   }
 
   const openUploadedImage = (file: File, uploaded: { file_url: string; mime_type: string; file_size: number }) => {
+    const assetType: AssetType = uploaded.mime_type.startsWith('video/') ? 'video' : uploaded.mime_type.startsWith('audio/') ? 'audio' : 'image'
     setAssetTitle(file.name.replace(/\.[^.]+$/, ''))
     setAssetDescription('')
     setAssetContent('')
     setAssetFolder(selectedFolderId !== 'all' ? selectedFolderId : unfiledId)
     setAssetDialog({
-      mode: 'create', assetType: 'image', fileUrl: uploaded.file_url,
+      mode: 'create', assetType, fileUrl: uploaded.file_url,
       mimeType: uploaded.mime_type, fileSize: uploaded.file_size,
     })
   }
@@ -738,9 +743,9 @@ export default function CreatorAssetsPage({ worldId = '' }: { worldId?: string }
             <Plus size={15} /> 新建笔记
           </button>
           <button type="button" className="ca-btn" onClick={() => uploadRef.current?.click()} disabled={busy === 'upload'}>
-            <Upload size={15} /> {busy === 'upload' ? '上传中…' : '上传图片'}
+            <Upload size={15} /> {busy === 'upload' ? '上传中…' : '上传媒体'}
           </button>
-          <input ref={uploadRef} type="file" accept="image/*,.pdf" hidden onChange={(event) => {
+          <input ref={uploadRef} type="file" accept="image/*,video/*,audio/*,.pdf" hidden onChange={(event) => {
             const file = event.target.files?.[0]
             if (file) void uploadImage(file)
           }} />
@@ -852,6 +857,8 @@ export default function CreatorAssetsPage({ worldId = '' }: { worldId?: string }
               <option value="story">故事</option>
               <option value="note">笔记</option>
               <option value="image">图片</option>
+              <option value="video">视频</option>
+              <option value="audio">音频</option>
             </select>
             <button type="button" className="ca-icon-btn" title="刷新" onClick={() => void refreshAll()} disabled={listLoading}>
               <RefreshCw size={15} className={listLoading ? 'ca-spin' : ''} />
@@ -954,6 +961,10 @@ export default function CreatorAssetsPage({ worldId = '' }: { worldId?: string }
             <div className="ca-detail-preview">
               {detail.asset_type === 'image' && detail.file_url ? (
                 <img src={`${API_ORIGIN}${detail.file_url}`} alt={detail.title} />
+              ) : detail.asset_type === 'video' && detail.file_url ? (
+                <video src={`${API_ORIGIN}${detail.file_url}`} controls preload="metadata" />
+              ) : detail.asset_type === 'audio' && detail.file_url ? (
+                <audio src={`${API_ORIGIN}${detail.file_url}`} controls preload="metadata" />
               ) : detail.asset_type === 'note' && detail.content ? (
                 <div className="ca-note-preview">{detail.content}</div>
               ) : detail.is_linked ? (
@@ -996,7 +1007,7 @@ export default function CreatorAssetsPage({ worldId = '' }: { worldId?: string }
 
             <div className="ca-detail-actions">
               {detail.status !== 'deleted' && <button type="button" className="ca-btn" onClick={openEditAsset}><Pencil size={14} /> 编辑</button>}
-              {(detail.asset_type === 'note' || detail.asset_type === 'image') && detail.status !== 'deleted' && (
+              {(['note', 'image', 'video', 'audio'].includes(detail.asset_type)) && detail.status !== 'deleted' && (
                 <button type="button" className="ca-btn" onClick={() => void duplicateAsset(detail)}><Copy size={14} /> 复制</button>
               )}
               {detail.status === 'published' && (
@@ -1060,11 +1071,17 @@ export default function CreatorAssetsPage({ worldId = '' }: { worldId?: string }
         <div className="ca-modal-mask" onMouseDown={() => setAssetDialog(null)}>
           <div className="ca-modal" onMouseDown={(event) => event.stopPropagation()}>
             <div className="ca-modal-head">
-              <div><span className="ca-panel-kicker">{assetDialog.mode === 'create' ? 'NEW CONTENT' : 'EDIT CONTENT'}</span><h3>{assetDialog.mode === 'create' ? (assetDialog.assetType === 'image' ? '保存图片资产' : '新建笔记') : '编辑内容'}</h3></div>
+              <div><span className="ca-panel-kicker">{assetDialog.mode === 'create' ? 'NEW CONTENT' : 'EDIT CONTENT'}</span><h3>{assetDialog.mode === 'create' ? ({ image: '保存图片资产', video: '保存视频资产', audio: '保存音频资产' } as Record<string, string>)[assetDialog.assetType] || '新建笔记' : '编辑内容'}</h3></div>
               <button type="button" className="ca-icon-btn" onClick={() => setAssetDialog(null)}><X size={15} /></button>
             </div>
             {assetDialog.assetType === 'image' && assetDialog.fileUrl && (
               <div className="ca-upload-preview"><img src={`${API_ORIGIN}${assetDialog.fileUrl}`} alt="待保存图片" /></div>
+            )}
+            {assetDialog.assetType === 'video' && assetDialog.fileUrl && (
+              <div className="ca-upload-preview"><video src={`${API_ORIGIN}${assetDialog.fileUrl}`} controls preload="metadata" /></div>
+            )}
+            {assetDialog.assetType === 'audio' && assetDialog.fileUrl && (
+              <div className="ca-upload-preview"><audio src={`${API_ORIGIN}${assetDialog.fileUrl}`} controls preload="metadata" /></div>
             )}
             <label className="ca-field"><span>标题</span><input autoFocus value={assetTitle} onChange={(event) => setAssetTitle(event.target.value)} placeholder="给这份内容起一个名字" /></label>
             <label className="ca-field"><span>简介</span><input value={assetDescription} onChange={(event) => setAssetDescription(event.target.value)} placeholder="可选：一句话说明用途" /></label>

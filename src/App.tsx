@@ -1083,6 +1083,7 @@ export default function App() {
                       onOpenSettings={() => handleHomeNav('settings')}
                       onOpenIdentity={() => handleHomeNav('identity')}
                       onLogout={() => { void authLogout().then(() => window.location.reload()) }}
+                      onNavigate={(page) => navigate(page as PageKey)}
                               />
                 ) : (
                   <header className="topbar app-topbar" style={{ height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2rem', borderBottom: '1px solid var(--card-border)' }}>

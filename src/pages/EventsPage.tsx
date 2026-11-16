@@ -161,7 +161,7 @@ export default function EventsPage({ worldId, onOpenSandbox, onNavigate, mode = 
   // ================= 沉浸式表单视图 =================
   if (isFormOpen) {
     return (
-      <div style={{ width: '100%', height: 'calc(100vh - 120px)', overflowY: 'auto', background: 'var(--bg-color)' }}>
+      <div style={{ width: '100%', height: 'calc(100vh - 120px)', overflowY: 'auto', background: 'transparent' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '32px 24px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
           
           {/* 顶部操作栏：左侧返回+标题，右侧取消+保存 */}

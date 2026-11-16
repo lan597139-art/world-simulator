@@ -513,3 +513,125 @@ html[data-bg-tone="dark"] { --workspace-glass-alpha: .84; }
     0 0 0 2px color-mix(in srgb, var(--primary-color) 38%, transparent),
     var(--workspace-glass-shadow) !important;
 }
+
+/* 专业模块的页面底色必须透出环境光，否则 76% 玻璃叠在实色上仍然像白卡。 */
+.rel-page,
+.sim-page,
+.slx-page {
+  background: transparent !important;
+}
+
+/* 故事线内部所有面板也走同一档，不再出现实色头栏、库栏和详情栏。 */
+.slx-head,
+.slx-toolbar,
+.slx-library,
+.slx-detail,
+.slx-event,
+.slx-branch,
+.slx-leaf {
+  background: var(--workspace-glass-bg) !important;
+  -webkit-backdrop-filter: var(--workspace-glass-blur) !important;
+  backdrop-filter: var(--workspace-glass-blur) !important;
+  border-color: var(--glass-border) !important;
+}
+
+/* 统一材质不能把根节点染白：根节点保留深色底和浅色字。 */
+.slx-node.slx-root {
+  background: linear-gradient(135deg, #263043 0%, #3b4b66 100%) !important;
+  color: #f5f7fb !important;
+  border-color: transparent !important;
+  box-shadow: 0 14px 34px rgba(18, 24, 38, .28) !important;
+}
+
+/* 图谱可读性：之前 7.5–8.5px 的元信息在 72% 缩放下不可读。 */
+.slx-root-mark { font-size: 13px; }
+.slx-root strong { font-size: 14px; }
+.slx-root small { font-size: 9.5px; color: #d2dcea; }
+.slx-branch strong { font-size: 12.5px; }
+.slx-branch small,
+.slx-leaf small { font-size: 9.5px; }
+.slx-leaf strong { font-size: 11.5px; }
+.slx-branch-del { opacity: .55; }
+
+.tlx-item-time { font-size: 13px; }
+.tlx-item-kind { font-size: 9.5px; }
+.tlx-item-title { font-size: 14px; }
+.tlx-item-desc { font-size: 11.5px; }
+.tlx-item-reason { font-size: 10.5px; }
+.tlx-item-open { font-size: 9.5px; }
+.tlx-date > span { font-size: 9.5px; }
+.tlx-date small { font-size: 9px; }
+.tlx-root-kicker { font-size: 8.5px; }
+.tlx-root strong { font-size: 13.5px; }
+.tlx-root-count { font-size: 9.5px; }
+.tlx-head-copy small { font-size: 11px; }
+.tlx-counts { font-size: 9.5px; }
+
+.ng-event text { font-size: 12.5px; }
+.ng-event .ng-event-sub { font-size: 10.5px; }
+.ng-thread-tag text { font-size: 12px; }
+.ng-axis-label,
+.ng-time-label { font-size: 10px; }
+.ng-panel-desc { font-size: 11.5px; }
+
+/* 关系与组织的主画布也要是一块完整玻璃，而不是透明底上散点。 */
+.relx-canvas {
+  background: var(--workspace-glass-bg) !important;
+  -webkit-backdrop-filter: var(--workspace-glass-blur) !important;
+  backdrop-filter: var(--workspace-glass-blur) !important;
+  border: var(--workspace-glass-border) !important;
+  box-shadow: var(--workspace-glass-shadow) !important;
+}
+
+/* 手机端：聊天三栏改为纵向，不再把 250 + 576 + 300 硬塞进 390。 */
+@media (max-width: 760px) {
+  .chat-page {
+    flex-direction: column !important;
+    height: auto !important;
+    min-height: calc(100vh - 60px);
+    padding: 10px !important;
+  }
+  .chat-page > .ws-glass-surface {
+    width: 100% !important;
+    flex: none !important;
+    max-height: none;
+  }
+  .chat-page > .ws-glass-surface:nth-child(2) {
+    min-height: 58vh;
+  }
+  .chat-page > .ws-glass-surface:first-child {
+    max-height: 300px;
+  }
+}
+
+/* 手机端时间线：取消 560px 强制宽度，改成单列纵向时间线。 */
+@media (max-width: 760px) {
+  .tlx-tree { min-width: 0 !important; width: 100% !important; }
+  .tlx-day {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+    margin-bottom: 14px;
+  }
+  .tlx-date { text-align: left !important; padding: 0 !important; }
+  .tlx-date strong { font-size: 19px !important; }
+  .tlx-date-dot { display: none !important; }
+  .tlx-feed::before { display: none !important; }
+  .tlx-item {
+    max-width: none !important;
+    width: 100% !important;
+    padding: 11px 12px !important;
+  }
+  .tlx-item::before, .tlx-item::after { display: none !important; }
+  .tlx-times { width: 100% !important; }
+  .tlx-canvas { padding: 14px 12px 28px !important; }
+}
+
+/* 关系与组织的 3D 宇宙画布本身也是一块玻璃工作区。 */
+.rel-universe {
+  border-radius: 14px !important;
+  overflow: hidden;
+}
+.rel-universe .scene-container,
+.rel-universe canvas {
+  background: transparent !important;
+}

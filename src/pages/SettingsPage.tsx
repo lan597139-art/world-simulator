@@ -6,6 +6,7 @@ import {
   Check,
   Database,
   Download,
+  Flag,
   ImagePlus,
   Info,
   KeyRound,
@@ -40,6 +41,7 @@ import {
   type SettingsPrivacy,
 } from '../api/settings'
 import { uploadMedia, resolveMediaUrl } from '../api/media'
+import { listAdminReports, resolveReport, type ContentReport } from '../api/moderation'
 import InviteCodesPanel from '../components/settings/InviteCodesPanel'
 import LocalWorkspacePanel from '../components/settings/LocalWorkspacePanel'
 import '../styles/settings.css'
@@ -48,7 +50,7 @@ import { DEFAULT_APPEARANCE, applyAppearance, loadAppearance, saveAppearance, ty
 import { tr } from '../i18n'
 
 type Lang = 'zh' | 'en'
-type Section = 'profile' | 'account' | 'privacy' | 'notifications' | 'experience' | 'data' | 'about'
+type Section = 'profile' | 'account' | 'privacy' | 'notifications' | 'experience' | 'data' | 'moderation' | 'about'
 
 const SECTIONS: { key: Section; zh: string; en: string; descZh: string; descEn: string; icon: ReactNode }[] = [
   { key: 'profile', zh: '个人资料与偏好', en: 'Profile & preferences', descZh: '昵称、简介与公开形象', descEn: 'Name, bio and public identity', icon: <UserRound size={17} strokeWidth={1.6} /> },
@@ -57,6 +59,7 @@ const SECTIONS: { key: Section; zh: string; en: string; descZh: string; descEn: 
   { key: 'notifications', zh: '通知与提醒', en: 'Notifications', descZh: '社区回复、好友与系统提醒', descEn: 'Replies, friends and system alerts', icon: <Bell size={17} strokeWidth={1.6} /> },
   { key: 'experience', zh: '使用体验', en: 'Experience', descZh: '语言、主题、密度与动效', descEn: 'Language, theme, density and motion', icon: <SlidersHorizontal size={17} strokeWidth={1.6} /> },
   { key: 'data', zh: '数据与存储', en: 'Data & storage', descZh: '统计、导出与本地缓存', descEn: 'Stats, export and local cache', icon: <Database size={17} strokeWidth={1.6} /> },
+  { key: 'moderation', zh: '内容治理', en: 'Moderation', descZh: '举报审核队列与处理记录', descEn: 'Reports, review queue and decisions', icon: <Flag size={17} strokeWidth={1.6} /> },
   { key: 'about', zh: '关于与帮助', en: 'About & help', descZh: '版本、后端状态与文档', descEn: 'Version, backend status and docs', icon: <Info size={17} strokeWidth={1.6} /> },
 ]
 
@@ -176,6 +179,17 @@ export default function SettingsPage({
   const [busy, setBusy] = useState('')
   const [error, setError] = useState('')
   const [flash, setFlash] = useState('')
+  const [reports, setReports] = useState<ContentReport[]>([])
+  const [reportBusy, setReportBusy] = useState('')
+
+  useEffect(() => {
+    if (section !== 'moderation' || !user?.is_owner) return
+    let live = true
+    void listAdminReports('pending')
+      .then((data) => { if (live) setReports(data.items) })
+      .catch(() => { if (live) setReports([]) })
+    return () => { live = false }
+  }, [section, user?.is_owner])
 
   useEffect(() => {
     document.documentElement.dataset.skin = skin
@@ -726,6 +740,70 @@ export default function SettingsPage({
                   <small>{tr(lang, '场景卡、登录、核心视觉', 'Scene cards, sign-in, hero visuals')}</small>
                 </div>
               </div>
+            </Panel>
+          )}
+
+          {section === 'moderation' && user?.is_owner && (
+            <Panel
+              title={tr(lang, '举报审核队列', 'Report review queue')}
+              subtitle={tr(lang, '处理社区动态、评论、讨论与作品的举报；处理结果会记录操作人和说明。', 'Review reports on posts, comments, discussions and works. Decisions record the reviewer and note.')}
+              aside={<button type="button" style={primary} onClick={() => void listAdminReports('pending').then((data) => setReports(data.items)).catch(() => setReports([]))}><RefreshCw size={14} /> {tr(lang, '刷新', 'Refresh')}</button>}
+            >
+              {reports.length === 0 ? (
+                <div style={{ padding: '28px 8px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 12 }}>
+                  {tr(lang, '当前没有待处理举报。', 'No pending reports.')}
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {reports.map((item) => (
+                    <div key={item.id} style={{ ...card, padding: 13, background: 'var(--workspace-glass-bg)', backdropFilter: 'blur(22px) saturate(140%)' }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+                        <div style={{ minWidth: 0 }}>
+                          <strong style={{ display: 'block', color: 'var(--text-main)', fontSize: 12 }}>
+                            {item.target_type} · {item.reason}
+                          </strong>
+                          <span style={{ display: 'block', marginTop: 3, color: 'var(--text-muted)', fontSize: 10, wordBreak: 'break-all' }}>
+                            {item.target_id}
+                          </span>
+                          {item.detail && <p style={{ margin: '6px 0 0', color: 'var(--text-main)', fontSize: 11, lineHeight: 1.6 }}>{item.detail}</p>}
+                          <small style={{ display: 'block', marginTop: 5, color: 'var(--text-muted)', fontSize: 9 }}>
+                            {item.reporter?.name || '匿名'} · {item.created_at ? new Date(item.created_at).toLocaleString() : ''}
+                          </small>
+                        </div>
+                        <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                          <button
+                            type="button"
+                            style={primary}
+                            disabled={reportBusy === item.id}
+                            onClick={() => {
+                              const note = window.prompt(tr(lang, '处理说明（可选）', 'Resolution note (optional)'), '') || ''
+                              setReportBusy(item.id)
+                              void resolveReport(item.id, 'resolved', note)
+                                .then(() => setReports((prev) => prev.filter((row) => row.id !== item.id)))
+                                .finally(() => setReportBusy(''))
+                            }}
+                          >
+                            <Check size={13} /> {tr(lang, '已处理', 'Resolve')}
+                          </button>
+                          <button
+                            type="button"
+                            style={{ ...primary, background: 'transparent', color: 'var(--text-main)' }}
+                            disabled={reportBusy === item.id}
+                            onClick={() => {
+                              setReportBusy(item.id)
+                              void resolveReport(item.id, 'dismissed')
+                                .then(() => setReports((prev) => prev.filter((row) => row.id !== item.id)))
+                                .finally(() => setReportBusy(''))
+                            }}
+                          >
+                            {tr(lang, '驳回', 'Dismiss')}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </Panel>
           )}
 

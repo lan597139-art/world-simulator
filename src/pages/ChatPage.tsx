@@ -159,6 +159,36 @@ export default function ChatPage({ worldId, product = 'game' }: {
     }
   }
 
+  const startVoiceInput = () => {
+    const Recognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (!Recognition) {
+      setLog('当前浏览器不支持语音输入，请使用 Chrome 或 Edge')
+      return
+    }
+    if (listening) {
+      recognitionRef.current?.stop()
+      setListening(false)
+      return
+    }
+    const recognition = new Recognition()
+    recognition.lang = 'zh-CN'
+    recognition.interimResults = false
+    recognition.continuous = false
+    recognition.onresult = (event: any) => {
+      const transcript = Array.from(event.results).map((row: any) => row[0]?.transcript || '').join('')
+      if (transcript) setDraft((prev) => `${prev}${prev ? ' ' : ''}${transcript}`)
+    }
+    recognition.onerror = () => setListening(false)
+    recognition.onend = () => setListening(false)
+    recognitionRef.current = recognition
+    try {
+      recognition.start()
+      setListening(true)
+    } catch {
+      setListening(false)
+    }
+  }
+
   const send = async () => {
     if (!threadId || !draft.trim() || busy) return
     setBusy(true)
@@ -352,7 +382,7 @@ export default function ChatPage({ worldId, product = 'game' }: {
   if (!worldId) return <div style={{ padding: '2rem', color: 'var(--text-muted)' }}>请先进入一个世界。</div>
 
   return (
-    <div style={{ padding: '1rem', display: 'flex', gap: '12px', height: 'calc(100vh - 60px)', boxSizing: 'border-box' }}>
+    <div className="chat-page" style={{ padding: '1rem', display: 'flex', gap: '12px', height: 'calc(100vh - 60px)', boxSizing: 'border-box' }}>
       <div className="ws-glass-surface" style={{ ...card, width: '250px' }}>
         <h3 style={{ margin: 0, fontSize: '14px' }}>{companion ? 'AI 伴侣角色' : 'AI 角色聊天'}</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -484,6 +514,16 @@ export default function ChatPage({ worldId, product = 'game' }: {
             disabled={!thread || busy}
             style={{ ...input, flex: 1 }}
           />
+          <button
+            type="button"
+            title={listening ? '停止语音输入' : '语音输入'}
+            aria-label={listening ? '停止语音输入' : '语音输入'}
+            disabled={!thread || busy}
+            onClick={startVoiceInput}
+            style={{ ...btn, minWidth: 42, background: listening ? 'var(--danger-color)' : 'transparent', color: listening ? '#fff' : 'var(--primary-color)' }}
+          >
+            {listening ? '■' : '🎙'}
+          </button>
           <button style={btn} disabled={!thread || busy || !draft.trim()} onClick={() => void send()}>发送</button>
         </div>
       </div>

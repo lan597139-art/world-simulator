@@ -634,3 +634,19 @@
   .ca-detail { top: 60px; right: 8px; width: calc(100vw - 16px); max-height: calc(100vh - 76px); }
   .ca-toast { right: 12px; bottom: 12px; }
 }
+
+/* 视频/音频资产预览：与图片使用同一容器宽度，控件可见。 */
+.ca-detail-preview video,
+.ca-upload-preview video {
+  display: block;
+  width: 100%;
+  max-height: 360px;
+  border-radius: 10px;
+  background: #000;
+}
+.ca-detail-preview audio,
+.ca-upload-preview audio {
+  display: block;
+  width: 100%;
+  margin: 8px 0;
+}

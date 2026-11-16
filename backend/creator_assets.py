@@ -24,11 +24,11 @@ router = APIRouter(tags=["creator-assets"])
 
 MAX_UPLOAD_BYTES = 15 * 1024 * 1024
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg", ".pdf"}
-ASSET_TYPES = {"world", "character", "location", "organization", "event", "story", "note", "image"}
+ASSET_TYPES = {"world", "character", "location", "organization", "event", "story", "note", "image", "video", "audio"}
 LINKED_TYPES = {"world", "character", "location", "organization", "event", "story"}
 TYPE_LABELS = {
     "world": "世界", "character": "人物", "location": "地点", "organization": "组织",
-    "event": "事件", "story": "章节/故事", "note": "笔记", "image": "图片/媒体",
+    "event": "事件", "story": "章节/故事", "note": "笔记", "image": "图片/媒体", "video": "视频", "audio": "音频",
 }
 MODEL_BY_TYPE = {
     "character": models.Character,

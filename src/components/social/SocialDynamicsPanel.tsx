@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  Heart, ImagePlus, Loader2, MessageCircle, Send, Sparkles, Trash2, X,
+  Flag, Heart, ImagePlus, Loader2, MessageCircle, Send, Sparkles, Trash2, X,
 } from 'lucide-react'
 import {
   createSocialComment, createSocialPost, deleteSocialComment, deleteSocialPost,
@@ -8,6 +8,7 @@ import {
   type SocialComment, type SocialPost,
 } from '../../api/socialCore'
 import { uploadMedia, resolveMediaUrl } from '../../api/media'
+import { reportContent, type ReportReason } from '../../api/moderation'
 import '../../styles/social-core.css'
 
 type Lang = 'zh' | 'en'
@@ -114,6 +115,56 @@ export default function SocialDynamicsPanel({
     finally { setBusy('') }
   }
 
+  const reportPost = async (post: SocialPost) => {
+    const labels: Record<ReportReason, string> = {
+      spam: lang === 'zh' ? '垃圾广告' : 'Spam',
+      harassment: lang === 'zh' ? '骚扰辱骂' : 'Harassment',
+      illegal: lang === 'zh' ? '违法内容' : 'Illegal',
+      adult: lang === 'zh' ? '成人内容' : 'Adult',
+      misinformation: lang === 'zh' ? '虚假信息' : 'Misinformation',
+      other: lang === 'zh' ? '其他' : 'Other',
+    }
+    const answer = window.prompt(
+      lang === 'zh'
+        ? '举报原因：spam / harassment / illegal / adult / misinformation / other'
+        : 'Report reason: spam / harassment / illegal / adult / misinformation / other',
+      'other',
+    )
+    if (answer === null) return
+    const reason = (Object.keys(labels) as ReportReason[]).includes(answer.trim() as ReportReason)
+      ? answer.trim() as ReportReason
+      : 'other'
+    const detail = window.prompt(lang === 'zh' ? '补充说明（可选）' : 'Additional detail (optional)', '') || ''
+    setBusy(`report:${post.id}`)
+    try {
+      const result = await reportContent({ target_type: 'post', target_id: post.id, reason, detail })
+      setError(result.duplicate
+        ? (lang === 'zh' ? '你已举报过这条动态，管理员会尽快处理' : 'You already reported this post')
+        : (lang === 'zh' ? `已提交举报：${labels[reason]}` : `Report submitted: ${labels[reason]}`))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : (lang === 'zh' ? '举报失败' : 'Report failed'))
+    } finally { setBusy('') }
+  }
+
+  const reportComment = async (comment: SocialComment) => {
+    const answer = window.prompt(
+      lang === 'zh'
+        ? '举报评论原因：spam / harassment / illegal / adult / misinformation / other'
+        : 'Report comment: spam / harassment / illegal / adult / misinformation / other',
+      'other',
+    )
+    if (answer === null) return
+    const reason = (['spam', 'harassment', 'illegal', 'adult', 'misinformation', 'other'] as ReportReason[]).includes(answer.trim() as ReportReason)
+      ? answer.trim() as ReportReason
+      : 'other'
+    try {
+      await reportContent({ target_type: 'comment', target_id: comment.id, reason })
+      setError(lang === 'zh' ? '评论举报已提交' : 'Comment report submitted')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : (lang === 'zh' ? '举报失败' : 'Report failed'))
+    }
+  }
+
   const removePost = async (post: SocialPost) => {
     if (!window.confirm(lang === 'zh' ? '删除这条动态？' : 'Delete this post?')) return
     setBusy(`delete:${post.id}`)
@@ -184,6 +235,7 @@ export default function SocialDynamicsPanel({
             <button type="button" className={post.liked_by_me ? 'is-liked' : ''} onClick={() => void toggleLike(post)}><Heart size={15} fill={post.liked_by_me ? 'currentColor' : 'none'} />{post.like_count || (lang === 'zh' ? '点赞' : 'Like')}</button>
             <button type="button" onClick={() => void openComments(post.id)}><MessageCircle size={15} />{post.comment_count || (lang === 'zh' ? '评论' : 'Comment')}</button>
             {post.is_mine && <button type="button" onClick={() => post.author && onOpenProfile(post.author.id)}><Send size={14} />{lang === 'zh' ? '主页' : 'Profile'}</button>}
+            {!post.is_mine && <button type="button" disabled={busy === `report:${post.id}`} onClick={() => void reportPost(post)} aria-label={lang === 'zh' ? '举报动态' : 'Report post'}><Flag size={14} />{lang === 'zh' ? '举报' : 'Report'}</button>}
           </footer>
           {commentsFor === post.id && (
             <div className="sc-comments">
@@ -191,7 +243,11 @@ export default function SocialDynamicsPanel({
                 <div className="sc-comment" key={comment.id}>
                   <span className={`sc-avatar sc-avatar-sm${comment.author?.avatar ? ' has-image' : ''}`}>{comment.author?.avatar ? <img src={resolveMediaUrl(comment.author.avatar)} alt="" /> : (comment.author?.display_name || '?').slice(0, 1)}</span>
                   <div><strong>{comment.author?.display_name || comment.author?.username}</strong><p>{comment.body}</p></div>
-                  {comment.author?.id === currentUserId && <button type="button" className="sc-icon-btn" onClick={() => void deleteSocialComment(comment.id).then(() => listSocialComments(post.id)).then((rows) => setComments((current) => ({ ...current, [post.id]: rows }))).catch(() => undefined)} aria-label="删除评论"><Trash2 size={12} /></button>}
+                  {comment.author?.id === currentUserId ? (
+                    <button type="button" className="sc-icon-btn" onClick={() => void deleteSocialComment(comment.id).then(() => listSocialComments(post.id)).then((rows) => setComments((current) => ({ ...current, [post.id]: rows }))).catch(() => undefined)} aria-label="删除评论"><Trash2 size={12} /></button>
+                  ) : (
+                    <button type="button" className="sc-icon-btn" onClick={() => void reportComment(comment)} aria-label={lang === 'zh' ? '举报评论' : 'Report comment'}><Flag size={12} /></button>
+                  )}
                 </div>
               ))}
               <div className="sc-comment-input">

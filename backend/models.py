@@ -2147,6 +2147,29 @@ class CommunityNotification(Base):
     )
 
 
+class ContentReport(Base):
+    """内容举报与审核队列。只记录用户提交的公开内容问题。"""
+
+    __tablename__ = "content_reports"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    reporter_id = Column(String, nullable=False, index=True)
+    target_type = Column(String, nullable=False, index=True)  # post/comment/topic/work/user/message
+    target_id = Column(String, nullable=False, index=True)
+    reason = Column(String, nullable=False)
+    detail = Column(Text, default="")
+    status = Column(String, default="pending", nullable=False, index=True)  # pending/resolved/dismissed
+    resolver_id = Column(String)
+    resolution_note = Column(Text, default="")
+    created_at = Column(DateTime, default=_now, index=True)
+    resolved_at = Column(DateTime)
+
+    __table_args__ = (
+        Index("ix_content_reports_status_time", "status", "created_at"),
+        Index("ix_content_reports_target", "target_type", "target_id"),
+    )
+
+
 # =====================================================================
 # 商业与服务中心：账户、会员、订单、流水、AI 用量、创作者结算
 # =====================================================================

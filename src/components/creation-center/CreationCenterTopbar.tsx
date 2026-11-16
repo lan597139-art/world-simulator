@@ -4,6 +4,7 @@ import type { LucideIcon } from 'lucide-react'
 import type { AuthUser } from '../../api/auth'
 import { resolveMediaUrl } from '../../api/media'
 import type { ProductKey } from '../../product/types'
+import { listGlobalNotifications, readAllGlobalNotifications, searchGlobal, type GlobalNotification, type SearchGroup } from '../../api/platform'
 
 type Lang = 'zh' | 'en'
 
@@ -26,6 +27,7 @@ export default function CreationCenterTopbar({
   onOpenSettings,
   onOpenIdentity,
   onLogout,
+  onNavigate,
 }: {
   lang: Lang
   page: 'home' | 'identity' | 'community' | 'community-social' | 'business' | 'spirit-economy' | 'ai-center' | 'game-center' | 'content-store' | 'assets' | 'works' | 'workspace'
@@ -45,11 +47,19 @@ export default function CreationCenterTopbar({
   onOpenSettings: () => void
   onOpenIdentity: () => void
   onLogout: () => void
+  onNavigate: (page: string) => void
 }) {
   const [panel, setPanel] = useState<'profile' | 'notifications' | null>(null)
   const [worldOpen, setWorldOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const [searchGroups, setSearchGroups] = useState<SearchGroup[]>([])
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searching, setSearching] = useState(false)
+  const [notifications, setNotifications] = useState<GlobalNotification[]>([])
+  const [notificationCount, setNotificationCount] = useState(0)
   const topRightRef = useRef<HTMLDivElement>(null)
   const worldRef = useRef<HTMLDivElement>(null)
+  const searchRef = useRef<HTMLFormElement>(null)
   const displayName = user?.display_name || (lang === 'zh' ? '本地用户' : 'Local user')
   const initial = displayName.trim().charAt(0).toUpperCase() || 'U'
   const avatarUrl = user?.avatar_url ? resolveMediaUrl(user.avatar_url) : ''
@@ -74,6 +84,48 @@ export default function CreationCenterTopbar({
       document.removeEventListener('keydown', closeOnEscape)
     }
   }, [panel, worldOpen])
+
+  useEffect(() => {
+    let live = true
+    const load = () => {
+      void listGlobalNotifications()
+        .then((data) => {
+          if (!live) return
+          setNotifications(data.items)
+          setNotificationCount(data.counts.unread)
+        })
+        .catch(() => undefined)
+    }
+    load()
+    const timer = window.setInterval(load, 60000)
+    return () => { live = false; window.clearInterval(timer) }
+  }, [])
+
+  useEffect(() => {
+    const value = query.trim()
+    if (value.length < 1) {
+      setSearchGroups([])
+      setSearching(false)
+      return
+    }
+    setSearching(true)
+    const timer = window.setTimeout(() => {
+      void searchGlobal(value)
+        .then((data) => setSearchGroups(data.groups))
+        .catch(() => setSearchGroups([]))
+        .finally(() => setSearching(false))
+    }, 220)
+    return () => window.clearTimeout(timer)
+  }, [query])
+
+  useEffect(() => {
+    if (!searchOpen) return
+    const close = (event: MouseEvent) => {
+      if (!searchRef.current?.contains(event.target as Node)) setSearchOpen(false)
+    }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [searchOpen])
 
   const breadcrumbRoot = page === 'identity' ? (lang === 'zh' ? '用户与身份中心' : 'User & Identity Center') : page === 'community' ? (lang === 'zh' ? '内容社区' : 'Content Community') : page === 'community-social' ? (lang === 'zh' ? '社区社交' : 'Community Social') : page === 'business' ? (lang === 'zh' ? '商业与服务中心' : 'Business & Services') : page === 'spirit-economy' ? (lang === 'zh' ? '灵果资源' : 'Spirit Resources') : page === 'ai-center' ? (lang === 'zh' ? 'AI 互动中心' : 'AI Interaction Center') : page === 'game-center' ? (lang === 'zh' ? '游戏体验中心' : 'Game Experience Center') : page === 'content-store' ? (lang === 'zh' ? '内容商城' : 'Content Store') : page === 'assets' ? (lang === 'zh' ? '创作者资产库' : 'Creator Assets') : page === 'works' ? (lang === 'zh' ? '我的作品' : 'My Works') : (lang === 'zh' ? '创作中心' : 'Creation Center')
   const productIcons: Record<ProductKey, LucideIcon> = {
@@ -181,16 +233,56 @@ export default function CreationCenterTopbar({
       )}
 
       <form
+        ref={searchRef}
         className="cc-search"
         role="search"
-        onSubmit={(event) => event.preventDefault()}
+        onSubmit={(event) => {
+          event.preventDefault()
+          const first = searchGroups[0]?.items[0]
+          if (first) {
+            setSearchOpen(false)
+            setQuery('')
+            onNavigate(first.page)
+          }
+        }}
       >
         <Search className="cc-search-icon" aria-hidden="true" strokeWidth={1.7} />
         <input
           type="search"
           aria-label={lang === 'zh' ? '搜索' : 'Search'}
           placeholder={lang === 'zh' ? '搜索世界、人物、作品…' : 'Search worlds, characters, works…'}
+          value={query}
+          onChange={(event) => { setQuery(event.target.value); setSearchOpen(true) }}
+          onFocus={() => setSearchOpen(true)}
         />
+        {searchOpen && query.trim() && (
+          <div className="cc-search-results" role="listbox">
+            {searching && <div className="cc-search-state">{lang === 'zh' ? '搜索中…' : 'Searching…'}</div>}
+            {!searching && searchGroups.length === 0 && <div className="cc-search-state">{lang === 'zh' ? '没有找到匹配内容' : 'No matches'}</div>}
+            {!searching && searchGroups.map((group) => (
+              <section key={group.key} className="cc-search-group">
+                <div className="cc-search-group-label">
+                  {lang === 'zh' ? group.label : ({ worlds: 'Worlds', characters: 'Characters', events: 'Events', works: 'Works', posts: 'Posts', users: 'Users', topics: 'Discussions' } as Record<string, string>)[group.key] || group.label}
+                </div>
+                {group.items.map((item) => (
+                  <button
+                    key={`${group.key}:${item.id}`}
+                    type="button"
+                    className="cc-search-hit"
+                    onClick={() => {
+                      setSearchOpen(false)
+                      setQuery('')
+                      onNavigate(item.page)
+                    }}
+                  >
+                    <strong>{item.title}</strong>
+                    {item.subtitle && <span>{item.subtitle}</span>}
+                  </button>
+                ))}
+              </section>
+            ))}
+          </div>
+        )}
       </form>
 
       <div className="cc-top-right" ref={topRightRef}>
@@ -222,7 +314,7 @@ export default function CreationCenterTopbar({
         <div className="cc-notify-wrap">
           <button
             type="button"
-            className="cc-icon-button has-dot"
+            className={`cc-icon-button${notificationCount > 0 ? ' has-dot' : ''}`}
             title={lang === 'zh' ? '提醒' : 'Notifications'}
             aria-label={lang === 'zh' ? '提醒' : 'Notifications'}
             aria-expanded={panel === 'notifications'}
@@ -232,10 +324,42 @@ export default function CreationCenterTopbar({
           </button>
           {panel === 'notifications' && (
             <div className="cc-popover" role="dialog" aria-label={lang === 'zh' ? '提醒' : 'Notifications'}>
-              <div className="cc-popover-title">{lang === 'zh' ? '提醒' : 'Notifications'}</div>
-              <div className="cc-popover-empty">
-                {lang === 'zh' ? '暂无新提醒' : 'No new notifications'}
+              <div className="cc-popover-title">
+                <span>{lang === 'zh' ? '提醒' : 'Notifications'}</span>
+                {notificationCount > 0 && <small>{notificationCount} {lang === 'zh' ? '条未读' : 'unread'}</small>}
               </div>
+              {notifications.length === 0 ? (
+                <div className="cc-popover-empty">{lang === 'zh' ? '暂无新提醒' : 'No new notifications'}</div>
+              ) : (
+                <div className="cc-notify-list">
+                  {notifications.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className={`cc-notify-item${item.read ? '' : ' is-unread'}`}
+                      onClick={() => {
+                        setPanel(null)
+                        onNavigate(item.page)
+                      }}
+                    >
+                      <strong>{item.title}</strong>
+                      {item.body && <span>{item.body}</span>}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    className="cc-notify-read"
+                    onClick={() => {
+                      void readAllGlobalNotifications().then(() => {
+                        setNotifications((prev) => prev.map((item) => ({ ...item, read: true })))
+                        setNotificationCount(0)
+                      }).catch(() => undefined)
+                    }}
+                  >
+                    {lang === 'zh' ? '全部标为已读' : 'Mark all as read'}
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

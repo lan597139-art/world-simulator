@@ -72,6 +72,9 @@ from storyline import router as storyline_router
 from chat import router as chat_router
 from creator_assets import router as creator_assets_router
 from storage import upload_root
+from platform_tools import router as platform_tools_router
+from moderation import router as moderation_router
+from portability import router as portability_router
 
 # SQLite 保留增量迁移；PostgreSQL 新库直接由模型建表，避免执行 SQLite 专用 DDL。
 models.Base.metadata.create_all(bind=engine)
@@ -180,6 +183,9 @@ for router in (
     social_core_router,
 ):
     app.include_router(router)
+app.include_router(platform_tools_router)
+app.include_router(moderation_router)
+app.include_router(portability_router)
 
 # 官方演示世界：首次启动自动内置；已存在则仅锁定，不覆盖用户当前数据。
 try:
