@@ -1,80 +1,125 @@
 :root {
   color-scheme: light;
   /* 浅色模式 - 极简灰白 */
-  --bg-color: #c3c8d0; 
-  --sidebar-bg: #303038; /* 你的深灰侧边栏 */
-  --sidebar-text: #cfcfd9; 
-  --sidebar-text-muted: #8E8E93;
-  
-  --card-bg: rgba(255, 255, 255, 0.6);
-  --card-border: rgba(0, 0, 0, 0.05);
-  --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.04);
-  
-  --text-main: #000000;
-  --text-muted: #8E8E93; 
-  
-  /* 统一的主色（低饱和深色） */
-  --primary-color: #3A3A3C; 
-  --primary-hover: #1C1C1E;
-  --primary-text: #FFFFFF; /* ✅ 新增：浅色模式下主按钮用白字 */
-  --danger-color: #FF3B30;
+  --bg-color: #f5f5f7;
+  --sidebar-bg: #1d1d1f;
+  --sidebar-text: #f5f5f7;
+  --sidebar-text-muted: #a1a1a6;
+
+  --card-bg: rgba(255, 255, 255, 0.9);
+  --card-border: rgba(0, 0, 0, 0.11);
+  --card-shadow: 0 10px 34px rgba(0, 0, 0, 0.06);
+
+  --text-main: #1d1d1f;
+  --text-muted: #5f5f66;
+
+  /* 统一的主色（黑白主调） */
+  --primary-color: #1d1d1f;
+  --primary-hover: #000000;
+  --primary-text: #ffffff;
+  --danger-color: #b42318;
+
+  /* F1 字体与排版层级：英文 Geist、中文 Noto Sans SC，均本地安装。 */
+  --font-sans: "Geist Variable", "Noto Sans SC Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-serif: "Songti SC", "Noto Serif SC", Georgia, "Times New Roman", serif;
+  --font-mono: "SFMono-Regular", "Cascadia Code", "Roboto Mono", Consolas, monospace;
+  --text-xs: 11px;
+  --text-sm: 12.5px;
+  --text-base: 14.5px;
+  --text-lg: 17px;
+  --text-xl: 21px;
+  --text-2xl: 28px;
+  --text-3xl: 36px;
+  --leading-tight: 1.2;
+  --leading-snug: 1.45;
+  --leading-body: 1.72;
+  --weight-regular: 400;
+  --weight-medium: 520;
+  --weight-semibold: 620;
+  --weight-bold: 700;
+  --tracking-tight: -0.022em;
+  --tracking-label: 0.08em;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+
+  /* 兼容旧页面的语义别名，避免各页面各自猜颜色。 */
+  --text-primary: var(--text-main);
+  --text-secondary: var(--text-muted);
+  --text-tertiary: color-mix(in srgb, var(--text-muted) 76%, var(--bg-color));
+  --surface-raised: var(--card-bg);
+  --field-bg: rgba(255, 255, 255, 0.82);
+  --field-border: rgba(0, 0, 0, 0.16);
+  --focus-ring: color-mix(in srgb, var(--primary-color) 22%, transparent);
+  --divider: color-mix(in srgb, var(--text-main) 12%, transparent);
+  --ease-out: cubic-bezier(.2, .7, .2, 1);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     /* 深色模式 - 纯黑深灰 */
-    --bg-color: #121212; 
-    --sidebar-bg: #000000; 
-    --sidebar-text: #d8d8db; 
-    --sidebar-text-muted: #A1A1AA;
-    
-    --card-bg: rgba(255, 255, 255, 0.06); 
-    --card-border: rgba(255, 255, 255, 0.12);
-    --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-    
-    --text-main: #cbcbcb;
-    --text-muted: #A1A1AA;
-    
-    --primary-color: #dcdcdc; 
-    --primary-hover: #E5E5EA;
-    --primary-text: #343434; /* ✅ 核心：深色模式下主按钮用黑字！ */
-    --danger-color: #c7534d;
+    --bg-color: #0e0e10;
+    --sidebar-bg: #000000;
+    --sidebar-text: #f2f2f4;
+    --sidebar-text-muted: #a1a1a6;
+
+    --card-bg: rgba(28, 28, 30, 0.88);
+    --card-border: rgba(255, 255, 255, 0.16);
+    --card-shadow: 0 10px 38px rgba(0, 0, 0, 0.42);
+
+    --text-main: #f2f2f4;
+    --text-muted: #a1a1a6;
+
+    --primary-color: #f2f2f4;
+    --primary-hover: #ffffff;
+    --primary-text: #1d1d1f;
+    --danger-color: #ff6961;
+    --field-bg: rgba(44, 44, 46, 0.9);
+    --field-border: rgba(255, 255, 255, 0.22);
+    --focus-ring: rgba(255, 255, 255, 0.24);
   }
 }
 
 /* 设置中心显式选择的主题：必须覆盖系统偏好，保证页面与 3D 画布同一套配色 */
 html[data-theme="light"] {
   color-scheme: light;
-  --bg-color: #c3c8d0;
-  --sidebar-bg: #303038;
-  --sidebar-text: #cfcfd9;
-  --sidebar-text-muted: #8E8E93;
-  --card-bg: rgba(255, 255, 255, 0.6);
-  --card-border: rgba(0, 0, 0, 0.05);
-  --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.04);
-  --text-main: #000000;
-  --text-muted: #8E8E93;
-  --primary-color: #3A3A3C;
-  --primary-hover: #1C1C1E;
-  --primary-text: #FFFFFF;
-  --danger-color: #FF3B30;
+  --bg-color: #f5f5f7;
+  --sidebar-bg: #1d1d1f;
+  --sidebar-text: #f5f5f7;
+  --sidebar-text-muted: #a1a1a6;
+  --card-bg: rgba(255, 255, 255, 0.9);
+  --card-border: rgba(0, 0, 0, 0.11);
+  --card-shadow: 0 10px 34px rgba(0, 0, 0, 0.06);
+  --text-main: #1d1d1f;
+  --text-muted: #5f5f66;
+  --primary-color: #1d1d1f;
+  --primary-hover: #000000;
+  --primary-text: #ffffff;
+  --danger-color: #b42318;
+  --field-bg: rgba(255, 255, 255, 0.82);
+  --field-border: rgba(0, 0, 0, 0.16);
+  --focus-ring: color-mix(in srgb, #1d1d1f 22%, transparent);
 }
 
 html[data-theme="dark"] {
   color-scheme: dark;
-  --bg-color: #121212;
+  --bg-color: #0e0e10;
   --sidebar-bg: #000000;
-  --sidebar-text: #d8d8db;
-  --sidebar-text-muted: #A1A1AA;
-  --card-bg: rgba(255, 255, 255, 0.06);
-  --card-border: rgba(255, 255, 255, 0.12);
-  --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-  --text-main: #cbcbcb;
-  --text-muted: #A1A1AA;
-  --primary-color: #dcdcdc;
-  --primary-hover: #E5E5EA;
-  --primary-text: #343434;
-  --danger-color: #c7534d;
+  --sidebar-text: #f2f2f4;
+  --sidebar-text-muted: #a1a1a6;
+  --card-bg: rgba(28, 28, 30, 0.88);
+  --card-border: rgba(255, 255, 255, 0.16);
+  --card-shadow: 0 10px 38px rgba(0, 0, 0, 0.42);
+  --text-main: #f2f2f4;
+  --text-muted: #a1a1a6;
+  --primary-color: #f2f2f4;
+  --primary-hover: #ffffff;
+  --primary-text: #1d1d1f;
+  --danger-color: #ff6961;
+  --field-bg: rgba(44, 44, 46, 0.9);
+  --field-border: rgba(255, 255, 255, 0.22);
+  --focus-ring: rgba(255, 255, 255, 0.24);
 }
 
 html {
@@ -83,7 +128,7 @@ html {
   height: 100%;
   background-color: var(--bg-color);
   color: var(--text-main);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--font-sans);
 }
 body, #root {
   margin: 0;
@@ -91,7 +136,7 @@ body, #root {
   height: 100%;
   background-color: transparent !important;
   color: var(--text-main);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--font-sans);
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
@@ -164,9 +209,9 @@ html[data-theme="light"] option { background-color: #FFFFFF !important; color: #
    变量化：模糊、透明度、饱和度、辉光、圆角、动效。
    ========================================= */
 :root {
-  --glass-blur: 40px;
-  --glass-saturate: 180%;
-  --glass-opacity: 1;
+  --glass-blur: 26px;
+  --glass-saturate: 145%;
+  --glass-opacity: 0.94;
   --glass-radius: 24px;
   --glass-glow: 0.05;
   --glass-highlight: rgba(255, 255, 255, 0.35);

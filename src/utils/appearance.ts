@@ -14,10 +14,10 @@ const STORAGE_KEY = 'ws.ui.appearance'
 export const DEFAULT_APPEARANCE: Appearance = {
   background_url: '',
   background_blur: 18,
-  background_opacity: 32,
-  glass_blur: 40,
-  glass_opacity: 100,
-  glow: 24,
+  background_opacity: 26,
+  glass_blur: 28,
+  glass_opacity: 92,
+  glow: 14,
 }
 
 function clamp(value: unknown, min: number, max: number, fallback: number): number {
