@@ -327,7 +327,7 @@ export default function EventsPage({ worldId, onOpenSandbox, onNavigate, mode = 
 
   // ================= 全宽列表视图 =================
   return (
-    <div style={{ padding: '32px', width: '100%', height: 'calc(100vh - 120px)', overflowY: 'auto', background: 'var(--bg-color)' }}>
+    <div className="events-page" style={{ padding: '32px', width: '100%', height: 'calc(100vh - 120px)', overflowY: 'auto', background: 'transparent' }}>
       
       {/* 只有标题，去掉了右上角的按钮 */}
       <div style={{ marginBottom: '32px' }}>
@@ -351,11 +351,11 @@ export default function EventsPage({ worldId, onOpenSandbox, onNavigate, mode = 
             flexDirection: 'column', 
             alignItems: 'center', 
             justifyContent: 'center', 
+            gap: '12px',
             cursor: 'pointer',
             borderStyle: 'dashed',
-            borderWidth: '2px',
+            borderWidth: '1px',
             borderColor: 'var(--card-border)',
-            background: 'transparent',
             transition: 'all 0.2s ease',
             minHeight: '220px',
             color: 'var(--text-muted)'

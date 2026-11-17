@@ -94,12 +94,11 @@ export default function ChatPage({ worldId, product = 'game' }: {
           if (preferred && list.some((c: any) => c.id === preferred)) return preferred
           return prev && list.some((c: any) => c.id === prev) ? prev : list[0]?.id || ''
         })
+        // 我的身份从人物管理里挑选：优先自我人物，没有自我人物时退回全部人物。
+        const selfs = list.filter((c: any) => c.persona_type === 'self')
+        setSelfCharacters(selfs.length ? selfs : list)
       })
       .catch((error) => setLog(String(error.message || error)))
-    fetch(`http://127.0.0.1:8000/api/characters?world_id=${worldId}`)
-      .then((res) => res.json())
-      .then((rows) => setSelfCharacters((Array.isArray(rows) ? rows : []).filter((c: any) => c.persona_type === 'self')))
-      .catch(() => setSelfCharacters([]))
   }, [worldId])
 
   useEffect(() => {
@@ -395,6 +394,13 @@ export default function ChatPage({ worldId, product = 'game' }: {
           <select value={selectedChar} onChange={(e) => setSelectedChar(e.target.value)} style={input}>
             {characters.map((char) => <option key={char.id} value={char.id}>{char.name}</option>)}
           </select>
+          <button
+            style={{ ...btn, background: 'var(--primary-color)', color: 'var(--primary-text)', border: 0, fontWeight: 700, justifyContent: 'center' }}
+            disabled={busy || !selectedChar}
+            onClick={() => void createPrivate()}
+          >
+            🎭 沉浸式 AI 角色聊天
+          </button>
           <button style={btn} disabled={busy} onClick={() => void createPrivate()}>+ 与选中人物私聊</button>
           <details>
             <summary style={{ ...hint, cursor: 'pointer' }}>新建群聊（选 2–6 人）</summary>

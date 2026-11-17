@@ -2262,10 +2262,17 @@
 
 .sim-page {
   display: flex;
-  gap: 12px;
+  gap: 0;
   height: calc(100vh - 150px);
   min-height: 560px;
   box-sizing: border-box;
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--glass-frost-bg) 48%, transparent);
+  -webkit-backdrop-filter: blur(26px) saturate(150%);
+  backdrop-filter: blur(26px) saturate(150%);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, .08), 0 1px 0 rgba(255, 255, 255, .22) inset;
+  overflow: hidden;
 }
 
 .sim-page.is-embedded {
@@ -2279,16 +2286,34 @@
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
-  border: 1px solid var(--card-border);
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--card-bg) 52%, transparent);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
-.sim-left { flex: none; width: 278px; }
-.sim-console { flex: 1; min-width: 0; background: color-mix(in srgb, var(--card-bg) 62%, transparent); }
-.sim-right { flex: none; width: 336px; }
+.sim-left { flex: none; width: 278px; border-right: 1px solid var(--card-border); }
+.sim-console { flex: 1; min-width: 0; border-left: 1px solid var(--card-border); }
+.sim-right { flex: none; width: 336px; border-left: 1px solid var(--card-border); }
 
 .sim-panel.is-hidden { display: none; }
+
+.sim-run-btn {
+  padding: 8px 16px;
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-main);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 140ms ease, border-color 140ms ease, transform 140ms ease;
+}
+.sim-run-btn:hover { border-color: color-mix(in srgb, var(--primary-color) 50%, var(--card-border)); transform: translateY(-1px); }
+.sim-run-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+.sim-run-btn.is-secondary { border-color: color-mix(in srgb, var(--primary-color) 35%, transparent); color: var(--primary-color); }
+.sim-run-btn.is-primary { background: var(--primary-color); border-color: var(--primary-color); color: var(--primary-text); }
+.sim-run-btn.is-primary:disabled { background: var(--card-border); border-color: var(--card-border); color: var(--text-muted); }
 
 .sim-view-btn {
   height: 26px;
@@ -2315,7 +2340,13 @@
 
 @media (max-width: 980px) {
   .sim-page { flex-wrap: wrap; height: auto; }
-  .sim-left, .sim-right { width: 100%; max-height: 380px; }
+  .sim-left, .sim-console, .sim-right {
+    width: 100%;
+    border-left: 0;
+    border-right: 0;
+    border-top: 1px solid var(--card-border);
+  }
+  .sim-left, .sim-right { max-height: 380px; }
   .sim-console { min-width: 100%; min-height: 480px; }
 }
 
@@ -4385,12 +4416,16 @@
   display: flex; flex-direction: column; gap: 0;
   height: calc(100vh - 150px); min-height: 640px;
   border: 1px solid var(--card-border); border-radius: 14px; overflow: hidden;
-  background: var(--bg-color); color: var(--text-main);
+  background: color-mix(in srgb, var(--glass-frost-bg) 50%, transparent);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+  backdrop-filter: blur(24px) saturate(150%);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, .08), 0 1px 0 rgba(255, 255, 255, .22) inset;
+  color: var(--text-main);
 }
 .slx-head {
   display: flex; align-items: flex-end; justify-content: space-between; gap: 16px;
   padding: 16px 20px 12px; border-bottom: 1px solid var(--card-border);
-  background: color-mix(in srgb, var(--card-bg) 35%, var(--bg-color));
+  background: color-mix(in srgb, var(--glass-frost-bg) 30%, transparent);
 }
 .slx-kicker { display: block; margin-bottom: 3px; font-size: 8px; letter-spacing: 0.16em; color: var(--text-muted); }
 .slx-head-copy strong { display: block; font-size: 20px; line-height: 1.2; }
@@ -4403,7 +4438,7 @@
 .slx-toolbar {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   padding: 8px 20px; border-bottom: 1px solid var(--card-border);
-  background: color-mix(in srgb, var(--card-bg) 20%, var(--bg-color));
+  background: color-mix(in srgb, var(--glass-frost-bg) 18%, transparent);
 }
 .slx-new-line { display: flex; align-items: center; gap: 5px; min-width: 0; flex: 1; }
 .slx-new-line input { min-width: 160px; width: 240px; padding: 5px 8px; border: 1px solid var(--card-border); border-radius: 6px; background: transparent; color: var(--text-main); font-size: 10px; outline: none; }
@@ -4430,8 +4465,8 @@
 .slx-library-foot { padding: 8px 12px; border-top: 1px solid var(--card-border); font-size: 8px; line-height: 1.55; color: var(--text-muted); }
 .slx-canvas-wrap {
   min-width: 0; min-height: 0; overflow: auto; position: relative;
-  background-color: color-mix(in srgb, var(--bg-color) 88%, var(--card-bg));
-  background-image: radial-gradient(circle, color-mix(in srgb, var(--text-muted) 22%, transparent) 0.7px, transparent 0.8px);
+  background-color: transparent;
+  background-image: radial-gradient(circle, color-mix(in srgb, var(--text-muted) 14%, transparent) 0.7px, transparent 0.8px);
   background-size: 18px 18px;
 }
 .slx-canvas { position: relative; margin: 0 auto; flex: none; }
@@ -4439,15 +4474,16 @@
 .slx-node { position: absolute; display: flex; align-items: center; gap: 7px; box-sizing: border-box; border: 1px solid var(--card-border); border-radius: 10px; background: var(--bg-color); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06); }
 .slx-root {
   z-index: 3; flex-direction: column; justify-content: center; gap: 1px; border: 0; border-radius: 16px;
-  background: linear-gradient(135deg, #263043 0%, #3b4b66 100%);
-  color: #f5f7fb; box-shadow: 0 14px 34px rgba(18, 24, 38, 0.28); text-align: center;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--glass-frost-bg) 78%, var(--primary-color) 18%), color-mix(in srgb, var(--glass-frost-bg) 66%, var(--ambient-a)));
+  color: var(--text-main); box-shadow: 0 14px 34px rgba(18, 24, 38, 0.2); text-align: center;
 }
 .slx-root-mark { font-size: 12px; color: #b8c8e8; line-height: 1; }
 .slx-root strong { font-size: 13px; font-weight: 650; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .slx-root small { font-size: 7.5px; color: #d2dcea; }
 .slx-branch {
   z-index: 2; padding: 5px 8px 5px 9px; cursor: pointer;
-  background: color-mix(in srgb, var(--bg-color) 92%, var(--card-bg));
+  background: color-mix(in srgb, var(--glass-frost-bg) 66%, transparent);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
 }
 .slx-branch:hover { box-shadow: 0 7px 20px rgba(0, 0, 0, 0.1); transform: translateY(-1px); }
 .slx-branch.is-selected { box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 35%, transparent), 0 8px 24px rgba(0, 0, 0, 0.12); }
@@ -4460,7 +4496,8 @@
 .slx-branch-del:hover { background: color-mix(in srgb, var(--danger-color) 10%, transparent); color: var(--danger-color); }
 .slx-leaf {
   z-index: 2; padding: 5px 8px; cursor: pointer; border-left-width: 3px;
-  background: color-mix(in srgb, var(--bg-color) 94%, var(--card-bg));
+  background: color-mix(in srgb, var(--glass-frost-bg) 60%, transparent);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
 }
 .slx-leaf:hover { box-shadow: 0 6px 18px rgba(0, 0, 0, 0.09); transform: translateY(-1px); }
 .slx-leaf.is-selected { box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 30%, transparent), 0 7px 20px rgba(0, 0, 0, 0.1); }
@@ -4503,16 +4540,19 @@
   --tlx-transaction: #c08a2e;
   display: flex; flex-direction: column; min-height: 640px; height: calc(100vh - 130px);
   border: 1px solid var(--card-border); border-radius: 14px; overflow: hidden;
-  background: var(--bg-color); color: var(--text-main);
+  background: color-mix(in srgb, var(--glass-frost-bg) 48%, transparent);
+  -webkit-backdrop-filter: blur(24px) saturate(150%); backdrop-filter: blur(24px) saturate(150%);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, .08), 0 1px 0 rgba(255, 255, 255, .22) inset;
+  color: var(--text-main);
 }
-.tlx-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; padding: 16px 22px 12px; border-bottom: 1px solid var(--card-border); background: color-mix(in srgb, var(--card-bg) 35%, var(--bg-color)); }
+.tlx-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; padding: 16px 22px 12px; border-bottom: 1px solid var(--card-border); background: color-mix(in srgb, var(--glass-frost-bg) 30%, transparent); }
 .tlx-kicker { display: block; margin-bottom: 3px; font-size: 8px; letter-spacing: 0.16em; color: var(--text-muted); }
 .tlx-head-copy strong { display: block; font-size: 20px; line-height: 1.2; }
 .tlx-head-copy small { display: block; margin-top: 4px; max-width: 680px; font-size: 10px; line-height: 1.6; color: var(--text-muted); }
 .tlx-head-right { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
 .tlx-world { font-size: 10px; color: var(--text-main); }
 .tlx-counts { font-size: 8px; color: var(--text-muted); }
-.tlx-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 22px; border-bottom: 1px solid var(--card-border); background: color-mix(in srgb, var(--card-bg) 18%, var(--bg-color)); }
+.tlx-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 22px; border-bottom: 1px solid var(--card-border); background: color-mix(in srgb, var(--glass-frost-bg) 16%, transparent); }
 .tlx-scopes, .tlx-kinds { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
 .tlx-kinds { margin-left: auto; }
 .tlx-chip { padding: 3px 9px; border: 1px solid var(--card-border); border-radius: 999px; background: transparent; color: var(--text-muted); font-size: 9px; cursor: pointer; line-height: 1.5; }
@@ -4522,8 +4562,8 @@
 .tlx-error { margin: 10px 22px 0; padding: 6px 9px; border: 1px solid color-mix(in srgb, var(--danger-color) 30%, transparent); border-radius: 6px; color: var(--danger-color); font-size: 9px; }
 .tlx-canvas {
   flex: 1; min-height: 0; overflow: auto; padding: 20px 26px 44px;
-  background-color: color-mix(in srgb, var(--bg-color) 90%, var(--card-bg));
-  background-image: radial-gradient(circle, color-mix(in srgb, var(--text-muted) 20%, transparent) 0.7px, transparent 0.8px);
+  background-color: transparent;
+  background-image: radial-gradient(circle, color-mix(in srgb, var(--text-muted) 13%, transparent) 0.7px, transparent 0.8px);
   background-size: 20px 20px;
 }
 .tlx-empty { display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 54px 18px; text-align: center; color: var(--text-muted); font-size: 10px; line-height: 1.7; }
@@ -4532,8 +4572,8 @@
 .tlx-root {
   display: inline-flex; align-items: center; gap: 8px; position: relative; z-index: 2;
   margin: 0 0 16px -10px; padding: 9px 13px; border-radius: 13px;
-  background: linear-gradient(135deg, #263043 0%, #3b4b66 100%);
-  color: #f5f7fb; box-shadow: 0 10px 28px rgba(18, 24, 38, 0.22);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--glass-frost-bg) 80%, var(--primary-color) 18%), color-mix(in srgb, var(--glass-frost-bg) 68%, var(--ambient-a)));
+  color: var(--text-main); box-shadow: 0 10px 28px rgba(18, 24, 38, 0.2);
 }
 .tlx-root-mark { font-size: 17px; color: #b8c8e8; }
 .tlx-root > div { display: flex; flex-direction: column; gap: 0; }
@@ -4541,11 +4581,6 @@
 .tlx-root strong { font-size: 12.5px; font-weight: 650; line-height: 1.35; }
 .tlx-root-count { margin-left: 12px; padding-left: 12px; border-left: 1px solid rgba(255, 255, 255, 0.18); font-size: 8px; color: #b8c8e8; white-space: nowrap; }
 .tlx-feed { position: relative; padding-top: 4px; }
-.tlx-feed::before {
-  content: ""; position: absolute; left: 126px; top: 0; bottom: 0; width: 2px;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--text-main) 25%, transparent), color-mix(in srgb, var(--text-main) 8%, transparent));
-  border-radius: 2px;
-}
 .tlx-day { display: grid; grid-template-columns: 118px minmax(0, 1fr); gap: 34px; margin-bottom: 18px; position: relative; }
 .tlx-date { position: relative; text-align: right; padding: 4px 4px 0 0; }
 .tlx-date-dot {
@@ -4559,7 +4594,8 @@
 .tlx-item {
   position: relative; display: flex; flex-direction: column; gap: 5px; width: 100%; max-width: 780px;
   padding: 10px 13px 11px; border: 1px solid var(--card-border); border-left: 3px solid var(--text-muted);
-  border-radius: 9px; background: color-mix(in srgb, var(--bg-color) 94%, var(--card-bg));
+  border-radius: 9px; background: color-mix(in srgb, var(--glass-frost-bg) 68%, transparent);
+  -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05); text-align: left; cursor: pointer; color: var(--text-main);
 }
 .tlx-item::before {
@@ -4598,23 +4634,21 @@
   .tlx-canvas { padding: 16px 14px 30px; }
   .tlx-tree { min-width: 560px; }
   .tlx-day { grid-template-columns: 86px minmax(0, 1fr); gap: 28px; }
-  .tlx-feed::before { left: 94px; }
   .tlx-date strong { font-size: 18px; }
 }
 
 /* ============ 关系与组织 · Obsidian 球形点线网 ============ */
 .relx-canvas {
   position: absolute; inset: 0; overflow: hidden;
-  background:
-    radial-gradient(circle at 52% 42%, rgba(56, 78, 112, 0.28) 0%, rgba(16, 21, 30, 0.6) 42%, #0b0e14 76%),
-    #0b0e14;
+  background: transparent;
 }
 .relx-canvas::before {
   content: ""; position: absolute; inset: 0; pointer-events: none;
   background-image:
-    radial-gradient(circle, rgba(148, 163, 184, 0.16) 0.7px, transparent 0.8px);
+    radial-gradient(circle, color-mix(in srgb, var(--text-muted) 14%, transparent) 0.7px, transparent 0.8px);
   background-size: 22px 22px;
-  mask-image: radial-gradient(circle at 50% 45%, #000 30%, transparent 80%);
+  mask-image: radial-gradient(circle at 50% 45%, #000 28%, transparent 82%);
+  -webkit-mask-image: radial-gradient(circle at 50% 45%, #000 28%, transparent 82%);
 }
 .relx-flow { position: absolute; inset: 0 0 0 300px; transition: left 0.25s ease; }
 .relx-canvas.is-collapsed .relx-flow { left: 0; }
@@ -4624,14 +4658,17 @@
 .relx-canvas .react-flow__pane:active { cursor: grabbing; }
 .relx-canvas .react-flow__background { opacity: 0.55; }
 .relx-canvas .react-flow__controls {
-  margin: 0 0 18px 18px; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 9px; overflow: hidden;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35); background: rgba(17, 23, 33, 0.86); backdrop-filter: blur(10px);
+  margin: 0 0 18px 18px; border: 1px solid var(--glass-border); border-radius: 9px; overflow: hidden;
+  box-shadow: var(--workspace-glass-shadow);
+  background: color-mix(in srgb, var(--glass-frost-bg) 78%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 }
 .relx-canvas .react-flow__controls-button {
-  width: 27px; height: 27px; border: 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  background: transparent; color: #c7d2e3; fill: #c7d2e3;
+  width: 27px; height: 27px; border: 0; border-bottom: 1px solid color-mix(in srgb, var(--text-muted) 16%, transparent);
+  background: transparent; color: var(--text-main); fill: var(--text-main);
 }
-.relx-canvas .react-flow__controls-button:hover { background: rgba(255, 255, 255, 0.08); }
+.relx-canvas .react-flow__controls-button:hover { background: color-mix(in srgb, var(--text-main) 10%, transparent); }
 .relx-canvas .react-flow__controls-button svg { fill: currentColor; }
 .relx-canvas .react-flow__edge-path { transition: opacity 0.16s ease; }
 .relx-canvas .react-flow__edge:hover .react-flow__edge-path { opacity: 1 !important; stroke-width: 2.2; }

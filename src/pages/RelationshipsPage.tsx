@@ -22,18 +22,10 @@ const toLocalInput = (value?: string | null) =>
 const toBackendTime = (value?: string | null) =>
   value ? `${String(value).replace(' ', 'T').slice(0, 16).replace('T', ' ')}:00` : null;
 
-/** 解析实际生效的主题：settings 里选“跟随系统”时 data-theme 是 system，不能只看属性值。 */
-const resolveTheme = (): 'light' | 'dark' => {
-  const explicit = document.documentElement.getAttribute('data-theme');
-  if (explicit === 'light' || explicit === 'dark') return explicit;
-  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-};
-
 /** 3D 画布背景跟随页面底色，避免深色模式下出现整屏惨白。 */
 const graphBackground = () => {
-  if (resolveTheme() === 'light') return '#fdfdfd';
-  const pageBackground = getComputedStyle(document.documentElement).getPropertyValue('--bg-color').trim();
-  return pageBackground || '#121212';
+  // 画布保留透明通道，让页面背景照片直接透出；3D 节点浮在环境光之上。
+  return 'transparent';
 };
 
 const LABEL_FONT = '700 44px -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif';
@@ -627,7 +619,7 @@ export default function RelationshipsPage({
             {!simpleRelations && (
               <label style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>范围</span>
-                <select value={filters.scope} onChange={(event) => setFilters({ ...filters, scope: event.target.value })} style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'var(--bg-color)', color: 'var(--text-main)', fontSize: '13px' }}>
+                <select value={filters.scope} onChange={(event) => setFilters({ ...filters, scope: event.target.value })} style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)', fontSize: '13px' }}>
                   <option value="all">全部</option>
                   <option value="character">人物之间</option>
                   <option value="organization">涉及组织</option>
@@ -639,7 +631,7 @@ export default function RelationshipsPage({
 
             <label style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
               <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>状态</span>
-              <select value={filters.status} onChange={(event) => setFilters({ ...filters, status: event.target.value })} style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'var(--bg-color)', color: 'var(--text-main)', fontSize: '13px' }}>
+              <select value={filters.status} onChange={(event) => setFilters({ ...filters, status: event.target.value })} style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)', fontSize: '13px' }}>
                 <option value="active">进行中</option>
                 <option value="ended">已结束</option>
                 <option value="all">全部</option>
@@ -648,7 +640,7 @@ export default function RelationshipsPage({
 
             <label style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
               <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>类型</span>
-              <select value={filters.relationType} onChange={(event) => setFilters({ ...filters, relationType: event.target.value })} style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'var(--bg-color)', color: 'var(--text-main)', fontSize: '13px' }}>
+              <select value={filters.relationType} onChange={(event) => setFilters({ ...filters, relationType: event.target.value })} style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)', fontSize: '13px' }}>
                 <option value="all">全部类型</option>
                 {uniqueRelationTypes.map((name: string) => <option key={name} value={name}>{name}</option>)}
               </select>
@@ -703,14 +695,14 @@ export default function RelationshipsPage({
 
       {/* ================= 弹窗面板 ================= */}
       {isModalOpen && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
-          <div className="glass-card" style={{ width: '700px', maxHeight: '90vh', overflowY: 'auto', background: 'var(--bg-color)', padding: '24px', borderRadius: '16px', border: '1px solid var(--card-border)', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '1.5rem' }}>
+          <div className="glass-card" style={{ width: '460px', maxWidth: '92vw', maxHeight: '90vh', overflowY: 'auto', background: 'transparent', padding: '24px', borderRadius: '16px', border: '1px solid var(--card-border)', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
             <h2 style={{ margin: '0 0 20px 0', color: 'var(--text-main)' }}>{editingId ? '编辑关系线' : '创建关系线'}</h2>
             
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
               <div>
                 <label style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px', display: 'block' }}>起点对象 (A)</label>
-                <select value={formData.source_id} onChange={e => setFormData({...formData, source_id: e.target.value})} disabled={!!editingId} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'var(--bg-color)', color: 'var(--text-main)' }}>
+                <select value={formData.source_id} onChange={e => setFormData({...formData, source_id: e.target.value})} disabled={!!editingId} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)' }}>
                   <option value="">选择对象</option>
                   <optgroup label="人物">{characters.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</optgroup>
                   {!simpleRelations && <>
@@ -722,7 +714,7 @@ export default function RelationshipsPage({
               </div>
               <div>
                 <label style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px', display: 'block' }}>终点对象 (B)</label>
-                <select value={formData.target_id} onChange={e => setFormData({...formData, target_id: e.target.value})} disabled={!!editingId} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'var(--bg-color)', color: 'var(--text-main)' }}>
+                <select value={formData.target_id} onChange={e => setFormData({...formData, target_id: e.target.value})} disabled={!!editingId} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)' }}>
                   <option value="">选择对象</option>
                   <optgroup label="人物">{characters.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</optgroup>
                   {!simpleRelations && <>
@@ -738,7 +730,7 @@ export default function RelationshipsPage({
               </div>
               <div>
                 <label style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px', display: 'block' }}>方向性</label>
-                <select value={String(formData.is_bidirectional)} onChange={e => setFormData({...formData, is_bidirectional: e.target.value === 'true'})} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'var(--bg-color)', color: 'var(--text-main)' }}>
+                <select value={String(formData.is_bidirectional)} onChange={e => setFormData({...formData, is_bidirectional: e.target.value === 'true'})} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)' }}>
                   <option value="false">单向 (A → B)</option>
                   <option value="true">双向 (A ⇄ B)</option>
                 </select>
@@ -748,16 +740,16 @@ export default function RelationshipsPage({
             <div style={{ borderTop: '1px dashed var(--card-border)', paddingTop: '16px', marginBottom: '16px' }}>
               <h3 style={{ fontSize: '14px', color: 'var(--text-main)', marginBottom: '12px' }}>A 对 B 的认知</h3>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px' }}>
-                <select value={formData.source_quadrant} onChange={e => setFormData({...formData, source_quadrant: e.target.value})} style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'var(--bg-color)', color: 'var(--text-main)' }}>
+                <select value={formData.source_quadrant} onChange={e => setFormData({...formData, source_quadrant: e.target.value})} style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)' }}>
                   {['亲密', '认同', '敌对', '漠视'].map(o => <option key={o} value={o}>{o}</option>)}
                 </select>
-                <select value={formData.source_strength} onChange={e => setFormData({...formData, source_strength: e.target.value})} style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'var(--bg-color)', color: 'var(--text-main)' }}>
+                <select value={formData.source_strength} onChange={e => setFormData({...formData, source_strength: e.target.value})} style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)' }}>
                   {['强', '中', '弱'].map(o => <option key={o} value={o}>强度: {o}</option>)}
                 </select>
-                <select value={formData.source_power} onChange={e => setFormData({...formData, source_power: e.target.value})} style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'var(--bg-color)', color: 'var(--text-main)' }}>
+                <select value={formData.source_power} onChange={e => setFormData({...formData, source_power: e.target.value})} style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)' }}>
                   {['对等', '不对等'].map(o => <option key={o} value={o}>{o}</option>)}
                 </select>
-                <select value={formData.source_value} onChange={e => setFormData({...formData, source_value: e.target.value})} style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'var(--bg-color)', color: 'var(--text-main)' }}>
+                <select value={formData.source_value} onChange={e => setFormData({...formData, source_value: e.target.value})} style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)' }}>
                   {['利他', '利己'].map(o => <option key={o} value={o}>{o}</option>)}
                 </select>
               </div>
@@ -767,16 +759,16 @@ export default function RelationshipsPage({
               <div style={{ borderTop: '1px dashed var(--card-border)', paddingTop: '16px', marginBottom: '16px' }}>
                 <h3 style={{ fontSize: '14px', color: 'var(--text-main)', marginBottom: '12px' }}>B 对 A 的认知</h3>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px' }}>
-                  <select value={formData.target_quadrant} onChange={e => setFormData({...formData, target_quadrant: e.target.value})} style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'var(--bg-color)', color: 'var(--text-main)' }}>
+                  <select value={formData.target_quadrant} onChange={e => setFormData({...formData, target_quadrant: e.target.value})} style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)' }}>
                     {['亲密', '认同', '敌对', '漠视'].map(o => <option key={o} value={o}>{o}</option>)}
                   </select>
-                  <select value={formData.target_strength} onChange={e => setFormData({...formData, target_strength: e.target.value})} style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'var(--bg-color)', color: 'var(--text-main)' }}>
+                  <select value={formData.target_strength} onChange={e => setFormData({...formData, target_strength: e.target.value})} style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)' }}>
                     {['强', '中', '弱'].map(o => <option key={o} value={o}>强度: {o}</option>)}
                   </select>
-                  <select value={formData.target_power} onChange={e => setFormData({...formData, target_power: e.target.value})} style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'var(--bg-color)', color: 'var(--text-main)' }}>
+                  <select value={formData.target_power} onChange={e => setFormData({...formData, target_power: e.target.value})} style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)' }}>
                     {['对等', '不对等'].map(o => <option key={o} value={o}>{o}</option>)}
                   </select>
-                  <select value={formData.target_value} onChange={e => setFormData({...formData, target_value: e.target.value})} style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'var(--bg-color)', color: 'var(--text-main)' }}>
+                  <select value={formData.target_value} onChange={e => setFormData({...formData, target_value: e.target.value})} style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)' }}>
                     {['利他', '利己'].map(o => <option key={o} value={o}>{o}</option>)}
                   </select>
                 </div>
@@ -796,7 +788,7 @@ export default function RelationshipsPage({
                   <select
                     value={formData.status}
                     onChange={e => setFormData({ ...formData, status: e.target.value })}
-                    style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'var(--bg-color)', color: 'var(--text-main)' }}
+                    style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)' }}
                   >
                     {[{ value: 'active', label: '进行中' }, { value: 'strained', label: '紧张' }, { value: 'interrupted', label: '中断' }, { value: 'ended', label: '已结束' }].map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                   </select>

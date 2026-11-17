@@ -121,6 +121,14 @@ html[data-theme="light"] {
   --card-shadow: 0 10px 34px rgba(0, 0, 0, 0.06);
   --text-main: #1d1d1f;
   --text-muted: #4b4b52;
+  --text-faint: #62626a;
+  --text-disabled: #7a7a82;
+  --surface-solid: #ffffff;
+  --glass-frost-bg: #ffffff;
+  --glass-liquid-bg: #fbfbfd;
+  --glass-frost-blur: 20px;
+  --glass-border: rgba(0, 0, 0, 0.12);
+  --glass-rim: rgba(255, 255, 255, 0.5);
   --primary-color: #1d1d1f;
   --primary-hover: #000000;
   --primary-text: #ffffff;

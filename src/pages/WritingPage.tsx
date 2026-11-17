@@ -1392,7 +1392,7 @@ export default function WritingPage({
             <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>已有手稿：从左侧手稿库选择一章继续。</div>
           </div>
         ) : (
-          <div style={{ ...card, flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div className="wp-editor-surface" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '8px 12px', borderBottom: '1px solid var(--card-border)', flexWrap: 'wrap' }}>
               <ToolbarBtn label="B" title="加粗" onClick={() => editor?.chain().focus().toggleBold().run()} />
               <ToolbarBtn label="I" title="斜体" onClick={() => editor?.chain().focus().toggleItalic().run()} />
@@ -1406,29 +1406,37 @@ export default function WritingPage({
               <ToolbarBtn label="↶" title="撤销" onClick={() => editor?.chain().focus().undo().run()} />
               <ToolbarBtn label="↷" title="重做" onClick={() => editor?.chain().focus().redo().run()} />
               <span style={{ width: '1px', height: '16px', background: 'var(--card-border)', margin: '0 4px' }} />
-              <button type="button" title="插入图片（也可粘贴或拖入）" disabled={imageBusy} onClick={() => imageInputRef.current?.click()} style={{ padding: '5px 8px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)', fontSize: '11px', cursor: imageBusy ? 'wait' : 'pointer' }}>{imageBusy ? '上传中…' : '＋ 图片'}</button>
-              <ToolbarBtn label="左" title="图片左对齐" onClick={() => setImageAlign('left')} />
-              <ToolbarBtn label="中" title="图片居中" onClick={() => setImageAlign('center')} />
-              <ToolbarBtn label="右" title="图片右对齐" onClick={() => setImageAlign('right')} />
-              <ToolbarBtn label="图注" title="编辑图片说明" onClick={editImageCaption} />
-              <span style={{ width: '1px', height: '16px', background: 'var(--card-border)', margin: '0 4px' }} />
-              <button type="button" title="朗读正文或选中文字" onClick={readAloud} style={{ padding: '5px 8px', borderRadius: '6px', border: '1px solid var(--card-border)', background: speechState === 'idle' ? 'transparent' : 'var(--text-main)', color: speechState === 'idle' ? 'var(--text-main)' : 'var(--bg-color)', fontSize: '11px', cursor: 'pointer' }}>
-                {speechState === 'playing' ? '⏸ 暂停' : speechState === 'paused' ? '▶ 继续' : '▶ 朗读'}
-              </button>
-              {speechState !== 'idle' && <button type="button" title="停止朗读" onClick={stopReading} style={{ padding: '5px 8px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-muted)', fontSize: '11px', cursor: 'pointer' }}>■ 停止</button>}
-              <select aria-label="朗读语速" value={speechRate} onChange={(event) => setSpeechRate(Number(event.target.value))} style={{ padding: '4px 6px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)', fontSize: '10px' }}>
-                <option value={0.8}>0.8×</option>
-                <option value={1}>1.0×</option>
-                <option value={1.2}>1.2×</option>
-                <option value={1.5}>1.5×</option>
-              </select>
-              {voices.length > 0 && (
-                <select aria-label="朗读音色" value={speechVoice} onChange={(event) => setSpeechVoice(event.target.value)} style={{ maxWidth: 130, padding: '4px 6px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)', fontSize: '10px' }}>
-                  <option value="">默认音色</option>
-                  {voices.map((voice) => <option key={voice.name} value={voice.name}>{voice.name}</option>)}
-                </select>
-              )}
-              <input ref={imageInputRef} type="file" accept="image/*" multiple hidden onChange={(event) => { const files = event.target.files ? [...event.target.files] : []; if (files.length) void insertImages(files); event.target.value = '' }} />
+              <details className="wp-more">
+                <summary>更多格式</summary>
+                <div className="wp-more-menu" style={{ flexDirection: 'column', gap: '9px', minWidth: '260px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                    <button type="button" title="插入图片（也可粘贴或拖入）" disabled={imageBusy} onClick={() => imageInputRef.current?.click()} style={{ padding: '5px 8px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)', fontSize: '11px', cursor: imageBusy ? 'wait' : 'pointer' }}>{imageBusy ? '上传中…' : '＋ 图片'}</button>
+                    <ToolbarBtn label="左" title="图片左对齐" onClick={() => setImageAlign('left')} />
+                    <ToolbarBtn label="中" title="图片居中" onClick={() => setImageAlign('center')} />
+                    <ToolbarBtn label="右" title="图片右对齐" onClick={() => setImageAlign('right')} />
+                    <ToolbarBtn label="图注" title="编辑图片说明" onClick={editImageCaption} />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                    <button type="button" title="朗读正文或选中文字" onClick={readAloud} style={{ padding: '5px 8px', borderRadius: '6px', border: '1px solid var(--card-border)', background: speechState === 'idle' ? 'transparent' : 'var(--text-main)', color: speechState === 'idle' ? 'var(--text-main)' : 'var(--bg-color)', fontSize: '11px', cursor: 'pointer' }}>
+                      {speechState === 'playing' ? '⏸ 暂停' : speechState === 'paused' ? '▶ 继续' : '▶ 朗读'}
+                    </button>
+                    {speechState !== 'idle' && <button type="button" title="停止朗读" onClick={stopReading} style={{ padding: '5px 8px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-muted)', fontSize: '11px', cursor: 'pointer' }}>■ 停止</button>}
+                    <select aria-label="朗读语速" value={speechRate} onChange={(event) => setSpeechRate(Number(event.target.value))} style={{ padding: '4px 6px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)', fontSize: '10px' }}>
+                      <option value={0.8}>0.8×</option>
+                      <option value={1}>1.0×</option>
+                      <option value={1.2}>1.2×</option>
+                      <option value={1.5}>1.5×</option>
+                    </select>
+                    {voices.length > 0 && (
+                      <select aria-label="朗读音色" value={speechVoice} onChange={(event) => setSpeechVoice(event.target.value)} style={{ maxWidth: 130, padding: '4px 6px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)', fontSize: '10px' }}>
+                        <option value="">默认音色</option>
+                        {voices.map((voice) => <option key={voice.name} value={voice.name}>{voice.name}</option>)}
+                      </select>
+                    )}
+                  </div>
+                  <input ref={imageInputRef} type="file" accept="image/*" multiple hidden onChange={(event) => { const files = event.target.files ? [...event.target.files] : []; if (files.length) void insertImages(files); event.target.value = '' }} />
+                </div>
+              </details>
               <div style={{ flex: 1 }} />
               <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
                 {current.mode === 'architect' ? '推演正文可直接精修' : '选中文字可提取或 AI 辅助'}
@@ -1629,7 +1637,7 @@ export default function WritingPage({
                 {sourceEvents.map((event) => {
                   const runs = runsByEvent[event.id] || []
                   return (
-                    <div key={event.id} style={{ ...card, padding: '13px', borderRadius: '10px' }}>
+                    <div key={event.id} style={{ padding: '13px', borderRadius: '10px', background: 'transparent', border: '1px solid var(--card-border)' }}>
                       <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-main)' }}>{event.name}</div>
                       <div style={{ marginTop: '4px', fontSize: '10px', color: 'var(--text-muted)' }}>
                         {event.story_time || '时间未定'} · {event.polarity || '—'} / {event.intensity || '—'}
@@ -1662,7 +1670,7 @@ export default function WritingPage({
             <SidebarEmpty text="选择一章后开始提取" />
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{ ...card, padding: '14px', borderRadius: '10px' }}>
+              <div style={{ padding: '14px', borderRadius: '10px', background: 'transparent', border: '1px solid var(--card-border)' }}>
                 <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-main)' }}>解析本章</div>
                 <p style={{ margin: '6px 0 10px', fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.7 }}>
                   AI 会从正文中抽取人物、地点、事件与关系，先存为草稿，不会直接改动正式设定。
@@ -1692,9 +1700,10 @@ export default function WritingPage({
                 <div
                   key={draft.id}
                   style={{
-                    ...card,
                     padding: '12px',
                     borderRadius: '10px',
+                    background: 'transparent',
+                    border: '1px solid var(--card-border)',
                     opacity: draft.status === 'pending' ? 1 : 0.55,
                   }}
                 >
@@ -1742,7 +1751,7 @@ export default function WritingPage({
         >
           <div
             onClick={(event) => event.stopPropagation()}
-            style={{ ...card, width: '640px', maxHeight: '86vh', display: 'flex', flexDirection: 'column', background: 'var(--bg-color)' }}
+            style={{ ...card, width: '640px', maxWidth: '92vw', maxHeight: '86vh', display: 'flex', flexDirection: 'column', background: 'transparent' }}
           >
             <div style={{ padding: '18px 20px', borderBottom: '1px solid var(--card-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
@@ -1843,7 +1852,7 @@ export default function WritingPage({
                   <select
                     value={perspectiveMode}
                     onChange={(event) => setPerspectiveMode(event.target.value)}
-                    style={{ flex: 1, padding: '8px 10px', borderRadius: '7px', border: '1px solid var(--card-border)', background: 'var(--bg-color)', color: 'var(--text-main)', fontSize: '12px', outline: 'none' }}
+                    style={{ flex: 1, padding: '8px 10px', borderRadius: '7px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)', fontSize: '12px', outline: 'none' }}
                   >
                     <option value="third_limited">第三人称限知（跟随角色）</option>
                     <option value="first_person">第一人称（代入角色）</option>
@@ -1855,7 +1864,7 @@ export default function WritingPage({
                     <select
                       value={perspectiveChar}
                       onChange={(event) => setPerspectiveChar(event.target.value)}
-                      style={{ flex: 1, padding: '8px 10px', borderRadius: '7px', border: '1px solid var(--card-border)', background: 'var(--bg-color)', color: 'var(--text-main)', fontSize: '12px', outline: 'none' }}
+                      style={{ flex: 1, padding: '8px 10px', borderRadius: '7px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)', fontSize: '12px', outline: 'none' }}
                     >
                       <option value="">自动跟随主导人物</option>
                       {characters.map((c: any) => (
@@ -1882,7 +1891,7 @@ export default function WritingPage({
 
       {deleteOpen && current && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
-          <div style={{ ...card, width: '380px', padding: '22px', background: 'var(--bg-color)' }}>
+          <div style={{ ...card, width: '380px', maxWidth: '92vw', padding: '22px', background: 'transparent' }}>
             <h3 style={{ margin: 0, fontSize: '16px', color: 'var(--text-main)' }}>删除《{current.title}》？</h3>
             <p style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.7 }}>
               章节与本章草稿会一起移入全局回收站，可随时恢复；已入库的实体不受影响。

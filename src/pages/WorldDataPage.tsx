@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import OfficialAssetPicker from '../components/media/OfficialAssetPicker';
+import { API_ORIGIN } from '../api/config';
 
 // ✅ 预设地形与气候数据
 const TERRAIN_PRESETS = ['平原', '山地', '丘陵', '森林', '沙漠', '沼泽', '水域', '冰川', '盆地', '城市建筑群'];
@@ -28,14 +29,14 @@ export default function WorldDataPage({ worldId }: { worldId?: string }) {
   const loadData = async () => {
     try {
       const [locRes, orgRes] = await Promise.all([
-        fetch(`http://127.0.0.1:8000/api/locations${worldId ? `?world_id=${worldId}` : ''}`),
-        fetch(`http://127.0.0.1:8000/api/organizations${worldId ? `?world_id=${worldId}` : ''}`)
+        fetch(`${API_ORIGIN}/api/locations${worldId ? `?world_id=${worldId}` : ''}`),
+        fetch(`${API_ORIGIN}/api/organizations${worldId ? `?world_id=${worldId}` : ''}`)
       ]);
       setLocations(await locRes.json());
       setOrganizations(await orgRes.json());
       
       if (worldId) {
-        const worldRes = await fetch(`http://127.0.0.1:8000/api/worlds/${worldId}`);
+        const worldRes = await fetch(`${API_ORIGIN}/api/worlds/${worldId}`);
         const wData = await worldRes.json();
         setWorldInfo(wData);
         setMapUrlInput(wData.map_image_url || '');
@@ -84,7 +85,7 @@ export default function WorldDataPage({ worldId }: { worldId?: string }) {
   const handleSaveMapUrl = async () => {
     if (!worldId) return;
     try {
-      await fetch(`http://127.0.0.1:8000/api/worlds/${worldId}`, {
+      await fetch(`${API_ORIGIN}/api/worlds/${worldId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ map_image_url: mapUrlInput })
@@ -97,7 +98,7 @@ export default function WorldDataPage({ worldId }: { worldId?: string }) {
   const handleSaveLoc = async () => {
     if (!locForm.name.trim()) return alert("请输入地点名称");
     try {
-      const url = editingLocId ? `http://127.0.0.1:8000/api/locations/${editingLocId}` : "http://127.0.0.1:8000/api/locations";
+      const url = editingLocId ? `${API_ORIGIN}/api/locations/${editingLocId}` : `${API_ORIGIN}/api/locations`;
       const method = editingLocId ? 'PUT' : 'POST';
 
       const res = await fetch(url, {
@@ -125,7 +126,7 @@ export default function WorldDataPage({ worldId }: { worldId?: string }) {
 
   const handleAddOrg = async () => {
     if (!orgForm.name.trim()) return alert("请输入组织名称");
-    await fetch("http://127.0.0.1:8000/api/organizations", {
+    await fetch(`${API_ORIGIN}/api/organizations`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...orgForm, world_id: worldId || "" })
     });
@@ -135,7 +136,7 @@ export default function WorldDataPage({ worldId }: { worldId?: string }) {
 
   const handleDeleteOrg = async (id: string) => {
     if (!window.confirm("确定删除该组织吗？")) return;
-    await fetch(`http://127.0.0.1:8000/api/organizations/${id}`, { method: 'DELETE' });
+    await fetch(`${API_ORIGIN}/api/organizations/${id}`, { method: 'DELETE' });
     loadData();
   };
 
@@ -169,10 +170,10 @@ export default function WorldDataPage({ worldId }: { worldId?: string }) {
   const existingNations = locations.filter(l => l.geo_type?.includes('国') || l.geo_type?.includes('帝国') || l.geo_type?.includes('城邦')).map(l => l.name);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '1.5rem', boxSizing: 'border-box' }}>
-      
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-        <div style={{ display: 'flex', gap: '8px', background: 'var(--card-bg)', padding: '4px', borderRadius: '8px', border: '1px solid var(--card-border)' }}>
+    <div className="world-data-page">
+      <div className="ws-glass-surface world-data-shell">
+      <div className="world-data-toolbar">
+        <div className="world-data-tabs">
           <button onClick={() => setActiveTab('map')} style={{ padding: '8px 24px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: activeTab === 'map' ? 'var(--primary-color)' : 'transparent', color: activeTab === 'map' ? 'var(--primary-text)' : 'var(--text-muted)', fontWeight: 600, transition: 'all 0.2s' }}>
             📍 地理与地图
           </button>
@@ -182,7 +183,7 @@ export default function WorldDataPage({ worldId }: { worldId?: string }) {
         </div>
 
         {activeTab === 'map' && (
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', background: 'var(--card-bg)', padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--card-border)' }}>
+          <div className="world-data-actions">
             <label style={{ padding: '6px 12px', background: 'rgba(128,128,128,0.1)', border: '1px solid var(--card-border)', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', color: 'var(--text-main)', fontWeight: 600 }}>
               📁 上传底图
               <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} />
@@ -193,7 +194,7 @@ export default function WorldDataPage({ worldId }: { worldId?: string }) {
         )}
       </div>
 
-      <div className="ws-glass-surface ws-map-surface" style={{ flex: 1, position: 'relative', borderRadius: '12px', overflow: 'hidden' }}>
+      <div className="ws-map-surface world-data-surface">
         
         {activeTab === 'map' && (
           <>
@@ -264,11 +265,11 @@ export default function WorldDataPage({ worldId }: { worldId?: string }) {
 
             {/* ✅ 悬浮表单面板 (全面UI升级) */}
             <div className="ws-glass-surface" style={{
-              position: 'absolute', top: '20px', width: '340px', zIndex: 20,
+              position: 'absolute', top: '20px', width: '300px', zIndex: 20,
               ...(isLeftSide ? { right: '20px' } : { left: '20px' }),
               background: 'var(--card-bg)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
               border: '1px solid var(--card-border)', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
-              padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px',
+              padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px',
               transition: 'all 0.3s ease', 
               transform: isPanelOpen ? 'translateX(0)' : (isLeftSide ? 'translateX(120%)' : 'translateX(-120%)')
             }}>
@@ -405,7 +406,7 @@ export default function WorldDataPage({ worldId }: { worldId?: string }) {
         )}
 
         {activeTab === 'org' && (
-          <div style={{ padding: '2rem', height: '100%', overflowY: 'auto', background: 'var(--bg-color)' }}>
+          <div className="world-data-orgs">
             <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
               <input type="text" placeholder="组织名称" value={orgForm.name} onChange={e => setOrgForm({...orgForm, name: e.target.value})} style={{ flex: 1, padding: '10px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)' }} />
               <input type="text" placeholder="组织描述" value={orgForm.description} onChange={e => setOrgForm({...orgForm, description: e.target.value})} style={{ flex: 2, padding: '10px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)' }} />
@@ -425,6 +426,7 @@ export default function WorldDataPage({ worldId }: { worldId?: string }) {
             </div>
           </div>
         )}
+      </div>
       </div>
 
       <OfficialAssetPicker

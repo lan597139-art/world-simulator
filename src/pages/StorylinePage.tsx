@@ -508,7 +508,7 @@ export default function StorylinePage({ worldId, onOpenEvents, lang = 'zh' }: { 
   )
 
   return (
-    <div className="slx-page" style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, background: 'transparent' }}>
+    <div className="slx-page" style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
       {/* 极简顶部工具栏，只保留故事选择与视图切换 */}
       <div className="slx-topbar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px', borderBottom: '1px solid var(--card-border)' }}>
         

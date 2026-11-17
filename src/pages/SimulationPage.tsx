@@ -290,24 +290,19 @@ export default function SimulationPage({ onWriteChapter, auxiliary = false, worl
               onClick={() => setRightOpen((prev) => !prev)}
             >结果</button>
             <span className="sim-run-label">运行操作</span>
-            <button 
+            <button
+              type="button"
+              className="sim-run-btn is-secondary"
               onClick={handleContinuousSimulate}
               disabled={isSimulating}
-              style={{ 
-                padding: '8px 16px', background: 'transparent', border: '1px solid var(--primary-color)', color: 'var(--primary-color)', 
-                borderRadius: '6px', cursor: isSimulating ? 'not-allowed' : 'pointer', fontWeight: 600, whiteSpace: 'nowrap'
-              }}
             >
               ⏩ 连续推演
             </button>
-            <button 
+            <button
+              type="button"
+              className="sim-run-btn is-primary"
               onClick={handleSimulate}
               disabled={isSimulating || !selectedEvent}
-              style={{ 
-                padding: '8px 20px', background: isSimulating ? 'var(--card-border)' : 'var(--primary-color)', 
-                color: isSimulating ? 'var(--text-muted)' : 'var(--primary-text)', 
-                border: 'none', borderRadius: '6px', cursor: isSimulating ? 'not-allowed' : 'pointer', fontWeight: 600, whiteSpace: 'nowrap'
-              }}
             >
               {isSimulating ? '推演中...' : '▶ 单步推演'}
             </button>

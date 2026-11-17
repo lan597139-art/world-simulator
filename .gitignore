@@ -41,3 +41,6 @@ backend/uploads/
 # OS
 .DS_Store
 backend/backups/
+
+# Local visual verification artifacts
+.verify/

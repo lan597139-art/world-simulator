@@ -83,8 +83,12 @@ html[data-glass-targets~="nav"] :is(.app-topbar, .cc-topbar, .yb-pinned-nav) {
 html[data-glass-targets~="card"] :is(
   .glass-card, .glass-frost, .glass-panel,
   .ws-glass-surface, .cc-card, .cw-card,
-  .sim-panel, .sim-console, .slx-canvas-wrap, .slx-node,
+  .sim-page,
+  .slx-card, .slx-canvas-wrap, .slx-node,
   .tlx-page, .tlx-head, .tlx-controls, .tlx-canvas, .tlx-item,
+  .cc-tool, .cc-asset, .cc-recent-work,
+  .world-data-shell, .world-data-surface, .world-data-orgs,
+  .rel-universe,
   .settings-material-card, .settings-card
 ) {
   background-color: color-mix(
@@ -151,7 +155,11 @@ html[data-glass-targets~="control"] :is(
   border-color: color-mix(in srgb, #fff calc(var(--ws-g-control-border) * 1%), var(--field-border)) !important;
 }
 
-html[data-glass-targets~="liquid"] :is(.glass-liquid, .cc-scene-card[data-liquid-glass="fallback"], .cc-scene-card[data-liquid-glass="pending"]) {
+html[data-glass-targets~="liquid"] :is(
+  .glass-liquid,
+  .cc-scene-card[data-liquid-glass="fallback"], .cc-scene-card[data-liquid-glass="pending"],
+  .cc-tool, .cc-asset, .cc-recent-work
+) {
   background-color: color-mix(
     in srgb,
     var(--glass-liquid-bg) calc(max(var(--ws-g-liquid-opacity), var(--ws-readability-floor)) * 1%),
@@ -191,7 +199,8 @@ html[data-text-scopes~="nav"] :is(.app-sidebar, .cc-sidebar, .app-topbar, .cc-to
 }
 html[data-text-scopes~="card"] :is(
   .glass-card, .glass-frost, .glass-panel, .ws-glass-surface,
-  .cc-card, .cw-card, .sim-panel, .tlx-item
+  .cc-card, .cw-card, .sim-page, .sim-panel, .sim-console, .tlx-item,
+  .cc-tool, .cc-asset, .cc-recent-work, .world-data-shell
 ) {
   --font-sans: var(--ws-font-family);
   font-family: var(--ws-font-family) !important;
@@ -211,7 +220,8 @@ html[data-text-custom="true"][data-text-scopes~="nav"] :is(.app-topbar, .cc-topb
 
 html[data-text-custom="true"][data-text-scopes~="card"] :is(
   .glass-card, .glass-frost, .glass-panel, .ws-glass-surface,
-  .cc-card, .cw-card, .sim-panel, .tlx-item
+  .cc-card, .cw-card, .sim-page, .sim-panel, .sim-console, .tlx-item,
+  .cc-tool, .cc-asset, .cc-recent-work, .world-data-shell
 ) {
   --text-main: color-mix(in srgb, var(--ws-text-color) calc(var(--ws-text-opacity) * 1%), transparent);
   --text-muted: color-mix(in srgb, var(--ws-text-color) calc(var(--ws-text-opacity) * 0.72%), transparent);
@@ -726,7 +736,8 @@ html[data-text-background="true"][data-text-scopes~="body"] main :where(p, li, b
 /* 自动对比：跟随当前主题的玻璃底色，浅底黑字、深底白字。 */
 html[data-text-auto="true"][data-text-scopes~="card"] :is(
   .glass-card, .glass-frost, .glass-panel, .ws-glass-surface,
-  .cc-card, .cw-card, .sim-panel, .tlx-item
+  .cc-card, .cw-card, .sim-page, .sim-panel, .sim-console, .tlx-item,
+  .cc-tool, .cc-asset, .cc-recent-work, .world-data-shell
 ) {
   --text-main: var(--ws-auto-text) !important;
   --text-muted: var(--ws-auto-text-muted) !important;
@@ -831,4 +842,71 @@ html[data-glass-targets~="liquid"] .cc-scene-card::after {
 .ws-studio-theme-buttons button:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--primary-color) 65%, transparent);
   outline-offset: 1px;
+}
+
+/* --------------------------------------------------------------------------
+   4. 点选元素：白色虚线框标记可微调的卡片、导航与文字。
+   -------------------------------------------------------------------------- */
+.ws-studio-pick-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 10px;
+  padding: 8px 9px;
+  border: 1px dashed color-mix(in srgb, var(--text-main) 18%, transparent);
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--text-main) 3%, transparent);
+  color: var(--text-muted);
+}
+.ws-studio-pick-row.is-on {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--primary-color) 55%, transparent);
+  background: color-mix(in srgb, var(--primary-color) 8%, transparent);
+}
+.ws-studio-pick-row button {
+  border: 1px solid color-mix(in srgb, var(--text-main) 14%, transparent);
+  border-radius: 8px;
+  padding: 5px 9px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.ws-studio-pick-row.is-on button.is-active {
+  border-color: var(--primary-color);
+  background: var(--primary-color);
+  color: var(--primary-text);
+}
+.ws-studio-pick-row span {
+  font-size: 9px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+html[data-ws-pick="1"] :is(
+  .cc-scene-card, .cc-tool, .cc-asset, .cc-recent-work, .cc-card, .cw-card,
+  .glass-card, .glass-frost, .glass-panel, .ws-glass-surface,
+  .tlx-page, .tlx-head, .tlx-controls, .tlx-canvas, .tlx-item,
+  .sim-page, .sim-panel, .sim-console,
+  .slx-page, .slx-card, .slx-canvas-wrap, .slx-node,
+  .events-page, .rel-page, .world-data-page, .world-data-shell, .rel-universe,
+  .cc-nav-item, .sidebar-nav-item, .app-sidebar, .cc-sidebar, .app-topbar, .cc-topbar,
+  .settings-card, .settings-material-card
+) {
+  outline: 1px dashed rgba(255, 255, 255, 0.82);
+  outline-offset: 1px;
+}
+html[data-ws-pick="1"] :is(
+  h1, h2, h3, h4, h5, h6, p, li, strong, em, blockquote,
+  .cc-scene-title, .cc-scene-desc, .cc-tool-name, .cc-asset-label,
+  .tlx-item-title, .tlx-item-desc, .wp-title-input
+) {
+  outline: 1px dashed rgba(255, 255, 255, 0.55);
+  outline-offset: 1px;
+}
+.ws-picked {
+  outline: 2px solid var(--primary-color) !important;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary-color) 12%, transparent) !important;
 }

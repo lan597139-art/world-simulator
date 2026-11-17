@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Check, Eye, Layers, Monitor, Moon, RotateCcw, Save, SlidersHorizontal, Sparkles, Sun, Trash2, Type, X } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Check, Eye, Layers, Monitor, Moon, MousePointer2, RotateCcw, Save, SlidersHorizontal, Sparkles, Sun, Trash2, Type, X } from 'lucide-react'
 import { tr, type Lang } from '../../i18n'
 import { updateSettings, type SettingsPreferences } from '../../api/settings'
 import {
@@ -104,6 +104,15 @@ function label(lang: Lang, zh: string, en: string) {
   return tr(lang, zh, en)
 }
 
+/** 点选模式：把点击到的元素归类到最接近的玻璃目标。 */
+function pickTargetFor(element: HTMLElement): GlassTarget {
+  if (element.closest('.cc-scene-card')) return 'liquid'
+  if (element.closest('.cc-nav-item, .sidebar-nav-item, .app-sidebar, .cc-sidebar, .app-topbar, .cc-topbar, .yb-pinned-nav')) return 'nav'
+  if (element.closest('[role="dialog"], .ws-modal, .modal')) return 'modal'
+  if (element.closest('input, textarea, select, button')) return 'control'
+  return 'card'
+}
+
 function Slider({
   labelText, value, min, max, step = 1, unit = '', onChange,
 }: {
@@ -142,6 +151,8 @@ export default function AppearanceStudio({ pageKey, pageName, lang }: Props) {
   const [draft, setDraft] = useState<Appearance>(() => loadAppearanceForPage(pageKey))
   const [savedPage, setSavedPage] = useState(() => hasPageAppearance(pageKey))
   const [flash, setFlash] = useState('')
+  const [pick, setPick] = useState(false)
+  const pickedRef = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
     setDraft(loadAppearanceForPage(pageKey))
@@ -158,6 +169,46 @@ export default function AppearanceStudio({ pageKey, pageName, lang }: Props) {
     observer.observe(root, { attributes: true, attributeFilter: ['data-theme'] })
     return () => observer.disconnect()
   }, [])
+
+  useEffect(() => {
+    if (!pick) {
+      if (pickedRef.current) pickedRef.current.classList.remove('ws-picked')
+      pickedRef.current = null
+      delete document.documentElement.dataset.wsPick
+      return
+    }
+    const root = document.documentElement
+    root.dataset.wsPick = '1'
+    const onClick = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null
+      if (!target || target.closest('.ws-studio-panel, .ws-studio-fab, .ws-studio-overlay')) return
+      const candidate = target.closest(
+        '.cc-scene-card, .cc-tool, .cc-asset, .cc-recent-work, .cc-card, .cw-card, .glass-card, .glass-frost, .glass-panel, .ws-glass-surface, .tlx-page, .tlx-item, .sim-page, .sim-panel, .sim-console, .slx-page, .slx-card, .slx-node, .events-page, .rel-page, .world-data-page, .world-data-shell, .rel-universe, .cc-nav-item, .sidebar-nav-item, .app-sidebar, .cc-sidebar, .app-topbar, .cc-topbar, h1, h2, h3, h4, h5, h6, p, li, strong, em, blockquote'
+      ) as HTMLElement | null
+      if (!candidate) return
+      if (pickedRef.current) pickedRef.current.classList.remove('ws-picked')
+      pickedRef.current = candidate
+      candidate.classList.add('ws-picked')
+      const pickedTarget = pickTargetFor(candidate)
+      setDraft((current) =>
+        current.glass_targets.includes(pickedTarget)
+          ? current
+          : { ...current, glass_targets: [...current.glass_targets, pickedTarget] },
+      )
+      setFlash(label(
+        lang,
+        `已选中：${pickedTarget === 'liquid' ? '场景卡' : pickedTarget === 'nav' ? '导航' : pickedTarget === 'modal' ? '弹窗' : pickedTarget === 'control' ? '控件' : '卡片'}，可继续微调`,
+        `Picked: ${pickedTarget === 'liquid' ? 'scene card' : pickedTarget === 'nav' ? 'navigation' : pickedTarget === 'modal' ? 'modal' : pickedTarget === 'control' ? 'control' : 'card'}. Adjust it now.`,
+      ))
+    }
+    window.addEventListener('click', onClick)
+    return () => {
+      window.removeEventListener('click', onClick)
+      if (pickedRef.current) pickedRef.current.classList.remove('ws-picked')
+      pickedRef.current = null
+      delete root.dataset.wsPick
+    }
+  }, [pick, lang])
 
   useEffect(() => {
     if (!open) return
@@ -404,6 +455,13 @@ export default function AppearanceStudio({ pageKey, pageName, lang }: Props) {
                     </button>
                   ))}
                 </div>
+              </div>
+              <div className={`ws-studio-pick-row${pick ? ' is-on' : ''}`}>
+                <MousePointer2 size={12} />
+                <button type="button" className={pick ? 'is-active' : ''} onClick={() => setPick((value) => !value)} aria-pressed={pick}>
+                  {label(lang, '点选元素', 'Pick elements')}
+                </button>
+                {pick && <span>{label(lang, '点击页面中的卡片或文字，进入精准微调', 'Click any card or text to fine-tune precisely')}</span>}
               </div>
               <div className="ws-studio-scope-row" role="group" aria-label={label(lang, '保存范围', 'Save scope')}>
                 <button type="button" className={scope === 'page' ? 'is-active' : ''} onClick={() => setScope('page')}>

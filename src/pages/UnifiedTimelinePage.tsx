@@ -207,9 +207,6 @@ export default function UnifiedTimelinePage({ worldId, worldName, mode = 'world'
         <div className="tlx-head-copy">
           <span className="tlx-kicker">TIMELINE / XMIND VIEW</span>
           <strong>{mode === 'life' ? '人生时间线' : mode === 'interaction' ? '互动时间线' : '统一时间线'}</strong>
-          <small>
-            {mode === 'life' ? '按人生经历与记录整理时间顺序，不做世界推演' : mode === 'interaction' ? '按互动事件与关系变化整理时间顺序' : '时间主轴只负责排序，枝干负责说明每条记录属于谁、改变了什么'}
-          </small>
         </div>
         <div className="tlx-head-right">
           <span className="tlx-world">{worldName || '未选择世界'}</span>
