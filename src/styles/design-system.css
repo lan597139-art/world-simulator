@@ -397,9 +397,13 @@ html[data-theme="dark"] [style^="color: #bbb"] {
 }
 .sidebar-nav-item.is-active::before { opacity: .9; transform: scaleY(1); }
 .sidebar-nav-item.is-active {
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--sidebar-text) 10%, transparent);
+  background: var(--ws-nav-item-bg-active) !important;
+  border-color: var(--ws-nav-item-border-active) !important;
+  box-shadow: var(--ws-nav-item-shadow-active) !important;
+  -webkit-backdrop-filter: var(--ws-nav-item-blur) !important;
+  backdrop-filter: var(--ws-nav-item-blur) !important;
 }
-.sidebar-nav-item:hover { background: rgba(128,128,128,.12) !important; }
+.sidebar-nav-item:hover { background: var(--ws-nav-item-bg-hover) !important; }
 
 /* 旧页面内联灰色：补上“其他属性之后才声明 color”的常见情况。 */
 html[data-theme="dark"] [style*="; color: rgb(102, 102, 102)"],
@@ -431,8 +435,11 @@ html[data-theme="dark"] [style*=";color: rgb(187, 187, 187)"] {
   opacity: .9;
 }
 .cc-nav-item.active {
-  background: rgba(255,255,255,.12) !important;
-  border-color: rgba(255,255,255,.16) !important;
+  background: var(--ws-nav-item-bg-active) !important;
+  border-color: var(--ws-nav-item-border-active) !important;
+  box-shadow: var(--ws-nav-item-shadow-active) !important;
+  -webkit-backdrop-filter: var(--ws-nav-item-blur) !important;
+  backdrop-filter: var(--ws-nav-item-blur) !important;
 }
 
 /* ==========================================================================
@@ -441,20 +448,53 @@ html[data-theme="dark"] [style*=";color: rgb(187, 187, 187)"] {
    时间线 / 模拟 / 故事线都必须使用这一套，不再逐页猜 rgba。
    ========================================================================== */
 html {
-  --workspace-glass-alpha: .76;
+  /* 专业工作区材质直接复用外观工作台的“卡片”档位，
+     这样悬浮调节器的模糊/透明度/描边/阴影可以覆盖所有工作区面板，
+     不再有一套与调节器脱节的硬编码玻璃。 */
   --workspace-glass-bg: color-mix(
     in srgb,
-    var(--glass-frost-bg) calc(var(--workspace-glass-alpha) * 100%),
+    var(--glass-frost-bg) calc(max(var(--ws-g-card-opacity, 76), var(--ws-readability-floor, .78)) * 1%),
     transparent
   );
-  --workspace-glass-blur: blur(22px) saturate(140%);
-  --workspace-glass-border: 1px solid var(--glass-border);
-  --workspace-glass-shadow: 0 1px 0 var(--glass-rim) inset, 0 10px 28px rgba(0, 0, 0, .07);
+  --workspace-glass-blur: blur(calc(var(--ws-g-card-blur, 24px) + (var(--ws-g-card-frost, 16) * 0.35px)))
+    saturate(calc(100% + (var(--ws-g-card-refraction, 14) * 0.9%)));
+  --workspace-glass-border: 1px solid color-mix(in srgb, #fff calc(var(--ws-g-card-border, 20) * 1%), var(--glass-border));
+  --workspace-glass-shadow:
+    0 1px 0 rgba(255, 255, 255, calc(var(--ws-g-card-border, 20) * 0.008)) inset,
+    0 0 calc(var(--ws-g-card-thickness, 10) * 0.45px) rgba(255, 255, 255, calc(var(--ws-g-card-border, 20) * 0.004)) inset,
+    0 calc(var(--ws-g-card-shadow, 16) * 0.09px) calc(var(--ws-g-card-shadow, 16) * 0.34px) rgba(0, 0, 0, calc(0.05 + var(--ws-g-card-shadow, 16) * 0.0012));
+
+  /* 侧栏导航条目（创作中心 .cc-nav-item / 主侧栏 .sidebar-nav-item）
+     之前背景、描边、阴影全部写死 rgba，控制台怎么调都不变。
+     这里改为同时读取控制台的“导航”与“卡片”档位并取均值，
+     因此调节导航或卡片玻璃都会同步到导航条目的悬停/选中态。 */
+  --ws-nav-item-opacity: calc((var(--ws-g-nav-opacity, 88) + var(--ws-g-card-opacity, 84)) / 2);
+  --ws-nav-item-blur: blur(calc(
+    ((var(--ws-g-nav-blur, 24px) + var(--ws-g-card-blur, 24px)) / 2)
+    + ((var(--ws-g-nav-frost, 18) + var(--ws-g-card-frost, 16)) / 2) * 0.35px
+  ));
+  --ws-nav-item-border: calc((var(--ws-g-nav-border, 24) + var(--ws-g-card-border, 20)) / 2);
+  --ws-nav-item-radius: calc((var(--ws-g-nav-radius, 0) + var(--ws-g-card-radius, 18)) / 2);
+  --ws-nav-item-shadow: calc((var(--ws-g-nav-shadow, 10) + var(--ws-g-card-shadow, 16)) / 2);
+  --ws-nav-item-bg-hover: color-mix(
+    in srgb,
+    var(--sidebar-bg) calc(var(--ws-nav-item-opacity) * 0.45%),
+    transparent
+  );
+  --ws-nav-item-bg-active: color-mix(
+    in srgb,
+    var(--sidebar-bg) calc(var(--ws-nav-item-opacity) * 0.9%),
+    transparent
+  );
+  --ws-nav-item-border-active: color-mix(
+    in srgb,
+    #fff calc(var(--ws-nav-item-border) * 0.55%),
+    var(--glass-border)
+  );
+  --ws-nav-item-shadow-active:
+    0 calc(var(--ws-nav-item-shadow) * 0.4px) calc(var(--ws-nav-item-shadow) * 0.9px)
+    rgba(0, 0, 0, calc(0.05 + var(--ws-nav-item-shadow) * 0.0012));
 }
-html[data-custom-background="true"] { --workspace-glass-alpha: .84; }
-html[data-bg-tone="vivid"] { --workspace-glass-alpha: .9; }
-html[data-bg-tone="detail"] { --workspace-glass-alpha: .88; }
-html[data-bg-tone="dark"] { --workspace-glass-alpha: .84; }
 
 /* 常规玻璃卡也走同一档，避免 70% / 90% / 100% 混用。 */
 .glass-card,

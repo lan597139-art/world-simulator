@@ -796,7 +796,7 @@ export default function SettingsPage({
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {reports.map((item) => (
-                    <div key={item.id} style={{ ...card, padding: 13, background: 'var(--workspace-glass-bg)', backdropFilter: 'blur(22px) saturate(140%)' }}>
+                    <div key={item.id} className="ws-glass-surface" style={{ ...card, padding: 13 }}>
                       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
                         <div style={{ minWidth: 0 }}>
                           <strong style={{ display: 'block', color: 'var(--text-main)', fontSize: 12 }}>

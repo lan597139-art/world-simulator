@@ -50,11 +50,13 @@ html[data-glass-targets~="nav"] :is(.app-sidebar, .cc-sidebar) {
     blur(calc(var(--ws-g-nav-blur) + (var(--ws-g-nav-frost) * 0.35px)))
     saturate(calc(100% + (var(--ws-g-nav-refraction) * 0.9%))) !important;
   border-color: color-mix(in srgb, #fff calc(var(--ws-g-nav-border) * 1%), var(--glass-border)) !important;
+  border-radius: calc(var(--ws-g-nav-radius) * 1px) !important;
   box-shadow:
     0 1px 0 rgba(255, 255, 255, calc(var(--ws-g-nav-border) * 0.008)) inset,
     0 0 calc(var(--ws-g-nav-thickness) * 0.45px) rgba(255, 255, 255, calc(var(--ws-g-nav-border) * 0.004)) inset,
     0 0 0 1px rgba(255, 86, 170, calc(var(--ws-g-nav-dispersion) * 0.004)),
-    0 0 22px rgba(90, 190, 255, calc(var(--ws-g-nav-dispersion) * 0.012)) !important;
+    0 0 calc(var(--ws-g-nav-shadow) * 0.35px) rgba(90, 190, 255, calc(var(--ws-g-nav-dispersion) * 0.012)),
+    0 calc(var(--ws-g-nav-shadow) * 0.09px) calc(var(--ws-g-nav-shadow) * 0.34px) rgba(0, 0, 0, calc(0.05 + var(--ws-g-nav-shadow) * 0.0012)) !important;
 }
 
 html[data-glass-targets~="nav"] :is(.app-topbar, .cc-topbar, .yb-pinned-nav) {
@@ -73,11 +75,13 @@ html[data-glass-targets~="nav"] :is(.app-topbar, .cc-topbar, .yb-pinned-nav) {
     blur(calc(var(--ws-g-nav-blur) + (var(--ws-g-nav-frost) * 0.35px)))
     saturate(calc(100% + (var(--ws-g-nav-refraction) * 0.9%))) !important;
   border-color: color-mix(in srgb, #fff calc(var(--ws-g-nav-border) * 1%), var(--glass-border)) !important;
+  border-radius: calc(var(--ws-g-nav-radius) * 1px) !important;
   box-shadow:
     0 1px 0 rgba(255, 255, 255, calc(var(--ws-g-nav-border) * 0.008)) inset,
     0 0 calc(var(--ws-g-nav-thickness) * 0.45px) rgba(255, 255, 255, calc(var(--ws-g-nav-border) * 0.004)) inset,
     0 0 0 1px rgba(255, 86, 170, calc(var(--ws-g-nav-dispersion) * 0.004)),
-    0 0 22px rgba(90, 190, 255, calc(var(--ws-g-nav-dispersion) * 0.012)) !important;
+    0 0 calc(var(--ws-g-nav-shadow) * 0.35px) rgba(90, 190, 255, calc(var(--ws-g-nav-dispersion) * 0.012)),
+    0 calc(var(--ws-g-nav-shadow) * 0.09px) calc(var(--ws-g-nav-shadow) * 0.34px) rgba(0, 0, 0, calc(0.05 + var(--ws-g-nav-shadow) * 0.0012)) !important;
 }
 
 html[data-glass-targets~="card"] :is(
@@ -89,7 +93,23 @@ html[data-glass-targets~="card"] :is(
   .cc-tool, .cc-asset, .cc-recent-work,
   .world-data-shell, .world-data-surface, .world-data-orgs,
   .rel-universe,
-  .settings-material-card, .settings-card
+  .settings-material-card, .settings-card,
+  .ct-section, .ct-toolbar,
+  .cm-section, .cm-toolbar,
+  .cc-world-menu, .cc-popover, .cc-search-results,
+  .ca-panel,
+  .ng-zoom, .ng-legend, .ng-panel,
+  .pwh-card, .pwh-world-card, .pwh-manuscript,
+  .wb-level-nav,
+  .nav-orb, .nav-orb-drawer,
+  .slx-head, .slx-toolbar, .slx-library, .slx-detail, .slx-event, .slx-branch, .slx-leaf,
+  .rel-page, .slx-page,
+  .relx-canvas, .relx-panel, .relx-entity-card, .relx-legend,
+  .uc-card,
+  .cw-hero-stats, .cw-cover-scene, .cw-cover-status,
+  .yb-overview-card,
+  .character-header-light,
+  [data-ai-assistant]
 ) {
   background-color: color-mix(
     in srgb,
@@ -106,16 +126,33 @@ html[data-glass-targets~="card"] :is(
     blur(calc(var(--ws-g-card-blur) + (var(--ws-g-card-frost) * 0.35px)))
     saturate(calc(100% + (var(--ws-g-card-refraction) * 0.9%))) !important;
   border-color: color-mix(in srgb, #fff calc(var(--ws-g-card-border) * 1%), var(--glass-border)) !important;
+  border-radius: calc(var(--ws-g-card-radius) * 1px) !important;
   box-shadow:
     0 1px 0 rgba(255, 255, 255, calc(var(--ws-g-card-border) * 0.008)) inset,
     0 0 calc(var(--ws-g-card-thickness) * 0.45px) rgba(255, 255, 255, calc(var(--ws-g-card-border) * 0.004)) inset,
     0 0 0 1px rgba(255, 86, 170, calc(var(--ws-g-card-dispersion) * 0.004)),
-    0 0 22px rgba(90, 190, 255, calc(var(--ws-g-card-dispersion) * 0.012)) !important;
+    0 0 calc(var(--ws-g-card-shadow) * 0.35px) rgba(90, 190, 255, calc(var(--ws-g-card-dispersion) * 0.012)),
+    0 calc(var(--ws-g-card-shadow) * 0.09px) calc(var(--ws-g-card-shadow) * 0.34px) rgba(0, 0, 0, calc(0.05 + var(--ws-g-card-shadow) * 0.0012)) !important;
 }
 
-html[data-glass-targets~="modal"] [role="dialog"] > :is(
-  .ws-glass-surface, .glass-card, .glass-panel,
+/* 圆形悬浮球保持圆形，不受卡片圆角影响；展开时保持反色高亮。 */
+html[data-glass-targets~="card"] .nav-orb {
+  border-radius: 50% !important;
+}
+html[data-glass-targets~="card"] .nav-orb.is-open {
+  background-color: var(--text-main) !important;
+  background-image: none !important;
+  color: var(--bg-color) !important;
+  border-color: var(--text-main) !important;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.18) !important;
+}
+
+html[data-glass-targets~="modal"] [role="dialog"] :is(
+  .ws-glass-surface, .glass-card, .glass-panel, .glass-frost,
   div[class*="modal"], section[class*="modal"]
+),
+html[data-glass-targets~="modal"] :is(
+  [class*="modal-card"], [class*="modal-content"], [class*="dialog-card"]
 ) {
   background-color: color-mix(
     in srgb,
@@ -132,11 +169,13 @@ html[data-glass-targets~="modal"] [role="dialog"] > :is(
     blur(calc(var(--ws-g-modal-blur) + (var(--ws-g-modal-frost) * 0.35px)))
     saturate(calc(100% + (var(--ws-g-modal-refraction) * 0.9%))) !important;
   border-color: color-mix(in srgb, #fff calc(var(--ws-g-modal-border) * 1%), var(--glass-border)) !important;
+  border-radius: calc(var(--ws-g-modal-radius) * 1px) !important;
   box-shadow:
     0 1px 0 rgba(255, 255, 255, calc(var(--ws-g-modal-border) * 0.008)) inset,
     0 0 calc(var(--ws-g-modal-thickness) * 0.45px) rgba(255, 255, 255, calc(var(--ws-g-modal-border) * 0.004)) inset,
     0 0 0 1px rgba(255, 86, 170, calc(var(--ws-g-modal-dispersion) * 0.004)),
-    0 0 26px rgba(90, 190, 255, calc(var(--ws-g-modal-dispersion) * 0.012)) !important;
+    0 0 calc(var(--ws-g-modal-shadow) * 0.4px) rgba(90, 190, 255, calc(var(--ws-g-modal-dispersion) * 0.012)),
+    0 calc(var(--ws-g-modal-shadow) * 0.1px) calc(var(--ws-g-modal-shadow) * 0.36px) rgba(0, 0, 0, calc(0.06 + var(--ws-g-modal-shadow) * 0.0012)) !important;
 }
 
 html[data-glass-targets~="control"] :is(
@@ -153,6 +192,11 @@ html[data-glass-targets~="control"] :is(
   -webkit-backdrop-filter: blur(calc(var(--ws-g-control-blur) + (var(--ws-g-control-frost) * 0.25px))) !important;
   backdrop-filter: blur(calc(var(--ws-g-control-blur) + (var(--ws-g-control-frost) * 0.25px))) !important;
   border-color: color-mix(in srgb, #fff calc(var(--ws-g-control-border) * 1%), var(--field-border)) !important;
+  border-radius: calc(var(--ws-g-control-radius) * 1px) !important;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, calc(var(--ws-g-control-border) * 0.008)) inset,
+    0 0 calc(var(--ws-g-control-thickness) * 0.45px) rgba(255, 255, 255, calc(var(--ws-g-control-border) * 0.004)) inset,
+    0 calc(var(--ws-g-control-shadow) * 0.1px) calc(var(--ws-g-control-shadow) * 0.3px) rgba(0, 0, 0, calc(0.04 + var(--ws-g-control-shadow) * 0.0012)) !important;
 }
 
 html[data-glass-targets~="liquid"] :is(
@@ -175,11 +219,13 @@ html[data-glass-targets~="liquid"] :is(
     blur(calc(var(--ws-g-liquid-blur) + (var(--ws-g-liquid-frost) * 0.35px)))
     saturate(calc(100% + (var(--ws-g-liquid-refraction) * 0.7%))) !important;
   border-color: color-mix(in srgb, #fff calc(var(--ws-g-liquid-border) * 1%), var(--glass-border)) !important;
+  border-radius: calc(var(--ws-g-liquid-radius) * 1px) !important;
   box-shadow:
     0 1px 0 rgba(255, 255, 255, calc(var(--ws-g-liquid-border) * 0.008)) inset,
     0 0 calc(var(--ws-g-liquid-thickness) * 0.45px) rgba(255, 255, 255, calc(var(--ws-g-liquid-border) * 0.004)) inset,
     0 0 0 1px rgba(255, 86, 170, calc(var(--ws-g-liquid-dispersion) * 0.004)),
-    0 0 26px rgba(90, 190, 255, calc(var(--ws-g-liquid-dispersion) * 0.012)) !important;
+    0 0 calc(var(--ws-g-liquid-shadow) * 0.4px) rgba(90, 190, 255, calc(var(--ws-g-liquid-dispersion) * 0.012)),
+    0 calc(var(--ws-g-liquid-shadow) * 0.1px) calc(var(--ws-g-liquid-shadow) * 0.36px) rgba(0, 0, 0, calc(0.06 + var(--ws-g-liquid-shadow) * 0.0012)) !important;
 }
 
 /* WebGL 场景卡已由 canvas 负责，CSS 只保留文字和交互。 */
@@ -556,10 +602,41 @@ html[data-text-background="true"][data-text-scopes~="body"] main :where(p, li, b
   font-weight: 550;
   color: var(--text-main);
 }
-.ws-studio-field-head output {
+.ws-studio-field-head output,
+.ws-studio-field-head .ws-studio-num {
   font-size: 9.5px;
   font-variant-numeric: tabular-nums;
   color: var(--text-muted);
+}
+.ws-studio-field-head .ws-studio-num {
+  width: 46px;
+  min-width: 46px;
+  height: 20px;
+  padding: 0 5px;
+  border: 1px solid color-mix(in srgb, var(--text-main) 16%, transparent);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--text-main) 5%, transparent);
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 10px;
+  text-align: center;
+  -moz-appearance: textfield;
+  appearance: textfield;
+  outline: none;
+}
+.ws-studio-field-head .ws-studio-num::-webkit-outer-spin-button,
+.ws-studio-field-head .ws-studio-num::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.ws-studio-field-head .ws-studio-num:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 16%, transparent);
+}
+.ws-studio-field-head .ws-studio-unit {
+  font-size: 9.5px;
+  color: var(--text-muted);
+  margin-left: 2px;
 }
 .ws-studio-range {
   width: 100%;

@@ -65,19 +65,19 @@ const FONT_META: Record<FontFamilyKey, { zh: string; en: string; sample: string 
 const PRESETS: Record<Preset, { zh: string; en: string; profile: Omit<GlassProfile, 'thickness'> & { thickness: number } }> = {
   clear: {
     zh: '清透', en: 'Clear',
-    profile: { blur: 12, opacity: 58, border: 44, refraction: 48, dispersion: 24, frost: 4, tint: 6, gradient: 18, thickness: 8 },
+    profile: { blur: 12, opacity: 58, border: 44, refraction: 48, dispersion: 24, frost: 4, tint: 6, gradient: 18, thickness: 8, radius: 20, shadow: 8 },
   },
   frost: {
     zh: '磨砂', en: 'Frost',
-    profile: { blur: 36, opacity: 88, border: 22, refraction: 4, dispersion: 0, frost: 78, tint: 10, gradient: 4, thickness: 18 },
+    profile: { blur: 36, opacity: 88, border: 22, refraction: 4, dispersion: 0, frost: 78, tint: 10, gradient: 4, thickness: 18, radius: 16, shadow: 14 },
   },
   liquid: {
     zh: '液态', en: 'Liquid',
-    profile: { blur: 22, opacity: 72, border: 50, refraction: 88, dispersion: 54, frost: 16, tint: 14, gradient: 42, thickness: 24 },
+    profile: { blur: 22, opacity: 72, border: 50, refraction: 88, dispersion: 54, frost: 16, tint: 14, gradient: 42, thickness: 24, radius: 22, shadow: 20 },
   },
   contrast: {
     zh: '高对比', en: 'Contrast',
-    profile: { blur: 20, opacity: 96, border: 30, refraction: 0, dispersion: 0, frost: 30, tint: 2, gradient: 0, thickness: 10 },
+    profile: { blur: 20, opacity: 96, border: 30, refraction: 0, dispersion: 0, frost: 30, tint: 2, gradient: 0, thickness: 10, radius: 14, shadow: 10 },
   },
 }
 
@@ -128,7 +128,24 @@ function Slider({
     <div className="ws-studio-field">
       <div className="ws-studio-field-head">
         <label>{labelText}</label>
-        <output>{Number(value.toFixed(step < 1 ? 2 : 0))}{unit}</output>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+          <input
+            className="ws-studio-num"
+            type="number"
+            min={min}
+            max={max}
+            step={step}
+            value={value}
+            onChange={(event) => {
+              const raw = event.target.value
+              if (raw === '') return
+              const num = Number(raw)
+              if (Number.isFinite(num)) onChange(Math.min(max, Math.max(min, num)))
+            }}
+            aria-label={labelText}
+          />
+          {unit && <span className="ws-studio-unit">{unit}</span>}
+        </span>
       </div>
       <input
         className="ws-studio-range"
@@ -152,6 +169,8 @@ export default function AppearanceStudio({ pageKey, pageName, lang }: Props) {
   const [savedPage, setSavedPage] = useState(() => hasPageAppearance(pageKey))
   const [flash, setFlash] = useState('')
   const [pick, setPick] = useState(false)
+  const [editTarget, setEditTarget] = useState<GlassTarget>('card')
+  const [syncAll, setSyncAll] = useState(true)
   const pickedRef = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
@@ -195,10 +214,12 @@ export default function AppearanceStudio({ pageKey, pageName, lang }: Props) {
           ? current
           : { ...current, glass_targets: [...current.glass_targets, pickedTarget] },
       )
+      setEditTarget(pickedTarget)
+      setSyncAll(false)
       setFlash(label(
         lang,
-        `已选中：${pickedTarget === 'liquid' ? '场景卡' : pickedTarget === 'nav' ? '导航' : pickedTarget === 'modal' ? '弹窗' : pickedTarget === 'control' ? '控件' : '卡片'}，可继续微调`,
-        `Picked: ${pickedTarget === 'liquid' ? 'scene card' : pickedTarget === 'nav' ? 'navigation' : pickedTarget === 'modal' ? 'modal' : pickedTarget === 'control' ? 'control' : 'card'}. Adjust it now.`,
+        `已选中：${pickedTarget === 'liquid' ? '场景卡' : pickedTarget === 'nav' ? '导航' : pickedTarget === 'modal' ? '弹窗' : pickedTarget === 'control' ? '控件' : '卡片'}，正在单独微调该目标`,
+        `Picked: ${pickedTarget === 'liquid' ? 'scene card' : pickedTarget === 'nav' ? 'navigation' : pickedTarget === 'modal' ? 'modal' : pickedTarget === 'control' ? 'control' : 'card'}. Tuning that target on its own now.`,
       ))
     }
     window.addEventListener('click', onClick)
@@ -242,8 +263,7 @@ export default function AppearanceStudio({ pageKey, pageName, lang }: Props) {
     return () => window.clearTimeout(timer)
   }, [flash])
 
-  const activeTarget = draft.glass_targets[0] || 'card'
-  const activeProfile = draft.glass_profiles[activeTarget]
+  const activeProfile = draft.glass_profiles[editTarget]
   const text = draft.text
   const textHue = hueOf(text.color)
 
@@ -275,10 +295,16 @@ export default function AppearanceStudio({ pageKey, pageName, lang }: Props) {
 
   const updateProfile = (field: keyof GlassProfile, value: number) => {
     setDraft((current) => {
-      const targets = current.glass_targets.length ? current.glass_targets : ['card' as GlassTarget]
       const profiles = { ...current.glass_profiles }
-      for (const target of targets) profiles[target] = { ...profiles[target], [field]: value }
-      return { ...current, glass_targets: targets, glass_profiles: profiles }
+      if (syncAll) {
+        // 同步模式：写入所有已选目标；未选时写入全部目标，保持旧行为。
+        const targets = current.glass_targets.length ? current.glass_targets : [...GLASS_TARGETS]
+        for (const target of targets) profiles[target] = { ...profiles[target], [field]: value }
+        return { ...current, glass_targets: targets, glass_profiles: profiles }
+      }
+      // 单独模式：只改动当前编辑目标，便于对某个 UI 精准微调。
+      profiles[editTarget] = { ...profiles[editTarget], [field]: value }
+      return { ...current, glass_profiles: profiles }
     })
   }
 
@@ -525,18 +551,53 @@ export default function AppearanceStudio({ pageKey, pageName, lang }: Props) {
               <div className="ws-studio-tab-body">
                 {draft.glass_targets.length === 0 && tab !== 'text' && (
                   <div className="ws-studio-note">
-                    {label(lang, '还没有勾选作用目标。调整会默认写入卡片，建议先选择导航或卡片。', 'No target selected. Changes fall back to Cards; pick a target first.')}
+                    {label(lang, '还没有勾选作用目标。调整会默认写入全部目标，建议先选择导航或卡片。', 'No target selected. Changes fall back to all targets; pick a target first.')}
                   </div>
                 )}
 
                 {tab === 'glass' && (
                   <>
+                    <div className="ws-studio-section-label">
+                      <span>{label(lang, '编辑目标', 'Edit target')}</span>
+                      <span style={{ fontWeight: 500, color: 'var(--text-faint)' }}>{label(lang, '单独微调', 'Per-target')}</span>
+                    </div>
+                    <div className="ws-studio-chip-row" style={{ marginBottom: 10 }}>
+                      {GLASS_TARGETS.map((target) => (
+                        <button
+                          key={target}
+                          type="button"
+                          className={`ws-studio-chip${editTarget === target ? ' is-on' : ''}`}
+                          onClick={() => setEditTarget(target)}
+                          aria-pressed={editTarget === target}
+                        >
+                          {label(lang, TARGET_META[target].zh, TARGET_META[target].en)}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="ws-studio-mini-actions" style={{ marginTop: 0, marginBottom: 10 }}>
+                      <button
+                        type="button"
+                        className={syncAll ? 'is-active' : ''}
+                        onClick={() => setSyncAll((value) => !value)}
+                        aria-pressed={syncAll}
+                      >
+                        {label(
+                          lang,
+                          syncAll ? '同步到全部已选目标' : '仅调整当前目标',
+                          syncAll ? 'Sync to all selected' : 'Adjust current target only',
+                        )}
+                      </button>
+                    </div>
                     <div className="ws-studio-note">
                       <Eye size={11} style={{ verticalAlign: '-2px', marginRight: 4 }} />
                       {label(
                         lang,
-                        `正在调节：${draft.glass_targets.map((item) => TARGET_META[item].zh).join('、') || '卡片'}。滑块会同步写入所有已选目标。`,
-                        `Editing: ${draft.glass_targets.map((item) => TARGET_META[item].en).join(', ') || 'Cards'}. Sliders sync to all selected targets.`,
+                        syncAll
+                          ? `正在调节：${draft.glass_targets.map((item) => TARGET_META[item].zh).join('、') || '全部'}。滑块会同步写入所有已选目标。`
+                          : `正在单独调节：${TARGET_META[editTarget].zh}。滑块只写入该目标。`,
+                        syncAll
+                          ? `Editing: ${draft.glass_targets.map((item) => TARGET_META[item].en).join(', ') || 'all'}. Sliders sync to all selected targets.`
+                          : `Editing ${TARGET_META[editTarget].en} on its own. Sliders write to this target only.`,
                       )}
                     </div>
                     <Slider labelText={label(lang, '模糊度 Blur', 'Blur')} value={activeProfile.blur} min={0} max={50} unit="px" onChange={(value) => updateProfile('blur', value)} />
@@ -545,6 +606,8 @@ export default function AppearanceStudio({ pageKey, pageName, lang }: Props) {
                     <Slider labelText={label(lang, '着色层 Tint', 'Tint layer')} value={activeProfile.tint} min={0} max={100} unit="%" onChange={(value) => updateProfile('tint', value)} />
                     <Slider labelText={label(lang, '颜色渐变 Gradient', 'Color gradient')} value={activeProfile.gradient} min={0} max={100} unit="%" onChange={(value) => updateProfile('gradient', value)} />
                     <Slider labelText={label(lang, '玻璃厚度', 'Glass thickness')} value={activeProfile.thickness} min={0} max={80} unit="" onChange={(value) => updateProfile('thickness', value)} />
+                    <Slider labelText={label(lang, '圆角 Radius', 'Corner radius')} value={activeProfile.radius} min={0} max={60} unit="px" onChange={(value) => updateProfile('radius', value)} />
+                    <Slider labelText={label(lang, '外阴影 Shadow', 'Outer shadow')} value={activeProfile.shadow} min={0} max={100} unit="" onChange={(value) => updateProfile('shadow', value)} />
                     <button
                       type="button"
                       className={`ws-studio-chip${draft.readability_guard ? ' is-on' : ''}`}

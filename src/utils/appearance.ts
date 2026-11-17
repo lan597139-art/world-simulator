@@ -15,6 +15,10 @@ export type GlassProfile = {
   tint: number
   gradient: number
   thickness: number
+  /** 圆角，单位 px。 */
+  radius: number
+  /** 外阴影强度，0–100。 */
+  shadow: number
 }
 
 export type TextAppearance = {
@@ -74,11 +78,11 @@ export const FONT_STACKS: Record<FontFamilyKey, string> = {
 }
 
 const DEFAULT_PROFILES: Record<GlassTarget, GlassProfile> = {
-  nav: { blur: 26, opacity: 88, border: 24, refraction: 18, dispersion: 6, frost: 18, tint: 8, gradient: 10, thickness: 12 },
-  card: { blur: 24, opacity: 84, border: 20, refraction: 14, dispersion: 4, frost: 16, tint: 4, gradient: 6, thickness: 10 },
-  modal: { blur: 32, opacity: 90, border: 28, refraction: 12, dispersion: 5, frost: 24, tint: 6, gradient: 8, thickness: 16 },
-  control: { blur: 14, opacity: 76, border: 18, refraction: 8, dispersion: 2, frost: 8, tint: 4, gradient: 0, thickness: 6 },
-  liquid: { blur: 24, opacity: 78, border: 34, refraction: 82, dispersion: 28, frost: 12, tint: 12, gradient: 30, thickness: 22 },
+  nav: { blur: 26, opacity: 88, border: 24, refraction: 18, dispersion: 6, frost: 18, tint: 8, gradient: 10, thickness: 12, radius: 0, shadow: 10 },
+  card: { blur: 24, opacity: 84, border: 20, refraction: 14, dispersion: 4, frost: 16, tint: 4, gradient: 6, thickness: 10, radius: 18, shadow: 16 },
+  modal: { blur: 32, opacity: 90, border: 28, refraction: 12, dispersion: 5, frost: 24, tint: 6, gradient: 8, thickness: 16, radius: 20, shadow: 30 },
+  control: { blur: 14, opacity: 76, border: 18, refraction: 8, dispersion: 2, frost: 8, tint: 4, gradient: 0, thickness: 6, radius: 10, shadow: 6 },
+  liquid: { blur: 24, opacity: 78, border: 34, refraction: 82, dispersion: 28, frost: 12, tint: 12, gradient: 30, thickness: 22, radius: 22, shadow: 26 },
 }
 
 const DEFAULT_TEXT: TextAppearance = {
@@ -158,6 +162,8 @@ function normalizeProfile(value: unknown, fallback: GlassProfile): GlassProfile 
     tint: clamp(source.tint, 0, 100, fallback.tint),
     gradient: clamp(source.gradient, 0, 100, fallback.gradient),
     thickness: clamp(source.thickness, 0, 80, fallback.thickness),
+    radius: clamp(source.radius, 0, 60, fallback.radius),
+    shadow: clamp(source.shadow, 0, 100, fallback.shadow),
   }
 }
 
@@ -348,7 +354,9 @@ export function applyAppearance(input: Appearance): void {
   root.dataset.customBackground = image ? 'true' : 'false'
 
   root.dataset.glassTargets = appearance.glass_targets.join(' ')
-  root.style.setProperty('--ws-readability-floor', appearance.readability_guard ? '78' : '0')
+  // 统一可读性下限：外观工作台与设计系统的玻璃都读取同一个值，
+  // 自定义/高饱和背景由 design-system 的 --glass-readability-floor 决定。
+  root.style.setProperty('--ws-readability-floor', appearance.readability_guard ? 'var(--glass-readability-floor)' : '0')
   for (const target of GLASS_TARGETS) {
     const profile = appearance.glass_profiles[target]
     root.style.setProperty(`--ws-g-${target}-blur`, `${profile.blur}px`)
@@ -360,6 +368,8 @@ export function applyAppearance(input: Appearance): void {
     root.style.setProperty(`--ws-g-${target}-tint`, `${profile.tint}`)
     root.style.setProperty(`--ws-g-${target}-gradient`, `${profile.gradient}`)
     root.style.setProperty(`--ws-g-${target}-thickness`, `${profile.thickness}`)
+    root.style.setProperty(`--ws-g-${target}-radius`, `${profile.radius}`)
+    root.style.setProperty(`--ws-g-${target}-shadow`, `${profile.shadow}`)
   }
 
   const text = appearance.text

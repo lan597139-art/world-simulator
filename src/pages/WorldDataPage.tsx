@@ -267,8 +267,6 @@ export default function WorldDataPage({ worldId }: { worldId?: string }) {
             <div className="ws-glass-surface" style={{
               position: 'absolute', top: '20px', width: '300px', zIndex: 20,
               ...(isLeftSide ? { right: '20px' } : { left: '20px' }),
-              background: 'var(--card-bg)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-              border: '1px solid var(--card-border)', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
               padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px',
               transition: 'all 0.3s ease', 
               transform: isPanelOpen ? 'translateX(0)' : (isLeftSide ? 'translateX(120%)' : 'translateX(-120%)')
@@ -392,7 +390,7 @@ export default function WorldDataPage({ worldId }: { worldId?: string }) {
               {locations.map(loc => {
                 const pin = getPinIcon(loc.geo_type);
                 return (
-                  <div key={loc.id} onClick={() => handleEditLoc(loc)} style={{ flexShrink: 0, padding: '10px 16px', background: 'var(--card-bg)', backdropFilter: 'blur(10px)', border: '1px solid var(--card-border)', borderRadius: '20px', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div key={loc.id} className="glass-card" onClick={() => handleEditLoc(loc)} style={{ flexShrink: 0, padding: '10px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span style={{ fontSize: '16px' }}>{pin.icon}</span>
                     <div>
                       <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '13px' }}>{loc.name}</div>

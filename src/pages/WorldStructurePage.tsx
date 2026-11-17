@@ -9,11 +9,7 @@ import type { DraftItem } from '../api/writing'
 // =====================================================================
 
 const card: CSSProperties = {
-  background: 'var(--card-bg)',
-  border: '1px solid var(--card-border)',
-  borderRadius: '14px',
-  boxShadow: 'var(--card-shadow)',
-  backdropFilter: 'blur(18px)',
+  boxSizing: 'border-box',
 }
 
 const inputStyle: CSSProperties = {

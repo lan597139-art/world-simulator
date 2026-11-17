@@ -45,11 +45,7 @@ type SaveState = 'saved' | 'dirty' | 'saving' | 'error'
 const API_BASE = `${API_ORIGIN}/api`
 
 const card: CSSProperties = {
-  background: 'var(--card-bg)',
-  border: '1px solid var(--card-border)',
-  borderRadius: '14px',
-  boxShadow: 'var(--card-shadow)',
-  backdropFilter: 'blur(18px)',
+  boxSizing: 'border-box',
 }
 
 const inputStyle: CSSProperties = {
@@ -1359,7 +1355,7 @@ export default function WritingPage({
         </header>
 
         {!current ? (
-          <div style={{ ...card, flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '22px', padding: '40px' }}>
+          <div className="glass-card" style={{ ...card, flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '22px', padding: '40px' }}>
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '11px', letterSpacing: '0.16em', color: 'var(--text-muted)' }}>CHOOSE YOUR FLOW</div>
               <h2 style={{ margin: '8px 0 6px', fontSize: '30px', color: 'var(--text-main)' }}>先写，还是先建世界？</h2>
@@ -1367,6 +1363,7 @@ export default function WritingPage({
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(220px, 300px))', gap: '16px', width: '100%', maxWidth: '680px' }}>
               <button
+                className="glass-card"
                 onClick={() => setModalOpen(true)}
                 style={{ ...card, padding: '22px', textAlign: 'left', cursor: 'pointer', color: 'var(--text-main)' }}
               >
@@ -1378,6 +1375,7 @@ export default function WritingPage({
                 <div style={{ marginTop: '14px', fontSize: '11px', color: 'var(--primary-color)' }}>从推演生成 →</div>
               </button>
               <button
+                className="glass-card"
                 onClick={() => void createBlank()}
                 style={{ ...card, padding: '22px', textAlign: 'left', cursor: 'pointer', color: 'var(--text-main)' }}
               >

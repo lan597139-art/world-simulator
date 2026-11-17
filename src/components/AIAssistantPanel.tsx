@@ -783,6 +783,7 @@ export default function AIAssistantPanel({
         <div
           ref={panelRef}
           data-ai-assistant
+          className="ws-glass-surface"
           style={{
             ...panelShell,
             display: 'flex',
@@ -790,10 +791,7 @@ export default function AIAssistantPanel({
             borderRadius: isNarrow ? '18px' : 0,
             border: isNarrow ? '1px solid var(--card-border)' : 'none',
             borderLeft: isNarrow ? undefined : '1px solid var(--card-border)',
-            background: 'color-mix(in srgb, var(--bg-color) 94%, transparent)',
-            boxShadow: isNarrow ? '0 24px 70px rgba(0,0,0,0.35)' : 'none',
             overflow: 'hidden',
-            backdropFilter: 'blur(24px)',
           }}
         >
           <header style={{ padding: '14px 15px 12px', borderBottom: '1px solid var(--card-border)', display: 'flex', alignItems: 'flex-start', gap: '10px' }}>

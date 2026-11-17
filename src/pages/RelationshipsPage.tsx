@@ -597,8 +597,6 @@ export default function RelationshipsPage({
         pointerEvents: isSidebarOpen ? 'auto' : 'none',
       }}>
         <div className="glass-card" style={{ 
-          background: 'var(--card-bg, rgba(255, 255, 255, 0.85))', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-          borderRadius: '16px', border: '1px solid var(--card-border)', boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
           display: 'flex', flexDirection: 'column', overflow: 'hidden'
         }}>
           <div style={{ padding: '16px', borderBottom: '1px solid var(--card-border)' }}>
@@ -674,12 +672,6 @@ export default function RelationshipsPage({
           alignItems: 'center',
           gap: '6px',
           padding: '6px',
-          background: 'var(--card-bg)',
-          border: '1px solid var(--card-border)',
-          borderRadius: '12px',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
-          boxShadow: '0 8px 24px rgba(0,0,0,0.16)',
         }}
       >
         <ViewButton onClick={() => zoomBy(0.78)} title="放大视图">＋</ViewButton>
