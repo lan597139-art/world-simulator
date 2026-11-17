@@ -109,6 +109,25 @@ html[data-glass-targets~="card"] :is(
   .cw-hero-stats, .cw-cover-scene, .cw-cover-status,
   .yb-overview-card,
   .character-header-light,
+  /* 各页面卡片面：统一接入卡片档，避免写死 rgba 导致无法随控制台调节 */
+  .ct-stats, .ct-empty,
+  .ai-char-card, .ai-companion, .ai-group-card, .ai-roster-card, .ai-roleplay,
+  .gx-feature-body, .gx-feature-cover, .gx-progress-branch, .gx-run-card, .gx-ending-card, .gx-world-cover,
+  .st-status, .st-asset-card, .st-market-empty,
+  .cm-hero-stats, .cm-result-card, .cm-feature-card, .cm-feature-cover,
+  .cm-world-card, .cm-oc-card, .cm-story-card, .cm-creator-profile,
+  .cm-co-create-empty, .cm-empty,
+  .uc-profile-cover, .uc-identity-row, .uc-achievement, .uc-membership-status, .uc-balance,
+  .pw-tabs-wrap, .pwh-world-visual, .pwh-book-cover,
+  .wr-overlay, .fb-overlay, .wp-immersive-exit, .ws-stats-overlay, .swl-overlay, .ol-overlay,
+  .relx-legend-note, .relx-panel-head, .relx-panel-note, .relx-expand,
+  .cw-detail,
+  .settings-background-preview,
+  .ng-stage,
+  /* 卡片内的统计小格：同样接入卡片档，避免各页透明度不一致 */
+  .ai-stat-pair > div, .gx-progress-stats > div, .st-seller-stats > div,
+  .cm-follow-counts > div, .cm-hot-columns > div,
+  .uc-follow-counts > div, .uc-favorite-counts > div, .uc-order-metrics > div,
   [data-ai-assistant]
 ) {
   background-color: color-mix(
@@ -181,7 +200,14 @@ html[data-glass-targets~="modal"] :is(
 html[data-glass-targets~="control"] :is(
   input:not([type="range"]):not([type="checkbox"]):not([type="radio"]),
   textarea,
-  select
+  select,
+  /* 各页面写死的搜索框、幽灵按钮、图标控件：统一接入控制档 */
+  .ct-search, .ct-ghost, .ct-section-link,
+  .cm-search, .cm-ghost, .cm-type,
+  .uc-ghost-button,
+  .pw-product-icon,
+  .relx-search, .relx-panel-close, .relx-filter-foot, .relx-entity-close,
+  .cm-portrait-remove, .cm-lightbox-close, .cm-lightbox-nav, .cm-lightbox-count
 ) {
   background-color: color-mix(
     in srgb,

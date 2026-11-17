@@ -41,6 +41,7 @@
 - 创作中心导航（`.cc-nav-item`、`.sidebar-nav-item`）以及侧栏/顶栏控件（`.cc-status-chip`、`.cc-icon-button`、`.cc-profile`、`.cc-back`、`.cc-world-trigger`、`.cc-workspace-icon`）原先用 `rgba(255,255,255,...)` 写死，已改为读取 `--ws-nav-item-*` 派生令牌。这些令牌同时取「导航」与「卡片」档位的均值，因此调节导航或卡片玻璃都会同步到导航条目与控件的悬停/选中态。
 - `.cc-search input` 改为读取控制档位令牌，不再用 `!important` 写死 rgba，控制台的「控制」调节可以生效。
 - `.cc-tool`、`.cc-asset`、`.cc-recent-work`、`.cc-scene-card` 属于**液态**档位（液态规则在卡片规则之后），由控制台的「液态」调节控制，不受「卡片」档位直接影响。
+- 各页面卡片面（AI 中心、社区、用户中心、游戏中心、内容商店、工作区外壳等）此前各自写死 `rgba(255,255,255,0.10~0.24)`，透明度、圆角、描边互不一致。现已把 `.ct-stats`、`.ai-*-card`、`.gx-*-card`、`.st-*-card`、`.cm-*-card`、`.uc-*-card`、`.pw-tabs-wrap`、`.pwh-world-visual`、`.relx-panel-head` 等，以及卡片内的统计小格（`.ai-stat-pair > div`、`.cm-follow-counts > div` 等）统一接入「卡片」档；搜索框、幽灵按钮、筛选标签、图标控件（`.ct-search`、`.cm-ghost`、`.cm-type`、`.uc-ghost-button`、`.relx-search` 等）接入「控制」档。现在拖动卡片或控制档位，所有页面的对应表面同步变化，不再出现“导航能调、卡片调不动”的情况。
 
 ### 液态玻璃
 
