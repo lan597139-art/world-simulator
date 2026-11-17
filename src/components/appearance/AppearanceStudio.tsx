@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Check, Eye, Layers, RotateCcw, Save, SlidersHorizontal, Sparkles, Trash2, Type, X } from 'lucide-react'
+import { Check, Eye, Layers, Monitor, Moon, RotateCcw, Save, SlidersHorizontal, Sparkles, Sun, Trash2, Type, X } from 'lucide-react'
 import { tr, type Lang } from '../../i18n'
+import { updateSettings, type SettingsPreferences } from '../../api/settings'
 import {
   FONT_STACKS,
   GLASS_TARGETS,
@@ -30,6 +31,12 @@ type Props = {
 type Tab = 'glass' | 'liquid' | 'text'
 type SaveScope = 'page' | 'global'
 type Preset = 'clear' | 'frost' | 'liquid' | 'contrast'
+type ThemeMode = SettingsPreferences['theme']
+
+function readThemeMode(): ThemeMode {
+  const value = document.documentElement.dataset.theme
+  return value === 'light' || value === 'dark' ? value : 'system'
+}
 
 const TARGET_META: Record<GlassTarget, { zh: string; en: string; short: string }> = {
   nav: { zh: '导航栏', en: 'Navigation', short: 'NAV' },
@@ -131,6 +138,7 @@ export default function AppearanceStudio({ pageKey, pageName, lang }: Props) {
   const [open, setOpen] = useState(false)
   const [tab, setTab] = useState<Tab>('glass')
   const [scope, setScope] = useState<SaveScope>('page')
+  const [themeMode, setThemeMode] = useState<ThemeMode>(readThemeMode)
   const [draft, setDraft] = useState<Appearance>(() => loadAppearanceForPage(pageKey))
   const [savedPage, setSavedPage] = useState(() => hasPageAppearance(pageKey))
   const [flash, setFlash] = useState('')
@@ -141,6 +149,15 @@ export default function AppearanceStudio({ pageKey, pageName, lang }: Props) {
     setScope('page')
     setFlash('')
   }, [pageKey])
+
+  useEffect(() => {
+    const root = document.documentElement
+    const sync = () => setThemeMode(readThemeMode())
+    sync()
+    const observer = new MutationObserver(sync)
+    observer.observe(root, { attributes: true, attributeFilter: ['data-theme'] })
+    return () => observer.disconnect()
+  }, [])
 
   useEffect(() => {
     if (!open) return
@@ -268,6 +285,19 @@ export default function AppearanceStudio({ pageKey, pageName, lang }: Props) {
     })
   }
 
+  const chooseTheme = (mode: ThemeMode) => {
+    setThemeMode(mode)
+    document.documentElement.dataset.theme = mode
+    window.dispatchEvent(new CustomEvent('ws:theme-change', { detail: mode }))
+    setFlash(label(
+      lang,
+      mode === 'dark' ? '已切换为深色主题' : mode === 'light' ? '已切换为浅色主题' : '已跟随系统主题',
+      mode === 'dark' ? 'Dark theme applied' : mode === 'light' ? 'Light theme applied' : 'Following system theme',
+    ))
+    // 主题属于账号偏好，立即同步；网络失败也不阻塞当前页面切换。
+    void updateSettings({ preferences: { theme: mode } }).catch(() => { /* offline */ })
+  }
+
   const closePanel = () => {
     setOpen(false)
     const saved = loadAppearanceForPage(pageKey)
@@ -350,6 +380,31 @@ export default function AppearanceStudio({ pageKey, pageName, lang }: Props) {
             </header>
 
             <div className="ws-studio-body">
+              <div className="ws-studio-theme-row">
+                <div className="ws-studio-theme-copy">
+                  <span className="ws-studio-theme-label">{label(lang, '界面主题', 'Theme')}</span>
+                  <span className="ws-studio-theme-hint">{label(lang, '切换后立即生效并保存到账号', 'Applies instantly and saves to your account')}</span>
+                </div>
+                <div className="ws-studio-theme-buttons" role="group" aria-label={label(lang, '界面主题', 'Theme')}>
+                  {([
+                    { key: 'light' as const, zh: '浅色', en: 'Light', icon: <Sun size={12} /> },
+                    { key: 'dark' as const, zh: '深色', en: 'Dark', icon: <Moon size={12} /> },
+                    { key: 'system' as const, zh: '跟随系统', en: 'System', icon: <Monitor size={12} /> },
+                  ]).map((item) => (
+                    <button
+                      key={item.key}
+                      type="button"
+                      className={themeMode === item.key ? 'is-active' : ''}
+                      aria-pressed={themeMode === item.key}
+                      title={label(lang, item.zh, item.en)}
+                      onClick={() => chooseTheme(item.key)}
+                    >
+                      {item.icon}
+                      <span>{label(lang, item.zh, item.en)}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div className="ws-studio-scope-row" role="group" aria-label={label(lang, '保存范围', 'Save scope')}>
                 <button type="button" className={scope === 'page' ? 'is-active' : ''} onClick={() => setScope('page')}>
                   {label(lang, '仅当前页面', 'This page')}

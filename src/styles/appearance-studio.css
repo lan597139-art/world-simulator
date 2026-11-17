@@ -763,3 +763,72 @@ html[data-glass-targets~="liquid"] .cc-scene-card::after {
   opacity: calc((var(--ws-g-liquid-gradient) * 0.004) + (var(--ws-g-liquid-tint) * 0.001));
   mix-blend-mode: screen;
 }
+
+/* 悬浮调节器内的主题切换：浅色 / 深色 / 跟随系统。 */
+.ws-studio-theme-row {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 0 0 12px;
+  padding: 10px;
+  border: 1px solid color-mix(in srgb, var(--text-main) 10%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--glass-frost-bg) 46%, transparent);
+}
+.ws-studio-theme-copy {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+.ws-studio-theme-label {
+  flex: 0 0 auto;
+  font-size: 10.5px;
+  font-weight: 650;
+  color: var(--text-main);
+}
+.ws-studio-theme-hint {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 9.5px;
+  color: var(--text-muted);
+}
+.ws-studio-theme-buttons {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--text-main) 5%, transparent);
+}
+.ws-studio-theme-buttons button {
+  flex: 1 1 0;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: 0;
+  border-radius: 7px;
+  padding: 7px 4px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 9.5px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ws-studio-theme-buttons button svg {
+  flex: 0 0 auto;
+}
+.ws-studio-theme-buttons button.is-active {
+  background: color-mix(in srgb, var(--glass-frost-bg) 92%, transparent);
+  color: var(--text-main);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .08), 0 1px 0 rgba(255, 255, 255, .24) inset;
+}
+.ws-studio-theme-buttons button:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--primary-color) 65%, transparent);
+  outline-offset: 1px;
+}
