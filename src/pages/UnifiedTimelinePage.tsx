@@ -22,7 +22,7 @@ const KIND_META: Record<string, { icon: string; label: string }> = {
 }
 
 const card: CSSProperties = {
-  background: 'var(--card-bg)',
+  background: 'var(--ws-surface-bg)',
   border: '1px solid var(--card-border)',
   borderRadius: '14px',
   boxShadow: 'var(--card-shadow)',

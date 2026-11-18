@@ -706,7 +706,7 @@ export default function WorldBuildingPage({ worldId, onBack, onSaved, lang, prod
                   style={{
                     display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
                     padding: '12px', width: '150px',
-                    background: isActive ? 'var(--text-main)' : 'var(--card-bg)',
+                    background: isActive ? 'var(--text-main)' : 'var(--ws-surface-bg)',
                     color: isActive ? 'var(--bg-color)' : 'var(--text-main)',
                     border: isActive ? '1px solid var(--text-main)' : '1px solid var(--card-border)',
                     borderRadius: '12px', cursor: 'pointer',

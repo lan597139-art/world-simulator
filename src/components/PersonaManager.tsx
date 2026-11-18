@@ -6,7 +6,7 @@ const overlay: React.CSSProperties = {
   display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 14,
 }
 const card: React.CSSProperties = {
-  background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 12,
+  background: 'var(--ws-surface-bg)', border: '1px solid var(--card-border)', borderRadius: 12,
   padding: 12, boxSizing: 'border-box',
 }
 const input: React.CSSProperties = {
@@ -231,7 +231,7 @@ export default function PersonaManager({ open, onClose, embedded = false }: { op
               <button key={p.id} type="button" onClick={() => { setSelectedId(p.id); setTab('profile') }} style={{
                 ...card, padding: '8px 9px', textAlign: 'left', cursor: 'pointer',
                 borderColor: selectedId === p.id ? 'var(--primary-color)' : 'var(--card-border)',
-                background: selectedId === p.id ? 'color-mix(in srgb, var(--primary-color) 10%, var(--card-bg))' : 'var(--card-bg)',
+                background: selectedId === p.id ? 'color-mix(in srgb, var(--primary-color) 10%, var(--ws-surface-bg))' : 'var(--ws-surface-bg)',
               }}>
                 <div style={{ fontSize: 11.5, fontWeight: 700 }}>{p.name}</div>
                 <div style={{ ...tiny, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.identity || '个人 AI 人格'}</div>

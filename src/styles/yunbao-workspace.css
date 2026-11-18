@@ -53,7 +53,7 @@
 
 .yb-pinned-tab:hover {
   border-color: rgba(0, 0, 0, 0.1);
-  background: color-mix(in srgb, var(--card-bg) 62%, transparent);
+  background: color-mix(in srgb, var(--ws-surface-bg) 62%, transparent);
   color: var(--text-main);
 }
 
@@ -174,8 +174,7 @@
   padding: 22px;
   border: 1px solid var(--card-border);
   border-radius: 18px;
-  background:
-    linear-gradient(145deg, color-mix(in srgb, var(--card-bg) 88%, transparent), color-mix(in srgb, var(--card-bg) 48%, transparent));
+  background: linear-gradient(145deg, color-mix(in srgb, var(--ws-surface-bg) 88%, transparent), color-mix(in srgb, var(--ws-surface-bg) 48%, transparent));
   color: var(--text-main);
   text-align: left;
   cursor: pointer;
@@ -205,7 +204,7 @@
   height: 42px;
   border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 11px;
-  background: color-mix(in srgb, var(--card-bg) 62%, transparent);
+  background: color-mix(in srgb, var(--ws-surface-bg) 62%, transparent);
   color: var(--text-main);
 }
 

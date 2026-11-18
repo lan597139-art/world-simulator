@@ -75,7 +75,7 @@ const SECTIONS: { key: Section; zh: string; en: string; descZh: string; descEn: 
 ]
 
 const card: CSSProperties = {
-  border: '1px solid var(--card-border)', borderRadius: 14, background: 'var(--card-bg)',
+  border: '1px solid var(--card-border)', borderRadius: 14, background: 'var(--ws-surface-bg)',
   boxSizing: 'border-box',
 }
 const input: CSSProperties = {

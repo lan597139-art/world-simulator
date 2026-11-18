@@ -26,7 +26,7 @@
   overflow: hidden;
   border: 1px solid var(--card-border);
   border-radius: 12px;
-  background: linear-gradient(145deg, color-mix(in srgb, var(--primary-color) 14%, var(--card-bg)), color-mix(in srgb, var(--card-bg) 88%, #111));
+  background: linear-gradient(145deg, color-mix(in srgb, var(--primary-color) 14%, var(--ws-surface-bg)), color-mix(in srgb, var(--ws-surface-bg) 88%, #111));
   color: var(--text-muted);
   font-size: 30px;
   font-weight: 650;
@@ -41,7 +41,7 @@
   font-size: 8.5px;
   cursor: pointer;
 }
-.cm-button { padding: 5px 8px; border: 1px solid var(--card-border); background: color-mix(in srgb, var(--card-bg) 55%, transparent); color: var(--text-main); }
+.cm-button { padding: 5px 8px; border: 1px solid var(--card-border); background: color-mix(in srgb, var(--ws-surface-bg) 55%, transparent); color: var(--text-main); }
 .cm-button:hover { border-color: color-mix(in srgb, var(--primary-color) 40%, var(--card-border)); }
 .cm-text-button { padding: 4px 5px; border: 0; background: transparent; color: var(--text-muted); }
 .cm-text-button:hover { color: var(--danger-strong); }
@@ -57,7 +57,7 @@
   overflow: hidden;
   border: 1px solid var(--card-border);
   border-radius: 9px;
-  background: color-mix(in srgb, var(--card-bg) 40%, transparent);
+  background: color-mix(in srgb, var(--ws-surface-bg) 40%, transparent);
 }
 .cm-portrait-image {
   display: block;
@@ -95,7 +95,7 @@
   min-height: 110px;
   border: 1px dashed var(--card-border);
   border-radius: 9px;
-  background: color-mix(in srgb, var(--card-bg) 25%, transparent);
+  background: color-mix(in srgb, var(--ws-surface-bg) 25%, transparent);
   color: var(--text-muted);
   cursor: pointer;
 }

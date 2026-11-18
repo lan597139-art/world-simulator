@@ -3,7 +3,7 @@
 .admin-monitor-title{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:650;color:var(--text-main)}
 .admin-monitor-head p{margin:5px 0 0;font-size:11px;line-height:1.6;color:var(--text-muted);max-width:560px}
 .admin-monitor-actions{display:flex;gap:8px}
-.admin-monitor-actions button{display:inline-flex;align-items:center;gap:5px;padding:7px 11px;border-radius:8px;border:1px solid var(--card-border);background:var(--card-bg);color:var(--text-main);font-size:11px;cursor:pointer}
+.admin-monitor-actions button{display:inline-flex;align-items:center;gap:5px;padding:7px 11px;border-radius:8px;border:1px solid var(--card-border);background: var(--ws-surface-bg);color:var(--text-main);font-size:11px;cursor:pointer}
 .admin-monitor-actions button:disabled{opacity:.45;cursor:not-allowed}
 .admin-monitor-actions .danger{color:var(--danger-color);border-color:color-mix(in srgb,var(--danger-color) 35%,transparent)}
 .admin-monitor-stats{display:flex;gap:16px;flex-wrap:wrap;align-items:center;padding:9px 12px;border:1px solid var(--card-border);border-radius:10px;background:var(--workspace-glass-bg);font-size:11px;color:var(--text-muted)}
@@ -24,5 +24,5 @@
 .admin-monitor-summary svg.open{transform:rotate(180deg)}
 .admin-monitor-detail{padding:0 14px 12px 28px;font-size:10px;color:var(--text-muted);display:flex;flex-direction:column;gap:7px}
 .admin-monitor-detail code{font-size:10px;word-break:break-all;color:var(--text-main)}
-.admin-monitor-detail pre{margin:0;max-height:220px;overflow:auto;padding:9px;border-radius:8px;background:var(--card-bg);border:1px solid var(--card-border);font-size:10px;line-height:1.5;white-space:pre-wrap;color:var(--text-muted)}
+.admin-monitor-detail pre{margin:0;max-height:220px;overflow:auto;padding:9px;border-radius:8px;background: var(--ws-surface-bg);border:1px solid var(--card-border);font-size:10px;line-height:1.5;white-space:pre-wrap;color:var(--text-muted)}
 @media(max-width:640px){.admin-monitor-stats .muted{margin-left:0;width:100%}.admin-monitor-summary{padding:10px}.admin-monitor-detail{padding-left:14px}}

@@ -181,7 +181,7 @@ export default function InformationSourcesPage({ worldId }: { worldId?: string }
   )
 }
 
-const card: React.CSSProperties = { border: '1px solid var(--card-border)', borderRadius: 10, padding: 12, background: 'var(--card-bg)' }
+const card: React.CSSProperties = { border: '1px solid var(--card-border)', borderRadius: 10, padding: 12, background: 'var(--ws-surface-bg)' }
 const input: React.CSSProperties = { width: '100%', boxSizing: 'border-box', padding: '7px 8px', borderRadius: 6, border: '1px solid var(--card-border)', background: 'var(--bg-color)', color: 'var(--text-main)', fontSize: 11 }
 const field: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 4, fontSize: 10, color: 'var(--text-muted)' }
 const primaryBtn: React.CSSProperties = { padding: '7px 10px', borderRadius: 6, border: '1px solid var(--primary-color)', background: 'var(--primary-color)', color: 'var(--primary-text)', fontSize: 11, cursor: 'pointer' }

@@ -48,7 +48,7 @@ export default function MemoryPage() {
         </p>
       </div>
       {error && <div style={{ padding: 8, borderRadius: 7, background: 'rgba(239,68,68,.08)', color: 'var(--danger-color)', fontSize: 11 }}>{error}</div>}
-      <main style={{ border: '1px solid var(--card-border)', borderRadius: 12, padding: 15, background: 'var(--card-bg)' }}>
+      <main style={{ border: '1px solid var(--card-border)', borderRadius: 12, padding: 15, background: 'var(--ws-surface-bg)' }}>
         {profile ? (
           <>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>

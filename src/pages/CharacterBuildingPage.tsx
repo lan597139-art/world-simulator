@@ -1226,7 +1226,7 @@ return (
                 <button 
                   type="button" 
                   onClick={() => switchStateLayer('seed')} 
-                  style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: stateLayer === 'seed' ? 'var(--card-bg)' : 'transparent', color: stateLayer === 'seed' ? 'var(--text-main)' : 'var(--text-muted)', fontWeight: stateLayer === 'seed' ? 600 : 400 }}
+                  style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: stateLayer === 'seed' ? 'var(--ws-surface-bg)' : 'transparent', color: stateLayer === 'seed' ? 'var(--text-main)' : 'var(--text-muted)', fontWeight: stateLayer === 'seed' ? 600 : 400 }}
                 >
                   种子设定
                 </button>
@@ -1236,7 +1236,7 @@ return (
                     switchStateLayer('runtime');
                     setShowRuntimeInfo(true);
                   }} 
-                  style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: stateLayer === 'runtime' ? 'var(--card-bg)' : 'transparent', color: stateLayer === 'runtime' ? 'var(--text-main)' : 'var(--text-muted)', fontWeight: stateLayer === 'runtime' ? 600 : 400 }}
+                  style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: stateLayer === 'runtime' ? 'var(--ws-surface-bg)' : 'transparent', color: stateLayer === 'runtime' ? 'var(--text-main)' : 'var(--text-muted)', fontWeight: stateLayer === 'runtime' ? 600 : 400 }}
                 >
                   当前运行态
                 </button>
@@ -1269,7 +1269,7 @@ return (
                     style={{
                       display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
                       padding: '16px', width: '160px',
-                      background: isActive ? 'var(--text-main)' : 'var(--card-bg)',
+                      background: isActive ? 'var(--text-main)' : 'var(--ws-surface-bg)',
                       color: isActive ? 'var(--bg-color)' : 'var(--text-main)',
                       border: isActive ? '1px solid var(--text-main)' : '1px solid var(--card-border)',
                       borderRadius: '12px', cursor: 'pointer',

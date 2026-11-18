@@ -84,7 +84,7 @@ export default function ProductSwitcher({
                     style={{
                       textAlign: 'left', padding: 14, borderRadius: 11, cursor: 'pointer',
                       border: `1px solid ${active ? 'var(--primary-color)' : 'var(--card-border)'}`,
-                      background: active ? 'color-mix(in srgb, var(--primary-color) 9%, var(--card-bg))' : 'var(--card-bg)',
+                      background: active ? 'color-mix(in srgb, var(--primary-color) 9%, var(--ws-surface-bg))' : 'var(--ws-surface-bg)',
                       color: 'var(--text-main)',
                     }}
                   >

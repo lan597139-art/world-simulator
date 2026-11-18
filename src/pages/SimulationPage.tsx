@@ -317,7 +317,7 @@ export default function SimulationPage({ onWriteChapter, auxiliary = false, worl
               onChange={(event) => setDirection(event.target.value)}
               rows={2}
               placeholder="例如：这次冲突不要立刻爆发，让韩立先隐忍观察；留空则按人物引擎自然推演。"
-              style={{ width: '100%', padding: '8px 10px', borderRadius: '7px', border: '1px solid var(--card-border)', background: 'var(--card-bg)', color: 'var(--text-main)', fontSize: '12px', resize: 'vertical', lineHeight: 1.6 }}
+              style={{ width: '100%', padding: '8px 10px', borderRadius: '7px', border: '1px solid var(--card-border)', background: 'var(--ws-surface-bg)', color: 'var(--text-main)', fontSize: '12px', resize: 'vertical', lineHeight: 1.6 }}
             />
           </label>
           <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '11px', color: 'var(--text-muted)' }}>
@@ -326,7 +326,7 @@ export default function SimulationPage({ onWriteChapter, auxiliary = false, worl
               <select
                 value={perspectiveMode}
                 onChange={(event) => setPerspectiveMode(event.target.value)}
-                style={{ flex: 1, padding: '8px 10px', borderRadius: '7px', border: '1px solid var(--card-border)', background: 'var(--card-bg)', color: 'var(--text-main)', fontSize: '12px', outline: 'none' }}
+                style={{ flex: 1, padding: '8px 10px', borderRadius: '7px', border: '1px solid var(--card-border)', background: 'var(--ws-surface-bg)', color: 'var(--text-main)', fontSize: '12px', outline: 'none' }}
               >
                 <option value="third_limited">第三人称限知（跟随角色）</option>
                 <option value="first_person">第一人称（代入角色）</option>
@@ -338,7 +338,7 @@ export default function SimulationPage({ onWriteChapter, auxiliary = false, worl
                 <select
                   value={perspectiveChar}
                   onChange={(event) => setPerspectiveChar(event.target.value)}
-                  style={{ flex: 1, padding: '8px 10px', borderRadius: '7px', border: '1px solid var(--card-border)', background: 'var(--card-bg)', color: 'var(--text-main)', fontSize: '12px', outline: 'none' }}
+                  style={{ flex: 1, padding: '8px 10px', borderRadius: '7px', border: '1px solid var(--card-border)', background: 'var(--ws-surface-bg)', color: 'var(--text-main)', fontSize: '12px', outline: 'none' }}
                 >
                   <option value="">自动跟随主导人物</option>
                   {characters.map((c: any) => (

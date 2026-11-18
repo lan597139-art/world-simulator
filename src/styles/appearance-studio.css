@@ -119,7 +119,7 @@ html[data-glass-targets~="card"] :is(
   .cm-co-create-empty, .cm-empty,
   .uc-profile-cover, .uc-identity-row, .uc-achievement, .uc-membership-status, .uc-balance,
   .pw-tabs-wrap, .pwh-world-visual, .pwh-book-cover,
-  .wr-overlay, .fb-overlay, .wp-immersive-exit, .ws-stats-overlay, .swl-overlay, .ol-overlay,
+  .wp-immersive-exit,
   .relx-legend-note, .relx-panel-head, .relx-panel-note, .relx-expand,
   .cw-detail,
   .settings-background-preview,
@@ -195,6 +195,23 @@ html[data-glass-targets~="modal"] :is(
     0 0 0 1px rgba(255, 86, 170, calc(var(--ws-g-modal-dispersion) * 0.004)),
     0 0 calc(var(--ws-g-modal-shadow) * 0.4px) rgba(90, 190, 255, calc(var(--ws-g-modal-dispersion) * 0.012)),
     0 calc(var(--ws-g-modal-shadow) * 0.1px) calc(var(--ws-g-modal-shadow) * 0.36px) rgba(0, 0, 0, calc(0.06 + var(--ws-g-modal-shadow) * 0.0012)) !important;
+}
+
+/* 弹窗遮罩：各页面写死的 rgba(0,0,0,.3~.6) 深色遮罩统一接入“弹窗”档，
+   由控制台的弹窗透明度/模糊驱动，避免遮罩深浅不一、与玻璃面板脱节。 */
+html[data-glass-targets~="modal"] :is(
+  .bc-modal-backdrop, .comic-modal-backdrop, .cs-modal-backdrop, .cm-modal-backdrop,
+  .ca-modal-mask, .official-assets-overlay, .swl-overlay, .sc-sheet-backdrop,
+  .uc-modal-backdrop, .cw-modal-backdrop, .cm-lightbox,
+  .wr-overlay, .fb-overlay, .ws-stats-overlay, .ol-overlay, .slx-picker-overlay
+) {
+  background-color: color-mix(
+    in srgb,
+    #000000 calc(var(--ws-g-modal-opacity, 90) * 0.5%),
+    transparent
+  ) !important;
+  -webkit-backdrop-filter: blur(calc(var(--ws-g-modal-blur, 32) * 0.4px)) !important;
+  backdrop-filter: blur(calc(var(--ws-g-modal-blur, 32) * 0.4px)) !important;
 }
 
 html[data-glass-targets~="control"] :is(

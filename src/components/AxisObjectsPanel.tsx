@@ -7,7 +7,7 @@ const AXIS_FALLBACK: Record<string, string> = {
   attachment: '依恋', regulation: '调节', negentropy: '负熵（环境修复力）',
 }
 const card: React.CSSProperties = {
-  background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 12,
+  background: 'var(--ws-surface-bg)', border: '1px solid var(--card-border)', borderRadius: 12,
   padding: 12, boxSizing: 'border-box',
 }
 const input: React.CSSProperties = {
@@ -186,7 +186,7 @@ export default function AxisObjectsPanel({ worldId, eventId, branchId, compact =
               return (
                 <div key={`${object.axis}-${object.name}-${object.id}`} style={{
                   border: '1px solid var(--card-border)', borderRadius: 8, padding: '7px 8px',
-                  background: isInherited ? 'rgba(128,128,128,.045)' : 'var(--card-bg)',
+                  background: isInherited ? 'rgba(128,128,128,.045)' : 'var(--ws-surface-bg)',
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                     <strong style={{ fontSize: 11 }}>{object.name}</strong>

@@ -3,11 +3,11 @@
 .admin-backups-title{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:650;color:var(--text-main)}
 .admin-backups-head p{margin:4px 0 0;font-size:10px;line-height:1.6;color:var(--text-muted);max-width:540px}
 .admin-backups-actions{display:flex;gap:7px}
-.admin-backups-actions button{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--card-border);background:var(--card-bg);color:var(--text-muted);border-radius:7px;padding:5px 9px;font-size:10px;cursor:pointer}
+.admin-backups-actions button{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--card-border);background: var(--ws-surface-bg);color:var(--text-muted);border-radius:7px;padding:5px 9px;font-size:10px;cursor:pointer}
 .admin-backups-actions button.primary{background:var(--primary-color);border-color:var(--primary-color);color:var(--primary-text)}
 .admin-backups-actions button:disabled{opacity:.45;cursor:not-allowed}
 .admin-backups-error{font-size:10px;color:var(--danger-color)}
-.admin-backups-note{font-size:10px;color:var(--text-muted);padding:7px 10px;border-radius:7px;background:var(--card-bg)}
+.admin-backups-note{font-size:10px;color:var(--text-muted);padding:7px 10px;border-radius:7px;background:var(--ws-surface-bg)}
 .admin-backups-empty{padding:18px;text-align:center;font-size:10px;color:var(--text-muted);border:1px dashed var(--card-border);border-radius:9px}
 .admin-backups-list{display:flex;flex-direction:column;gap:6px}
 .admin-backup-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--card-border);border-radius:8px;background:var(--workspace-glass-bg);font-size:10px;color:var(--text-main);flex-wrap:wrap}

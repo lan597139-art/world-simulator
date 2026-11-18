@@ -208,7 +208,7 @@ export default function WorldDataPage({ worldId }: { worldId?: string }) {
                   let isPanning = false;
                   return (
                     <>
-                      <div style={{ position: 'absolute', bottom: '20px', right: '20px', zIndex: 10, display: 'flex', flexDirection: 'column', gap: '6px', background: 'var(--card-bg)', padding: '6px', borderRadius: '8px', border: '1px solid var(--card-border)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+                      <div style={{ position: 'absolute', bottom: '20px', right: '20px', zIndex: 10, display: 'flex', flexDirection: 'column', gap: '6px', background: 'var(--ws-surface-bg)', padding: '6px', borderRadius: '8px', border: '1px solid var(--card-border)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
                         <button onClick={(e) => { e.stopPropagation(); zoomIn(); }} style={{ width: '32px', height: '32px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-main)', fontSize: '18px' }}>+</button>
                         <button onClick={(e) => { e.stopPropagation(); zoomOut(); }} style={{ width: '32px', height: '32px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-main)', fontSize: '18px' }}>-</button>
                         <button onClick={(e) => { e.stopPropagation(); resetTransform(); }} style={{ width: '32px', height: '32px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-main)' }}>↺</button>
@@ -380,7 +380,7 @@ export default function WorldDataPage({ worldId }: { worldId?: string }) {
               <button onClick={() => setIsPanelOpen(true)} style={{
                 position: 'absolute', top: '20px', zIndex: 20, 
                 ...(isLeftSide ? { right: '20px' } : { left: '20px' }),
-                padding: '10px 16px', background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, color: 'var(--text-main)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' 
+                padding: '10px 16px', background: 'var(--ws-surface-bg)', border: '1px solid var(--card-border)', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, color: 'var(--text-main)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' 
               }}>
                 ▶ 展开操作面板
               </button>

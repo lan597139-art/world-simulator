@@ -9,7 +9,7 @@ const overlay: React.CSSProperties = {
   display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 14,
 }
 const card: React.CSSProperties = {
-  background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 10,
+  background: 'var(--ws-surface-bg)', border: '1px solid var(--card-border)', borderRadius: 10,
   padding: 10, boxSizing: 'border-box',
 }
 const input: React.CSSProperties = {

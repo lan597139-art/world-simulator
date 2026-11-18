@@ -18,7 +18,7 @@ const KIND_COLOR: Record<string, string> = {
   main: 'var(--primary-color)', side: '#4f8b6d', copy: '#8768b5', shadow: '#a1703d', ensemble: '#627d9e',
 }
 const card: React.CSSProperties = {
-  background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 12,
+  background: 'var(--ws-surface-bg)', border: '1px solid var(--card-border)', borderRadius: 12,
   padding: 12, boxSizing: 'border-box',
 }
 const input: React.CSSProperties = {
@@ -411,7 +411,7 @@ export default function StorylinePage({ worldId, onOpenEvents }: { worldId?: str
                   style={{
                     padding: '7px 8px', borderRadius: 8, cursor: 'grab',
                     border: `1px solid ${selectedEventId === event.id ? 'var(--primary-color)' : 'var(--card-border)'}`,
-                    background: selectedEventId === event.id ? 'color-mix(in srgb, var(--primary-color) 10%, var(--card-bg))' : 'transparent',
+                    background: selectedEventId === event.id ? 'color-mix(in srgb, var(--primary-color) 10%, var(--ws-surface-bg))' : 'transparent',
                   }}
                 >
                   <div style={{ fontSize: 11, fontWeight: 600 }}>{event.name}</div>

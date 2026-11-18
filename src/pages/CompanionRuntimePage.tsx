@@ -48,7 +48,7 @@ export default function CompanionRuntimePage({ onOpenPersonas }: { onOpenPersona
       {error && <div style={{ marginTop: 10, padding: 8, borderRadius: 7, background: 'rgba(239,68,68,.08)', color: 'var(--danger-color)', fontSize: 11 }}>{error}</div>}
       <div style={{ marginTop: 14 }}>
         {profile ? (
-          <div style={{ border: '1px solid var(--card-border)', borderRadius: 13, padding: 16, background: 'var(--card-bg)', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ border: '1px solid var(--card-border)', borderRadius: 13, padding: 16, background: 'var(--ws-surface-bg)', display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <span style={{ width: 44, height: 44, borderRadius: '50%', display: 'grid', placeItems: 'center', background: active ? 'color-mix(in srgb, var(--primary-color) 14%, transparent)' : 'rgba(128,128,128,.12)', fontSize: 19 }}>{profile.avatar || '☁'}</span>
               <div style={{ minWidth: 0 }}>

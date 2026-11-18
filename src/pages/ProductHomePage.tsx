@@ -38,7 +38,7 @@ export default function ProductHomePage({
               onClick={() => onSelect(product.key)}
               style={{
                 position: 'relative', minHeight: 218, padding: '25px 24px 22px', borderRadius: 16,
-                border: '1px solid var(--card-border)', background: 'var(--card-bg)', color: 'var(--text-main)',
+                border: '1px solid var(--card-border)', background: 'var(--ws-surface-bg)', color: 'var(--text-main)',
                 textAlign: 'left', cursor: 'pointer', display: 'flex', flexDirection: 'column',
                 boxShadow: '0 12px 40px rgba(0,0,0,0.06)', overflow: 'hidden',
               }}

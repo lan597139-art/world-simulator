@@ -281,7 +281,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
         type="button"
         onClick={switchLang}
         aria-label={copy.language}
-        style={{ position: 'fixed', top: 18, right: 18, padding: '6px 10px', borderRadius: 8, border: '1px solid var(--card-border)', background: 'var(--card-bg)', color: 'var(--text-main)', fontSize: 11, cursor: 'pointer' }}
+        style={{ position: 'fixed', top: 18, right: 18, padding: '6px 10px', borderRadius: 8, border: '1px solid var(--card-border)', background: 'var(--ws-surface-bg)', color: 'var(--text-main)', fontSize: 11, cursor: 'pointer' }}
       >
         {zh ? 'EN' : '中文'}
       </button>

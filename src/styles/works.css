@@ -46,7 +46,7 @@
   padding: 4px;
   border: 1px solid var(--card-border);
   border-radius: 13px;
-  background: color-mix(in srgb, var(--card-bg) 52%, transparent);
+  background: color-mix(in srgb, var(--ws-surface-bg) 52%, transparent);
   backdrop-filter: blur(18px) saturate(125%);
 }
 .cw-hero-stats div {
@@ -86,7 +86,7 @@
 .cw-secondary-button {
   padding: 7px 9px;
   border: 1px solid var(--card-border);
-  background: color-mix(in srgb, var(--card-bg) 58%, transparent);
+  background: color-mix(in srgb, var(--ws-surface-bg) 58%, transparent);
   color: var(--text-main);
 }
 .cw-secondary-button:hover { border-color: color-mix(in srgb, var(--primary-color) 40%, var(--card-border)); }
@@ -127,16 +127,16 @@
   padding: 8px 10px;
   border: 1px solid var(--card-border);
   border-radius: 10px;
-  background: color-mix(in srgb, var(--card-bg) 36%, transparent);
+  background: color-mix(in srgb, var(--ws-surface-bg) 36%, transparent);
   color: var(--text-muted);
   text-align: left;
   cursor: pointer;
   transition: border-color .15s ease, background .15s ease;
 }
-.cw-scene-pill:hover { background: color-mix(in srgb, var(--card-bg) 60%, transparent); }
+.cw-scene-pill:hover { background: color-mix(in srgb, var(--ws-surface-bg) 60%, transparent); }
 .cw-scene-pill.is-active {
   border-color: color-mix(in srgb, var(--primary-color) 48%, var(--card-border));
-  background: color-mix(in srgb, var(--primary-color) 8%, var(--card-bg));
+  background: color-mix(in srgb, var(--primary-color) 8%, var(--ws-surface-bg));
   color: var(--text-main);
 }
 .cw-scene-pill-icon {
@@ -170,7 +170,7 @@
   height: 32px;
   border: 1px solid var(--card-border);
   border-radius: 8px;
-  background: color-mix(in srgb, var(--card-bg) 52%, transparent);
+  background: color-mix(in srgb, var(--ws-surface-bg) 52%, transparent);
   color: var(--text-muted);
 }
 .cw-search:focus-within { border-color: color-mix(in srgb, var(--primary-color) 45%, var(--card-border)); }
@@ -191,7 +191,7 @@
   padding: 3px;
   border: 1px solid var(--card-border);
   border-radius: 8px;
-  background: color-mix(in srgb, var(--card-bg) 36%, transparent);
+  background: color-mix(in srgb, var(--ws-surface-bg) 36%, transparent);
 }
 .cw-status-filter button {
   padding: 4px 7px;
@@ -236,7 +236,7 @@
   text-align: center;
   border: 1px dashed var(--card-border);
   border-radius: 16px;
-  background: color-mix(in srgb, var(--card-bg) 28%, transparent);
+  background: color-mix(in srgb, var(--ws-surface-bg) 28%, transparent);
 }
 .cw-empty.is-filter { min-height: 220px; }
 .cw-empty-mark {
@@ -268,13 +268,13 @@
   padding: 20px;
   border: 1px dashed var(--card-border);
   border-radius: 14px;
-  background: color-mix(in srgb, var(--card-bg) 28%, transparent);
+  background: color-mix(in srgb, var(--ws-surface-bg) 28%, transparent);
   color: var(--text-muted);
   text-align: left;
   cursor: pointer;
   transition: border-color .15s ease, background .15s ease;
 }
-.cw-create-card:hover { border-color: color-mix(in srgb, var(--primary-color) 42%, var(--card-border)); background: color-mix(in srgb, var(--primary-color) 5%, var(--card-bg)); }
+.cw-create-card:hover { border-color: color-mix(in srgb, var(--primary-color) 42%, var(--card-border)); background: color-mix(in srgb, var(--primary-color) 5%, var(--ws-surface-bg)); }
 .cw-create-plus {
   display: grid;
   place-items: center;
@@ -293,7 +293,7 @@
   overflow: hidden;
   border: 1px solid var(--card-border);
   border-radius: 14px;
-  background: color-mix(in srgb, var(--card-bg) 66%, transparent);
+  background: color-mix(in srgb, var(--ws-surface-bg) 66%, transparent);
   box-shadow: 0 9px 30px rgba(0, 0, 0, .05), inset 0 1px 0 rgba(255,255,255,.2);
   cursor: pointer;
   transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
@@ -310,9 +310,8 @@
   position: relative;
   aspect-ratio: 16 / 10;
   overflow: hidden;
-  background:
-    radial-gradient(circle at 78% 15%, color-mix(in srgb, var(--cw-tone) 26%, transparent), transparent 48%),
-    linear-gradient(145deg, color-mix(in srgb, var(--cw-tone) 18%, var(--card-bg)), color-mix(in srgb, var(--card-bg) 92%, #111));
+  background: radial-gradient(circle at 78% 15%, color-mix(in srgb, var(--cw-tone) 26%, transparent), transparent 48%),
+    linear-gradient(145deg, color-mix(in srgb, var(--cw-tone) 18%, var(--ws-surface-bg)), color-mix(in srgb, var(--ws-surface-bg) 92%, #111));
 }
 .cw-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .cw-cover-placeholder {
@@ -337,7 +336,7 @@
   line-height: 1.2;
 }
 .cw-cover-scene { left: 8px; color: rgba(255,255,255,.9); background: rgba(18, 22, 28, .38); border: 1px solid rgba(255,255,255,.16); }
-.cw-cover-status { right: 8px; color: var(--text-main); background: color-mix(in srgb, var(--card-bg) 80%, transparent); border: 1px solid var(--card-border); }
+.cw-cover-status { right: 8px; color: var(--text-main); background: color-mix(in srgb, var(--ws-surface-bg) 80%, transparent); border: 1px solid var(--card-border); }
 .cw-cover-status.is-completed { color: var(--success-strong); }
 .cw-cover-status.is-in_progress { color: var(--primary-color); }
 
@@ -389,7 +388,7 @@
   flex-direction: column;
   border: 1px solid color-mix(in srgb, var(--card-border) 70%, rgba(255,255,255,.2));
   border-radius: 17px;
-  background: color-mix(in srgb, var(--card-bg) 92%, #10141b);
+  background: color-mix(in srgb, var(--ws-surface-bg) 92%, #10141b);
   box-shadow: 0 28px 90px rgba(0, 0, 0, .34), inset 0 1px 0 rgba(255,255,255,.25);
 }
 .cw-modal-head {
@@ -429,7 +428,7 @@
   border: 1px solid var(--card-border);
   border-radius: 7px;
   outline: none;
-  background: color-mix(in srgb, var(--card-bg) 52%, transparent);
+  background: color-mix(in srgb, var(--ws-surface-bg) 52%, transparent);
   color: var(--text-main);
   font-size: 10px;
 }
@@ -454,7 +453,7 @@
   overflow: hidden;
   border: 1px solid var(--card-border);
   border-radius: 9px;
-  background: linear-gradient(145deg, color-mix(in srgb, var(--cw-tone) 18%, var(--card-bg)), color-mix(in srgb, var(--card-bg) 92%, #111));
+  background: linear-gradient(145deg, color-mix(in srgb, var(--cw-tone) 18%, var(--ws-surface-bg)), color-mix(in srgb, var(--ws-surface-bg) 92%, #111));
   color: var(--text-muted);
 }
 .cw-cover-preview img { width: 100%; height: 100%; object-fit: cover; }
@@ -479,7 +478,7 @@
   border: 1px solid var(--card-border);
   border-radius: 7px;
   cursor: pointer;
-  background: color-mix(in srgb, var(--card-bg) 30%, transparent);
+  background: color-mix(in srgb, var(--ws-surface-bg) 30%, transparent);
 }
 .cw-option:hover { border-color: color-mix(in srgb, var(--primary-color) 35%, var(--card-border)); }
 .cw-option.is-selected { border-color: color-mix(in srgb, var(--primary-color) 50%, var(--card-border)); background: color-mix(in srgb, var(--primary-color) 7%, transparent); }
@@ -538,11 +537,11 @@
   width: min(760px, 100%);
   max-height: min(82vh, 780px);
 }
-.cw-detail-close { position: absolute; top: 11px; right: 11px; z-index: 2; background: color-mix(in srgb, var(--card-bg) 70%, transparent); }
+.cw-detail-close { position: absolute; top: 11px; right: 11px; z-index: 2; background: color-mix(in srgb, var(--ws-surface-bg) 70%, transparent); }
 .cw-detail-cover {
   min-height: 280px;
   overflow: hidden;
-  background: linear-gradient(145deg, color-mix(in srgb, var(--primary-color) 18%, var(--card-bg)), color-mix(in srgb, var(--card-bg) 90%, #111));
+  background: linear-gradient(145deg, color-mix(in srgb, var(--primary-color) 18%, var(--ws-surface-bg)), color-mix(in srgb, var(--ws-surface-bg) 90%, #111));
 }
 .cw-detail-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .cw-detail-cover > div { display: grid; place-items: center; height: 100%; min-height: 280px; color: var(--text-muted); }
@@ -560,10 +559,10 @@
 .cw-detail-section h3 { display: flex; align-items: center; gap: 4px; margin: 0 0 6px; font-size: 9px; color: var(--text-main); }
 .cw-detail-section h3 small { margin-left: 2px; font-size: 7.5px; color: var(--text-muted); }
 .cw-detail-chips { display: flex; flex-wrap: wrap; gap: 4px; }
-.cw-detail-chips span { padding: 4px 7px; border: 1px solid var(--card-border); border-radius: 999px; font-size: 8.5px; color: var(--text-main); background: color-mix(in srgb, var(--card-bg) 45%, transparent); }
+.cw-detail-chips span { padding: 4px 7px; border: 1px solid var(--card-border); border-radius: 999px; font-size: 8.5px; color: var(--text-main); background: color-mix(in srgb, var(--ws-surface-bg) 45%, transparent); }
 .cw-detail-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 18px; padding-top: 13px; border-top: 1px solid var(--card-border); }
 .cw-detail-actions .cw-primary-button { margin-right: auto; }
-.cw-narrative-actions { display: flex; gap: 4px; padding: 3px; border: 1px solid var(--card-border); border-radius: 8px; background: color-mix(in srgb, var(--card-bg) 35%, transparent); }
+.cw-narrative-actions { display: flex; gap: 4px; padding: 3px; border: 1px solid var(--card-border); border-radius: 8px; background: color-mix(in srgb, var(--ws-surface-bg) 35%, transparent); }
 
 .cw-status-archive-icon { font-size: 11px; line-height: 1; }
 

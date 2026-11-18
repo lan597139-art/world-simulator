@@ -910,7 +910,7 @@ export default function AIAssistantPanel({
                         const key = `${message.id}:${index}`
                         const status = applied[key]
                         return (
-                          <div key={key} style={{ border: '1px solid var(--card-border)', borderRadius: '9px', padding: '8px 9px', background: 'var(--card-bg)' }}>
+                          <div key={key} style={{ border: '1px solid var(--card-border)', borderRadius: '9px', padding: '8px 9px', background: 'var(--ws-surface-bg)' }}>
                             <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '5px', lineHeight: 1.5 }}>
                               {action.summary}
                             </div>

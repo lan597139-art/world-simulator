@@ -1,11 +1,11 @@
 .account-sanctions{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
 .account-sanctions-title{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:650;color:var(--danger-color)}
-.account-sanction-card{border:1px solid color-mix(in srgb,var(--danger-color) 30%,var(--card-border));border-radius:11px;padding:12px;background:color-mix(in srgb,var(--danger-color) 7%,var(--card-bg))}
+.account-sanction-card{border:1px solid color-mix(in srgb,var(--danger-color) 30%,var(--card-border));border-radius:11px;padding:12px;background:color-mix(in srgb,var(--danger-color) 7%,var(--ws-surface-bg))}
 .account-sanction-card strong{font-size:12px;color:var(--danger-color)}
 .account-sanction-card p{margin:5px 0;font-size:11px;line-height:1.6;color:var(--text-main)}
 .account-sanction-card small{font-size:10px;color:var(--text-muted)}
 .account-sanction-appeal{display:flex;flex-direction:column;gap:7px;margin-top:8px}
-.account-sanction-appeal textarea{width:100%;box-sizing:border-box;border:1px solid var(--card-border);border-radius:8px;background:var(--card-bg);color:var(--text-main);font:inherit;font-size:11px;padding:8px;resize:vertical}
+.account-sanction-appeal textarea{width:100%;box-sizing:border-box;border:1px solid var(--card-border);border-radius:8px;background: var(--ws-surface-bg);color:var(--text-main);font:inherit;font-size:11px;padding:8px;resize:vertical}
 .account-sanction-appeal button{align-self:flex-end;border:1px solid var(--danger-color);background:transparent;color:var(--danger-color);border-radius:7px;padding:5px 10px;font-size:10px;cursor:pointer}
 .account-sanction-appeal button:disabled{opacity:.45;cursor:not-allowed}
 .account-sanction-appealed{margin-top:8px;font-size:10px;color:var(--text-muted)}

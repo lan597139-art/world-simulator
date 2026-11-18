@@ -35,7 +35,7 @@
   padding: 0 11px;
   border: 1px solid rgba(0, 0, 0, 0.13);
   border-radius: 9px;
-  background: color-mix(in srgb, var(--card-bg) 72%, transparent);
+  background: color-mix(in srgb, var(--ws-surface-bg) 72%, transparent);
   color: var(--text-main);
   font-size: 10px;
   font-weight: 650;
@@ -52,7 +52,7 @@
   flex: none;
   border: 1px solid rgba(0, 0, 0, 0.10);
   border-radius: 14px;
-  background: linear-gradient(145deg, color-mix(in srgb, var(--card-bg) 94%, transparent), color-mix(in srgb, var(--text-main) 6%, var(--card-bg)));
+  background: linear-gradient(145deg, color-mix(in srgb, var(--ws-surface-bg) 94%, transparent), color-mix(in srgb, var(--text-main) 6%, var(--ws-surface-bg)));
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.7);
   color: var(--text-main);
 }
@@ -112,7 +112,7 @@
   padding: 0 12px;
   border: 1px solid rgba(0, 0, 0, 0.14);
   border-radius: 10px;
-  background: color-mix(in srgb, var(--card-bg) 82%, transparent);
+  background: color-mix(in srgb, var(--ws-surface-bg) 82%, transparent);
   color: var(--text-main);
   font-size: 10.5px;
   cursor: pointer;
@@ -366,7 +366,7 @@
   padding: 0 7px;
   border: 1px solid rgba(0, 0, 0, 0.09);
   border-radius: 999px;
-  background: color-mix(in srgb, var(--card-bg) 58%, transparent);
+  background: color-mix(in srgb, var(--ws-surface-bg) 58%, transparent);
   color: var(--text-muted);
   font-size: 7.5px;
   white-space: nowrap;
@@ -393,7 +393,7 @@
   padding: 14px 15px;
   border: 1px solid rgba(0, 0, 0, 0.10);
   border-radius: 5px;
-  background: color-mix(in srgb, var(--card-bg) 72%, transparent);
+  background: color-mix(in srgb, var(--ws-surface-bg) 72%, transparent);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
   min-width: 0;
@@ -443,7 +443,7 @@
   padding: 0 9px;
   border: 1px solid rgba(0, 0, 0, 0.14);
   border-radius: 6px;
-  background: color-mix(in srgb, var(--card-bg) 74%, transparent);
+  background: color-mix(in srgb, var(--ws-surface-bg) 74%, transparent);
   color: var(--text-main);
   font-size: 8.5px;
   font-weight: 550;
@@ -513,7 +513,7 @@
   margin-bottom: 12px;
   border: 1px solid rgba(0, 0, 0, 0.10);
   border-radius: 12px;
-  background: color-mix(in srgb, var(--card-bg) 66%, transparent);
+  background: color-mix(in srgb, var(--ws-surface-bg) 66%, transparent);
   color: var(--text-main);
 }
 
@@ -549,7 +549,7 @@
   padding: 17px;
   border: 1px solid rgba(0, 0, 0, 0.10);
   border-radius: 5px;
-  background: color-mix(in srgb, var(--card-bg) 72%, transparent);
+  background: color-mix(in srgb, var(--ws-surface-bg) 72%, transparent);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
 }
@@ -774,7 +774,7 @@
   padding: 17px;
   border: 1px solid rgba(0, 0, 0, 0.10);
   border-radius: 5px;
-  background: color-mix(in srgb, var(--card-bg) 72%, transparent);
+  background: color-mix(in srgb, var(--ws-surface-bg) 72%, transparent);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
 }
@@ -885,7 +885,7 @@
   margin-top: 11px;
   padding: 10px;
   border-left: 2px solid var(--text-main);
-  background: color-mix(in srgb, var(--card-bg) 50%, transparent);
+  background: color-mix(in srgb, var(--ws-surface-bg) 50%, transparent);
   color: var(--text-muted);
   font-size: 8px;
   line-height: 1.7;
@@ -965,11 +965,11 @@
   cursor: pointer;
 }
 
-.pwh-roster-row:hover { background: color-mix(in srgb, var(--card-bg) 40%, transparent); }
+.pwh-roster-row:hover { background: color-mix(in srgb, var(--ws-surface-bg) 40%, transparent); }
 
 .pwh-roster-row.is-active {
   border-color: rgba(0, 0, 0, 0.12);
-  background: color-mix(in srgb, var(--card-bg) 58%, transparent);
+  background: color-mix(in srgb, var(--ws-surface-bg) 58%, transparent);
 }
 
 .pwh-character-avatar {
@@ -1046,7 +1046,7 @@
   flex-direction: column;
   gap: 9px;
   padding: 15px 13px;
-  background: color-mix(in srgb, var(--card-bg) 34%, transparent);
+  background: color-mix(in srgb, var(--ws-surface-bg) 34%, transparent);
 }
 
 .pwh-message {
@@ -1054,12 +1054,12 @@
   padding: 8px 10px;
   border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 2px;
-  background: color-mix(in srgb, var(--card-bg) 68%, transparent);
+  background: color-mix(in srgb, var(--ws-surface-bg) 68%, transparent);
 }
 
 .pwh-message.is-mine {
   align-self: flex-end;
-  background: color-mix(in srgb, var(--text-main) 8%, var(--card-bg));
+  background: color-mix(in srgb, var(--text-main) 8%, var(--ws-surface-bg));
 }
 
 .pwh-message p {
@@ -1184,7 +1184,7 @@
 
 .pwh-diary-strip > div {
   padding: 11px 13px;
-  background: color-mix(in srgb, var(--card-bg) 64%, transparent);
+  background: color-mix(in srgb, var(--ws-surface-bg) 64%, transparent);
 }
 
 .pwh-diary-strip span {
@@ -1447,7 +1447,7 @@
   padding: 8px 11px;
   border: 1px solid rgba(0, 0, 0, 0.09);
   border-radius: 6px;
-  background: color-mix(in srgb, var(--card-bg) 52%, transparent);
+  background: color-mix(in srgb, var(--ws-surface-bg) 52%, transparent);
   color: var(--text-muted);
   font-size: 8.5px;
   line-height: 1.7;
@@ -1474,7 +1474,7 @@
   flex: none;
   border: 1px solid rgba(0, 0, 0, 0.12);
   border-radius: 50%;
-  background: color-mix(in srgb, var(--card-bg) 52%, transparent);
+  background: color-mix(in srgb, var(--ws-surface-bg) 52%, transparent);
   color: var(--text-main);
 }
 
@@ -1573,7 +1573,7 @@
   gap: 6px;
   padding: 9px 10px;
   border: 0;
-  background: color-mix(in srgb, var(--card-bg) 58%, transparent);
+  background: color-mix(in srgb, var(--ws-surface-bg) 58%, transparent);
   color: var(--text-main);
   text-align: left;
 }
@@ -1654,7 +1654,7 @@
   padding: 8px 10px;
   border: 1px solid rgba(0, 0, 0, 0.09);
   border-left: 2px solid #8d9098;
-  background: color-mix(in srgb, var(--card-bg) 48%, transparent);
+  background: color-mix(in srgb, var(--ws-surface-bg) 48%, transparent);
   color: var(--text-muted);
   font-size: 8px;
   line-height: 1.65;
@@ -1690,7 +1690,7 @@
   flex: none;
   border: 1px solid rgba(0, 0, 0, 0.09);
   border-radius: 8px;
-  background: color-mix(in srgb, var(--card-bg) 52%, transparent);
+  background: color-mix(in srgb, var(--ws-surface-bg) 52%, transparent);
 }
 
 .yb-cap-copy { flex: 1; min-width: 0; }
@@ -1833,7 +1833,7 @@
   margin-top: 10px;
   padding: 8px;
   border: 1px solid rgba(0, 0, 0, 0.08);
-  background: color-mix(in srgb, var(--card-bg) 48%, transparent);
+  background: color-mix(in srgb, var(--ws-surface-bg) 48%, transparent);
   color: var(--text-muted);
 }
 
@@ -1894,9 +1894,8 @@
   align-items: flex-start !important;
   gap: 18px;
   border-radius: 18px !important;
-  background:
-    radial-gradient(120% 150% at 0% 0%, color-mix(in srgb, var(--primary-color) 7%, transparent), transparent 48%),
-    color-mix(in srgb, var(--card-bg) 96%, transparent) !important;
+  background: radial-gradient(120% 150% at 0% 0%, color-mix(in srgb, var(--primary-color) 7%, transparent), transparent 48%),
+    color-mix(in srgb, var(--ws-surface-bg) 96%, transparent) !important;
   box-shadow: 0 14px 40px rgba(0, 0, 0, 0.05);
 }
 
@@ -2046,7 +2045,7 @@
   padding: 0;
   border: 1px solid color-mix(in srgb, var(--card-border) 84%, var(--text-main) 16%);
   border-radius: 50%;
-  background: color-mix(in srgb, var(--card-bg) 92%, transparent);
+  background: color-mix(in srgb, var(--ws-surface-bg) 92%, transparent);
   color: var(--text-main);
   box-shadow: 0 8px 22px rgba(0, 0, 0, 0.14);
   backdrop-filter: blur(18px) saturate(150%);
@@ -2094,7 +2093,7 @@
   padding: 8px;
   border: 1px solid color-mix(in srgb, var(--card-border) 80%, var(--text-main) 20%);
   border-radius: 13px;
-  background: color-mix(in srgb, var(--card-bg) 94%, transparent);
+  background: color-mix(in srgb, var(--ws-surface-bg) 94%, transparent);
   box-shadow: 0 18px 46px rgba(0, 0, 0, 0.2);
   backdrop-filter: blur(24px) saturate(170%);
   -webkit-backdrop-filter: blur(24px) saturate(170%);
@@ -2234,9 +2233,8 @@
 
 .character-editor-header.cb-scene-head {
   border-radius: 0 0 16px 16px;
-  background:
-    radial-gradient(110% 150% at 0% 0%, color-mix(in srgb, var(--primary-color) 6%, transparent), transparent 50%),
-    color-mix(in srgb, var(--card-bg) 96%, transparent) !important;
+  background: radial-gradient(110% 150% at 0% 0%, color-mix(in srgb, var(--primary-color) 6%, transparent), transparent 50%),
+    color-mix(in srgb, var(--ws-surface-bg) 96%, transparent) !important;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
 }
 
@@ -2549,7 +2547,7 @@
   padding: 0 10px;
   border: 1px solid var(--card-border);
   border-radius: 8px;
-  background: color-mix(in srgb, var(--card-bg) 48%, transparent);
+  background: color-mix(in srgb, var(--ws-surface-bg) 48%, transparent);
   color: var(--text-muted);
 }
 
@@ -2580,7 +2578,7 @@
   padding: 0 26px 0 9px;
   border: 1px solid var(--card-border);
   border-radius: 8px;
-  background: color-mix(in srgb, var(--card-bg) 48%, transparent);
+  background: color-mix(in srgb, var(--ws-surface-bg) 48%, transparent);
   color: var(--text-main);
   font-size: 10.5px;
   cursor: pointer;
@@ -3107,7 +3105,7 @@
   width: 246px;
   min-height: 0;
   border-right: 1px solid var(--card-border);
-  background: color-mix(in srgb, var(--card-bg) 36%, transparent);
+  background: color-mix(in srgb, var(--ws-surface-bg) 36%, transparent);
 }
 
 .wp-side {
@@ -3117,7 +3115,7 @@
   width: 300px;
   min-height: 0;
   border-left: 1px solid var(--card-border);
-  background: color-mix(in srgb, var(--card-bg) 30%, transparent);
+  background: color-mix(in srgb, var(--ws-surface-bg) 30%, transparent);
 }
 
 .wp-library.is-hidden,
@@ -3164,7 +3162,7 @@
   padding: 2px;
   border: 1px solid var(--card-border);
   border-radius: 8px;
-  background: color-mix(in srgb, var(--card-bg) 55%, transparent);
+  background: color-mix(in srgb, var(--ws-surface-bg) 55%, transparent);
 }
 
 .wp-view-btn {
@@ -3353,7 +3351,7 @@
   padding: 12px 10px;
   border: 1px solid var(--card-border);
   border-radius: 9px;
-  background: color-mix(in srgb, var(--card-bg) 60%, transparent);
+  background: color-mix(in srgb, var(--ws-surface-bg) 60%, transparent);
   color: var(--text-muted);
 }
 
@@ -3450,7 +3448,7 @@
   padding: 9px;
   border: 1px solid var(--card-border);
   border-radius: 8px;
-  background: color-mix(in srgb, var(--card-bg) 55%, transparent);
+  background: color-mix(in srgb, var(--ws-surface-bg) 55%, transparent);
 }
 .wt-patch.is-applied { opacity: 0.62; }
 .wt-patch-head {
@@ -3720,7 +3718,7 @@
   padding: 14px;
   border: 1px solid var(--card-border);
   border-radius: 11px;
-  background: color-mix(in srgb, var(--card-bg) 55%, transparent);
+  background: color-mix(in srgb, var(--ws-surface-bg) 55%, transparent);
 }
 .wr-persona.is-ok { border-top: 2px solid #2f8a63; }
 .wr-persona.is-warn { border-top: 2px solid #9a6b18; }
@@ -3815,7 +3813,7 @@
 .vt-volume {
   border: 1px solid var(--card-border);
   border-radius: 10px;
-  background: color-mix(in srgb, var(--card-bg) 35%, transparent);
+  background: color-mix(in srgb, var(--ws-surface-bg) 35%, transparent);
   overflow: hidden;
 }
 .vt-volume.is-unfiled { border-style: dashed; background: transparent; }
@@ -4061,7 +4059,7 @@
   padding: 5px 9px; border: 1px solid transparent; border-radius: 6px;
   background: transparent; color: var(--text-muted); font-size: 10px; cursor: pointer;
 }
-.fb-tabs > button.is-on { border-color: var(--card-border); background: var(--card-bg); color: var(--text-main); }
+.fb-tabs > button.is-on { border-color: var(--card-border); background: var(--ws-surface-bg); color: var(--text-main); }
 .fb-summary { margin-left: auto; font-size: 9px; color: var(--text-muted); }
 .fb-body { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 22px 20px; }
 .fb-board-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
@@ -4079,7 +4077,7 @@
 .fb-primary:disabled { opacity: 0.55; cursor: wait; }
 .fb-form {
   margin-bottom: 14px; padding: 12px; border: 1px solid var(--card-border);
-  border-radius: 10px; background: color-mix(in srgb, var(--card-bg) 45%, transparent);
+  border-radius: 10px; background: color-mix(in srgb, var(--ws-surface-bg) 45%, transparent);
 }
 .fb-form label { display: flex; flex-direction: column; gap: 4px; }
 .fb-form label > span { font-size: 9px; color: var(--text-muted); }
@@ -4099,7 +4097,7 @@
 .fb-card {
   display: flex; flex-direction: column; gap: 7px; padding: 12px;
   border: 1px solid var(--card-border); border-radius: 10px;
-  background: color-mix(in srgb, var(--card-bg) 35%, transparent);
+  background: color-mix(in srgb, var(--ws-surface-bg) 35%, transparent);
 }
 .fb-card.is-pending { border-left: 2px solid #a87838; }
 .fb-card.is-planted { border-left: 2px solid #5b7fa8; }
@@ -4313,7 +4311,7 @@
 .swl-import-foot button, .swl-scan-btn { display: inline-flex; align-items: center; gap: 4px; padding: 5px 8px; border: 1px solid var(--card-border); border-radius: 6px; background: transparent; color: var(--text-main); font-size: 9px; cursor: pointer; }
 .swl-import-foot button.is-primary, .swl-foot button.is-primary { border-color: var(--text-main); background: var(--text-main); color: var(--bg-color); }
 .swl-scan-btn { width: 100%; justify-content: center; padding: 7px; }
-.swl-result { margin-top: 8px; padding: 8px; border: 1px solid var(--card-border); border-radius: 7px; background: color-mix(in srgb, var(--card-bg) 30%, transparent); }
+.swl-result { margin-top: 8px; padding: 8px; border: 1px solid var(--card-border); border-radius: 7px; background: color-mix(in srgb, var(--ws-surface-bg) 30%, transparent); }
 .swl-result.has-hit { border-color: color-mix(in srgb, #a84b4b 40%, var(--card-border)); }
 .swl-result-head { display: flex; justify-content: space-between; gap: 8px; font-size: 9px; color: var(--text-main); }
 .swl-result-head span { color: var(--text-muted); }
@@ -4359,7 +4357,7 @@
 .ol-body { flex: 1; min-height: 0; overflow-y: auto; padding: 14px 22px 18px; display: flex; flex-direction: column; gap: 10px; }
 .ol-empty { display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 38px 18px; border: 1px dashed var(--card-border); border-radius: 10px; text-align: center; color: var(--text-muted); font-size: 10px; line-height: 1.7; }
 .ol-empty strong { font-size: 12px; color: var(--text-main); }
-.ol-volume { border: 1px solid var(--card-border); border-radius: 10px; overflow: hidden; background: color-mix(in srgb, var(--card-bg) 28%, transparent); }
+.ol-volume { border: 1px solid var(--card-border); border-radius: 10px; overflow: hidden; background: color-mix(in srgb, var(--ws-surface-bg) 28%, transparent); }
 .ol-volume.is-unfiled { border-style: dashed; }
 .ol-volume-head { display: flex; align-items: center; gap: 6px; min-height: 38px; padding: 5px 7px; border-bottom: 1px solid transparent; }
 .ol-volume-head:focus-within { border-bottom-color: var(--card-border); }
@@ -4449,14 +4447,14 @@
 .slx-legend span { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
 .slx-legend i { width: 6px; height: 6px; border-radius: 50%; }
 .slx-shell { flex: 1; min-height: 0; display: grid; grid-template-columns: 226px minmax(0, 1fr) 250px; }
-.slx-library { min-height: 0; display: flex; flex-direction: column; border-right: 1px solid var(--card-border); background: color-mix(in srgb, var(--card-bg) 18%, var(--bg-color)); }
+.slx-library { min-height: 0; display: flex; flex-direction: column; border-right: 1px solid var(--card-border); background: color-mix(in srgb, var(--ws-surface-bg) 18%, var(--bg-color)); }
 .slx-library-head { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; padding: 11px 12px 5px; }
 .slx-library-head strong { font-size: 10.5px; }
 .slx-library-head span { font-size: 8px; color: var(--text-muted); }
 .slx-search { margin: 0 10px 7px; padding: 5px 7px; border: 1px solid var(--card-border); border-radius: 5px; background: transparent; color: var(--text-main); font-size: 9.5px; outline: none; }
 .slx-events { flex: 1; min-height: 0; overflow-y: auto; padding: 0 7px 8px; display: flex; flex-direction: column; gap: 4px; }
-.slx-event { display: flex; align-items: flex-start; gap: 6px; padding: 6px 7px; border: 1px solid transparent; border-radius: 6px; cursor: grab; background: color-mix(in srgb, var(--card-bg) 22%, transparent); }
-.slx-event:hover { border-color: var(--card-border); background: var(--card-bg); }
+.slx-event { display: flex; align-items: flex-start; gap: 6px; padding: 6px 7px; border: 1px solid transparent; border-radius: 6px; cursor: grab; background: color-mix(in srgb, var(--ws-surface-bg) 22%, transparent); }
+.slx-event:hover { border-color: var(--card-border); background: var(--ws-surface-bg); }
 .slx-event:active { cursor: grabbing; }
 .slx-event-dot { width: 5px; height: 5px; flex: 0 0 5px; margin-top: 4px; border-radius: 50%; background: var(--primary-color); }
 .slx-event strong { display: block; font-size: 10.5px; font-weight: 570; line-height: 1.4; }
@@ -4512,7 +4510,7 @@
 }
 .slx-empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; color: var(--text-muted); font-size: 10px; }
 .slx-empty strong { font-size: 13px; color: var(--text-main); }
-.slx-detail { min-height: 0; overflow-y: auto; border-left: 1px solid var(--card-border); background: color-mix(in srgb, var(--card-bg) 18%, var(--bg-color)); }
+.slx-detail { min-height: 0; overflow-y: auto; border-left: 1px solid var(--card-border); background: color-mix(in srgb, var(--ws-surface-bg) 18%, var(--bg-color)); }
 .slx-detail-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 11px 12px; border-bottom: 1px solid var(--card-border); font-size: 10px; font-weight: 600; }
 .slx-detail-head button { border: 0; background: transparent; color: var(--danger-color); font-size: 8px; cursor: pointer; }
 .slx-detail-body { padding: 14px 12px; }
@@ -4875,8 +4873,8 @@
 .slx-picker-head > button { width: 24px; height: 24px; border: 1px solid var(--card-border); border-radius: 6px; background: transparent; color: var(--text-muted); cursor: pointer; }
 .slx-picker-search { margin: 10px 12px 6px; padding: 7px 9px; border: 1px solid var(--card-border); border-radius: 6px; background: transparent; color: var(--text-main); font-size: 10px; outline: none; }
 .slx-picker-list { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 10px 12px; display: flex; flex-direction: column; gap: 4px; }
-.slx-picker-event { display: flex; flex-direction: column; gap: 2px; padding: 8px 9px; border: 1px solid transparent; border-radius: 7px; background: color-mix(in srgb, var(--card-bg) 24%, transparent); color: var(--text-main); text-align: left; cursor: pointer; }
-.slx-picker-event:hover { border-color: var(--card-border); background: var(--card-bg); }
+.slx-picker-event { display: flex; flex-direction: column; gap: 2px; padding: 8px 9px; border: 1px solid transparent; border-radius: 7px; background: color-mix(in srgb, var(--ws-surface-bg) 24%, transparent); color: var(--text-main); text-align: left; cursor: pointer; }
+.slx-picker-event:hover { border-color: var(--card-border); background: var(--ws-surface-bg); }
 .slx-picker-event strong { font-size: 10.5px; font-weight: 580; }
 .slx-picker-event span { font-size: 8px; color: var(--text-muted); line-height: 1.5; }
 .slx-picker-empty { padding: 28px 12px; text-align: center; font-size: 9px; color: var(--text-muted); }

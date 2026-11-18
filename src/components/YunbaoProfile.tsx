@@ -4,7 +4,7 @@ import * as api from '../api/yunbao'
 import type { YunbaoGrowth, YunbaoProfile } from '../api/yunbao'
 
 const cardSurface: CSSProperties = {
-  border: '1px solid var(--card-border)', borderRadius: 14, background: 'var(--card-bg)',
+  border: '1px solid var(--card-border)', borderRadius: 14, background: 'var(--ws-surface-bg)',
   boxSizing: 'border-box',
 }
 const input: CSSProperties = {
@@ -58,7 +58,7 @@ export function YunbaoCard({ onOpen, actionLabel = '云宝人格设计' }: { onO
     <div style={{
       ...cardSurface, padding: 15, display: 'flex', gap: 14, alignItems: 'stretch',
       flexWrap: 'wrap', borderColor: 'color-mix(in srgb, var(--primary-color) 42%, var(--card-border))',
-      background: 'linear-gradient(135deg, color-mix(in srgb, var(--primary-color) 7%, var(--card-bg)), var(--card-bg))',
+      background: 'linear-gradient(135deg, color-mix(in srgb, var(--primary-color) 7%, var(--ws-surface-bg)), var(--ws-surface-bg))',
     }}>
       <div style={{
         width: 56, height: 56, borderRadius: 15, display: 'grid', placeItems: 'center',

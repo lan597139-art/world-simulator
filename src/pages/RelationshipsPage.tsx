@@ -655,7 +655,7 @@ export default function RelationshipsPage({
       {/* 展开收起按钮 */}
       <button
         onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-        style={{ position: 'absolute', top: '20px', left: isSidebarOpen ? '330px' : '20px', zIndex: 20, width: '32px', height: '32px', background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', color: 'var(--text-main)', transition: 'all 0.3s ease' }}
+        style={{ position: 'absolute', top: '20px', left: isSidebarOpen ? '330px' : '20px', zIndex: 20, width: '32px', height: '32px', background: 'var(--ws-surface-bg)', border: '1px solid var(--card-border)', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', color: 'var(--text-main)', transition: 'all 0.3s ease' }}
       >
         {isSidebarOpen ? '◀' : '▶'}
       </button>

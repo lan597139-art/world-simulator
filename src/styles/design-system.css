@@ -85,7 +85,7 @@ select:disabled,
 input,
 textarea,
 select {
-  background-color: var(--field-bg) !important;
+  background-color: var(--ws-control-bg) !important;
   border: 1px solid var(--field-border) !important;
   color: var(--text-main) !important;
   font-size: var(--text-sm);
@@ -122,7 +122,7 @@ select:focus {
 .spirit-panel,
 .comic-main,
 .comic-chapters {
-  background-color: var(--card-bg);
+  background-color: var(--ws-surface-bg);
   border-color: var(--card-border);
 }
 .glass-card {
@@ -334,7 +334,7 @@ table,
 .settings-session-list {
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
-  background-color: var(--surface-solid, var(--card-bg)) !important;
+  background-color: var(--surface-solid, var(--ws-surface-bg)) !important;
 }
 .ws-prose,
 .reading-body,
@@ -350,7 +350,7 @@ table,
 .cc-sidebar {
   background: color-mix(
     in srgb,
-    var(--sidebar-bg) calc(max(var(--glass-opacity), var(--glass-readability-floor)) * 100%),
+    var(--ws-nav-bg) calc(max(var(--glass-opacity), var(--glass-readability-floor)) * 100%),
     transparent
   ) !important;
   -webkit-backdrop-filter: blur(24px) saturate(140%) !important;
@@ -463,6 +463,27 @@ html {
     0 1px 0 rgba(255, 255, 255, calc(var(--ws-g-card-border, 20) * 0.008)) inset,
     0 0 calc(var(--ws-g-card-thickness, 10) * 0.45px) rgba(255, 255, 255, calc(var(--ws-g-card-border, 20) * 0.004)) inset,
     0 calc(var(--ws-g-card-shadow, 16) * 0.09px) calc(var(--ws-g-card-shadow, 16) * 0.34px) rgba(0, 0, 0, calc(0.05 + var(--ws-g-card-shadow, 16) * 0.0012));
+
+  /* 通用表面底色令牌：各页面大量使用 var(--card-bg) / var(--sidebar-bg) /
+     var(--field-bg) 做背景，但这些令牌本身与控制台无关。这里派生出受控制台
+     “卡片 / 导航 / 控制”档位驱动的表面底色，供背景声明复用，
+     使所有页面表面自动跟随悬浮调节器，同时受可读性下限保护。
+     注意：--card-bg 仍保留为实心主题色，供反色按钮文字、SVG fill 使用。 */
+  --ws-surface-bg: color-mix(
+    in srgb,
+    var(--glass-frost-bg) calc(max(var(--ws-g-card-opacity, 84), var(--ws-readability-floor, .78)) * 1%),
+    transparent
+  );
+  --ws-nav-bg: color-mix(
+    in srgb,
+    var(--sidebar-bg) calc(max(var(--ws-g-nav-opacity, 88), var(--ws-readability-floor, .78)) * 1%),
+    transparent
+  );
+  --ws-control-bg: color-mix(
+    in srgb,
+    var(--field-bg) calc(max(var(--ws-g-control-opacity, 82), var(--ws-readability-floor, .78)) * 1%),
+    transparent
+  );
 
   /* 侧栏导航条目（创作中心 .cc-nav-item / 主侧栏 .sidebar-nav-item）
      之前背景、描边、阴影全部写死 rgba，控制台怎么调都不变。

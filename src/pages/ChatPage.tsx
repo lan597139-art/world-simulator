@@ -5,7 +5,7 @@ import { createDiary } from '../api/diary'
 import type { AiRole, ChatMemory, ChatMessage, ChatThread } from '../api/chat'
 
 const card: React.CSSProperties = {
-  background: 'var(--card-bg)',
+  background: 'var(--ws-surface-bg)',
   border: '1px solid var(--card-border)',
   borderRadius: '12px',
   padding: '12px',
@@ -18,7 +18,7 @@ const input: React.CSSProperties = {
   padding: '7px 9px',
   borderRadius: '7px',
   border: '1px solid var(--card-border)',
-  background: 'var(--card-bg)',
+  background: 'var(--ws-surface-bg)',
   color: 'var(--text-main)',
   fontSize: '12px',
   minWidth: 0,

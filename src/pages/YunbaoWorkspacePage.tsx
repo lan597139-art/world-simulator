@@ -55,7 +55,7 @@ export default function YunbaoWorkspacePage({ onNavigate }: { onNavigate: (page:
           return (
             <button key={item.page} type="button" onClick={() => onNavigate(item.page)} style={{
               display: 'flex', alignItems: 'flex-start', gap: 9, padding: 12, textAlign: 'left',
-              border: '1px solid var(--card-border)', borderRadius: 10, background: 'var(--card-bg)',
+              border: '1px solid var(--card-border)', borderRadius: 10, background: 'var(--ws-surface-bg)',
               color: 'var(--text-main)', cursor: 'pointer',
             }}>
               <Icon size={17} strokeWidth={1.6} style={{ marginTop: 1, color: 'var(--primary-color)' }} />

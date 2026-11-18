@@ -42,6 +42,9 @@
 - `.cc-search input` 改为读取控制档位令牌，不再用 `!important` 写死 rgba，控制台的「控制」调节可以生效。
 - `.cc-tool`、`.cc-asset`、`.cc-recent-work`、`.cc-scene-card` 属于**液态**档位（液态规则在卡片规则之后），由控制台的「液态」调节控制，不受「卡片」档位直接影响。
 - 各页面卡片面（AI 中心、社区、用户中心、游戏中心、内容商店、工作区外壳等）此前各自写死 `rgba(255,255,255,0.10~0.24)`，透明度、圆角、描边互不一致。现已把 `.ct-stats`、`.ai-*-card`、`.gx-*-card`、`.st-*-card`、`.cm-*-card`、`.uc-*-card`、`.pw-tabs-wrap`、`.pwh-world-visual`、`.relx-panel-head` 等，以及卡片内的统计小格（`.ai-stat-pair > div`、`.cm-follow-counts > div` 等）统一接入「卡片」档；搜索框、幽灵按钮、筛选标签、图标控件（`.ct-search`、`.cm-ghost`、`.cm-type`、`.uc-ghost-button`、`.relx-search` 等）接入「控制」档。现在拖动卡片或控制档位，所有页面的对应表面同步变化，不再出现“导航能调、卡片调不动”的情况。
+- **全站表面底色令牌派生（系统性联动）**：`--card-bg` / `--sidebar-bg` / `--field-bg` 是主题令牌，本身与控制台无关，而全站有 200+ 处 `background` 声明（含 TSX 行内样式）直接引用它们，导致大量面板、按钮、侧栏“写死”、无法随调节器变化。设计系统在 `html` 上新增三个派生令牌：`--ws-surface-bg`（读「卡片」档透明度）、`--ws-nav-bg`（读「导航」档）、`--ws-control-bg`（读「控制」档），均叠加 `--ws-readability-floor` 可读性下限。随后把全站 `background` / `background-color` 声明里的 `var(--card-bg)`、`var(--sidebar-bg)`、`var(--field-bg)` 统一替换为对应派生令牌。默认值下与原值等价（浅色约 `rgba(255,255,255,.84)`、深色约 `rgba(28,28,30,.84)`），因此默认观感不变，只有拖动调节器时才联动。`--card-bg` 仍保留为实心主题色，专供反色按钮的文字色与 SVG `fill` 使用，避免被透明度污染。
+- **弹窗遮罩统一**：各页面写死的 `rgba(0,0,0,.3~.6)` 深色遮罩（`.bc-modal-backdrop`、`.cm-lightbox`、`.swl-overlay`、`.sc-sheet-backdrop`、`.ca-modal-mask`、`.official-assets-overlay`、`.wr-overlay`、`.fb-overlay`、`.ws-stats-overlay`、`.ol-overlay`、`.slx-picker-overlay` 等 15 类）新增统一的「弹窗遮罩」规则，背景浓度与模糊由弹窗档的透明度/模糊驱动。此前误入「卡片」档的遮罩类已移出，避免浅色模式下被覆盖成白色而失去遮罩作用。
+- **滚动链修复**：`.main-area-body` / `.main-area-body-inner` 补充 `display:flex; flex-direction:column`，使 `.cc-page-scroll` 获得受限高度，灵果资源中心等长内容页面恢复上下滚动（此前 `flex:1; min-height:0` 因父级非 flex 而不生效）。
 
 ### 液态玻璃
 

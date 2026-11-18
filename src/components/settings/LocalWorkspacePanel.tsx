@@ -8,7 +8,7 @@ import {
 } from '../../services/localContent'
 
 const card: React.CSSProperties = {
-  border: '1px solid var(--card-border)', borderRadius: 14, background: 'var(--card-bg)',
+  border: '1px solid var(--card-border)', borderRadius: 14, background: 'var(--ws-surface-bg)',
   boxSizing: 'border-box', padding: 18,
 }
 const ghost: React.CSSProperties = {

@@ -126,7 +126,7 @@
 
 .ca-panel {
   min-width: 0;
-  background: var(--card-bg);
+  background: var(--ws-surface-bg);
   border: 1px solid var(--card-border);
   border-radius: 16px;
   backdrop-filter: blur(22px) saturate(150%);

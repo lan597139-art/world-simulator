@@ -16,7 +16,7 @@
 .settings-hero p { margin: 9px 0 0; max-width: 620px; font-size: 12px; line-height: 1.8; color: var(--text-muted); }
 .settings-hero-user {
   display: flex; align-items: center; gap: 11px; padding: 10px 13px;
-  border: 1px solid var(--card-border); border-radius: 13px; background: var(--card-bg);
+  border: 1px solid var(--card-border); border-radius: 13px; background: var(--ws-surface-bg);
 }
 .settings-hero-avatar {
   width: 42px; height: 42px; display: grid; place-items: center; border-radius: 12px;
@@ -29,7 +29,7 @@
 .settings-layout { display: grid; grid-template-columns: 246px minmax(0, 1fr); gap: 20px; align-items: start; }
 .settings-nav {
   position: sticky; top: 18px; display: grid; gap: 5px; padding: 8px;
-  border: 1px solid var(--card-border); border-radius: 14px; background: var(--card-bg);
+  border: 1px solid var(--card-border); border-radius: 14px; background: var(--ws-surface-bg);
 }
 .settings-nav-item {
   display: flex; align-items: flex-start; gap: 10px; width: 100%; padding: 10px;
@@ -81,7 +81,7 @@
   color: var(--text-muted); font-size: 10px; line-height: 1.7;
 }
 .settings-kv-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; border: 1px solid var(--card-border); border-radius: 10px; overflow: hidden; background: var(--card-border); }
-.settings-kv-grid > div { padding: 12px; background: var(--card-bg); }
+.settings-kv-grid > div { padding: 12px; background: var(--ws-surface-bg); }
 .settings-kv-grid span { display: block; font-size: 9.5px; color: var(--text-muted); margin-bottom: 4px; }
 .settings-kv-grid strong { display: block; font-size: 11.5px; font-weight: 650; }
 .settings-badge { display: inline-flex; padding: 4px 9px; border-radius: 999px; border: 1px solid var(--card-border); font-size: 9.5px; color: var(--text-muted); }
@@ -279,5 +279,5 @@ html[data-reduce-motion="true"] *, html[data-reduce-motion="true"] *::before, ht
 .settings-official-current{display:flex;flex-direction:column;gap:3px;margin-top:8px;padding:8px 10px;border:1px solid var(--card-border);border-radius:9px;background:var(--workspace-glass-bg);font-size:10px;color:var(--text-muted)}
 .settings-official-current strong{font-size:11px;color:var(--text-main)}
 .settings-focus-grid{display:grid;grid-template-columns:repeat(3,38px);gap:5px}
-.settings-focus-grid button{width:38px;height:34px;border:1px solid var(--card-border);border-radius:7px;background:var(--card-bg);color:var(--text-muted);cursor:pointer;font-size:14px;line-height:1}
+.settings-focus-grid button{width:38px;height:34px;border:1px solid var(--card-border);border-radius:7px;background: var(--ws-surface-bg);color:var(--text-muted);cursor:pointer;font-size:14px;line-height:1}
 .settings-focus-grid button.is-active{background:var(--text-main);color:var(--bg-color);border-color:var(--text-main)}

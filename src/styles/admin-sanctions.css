@@ -1,7 +1,7 @@
 .admin-sanctions{display:flex;flex-direction:column;gap:9px;margin-top:6px}
 .admin-sanctions-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .admin-sanctions-title{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:650;color:var(--text-main)}
-.admin-sanctions-head button{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--card-border);background:var(--card-bg);color:var(--text-muted);border-radius:7px;padding:5px 9px;font-size:10px;cursor:pointer}
+.admin-sanctions-head button{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--card-border);background: var(--ws-surface-bg);color:var(--text-muted);border-radius:7px;padding:5px 9px;font-size:10px;cursor:pointer}
 .admin-sanctions-empty{padding:18px;text-align:center;font-size:11px;color:var(--text-muted);border:1px dashed var(--card-border);border-radius:10px}
 .admin-sanctions-error{padding:9px 12px;border-radius:8px;background:color-mix(in srgb,var(--danger-color) 12%,transparent);color:var(--danger-color);font-size:11px}
 .admin-sanctions-list{display:flex;flex-direction:column;gap:7px}
@@ -14,7 +14,7 @@
 .admin-sanction-done{font-size:9px;color:var(--text-muted)}.admin-sanction-appeal{font-size:9px;color:var(--primary-color)}
 .admin-sanction-main p{margin:4px 0;font-size:11px;line-height:1.55;color:var(--text-main);word-break:break-word}
 .admin-sanction-main small{font-size:9px;color:var(--text-muted)}
-.admin-sanction-main blockquote{margin:5px 0 0;padding:5px 8px;border-left:2px solid var(--primary-color);font-size:10px;color:var(--text-muted);background:var(--card-bg);border-radius:0 6px 6px 0}
+.admin-sanction-main blockquote{margin:5px 0 0;padding:5px 8px;border-left:2px solid var(--primary-color);font-size:10px;color:var(--text-muted);background: var(--ws-surface-bg);border-radius:0 6px 6px 0}
 .admin-sanction-row>button{flex:none;display:inline-flex;align-items:center;gap:4px;border:1px solid var(--card-border);background:transparent;color:var(--text-muted);border-radius:7px;padding:5px 8px;font-size:10px;cursor:pointer}
 .admin-sanction-row>button:hover{color:var(--danger-color);border-color:var(--danger-color)}
 @media(max-width:640px){.admin-sanction-row{flex-direction:column}.admin-sanction-row>button{align-self:flex-end}}

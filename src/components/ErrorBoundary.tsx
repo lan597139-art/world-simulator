@@ -43,7 +43,7 @@ export default class ErrorBoundary extends Component<Props, State> {
           style={{
             fontSize: '11px',
             color: 'var(--danger-color)',
-            background: 'var(--card-bg)',
+            background: 'var(--ws-surface-bg)',
             border: '1px solid var(--card-border)',
             borderRadius: '10px',
             padding: '12px',

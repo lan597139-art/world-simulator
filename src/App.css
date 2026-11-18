@@ -85,7 +85,7 @@ button {
   border: 1px solid var(--card-border);
   border-left: 0;
   border-radius: 0 9px 9px 0;
-  background: var(--sidebar-bg);
+  background: var(--ws-nav-bg);
   color: var(--sidebar-text);
   box-shadow: 4px 0 18px rgba(0, 0, 0, 0.14);
   cursor: pointer;
@@ -242,7 +242,7 @@ button {
   height: 66px;
   padding: 0 42px;
   border-bottom: 1px solid var(--card-border);
-  background: var(--card-bg);
+  background: var(--ws-surface-bg);
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
 }
@@ -364,7 +364,7 @@ button {
   padding: 19px 20px;
   border: 1px solid var(--card-border);
   border-radius: 9px;
-  background: var(--card-bg);
+  background: var(--ws-surface-bg);
 }
 
 .stat-card-top {
@@ -411,7 +411,7 @@ button {
   padding: 22px;
   border: 1px solid var(--card-border);
   border-radius: 9px;
-  background: var(--card-bg);
+  background: var(--ws-surface-bg);
 }
 
 .main-panel {
@@ -488,7 +488,7 @@ button {
   padding: 9px 14px;
   border: 1px solid var(--card-border);
   border-radius: 6px;
-  background: var(--card-bg);
+  background: var(--ws-surface-bg);
   color: var(--text-main);
   font-size: 11px;
   cursor: pointer;
@@ -513,7 +513,7 @@ button {
   padding: 18px 20px;
   border: 1px solid var(--card-border);
   border-radius: 9px;
-  background: var(--card-bg);
+  background: var(--ws-surface-bg);
 }
 
 .principle-mark {
@@ -557,7 +557,7 @@ button {
   padding: 30px;
   border: 1px solid var(--card-border);
   border-radius: 9px;
-  background: var(--card-bg);
+  background: var(--ws-surface-bg);
   text-align: center;
 }
 
@@ -612,7 +612,7 @@ button {
 
 /* 顶部通栏 */
 .character-header-light {
-  background: var(--card-bg);
+  background: var(--ws-surface-bg);
   padding: 20px 42px;
   border-bottom: 1px solid var(--card-border);
   display: flex;
@@ -627,7 +627,7 @@ button {
 }
 
 .character-back-light {
-  background: var(--card-bg);
+  background: var(--ws-surface-bg);
   border: 1px solid var(--card-border);
   color: var(--text-main);
   padding: 8px 14px;
@@ -692,7 +692,7 @@ button {
   align-items: flex-start;
   min-width: 140px;
   padding: 12px 16px;
-  background: var(--card-bg);
+  background: var(--ws-surface-bg);
   border: 1px solid var(--card-border);
   border-radius: 8px;
   cursor: pointer;
@@ -813,7 +813,7 @@ button {
   align-items: center;
   gap: 16px;
   padding: 16px 20px;
-  background: var(--card-bg);
+  background: var(--ws-surface-bg);
   border: 1px solid var(--card-border);
   border-radius: 8px;
   cursor: pointer;
@@ -865,7 +865,7 @@ button {
   gap: 12px;
   margin-top: 24px;
   padding: 16px 20px;
-  background: var(--card-bg);
+  background: var(--ws-surface-bg);
   border: 1px dashed var(--card-border);
   border-radius: 8px;
 }
@@ -906,7 +906,7 @@ button {
 }
 
 .module-pagination-light button {
-  background: var(--card-bg);
+  background: var(--ws-surface-bg);
   border: 1px solid var(--card-border);
   color: var(--text-main);
   border-radius: 6px;
@@ -936,7 +936,7 @@ button {
 
 /* 1. 干掉所有紫色高亮，换成极简灰 */
 .stepper-item.active {
-  background: var(--card-bg) !important;
+  background: var(--ws-surface-bg) !important;
   border: 1px solid var(--text-main) !important; /* 选中用黑/白边框，不用彩色 */
 }
 .stepper-number, .stepper-item.active .stepper-number {
@@ -949,7 +949,7 @@ button {
 /* 2. 修复图二里“快要隐形”的顶部区域 */
 /* 给头部加一个明显的毛玻璃底色和底边框 */
 .character-header-light {
-  background: var(--card-bg) !important;
+  background: var(--ws-surface-bg) !important;
   backdrop-filter: blur(20px) !important;
   -webkit-backdrop-filter: blur(20px) !important;
   border-bottom: 1px solid var(--card-border) !important;
@@ -983,7 +983,7 @@ button {
 }
 .nav-item.active { 
   color: var(--text-main) !important; 
-  background: var(--card-bg) !important; 
+  background: var(--ws-surface-bg) !important; 
   border: 1px solid var(--card-border) !important;
   box-shadow: 0 2px 8px rgba(0,0,0,0.05) !important;
 }
