@@ -1,61 +1,23 @@
-import { useEffect, useMemo, useRef, useState } from 'react' 
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Cloud, PanelLeftClose, PanelLeftOpen, Sparkles } from 'lucide-react'
 import './App.css'
 import './styles/creation-center.css'
-import WorldsPage from './pages/WorldsPage'
-import WorldBuildingPage from './pages/WorldBuildingPage'
-import CharacterListPage from './pages/CharacterListPage' 
-import RelationshipsPage from './pages/RelationshipsPage'
-import UnifiedTimelinePage from './pages/UnifiedTimelinePage'
 import ErrorBoundary from './components/ErrorBoundary'
 import AiAccessModal from './components/AiAccessModal'
 import { hasPersonalAiKey } from './api/aiSettings'
 import { getAllWorlds } from './services/worldService'
 import { checkBackendHealth } from "./api/client";
-import EventsPage from './pages/EventsPage'
-import SimulationPage from './pages/SimulationPage'
-import MultiPathPage from './pages/MultiPathPage'
-import StorylinePage from './pages/StorylinePage'
-import ChatPage from './pages/ChatPage'
-import WritingPage from './pages/WritingPage'
-import SimulationWritingPage from './pages/SimulationWritingPage'
-import WorldDataPage from './pages/WorldDataPage'
-import WorldStructurePage from './pages/WorldStructurePage'
-import ArchivePage from './pages/ArchivePage'
-import CreatorAssetsPage from './pages/CreatorAssetsPage'
-import TrashPage from './pages/TrashPage'
-import JournalPage from './pages/JournalPage'
 import { authLogout, type AuthUser } from './api/auth'
 import { resolveMediaUrl } from './api/media'
 import { AUTH_USER_KEY } from './api/authToken'
-import TimeMachinePage from './pages/TimeMachinePage'
 import AIAssistantPanel from './components/AIAssistantPanel'
 import AppearanceStudio from './components/appearance/AppearanceStudio'
 import { applyAppearance, appearancePageKey, loadAppearanceForPage } from './utils/appearance'
 import { setAssistantPage } from './api/assistantContext'
-import PersonaPage from './pages/PersonaPage'
-import YunbaoWorkspacePage from './pages/YunbaoWorkspacePage'
-import YunbaoSeedPage from './pages/YunbaoSeedPage'
-import MemoryPage from './pages/MemoryPage'
-import CompanionRuntimePage from './pages/CompanionRuntimePage'
-import InformationSourcesPage from './pages/InformationSourcesPage'
-import CreationCenterPage, { type CreationAssetKey, type CreationToolKey } from './pages/CreationCenterPage'
 import CreationCenterSidebar, { type HomeNavTarget } from './components/creation-center/CreationCenterSidebar'
 import CreationCenterTopbar from './components/creation-center/CreationCenterTopbar'
-import YunbaoOverviewPage from './components/creation-center/YunbaoOverviewPage'
 import YunbaoGroupNav from './components/creation-center/YunbaoGroupNav'
 import ProductWorkspaceNav from './components/workspace/ProductWorkspaceNav'
-import ProductWorkspaceHome from './pages/ProductWorkspaceHome'
-import UserCenterPage, { type UserAssetTarget } from './pages/UserCenterPage'
-import CommunityPage from './pages/CommunityPage'
-import CommunitySocialPage from './pages/CommunitySocialPage'
-import AICenterPage from './pages/AICenterPage'
-import GameCenterPage from './pages/GameCenterPage'
-import ContentStorePage from './pages/ContentStorePage'
-import SettingsPage from './pages/SettingsPage'
-import BillingCenterPage from './pages/BillingCenterPage'
-import WorksPage from './pages/WorksPage'
-import SpiritEconomyPage from './pages/SpiritEconomyPage'
 import type { WorkScene } from './api/creativeWorks'
 import { getSettings, updateSettings } from './api/settings'
 import { applyDocumentLanguage, hasStoredLanguage, loadLanguage, saveLanguage, type Lang } from './i18n'
@@ -64,6 +26,50 @@ import { ensureProductWorkspace, fetchProductMatrix } from './api/productConfig'
 import { FALLBACK_MATRIX, getStoredProduct, navigationConfig, productByKey, storeProduct, YUNBAO_HIDDEN_PAGES } from './product/products'
 import { localizedProduct, NAV_GROUP_EN, PAGE_LABELS_EN } from './product/labels'
 import type { ProductConfig, ProductKey, ProductMatrix } from './product/types'
+import type { CreationAssetKey, CreationToolKey } from './pages/CreationCenterPage'
+import type { UserAssetTarget } from './pages/UserCenterPage'
+
+/* 页面级组件按需懒加载：首屏只拉取外壳与当前页，重型依赖
+   （three / 3d-force-graph / @tiptap / react-zoom-pan-pinch / @dnd-kit 等）
+   在进入对应页面时才加载，避免整站打进单个 3.85MB 包拖垮首屏。 */
+const WorldsPage = lazy(() => import('./pages/WorldsPage'))
+const WorldBuildingPage = lazy(() => import('./pages/WorldBuildingPage'))
+const CharacterListPage = lazy(() => import('./pages/CharacterListPage'))
+const RelationshipsPage = lazy(() => import('./pages/RelationshipsPage'))
+const UnifiedTimelinePage = lazy(() => import('./pages/UnifiedTimelinePage'))
+const EventsPage = lazy(() => import('./pages/EventsPage'))
+const SimulationPage = lazy(() => import('./pages/SimulationPage'))
+const MultiPathPage = lazy(() => import('./pages/MultiPathPage'))
+const StorylinePage = lazy(() => import('./pages/StorylinePage'))
+const ChatPage = lazy(() => import('./pages/ChatPage'))
+const WritingPage = lazy(() => import('./pages/WritingPage'))
+const SimulationWritingPage = lazy(() => import('./pages/SimulationWritingPage'))
+const WorldDataPage = lazy(() => import('./pages/WorldDataPage'))
+const WorldStructurePage = lazy(() => import('./pages/WorldStructurePage'))
+const ArchivePage = lazy(() => import('./pages/ArchivePage'))
+const CreatorAssetsPage = lazy(() => import('./pages/CreatorAssetsPage'))
+const TrashPage = lazy(() => import('./pages/TrashPage'))
+const JournalPage = lazy(() => import('./pages/JournalPage'))
+const TimeMachinePage = lazy(() => import('./pages/TimeMachinePage'))
+const PersonaPage = lazy(() => import('./pages/PersonaPage'))
+const YunbaoWorkspacePage = lazy(() => import('./pages/YunbaoWorkspacePage'))
+const YunbaoSeedPage = lazy(() => import('./pages/YunbaoSeedPage'))
+const MemoryPage = lazy(() => import('./pages/MemoryPage'))
+const CompanionRuntimePage = lazy(() => import('./pages/CompanionRuntimePage'))
+const InformationSourcesPage = lazy(() => import('./pages/InformationSourcesPage'))
+const CreationCenterPage = lazy(() => import('./pages/CreationCenterPage'))
+const ProductWorkspaceHome = lazy(() => import('./pages/ProductWorkspaceHome'))
+const UserCenterPage = lazy(() => import('./pages/UserCenterPage'))
+const CommunityPage = lazy(() => import('./pages/CommunityPage'))
+const CommunitySocialPage = lazy(() => import('./pages/CommunitySocialPage'))
+const AICenterPage = lazy(() => import('./pages/AICenterPage'))
+const GameCenterPage = lazy(() => import('./pages/GameCenterPage'))
+const ContentStorePage = lazy(() => import('./pages/ContentStorePage'))
+const SettingsPage = lazy(() => import('./pages/SettingsPage'))
+const BillingCenterPage = lazy(() => import('./pages/BillingCenterPage'))
+const WorksPage = lazy(() => import('./pages/WorksPage'))
+const SpiritEconomyPage = lazy(() => import('./pages/SpiritEconomyPage'))
+const YunbaoOverviewPage = lazy(() => import('./components/creation-center/YunbaoOverviewPage'))
 
 type PageKey = 
   | 'home'
@@ -1180,6 +1186,7 @@ export default function App() {
             </div>
           )}
           <ErrorBoundary key={`${product}:${activePage}:${currentWorldId}`} onReset={() => setActivePage(usesWorkspaceShell(product) ? 'workspace-home' : productConfig.home as PageKey)}>
+          <Suspense fallback={<PageLoading label={lang === 'zh' ? '加载中…' : 'Loading…'} />}>
           {activePage === 'home' ? (
             <CreationCenterPage
               lang={lang}
@@ -1396,6 +1403,7 @@ export default function App() {
           ) : (
             <div style={{ padding: '2rem', color: 'var(--text-main)' }}><h1>{lang === 'zh' ? '开发中' : 'In development'}</h1></div>
           )}
+          </Suspense>
           </ErrorBoundary>
             </div>
           </div>
@@ -1412,6 +1420,15 @@ export default function App() {
         pageName={pageLabel(activePage, dict, lang)}
         lang={lang}
       />
+    </div>
+  )
+}
+
+/** 懒加载页面时的占位，避免切页时出现空白。 */
+function PageLoading({ label }: { label: string }) {
+  return (
+    <div style={{ display: 'grid', placeItems: 'center', minHeight: '56vh', color: 'var(--text-muted)', fontSize: 13, letterSpacing: '.04em' }}>
+      {label}
     </div>
   )
 }
