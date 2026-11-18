@@ -485,6 +485,17 @@ html {
     transparent
   );
 
+  /* 选中 / 激活态底色令牌：各页面此前用实心 var(--text-main) 做选中背景，
+     选中态因此发实、且完全不跟随控制台。这里派生半透明玻璃底色，
+     使按钮 / 标签的选中态与“卡片”档联动，文字统一用正文色保证可读。 */
+  --ws-active-bg: color-mix(
+    in srgb,
+    var(--glass-frost-bg) calc(max(var(--ws-g-card-opacity, 84), var(--ws-readability-floor, .78)) * 1.14%),
+    transparent
+  );
+  --ws-active-fg: var(--text-main);
+  --ws-active-border: color-mix(in srgb, var(--primary-color) 48%, var(--card-border));
+
   /* 侧栏导航条目（创作中心 .cc-nav-item / 主侧栏 .sidebar-nav-item）
      之前背景、描边、阴影全部写死 rgba，控制台怎么调都不变。
      这里改为同时读取控制台的“导航”与“卡片”档位并取均值，

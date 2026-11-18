@@ -904,7 +904,7 @@ export default function App() {
       <aside className={`sidebar app-sidebar${sidebarCollapsed ? ' is-collapsed' : ''}`} style={{ width: sidebarCollapsed ? 0 : 260, height: '100%', padding: sidebarCollapsed ? 0 : undefined, minWidth: 0, overflow: 'hidden', borderRight: sidebarCollapsed ? 'none' : '1px solid var(--card-border)', display: isGlobalShell || isProductWorkspace ? 'none' : 'flex', flexDirection: 'column' }}>
         
         <div className="brand" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div className="brand-mark" style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'var(--sidebar-text)', color: 'var(--sidebar-bg)', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 'bold', fontSize: '20px' }}>W</div>
+          <div className="brand-mark" style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'var(--ws-surface-bg)', color: 'var(--text-main)', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 'bold', fontSize: '20px' }}>W</div>
           <div className="brand-text" style={{ display: 'flex', flexDirection: 'column' }}>
             <strong style={{ fontSize: '16px', color: 'var(--sidebar-text)' }}>{lang === 'zh' ? '世界模拟器' : 'World Sim'}</strong>
             <span style={{ fontSize: '10px', color: 'var(--sidebar-text-muted)', textTransform: 'uppercase' }}>{isHome ? (lang === 'zh' ? '选择产品' : 'Choose Product') : 'World Simulator'}</span>

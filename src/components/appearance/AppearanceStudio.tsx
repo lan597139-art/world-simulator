@@ -5,8 +5,13 @@ import { updateSettings, type SettingsPreferences } from '../../api/settings'
 import {
   FONT_STACKS,
   GLASS_TARGETS,
+  PRESET_APPEARANCES,
+  PRESET_IDS,
+  PRESET_META,
   TEXT_SCOPES,
   applyAppearance,
+  applyPresetGlobal,
+  clearAllAppearance,
   clearPageAppearance,
   defaultAppearance,
   hasPageAppearance,
@@ -16,6 +21,8 @@ import {
   saveAppearance,
   savePageAppearance,
   type Appearance,
+  type AppearancePresetId,
+  type AppearanceTheme,
   type FontFamilyKey,
   type GlassProfile,
   type GlassTarget,
@@ -30,7 +37,6 @@ type Props = {
 
 type Tab = 'glass' | 'liquid' | 'text'
 type SaveScope = 'page' | 'global'
-type Preset = 'clear' | 'frost' | 'liquid' | 'contrast'
 type ThemeMode = SettingsPreferences['theme']
 
 function readThemeMode(): ThemeMode {
@@ -62,23 +68,17 @@ const FONT_META: Record<FontFamilyKey, { zh: string; en: string; sample: string 
   mono: { zh: '等宽', en: 'Mono', sample: 'Aa 01' },
 }
 
-const PRESETS: Record<Preset, { zh: string; en: string; profile: Omit<GlassProfile, 'thickness'> & { thickness: number } }> = {
-  clear: {
-    zh: '清透', en: 'Clear',
-    profile: { blur: 12, opacity: 58, border: 44, refraction: 48, dispersion: 24, frost: 4, tint: 6, gradient: 18, thickness: 8, radius: 20, shadow: 8 },
-  },
-  frost: {
-    zh: '磨砂', en: 'Frost',
-    profile: { blur: 36, opacity: 88, border: 22, refraction: 4, dispersion: 0, frost: 78, tint: 10, gradient: 4, thickness: 18, radius: 16, shadow: 14 },
-  },
-  liquid: {
-    zh: '液态', en: 'Liquid',
-    profile: { blur: 22, opacity: 72, border: 50, refraction: 88, dispersion: 54, frost: 16, tint: 14, gradient: 42, thickness: 24, radius: 22, shadow: 20 },
-  },
-  contrast: {
-    zh: '高对比', en: 'Contrast',
-    profile: { blur: 20, opacity: 96, border: 30, refraction: 0, dispersion: 0, frost: 30, tint: 2, gradient: 0, thickness: 10, radius: 14, shadow: 10 },
-  },
+/** 预设缩略预览：直接用预设的卡片档渲染一小块玻璃，所见即所得。 */
+function presetSwatchStyle(presetId: AppearancePresetId) {
+  const card = PRESET_APPEARANCES[presetId].glass_profiles.card
+  return {
+    background: `color-mix(in srgb, var(--glass-frost-bg) ${card.opacity}%, transparent)`,
+    backdropFilter: `blur(${card.blur}px)`,
+    WebkitBackdropFilter: `blur(${card.blur}px)`,
+    border: `1px solid color-mix(in srgb, #fff ${card.border}%, var(--glass-border))`,
+    borderRadius: `${card.radius}px`,
+    boxShadow: `0 ${card.shadow * 0.3}px ${card.shadow * 0.8}px rgba(0, 0, 0, .14)`,
+  }
 }
 
 const isColor = (value: string) => /^(#(?:[0-9a-f]{3,8})|rgba?\([^)]*\)|hsla?\([^)]*\)|oklch\([^)]*\))$/i.test(value.trim())
@@ -341,25 +341,16 @@ export default function AppearanceStudio({ pageKey, pageName, lang }: Props) {
     }))
   }
 
-  const applyPreset = (preset: Preset) => {
-    setDraft((current) => {
-      const targets = current.glass_targets.length ? current.glass_targets : [...GLASS_TARGETS]
-      const profiles = { ...current.glass_profiles }
-      for (const target of targets) profiles[target] = { ...PRESETS[preset].profile }
-      const nextText = preset === 'contrast'
-        ? {
-            ...current.text,
-            color_mode: 'auto' as const,
-            opacity: 100,
-            background_enabled: true,
-            background_auto: true,
-            background_opacity: 92,
-            background_thickness: 7,
-            background_blur: 14,
-          }
-        : current.text
-      return { ...current, glass_targets: targets, glass_profiles: profiles, text: nextText, readability_guard: true }
-    })
+  /** 一键全局套用预设：写入全站默认、清除本页独立配置并立即生效，必要时同步主题。 */
+  const applyPresetGlobalAction = (presetId: AppearancePresetId) => {
+    const { appearance: next, theme } = applyPresetGlobal(presetId)
+    clearPageAppearance(pageKey)
+    setSavedPage(false)
+    setScope('global')
+    setDraft(loadAppearanceForPage(pageKey))
+    if (theme) chooseTheme(theme)
+    void next
+    setFlash(label(lang, '已一键套用预设并应用到全站', 'Preset applied across the whole site'))
   }
 
   const chooseTheme = (mode: ThemeMode) => {
@@ -406,6 +397,15 @@ export default function AppearanceStudio({ pageKey, pageName, lang }: Props) {
     setSavedPage(false)
     setDraft(loadAppearance())
     setFlash(label(lang, '已清除本页独立配置', 'Page override removed'))
+  }
+
+  /** 一键清除所有父子级自定义调节：全站默认 + 所有页面独立配置，恢复出厂默认。 */
+  const clearAll = () => {
+    clearAllAppearance()
+    setSavedPage(false)
+    setScope('global')
+    setDraft(loadAppearance())
+    setFlash(label(lang, '已清除全部自定义调节，恢复默认', 'All custom adjustments cleared; defaults restored'))
   }
 
   return (
@@ -459,8 +459,8 @@ export default function AppearanceStudio({ pageKey, pageName, lang }: Props) {
             <div className="ws-studio-body">
               <div className="ws-studio-theme-row">
                 <div className="ws-studio-theme-copy">
-                  <span className="ws-studio-theme-label">{label(lang, '界面主题', 'Theme')}</span>
-                  <span className="ws-studio-theme-hint">{label(lang, '切换后立即生效并保存到账号', 'Applies instantly and saves to your account')}</span>
+                  <span className="ws-studio-theme-label">{label(lang, '界面主题 · 全局父级', 'Theme · global parent')}</span>
+                  <span className="ws-studio-theme-hint">{label(lang, '作为设置中心主题的子级联动，切换后全站即时同步并保存到账号', 'Child of the Settings theme center; syncs site-wide instantly and saves to your account')}</span>
                 </div>
                 <div className="ws-studio-theme-buttons" role="group" aria-label={label(lang, '界面主题', 'Theme')}>
                   {([
@@ -528,12 +528,28 @@ export default function AppearanceStudio({ pageKey, pageName, lang }: Props) {
                 <button type="button" onClick={() => chooseTargets('card')}>{label(lang, '仅卡片', 'Cards only')}</button>
               </div>
 
+              <div className="ws-studio-section-label">
+                <span>{label(lang, '预设（一键全局使用）', 'Presets (one-click global)')}</span>
+                <span>{label(lang, '预览后一键套用到全站', 'Preview then apply site-wide')}</span>
+              </div>
               <div className="ws-studio-presets">
-                {(Object.keys(PRESETS) as Preset[]).map((preset) => (
-                  <button key={preset} type="button" onClick={() => applyPreset(preset)}>
-                    {label(lang, PRESETS[preset].zh, PRESETS[preset].en)}
+                {PRESET_IDS.map((presetId) => (
+                  <button
+                    key={presetId}
+                    type="button"
+                    className="ws-studio-preset"
+                    onClick={() => applyPresetGlobalAction(presetId)}
+                    title={label(lang, PRESET_META[presetId].zh, PRESET_META[presetId].en)}
+                  >
+                    <span className="ws-studio-preset-swatch" style={presetSwatchStyle(presetId)} />
+                    <span className="ws-studio-preset-label">{label(lang, PRESET_META[presetId].zh, PRESET_META[presetId].en)}</span>
                   </button>
                 ))}
+              </div>
+              <div className="ws-studio-mini-actions">
+                <button type="button" className="ws-studio-clear-all" onClick={clearAll}>
+                  <Trash2 size={11} /> {label(lang, '一键清除全部自定义调节', 'Clear all custom adjustments')}
+                </button>
               </div>
 
               <div className="ws-studio-tabs" role="tablist" aria-label={label(lang, '调节分类', 'Adjustment category')}>

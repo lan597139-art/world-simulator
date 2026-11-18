@@ -56,7 +56,20 @@ import '../styles/admin-sanctions.css'
 import '../styles/admin-backups.css'
 import '../styles/account-sanctions.css'
 import { applyExperience } from '../utils/experience'
-import { GLASS_TARGETS, applyAppearance, defaultAppearance, loadAppearance, saveAppearance, type Appearance } from '../utils/appearance'
+import {
+  GLASS_TARGETS,
+  PRESET_APPEARANCES,
+  PRESET_IDS,
+  PRESET_META,
+  applyAppearance,
+  applyPresetGlobal,
+  clearAllAppearance,
+  defaultAppearance,
+  loadAppearance,
+  saveAppearance,
+  type Appearance,
+  type AppearancePresetId,
+} from '../utils/appearance'
 import { tr } from '../i18n'
 
 type Lang = 'zh' | 'en'
@@ -253,6 +266,33 @@ export default function SettingsPage({
     }
     const preset = presets[value]
     if (preset) updateAppearance(preset)
+  }
+
+  /** 预设缩略预览：用预设的卡片档渲染一小块玻璃。 */
+  const presetSwatch = (presetId: AppearancePresetId) => {
+    const card = PRESET_APPEARANCES[presetId].glass_profiles.card
+    return {
+      background: `color-mix(in srgb, var(--glass-frost-bg) ${card.opacity}%, transparent)`,
+      backdropFilter: `blur(${card.blur}px)`,
+      WebkitBackdropFilter: `blur(${card.blur}px)`,
+      border: `1px solid color-mix(in srgb, #fff ${card.border}%, var(--glass-border))`,
+      borderRadius: `${card.radius}px`,
+    }
+  }
+
+  /** 一键全局套用预设，并同步主题父级。 */
+  const applyPreset = (presetId: AppearancePresetId) => {
+    const { appearance: next, theme } = applyPresetGlobal(presetId)
+    setAppearance(next)
+    if (theme) preference('theme', theme)
+    setFlash(tr(lang, '已套用预设并应用到全站', 'Preset applied across the whole site'))
+  }
+
+  /** 一键清除全站默认与所有页面的独立调节，恢复出厂默认。 */
+  const clearAllAppearanceAction = () => {
+    const next = clearAllAppearance()
+    setAppearance(next)
+    setFlash(tr(lang, '已清除全部自定义调节，恢复默认', 'All custom adjustments cleared; defaults restored'))
   }
 
   const uploadBackground = async (file?: File) => {
@@ -697,6 +737,27 @@ export default function SettingsPage({
                     <SlidersHorizontal size={13} /> {tr(lang, '打开悬浮调节器', 'Open floating studio')}
                   </button>
                   <button type="button" style={ghost} onClick={() => setAppearance(defaultAppearance())}><RotateCcw size={13} /> {tr(lang, '恢复默认', 'Reset')}</button>
+                </div>
+              </div>
+              <div className="settings-preset-row">
+                <span className="settings-preset-title">{tr(lang, '预设 · 一键全局使用', 'Presets · one-click global')}</span>
+                <div className="settings-preset-grid">
+                  {PRESET_IDS.map((presetId) => (
+                    <button
+                      key={presetId}
+                      type="button"
+                      className="settings-preset"
+                      onClick={() => applyPreset(presetId)}
+                      title={tr(lang, PRESET_META[presetId].zh, PRESET_META[presetId].en)}
+                    >
+                      <span className="settings-preset-swatch" style={presetSwatch(presetId)} />
+                      <span className="settings-preset-label">{tr(lang, PRESET_META[presetId].zh, PRESET_META[presetId].en)}</span>
+                    </button>
+                  ))}
+                  <button type="button" className="settings-preset settings-preset-clear" onClick={clearAllAppearanceAction}>
+                    <Trash2 size={13} />
+                    <span className="settings-preset-label">{tr(lang, '一键清除全部', 'Clear all')}</span>
+                  </button>
                 </div>
               </div>
               <div className="settings-appearance-grid">

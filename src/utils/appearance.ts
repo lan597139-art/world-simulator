@@ -126,6 +126,56 @@ export function defaultAppearance(): Appearance {
 
 export const DEFAULT_APPEARANCE: Appearance = defaultAppearance()
 
+/** 预设可同步设置的界面主题；null 表示不改动主题。 */
+export type AppearanceTheme = 'light' | 'dark' | 'system'
+
+export type AppearancePresetId = 'classic-light' | 'classic-dark' | 'clear' | 'frost' | 'liquid'
+
+export type AppearancePreset = {
+  id: AppearancePresetId
+  zh: string
+  en: string
+  theme: AppearanceTheme | null
+  appearance: Appearance
+}
+
+const PRESET_PROFILES: Record<AppearancePresetId, GlassProfile> = {
+  /* 经典黑白：干净、低折射、高不透明，文字对比最稳。 */
+  'classic-light': { blur: 12, opacity: 94, border: 34, refraction: 2, dispersion: 0, frost: 6, tint: 2, gradient: 0, thickness: 8, radius: 12, shadow: 6 },
+  'classic-dark': { blur: 12, opacity: 94, border: 34, refraction: 2, dispersion: 0, frost: 6, tint: 2, gradient: 0, thickness: 8, radius: 12, shadow: 6 },
+  /* 清透：低不透明、高折射与色散，尽量还原背景。 */
+  clear: { blur: 12, opacity: 58, border: 44, refraction: 48, dispersion: 24, frost: 4, tint: 6, gradient: 18, thickness: 8, radius: 20, shadow: 8 },
+  /* 磨砂：高霜感、低折射，柔和不透明。 */
+  frost: { blur: 36, opacity: 88, border: 22, refraction: 4, dispersion: 0, frost: 78, tint: 10, gradient: 4, thickness: 18, radius: 16, shadow: 14 },
+  /* 液态：高折射、高色散、强渐变，WebGL 液态质感。 */
+  liquid: { blur: 22, opacity: 72, border: 50, refraction: 88, dispersion: 54, frost: 16, tint: 14, gradient: 42, thickness: 24, radius: 22, shadow: 20 },
+}
+
+export const PRESET_META: Record<AppearancePresetId, { zh: string; en: string; theme: AppearanceTheme | null }> = {
+  'classic-light': { zh: '预设1 经典浅色', en: 'Preset 1 Classic Light', theme: 'light' },
+  'classic-dark': { zh: '预设2 经典深色', en: 'Preset 2 Classic Dark', theme: 'dark' },
+  clear: { zh: '预设3 清透', en: 'Preset 3 Clear', theme: null },
+  frost: { zh: '预设4 磨砂', en: 'Preset 4 Frost', theme: null },
+  liquid: { zh: '预设5 液态', en: 'Preset 5 Liquid', theme: null },
+}
+
+export const PRESET_IDS: AppearancePresetId[] = ['classic-light', 'classic-dark', 'clear', 'frost', 'liquid']
+
+function withProfile(profile: GlassProfile): Appearance {
+  const base = defaultAppearance()
+  const profiles = cloneProfiles(base.glass_profiles)
+  for (const target of GLASS_TARGETS) profiles[target] = { ...profile }
+  return { ...base, glass_profiles: profiles }
+}
+
+export const PRESET_APPEARANCES: Record<AppearancePresetId, Appearance> = PRESET_IDS.reduce(
+  (accumulator, id) => {
+    accumulator[id] = withProfile(PRESET_PROFILES[id])
+    return accumulator
+  },
+  {} as Record<AppearancePresetId, Appearance>,
+)
+
 function cloneProfiles(profiles: Record<GlassTarget, GlassProfile>): Record<GlassTarget, GlassProfile> {
   return GLASS_TARGETS.reduce((result, target) => {
     result[target] = { ...profiles[target] }
@@ -274,6 +324,34 @@ export function clearPageAppearance(pageKey: string): void {
   try {
     localStorage.removeItem(PAGE_STORAGE_PREFIX + pageKey)
   } catch { /* private mode */ }
+}
+
+/**
+ * 一键全局套用预设：把预设写入全站默认并立即生效。
+ * 返回套用后的外观与需要同步的界面主题（null 表示不改动主题）。
+ */
+export function applyPresetGlobal(presetId: AppearancePresetId): { appearance: Appearance; theme: AppearanceTheme | null } {
+  const next = normalizeAppearance(PRESET_APPEARANCES[presetId])
+  saveAppearance(next)
+  applyAppearance(next)
+  return { appearance: next, theme: PRESET_META[presetId].theme }
+}
+
+/**
+ * 一键清除所有父子级自定义调节：移除全站默认与全部页面独立配置，
+ * 恢复出厂默认并立即生效。
+ */
+export function clearAllAppearance(): Appearance {
+  try {
+    localStorage.removeItem(STORAGE_KEY)
+    for (let index = localStorage.length - 1; index >= 0; index -= 1) {
+      const key = localStorage.key(index)
+      if (key && key.startsWith(PAGE_STORAGE_PREFIX)) localStorage.removeItem(key)
+    }
+  } catch { /* private mode */ }
+  const next = defaultAppearance()
+  applyAppearance(next)
+  return next
 }
 
 let currentAppearance: Appearance = defaultAppearance()

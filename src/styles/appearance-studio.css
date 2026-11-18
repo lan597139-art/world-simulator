@@ -128,7 +128,30 @@ html[data-glass-targets~="card"] :is(
   .ai-stat-pair > div, .gx-progress-stats > div, .st-seller-stats > div,
   .cm-follow-counts > div, .cm-hot-columns > div,
   .uc-follow-counts > div, .uc-favorite-counts > div, .uc-order-metrics > div,
-  [data-ai-assistant]
+  [data-ai-assistant],
+  /* 社区社交：动态卡片、推荐卡片、标签容器等此前未接入卡片档 */
+  .cs-feed-card, .cs-side-card, .cs-person-card, .cs-group-card, .cs-topic-card,
+  .cs-tabs, .cs-stat-row, .cs-message, .cs-inline-search, .cs-search-bar,
+  .cs-field, .cs-modal, .cs-notification, .cs-pending-members, .cs-request,
+  .cs-group-compose, .cs-mini-group,
+  /* 我的作品：场景 / 状态标签条、工具条、新建卡、空态、详情卡 */
+  .cw-scene-pill, .cw-status-filter, .cw-toolbar, .cw-search, .cw-create-card,
+  .cw-empty, .cw-alert, .cw-form, .cw-modal, .cw-detail-cover, .cw-cover-preview,
+  .cw-detail-chips, .cw-narrative-actions, .cw-field, .cw-option,
+  /* 灵果资源中心 */
+  .spirit-panel, .spirit-balance, .spirit-stat, .spirit-shop-card, .spirit-inventory,
+  .spirit-note-card, .spirit-tabs, .spirit-reward-card, .spirit-plant-card,
+  .spirit-field, .spirit-alert, .spirit-back, .spirit-category, .spirit-kind-switch,
+  .spirit-admin-row,
+  /* 商业服务中心 */
+  .bc-balance-card, .bc-hero-card, .bc-order-card, .bc-modal, .bc-current-plan,
+  .bc-inline-note, .bc-stat-grid, .bc-warning, .bc-balance-stats,
+  .bc-checkout-amount, .bc-checkout-lines, .bc-panel, .bc-package-card,
+  .bc-plan-card, .bc-plan-ribbon, .bc-progress, .bc-nav-item,
+  /* 设置中心 */
+  .settings-focus-grid, .settings-stat-grid, .settings-kv-grid,
+  .settings-inline-note, .settings-material-demo, .settings-nav-item,
+  .settings-official-current, .settings-official-tile, .settings-session-list
 ) {
   background-color: color-mix(
     in srgb,
@@ -152,6 +175,40 @@ html[data-glass-targets~="card"] :is(
     0 0 0 1px rgba(255, 86, 170, calc(var(--ws-g-card-dispersion) * 0.004)),
     0 0 calc(var(--ws-g-card-shadow) * 0.35px) rgba(90, 190, 255, calc(var(--ws-g-card-dispersion) * 0.012)),
     0 calc(var(--ws-g-card-shadow) * 0.09px) calc(var(--ws-g-card-shadow) * 0.34px) rgba(0, 0, 0, calc(0.05 + var(--ws-g-card-shadow) * 0.0012)) !important;
+}
+
+/* 选中 / 激活态：此前多个页面用实心 var(--text-main) 做选中背景，
+   选中态因此发实、且完全不跟随控制台（拖动玻璃毫无反应）。
+   这里统一改为受“卡片”档驱动的半透明玻璃，文字改用正文色、描边用强调色，
+   使按钮 / 标签的选中态与整体玻璃同步调节。 */
+html[data-glass-targets~="card"] :is(
+  .ct-filter.active,
+  .st-directory button.active strong,
+  .cm-filter.active,
+  .cm-compose-status button.active,
+  .ca-view-tabs button.is-active,
+  .official-assets-toolbar > button.is-active,
+  .official-assets-categories button.is-active,
+  .pw-tab.active,
+  .nav-orb-item.is-active,
+  .sim-view-btn.is-on,
+  .sw-stage.is-active,
+  .wp-view-btn.is-on,
+  .tlx-chip.is-on,
+  .tlx-orient button.is-on,
+  .slx-modes button.is-on,
+  .settings-focus-grid button.is-active,
+  .spirit-tabs button.active,
+  .cs-tab.is-active,
+  .cw-scene-pill.is-active,
+  .cw-status-filter button.is-active
+) {
+  background-color: var(--ws-active-bg) !important;
+  background-image: linear-gradient(180deg, color-mix(in srgb, var(--primary-color) calc(var(--ws-g-card-tint) * 0.14%), transparent), transparent) !important;
+  -webkit-backdrop-filter: blur(calc(var(--ws-g-card-blur, 24px) + (var(--ws-g-card-frost, 16) * 0.35px))) !important;
+  backdrop-filter: blur(calc(var(--ws-g-card-blur, 24px) + (var(--ws-g-card-frost, 16) * 0.35px))) !important;
+  border-color: var(--ws-active-border) !important;
+  color: var(--ws-active-fg) !important;
 }
 
 /* 圆形悬浮球保持圆形，不受卡片圆角影响；展开时保持反色高亮。 */
@@ -594,17 +651,46 @@ html[data-text-background="true"][data-text-scopes~="body"] main :where(p, li, b
 }
 .ws-studio-mini-actions button:hover { color: var(--text-main); }
 
-.ws-studio-presets { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin: 12px 0; }
-.ws-studio-presets button {
+.ws-studio-presets { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin: 12px 0; }
+.ws-studio-preset {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 4px 7px;
   border: 1px solid color-mix(in srgb, var(--text-main) 10%, transparent);
-  border-radius: 10px;
+  border-radius: 11px;
   background: color-mix(in srgb, var(--text-main) 4%, transparent);
   color: var(--text-main);
-  padding: 7px 4px;
-  font-size: 9.5px;
   cursor: pointer;
+  transition: border-color .15s ease, transform .15s ease;
 }
-.ws-studio-presets button:hover { border-color: var(--primary-color); }
+.ws-studio-preset:hover { border-color: var(--primary-color); transform: translateY(-1px); }
+.ws-studio-preset-swatch {
+  width: 100%;
+  height: 34px;
+  display: block;
+  border-radius: 8px;
+}
+.ws-studio-preset-label {
+  font-size: 9.5px;
+  line-height: 1.3;
+  text-align: center;
+  white-space: nowrap;
+}
+.ws-studio-mini-actions .ws-studio-clear-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 9px;
+  border: 1px solid color-mix(in srgb, var(--danger-color) 40%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--danger-color) 8%, transparent);
+  color: var(--danger-color);
+  font-size: 10px;
+  text-decoration: none;
+}
+.ws-studio-mini-actions .ws-studio-clear-all:hover { background: color-mix(in srgb, var(--danger-color) 15%, transparent); color: var(--danger-color); }
 
 .ws-studio-tabs {
   display: flex;
