@@ -58,18 +58,18 @@ import '../styles/account-sanctions.css'
 import { applyExperience } from '../utils/experience'
 import {
   GLASS_TARGETS,
-  PRESET_APPEARANCES,
-  PRESET_IDS,
-  PRESET_META,
   applyAppearance,
   applyPresetGlobal,
   clearAllAppearance,
   defaultAppearance,
   loadAppearance,
   saveAppearance,
+  saveUserPreset,
   type Appearance,
-  type AppearancePresetId,
+  type SystemPresetId,
+  type UserPreset,
 } from '../utils/appearance'
+import PresetPicker from '../components/appearance/AppearancePresetPicker'
 import { tr } from '../i18n'
 
 type Lang = 'zh' | 'en'
@@ -191,6 +191,8 @@ export default function SettingsPage({
   const [skin, setSkin] = useState(() => localStorage.getItem('ws.ui.skin') || 'default')
   const [glass, setGlass] = useState(() => localStorage.getItem('ws.ui.glass') || 'medium')
   const [appearance, setAppearance] = useState<Appearance>(() => loadAppearance())
+  /** 正在编辑的用户自定义预设 id；null 表示未载入用户预设。 */
+  const [editingPresetId, setEditingPresetId] = useState<string | null>(null)
   const appearanceMounted = useRef(false)
   const backgroundUpload = useRef<HTMLInputElement>(null)
   const [backgroundBusy, setBackgroundBusy] = useState(false)
@@ -268,24 +270,35 @@ export default function SettingsPage({
     if (preset) updateAppearance(preset)
   }
 
-  /** 预设缩略预览：用预设的卡片档渲染一小块玻璃。 */
-  const presetSwatch = (presetId: AppearancePresetId) => {
-    const card = PRESET_APPEARANCES[presetId].glass_profiles.card
-    return {
-      background: `color-mix(in srgb, var(--glass-frost-bg) ${card.opacity}%, transparent)`,
-      backdropFilter: `blur(${card.blur}px)`,
-      WebkitBackdropFilter: `blur(${card.blur}px)`,
-      border: `1px solid color-mix(in srgb, #fff ${card.border}%, var(--glass-border))`,
-      borderRadius: `${card.radius}px`,
-    }
-  }
-
-  /** 一键全局套用预设，并同步主题父级。 */
-  const applyPreset = (presetId: AppearancePresetId) => {
+  /** 系统预设 1/2：一键全局套用，并同步主题父级。 */
+  const applySystemPreset = (presetId: SystemPresetId) => {
     const { appearance: next, theme } = applyPresetGlobal(presetId)
     setAppearance(next)
     if (theme) preference('theme', theme)
     setFlash(tr(lang, '已套用预设并应用到全站', 'Preset applied across the whole site'))
+  }
+
+  /** 点击用户自定义预设：载入到当前外观进行调节（含背景照片）。 */
+  const handleSelectUserPreset = (preset: UserPreset) => {
+    setEditingPresetId(preset.id)
+    setAppearance({ ...preset.appearance })
+    setFlash(tr(lang, `已载入 ${preset.name}，调节后点击“保存预设”`, `Loaded ${preset.name}; tune it and save the preset`))
+  }
+
+  /** 保存当前外观为用户自定义预设，并同步保存与应用。 */
+  const handleSaveUserPreset = (id: string, name: string, appearance: Appearance) => {
+    saveUserPreset({ id, name, appearance })
+    setFlash(tr(lang, `已保存预设 ${name}`, `Preset ${name} saved`))
+  }
+
+  const handleDeleteUserPreset = (id: string) => {
+    setEditingPresetId((current) => (current === id ? null : current))
+    setFlash(tr(lang, '已删除自定义预设', 'Custom preset deleted'))
+  }
+
+  const handleCancelUserPreset = () => {
+    setEditingPresetId(null)
+    setAppearance(loadAppearance())
   }
 
   /** 一键清除全站默认与所有页面的独立调节，恢复出厂默认。 */
@@ -740,23 +753,20 @@ export default function SettingsPage({
                 </div>
               </div>
               <div className="settings-preset-row">
-                <span className="settings-preset-title">{tr(lang, '预设 · 一键全局使用', 'Presets · one-click global')}</span>
-                <div className="settings-preset-grid">
-                  {PRESET_IDS.map((presetId) => (
-                    <button
-                      key={presetId}
-                      type="button"
-                      className="settings-preset"
-                      onClick={() => applyPreset(presetId)}
-                      title={tr(lang, PRESET_META[presetId].zh, PRESET_META[presetId].en)}
-                    >
-                      <span className="settings-preset-swatch" style={presetSwatch(presetId)} />
-                      <span className="settings-preset-label">{tr(lang, PRESET_META[presetId].zh, PRESET_META[presetId].en)}</span>
-                    </button>
-                  ))}
-                  <button type="button" className="settings-preset settings-preset-clear" onClick={clearAllAppearanceAction}>
-                    <Trash2 size={13} />
-                    <span className="settings-preset-label">{tr(lang, '一键清除全部', 'Clear all')}</span>
+                <PresetPicker
+                  lang={lang}
+                  editingId={editingPresetId}
+                  currentAppearance={appearance}
+                  onSystemApply={applySystemPreset}
+                  onUserSelect={handleSelectUserPreset}
+                  onSaveUser={handleSaveUserPreset}
+                  onUserDelete={handleDeleteUserPreset}
+                  onUserCancel={handleCancelUserPreset}
+                />
+                <div className="settings-preset-clear-wrap">
+                  <button type="button" className="ws-clear-all-btn" onClick={clearAllAppearanceAction}>
+                    <Trash2 size={12} />
+                    {tr(lang, '一键清除全部自定义调节', 'Clear all custom adjustments')}
                   </button>
                 </div>
               </div>

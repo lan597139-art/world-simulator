@@ -129,7 +129,9 @@ export const DEFAULT_APPEARANCE: Appearance = defaultAppearance()
 /** 预设可同步设置的界面主题；null 表示不改动主题。 */
 export type AppearanceTheme = 'light' | 'dark' | 'system'
 
-export type AppearancePresetId = 'classic-light' | 'classic-dark' | 'clear' | 'frost' | 'liquid'
+/** 系统预设：仅经典浅色 / 经典深色，其余编号均为用户自定义。 */
+export type SystemPresetId = 'classic-light' | 'classic-dark'
+export type AppearancePresetId = SystemPresetId | (string & {})
 
 export type AppearancePreset = {
   id: AppearancePresetId
@@ -139,27 +141,25 @@ export type AppearancePreset = {
   appearance: Appearance
 }
 
-const PRESET_PROFILES: Record<AppearancePresetId, GlassProfile> = {
+/** 用户自定义预设：保存整套外观，包含背景照片等全部字段。 */
+export type UserPreset = {
+  id: string
+  name: string
+  appearance: Appearance
+}
+
+const PRESET_PROFILES: Record<SystemPresetId, GlassProfile> = {
   /* 经典黑白：干净、低折射、高不透明，文字对比最稳。 */
   'classic-light': { blur: 12, opacity: 94, border: 34, refraction: 2, dispersion: 0, frost: 6, tint: 2, gradient: 0, thickness: 8, radius: 12, shadow: 6 },
   'classic-dark': { blur: 12, opacity: 94, border: 34, refraction: 2, dispersion: 0, frost: 6, tint: 2, gradient: 0, thickness: 8, radius: 12, shadow: 6 },
-  /* 清透：低不透明、高折射与色散，尽量还原背景。 */
-  clear: { blur: 12, opacity: 58, border: 44, refraction: 48, dispersion: 24, frost: 4, tint: 6, gradient: 18, thickness: 8, radius: 20, shadow: 8 },
-  /* 磨砂：高霜感、低折射，柔和不透明。 */
-  frost: { blur: 36, opacity: 88, border: 22, refraction: 4, dispersion: 0, frost: 78, tint: 10, gradient: 4, thickness: 18, radius: 16, shadow: 14 },
-  /* 液态：高折射、高色散、强渐变，WebGL 液态质感。 */
-  liquid: { blur: 22, opacity: 72, border: 50, refraction: 88, dispersion: 54, frost: 16, tint: 14, gradient: 42, thickness: 24, radius: 22, shadow: 20 },
 }
 
-export const PRESET_META: Record<AppearancePresetId, { zh: string; en: string; theme: AppearanceTheme | null }> = {
+export const PRESET_META: Record<SystemPresetId, { zh: string; en: string; theme: AppearanceTheme | null }> = {
   'classic-light': { zh: '预设1 经典浅色', en: 'Preset 1 Classic Light', theme: 'light' },
   'classic-dark': { zh: '预设2 经典深色', en: 'Preset 2 Classic Dark', theme: 'dark' },
-  clear: { zh: '预设3 清透', en: 'Preset 3 Clear', theme: null },
-  frost: { zh: '预设4 磨砂', en: 'Preset 4 Frost', theme: null },
-  liquid: { zh: '预设5 液态', en: 'Preset 5 Liquid', theme: null },
 }
 
-export const PRESET_IDS: AppearancePresetId[] = ['classic-light', 'classic-dark', 'clear', 'frost', 'liquid']
+export const PRESET_IDS: SystemPresetId[] = ['classic-light', 'classic-dark']
 
 function withProfile(profile: GlassProfile): Appearance {
   const base = defaultAppearance()
@@ -168,13 +168,116 @@ function withProfile(profile: GlassProfile): Appearance {
   return { ...base, glass_profiles: profiles }
 }
 
-export const PRESET_APPEARANCES: Record<AppearancePresetId, Appearance> = PRESET_IDS.reduce(
+export const PRESET_APPEARANCES: Record<SystemPresetId, Appearance> = PRESET_IDS.reduce(
   (accumulator, id) => {
     accumulator[id] = withProfile(PRESET_PROFILES[id])
     return accumulator
   },
-  {} as Record<AppearancePresetId, Appearance>,
+  {} as Record<SystemPresetId, Appearance>,
 )
+
+/* ------------------------------------------------------------------ *
+ * 用户自定义预设（预设 3 起 + ➕ 新增）
+ * 保存整套 Appearance（含背景照片、玻璃、文字），与系统预设 1/2 并存。
+ * ------------------------------------------------------------------ */
+
+const USER_PRESET_PREFIX = 'ws.ui.preset.v1.'
+const USER_PRESET_SEED_KEY = 'ws.ui.preset.seeded'
+export const USER_PRESET_CHANGE_EVENT = 'ws:user-presets-change'
+
+function parseUserPreset(id: string, raw: string | null): UserPreset | null {
+  if (!raw) return null
+  try {
+    const value = JSON.parse(raw)
+    return { id, name: typeof value?.name === 'string' && value.name.trim() ? value.name.trim() : id, appearance: normalizeAppearance(value?.appearance ?? value) }
+  } catch {
+    return null
+  }
+}
+
+/** 读取全部用户自定义预设，按编号升序。 */
+export function loadUserPresets(): UserPreset[] {
+  try {
+    const presets: UserPreset[] = []
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const key = localStorage.key(index)
+      if (!key || !key.startsWith(USER_PRESET_PREFIX)) continue
+      const id = key.slice(USER_PRESET_PREFIX.length)
+      const preset = parseUserPreset(id, localStorage.getItem(key))
+      if (preset) presets.push(preset)
+    }
+    return presets.sort((a, b) => presetNumber(a.id) - presetNumber(b.id))
+  } catch {
+    return []
+  }
+}
+
+function presetNumber(id: string): number {
+  const match = id.match(/(\d+)$/)
+  return match ? Number(match[1]) : Number.MAX_SAFE_INTEGER
+}
+
+/** 下一个可用的预设编号（从 3 起）。 */
+export function nextUserPresetNumber(): number {
+  const existing = loadUserPresets().map((preset) => presetNumber(preset.id))
+  let next = 3
+  while (existing.includes(next)) next += 1
+  return next
+}
+
+export function saveUserPreset(preset: UserPreset): void {
+  try {
+    localStorage.setItem(USER_PRESET_PREFIX + preset.id, JSON.stringify({ name: preset.name, appearance: normalizeAppearance(preset.appearance) }))
+    dispatchUserPresetsChange()
+  } catch { /* private mode */ }
+}
+
+export function deleteUserPreset(id: string): void {
+  try {
+    localStorage.removeItem(USER_PRESET_PREFIX + id)
+    dispatchUserPresetsChange()
+  } catch { /* private mode */ }
+}
+
+export function clearUserPresets(): void {
+  try {
+    for (let index = localStorage.length - 1; index >= 0; index -= 1) {
+      const key = localStorage.key(index)
+      if (key && key.startsWith(USER_PRESET_PREFIX)) localStorage.removeItem(key)
+    }
+    dispatchUserPresetsChange()
+  } catch { /* private mode */ }
+}
+
+/** 首次使用时生成预设 3/4/5 三个待自定义的空位。 */
+export function ensureDefaultUserPresets(): UserPreset[] {
+  try {
+    if (localStorage.getItem(USER_PRESET_SEED_KEY)) return loadUserPresets()
+    const base = loadAppearance()
+    const seeds = [3, 4, 5].map((number) => ({
+      id: `user-${number}`,
+      name: `预设${number}`,
+      appearance: base,
+    }))
+    seeds.forEach((preset) => saveUserPreset(preset))
+    localStorage.setItem(USER_PRESET_SEED_KEY, '1')
+    return seeds
+  } catch {
+    return loadUserPresets()
+  }
+}
+
+/** 新增一个用户自定义预设空位，返回新建的预设。 */
+export function createUserPreset(appearance: Appearance, name?: string): UserPreset {
+  const number = nextUserPresetNumber()
+  const preset: UserPreset = { id: `user-${number}`, name: name || `预设${number}`, appearance }
+  saveUserPreset(preset)
+  return preset
+}
+
+function dispatchUserPresetsChange(): void {
+  if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent(USER_PRESET_CHANGE_EVENT))
+}
 
 function cloneProfiles(profiles: Record<GlassTarget, GlassProfile>): Record<GlassTarget, GlassProfile> {
   return GLASS_TARGETS.reduce((result, target) => {
@@ -330,7 +433,7 @@ export function clearPageAppearance(pageKey: string): void {
  * 一键全局套用预设：把预设写入全站默认并立即生效。
  * 返回套用后的外观与需要同步的界面主题（null 表示不改动主题）。
  */
-export function applyPresetGlobal(presetId: AppearancePresetId): { appearance: Appearance; theme: AppearanceTheme | null } {
+export function applyPresetGlobal(presetId: SystemPresetId): { appearance: Appearance; theme: AppearanceTheme | null } {
   const next = normalizeAppearance(PRESET_APPEARANCES[presetId])
   saveAppearance(next)
   applyAppearance(next)

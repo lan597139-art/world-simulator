@@ -5,9 +5,6 @@ import { updateSettings, type SettingsPreferences } from '../../api/settings'
 import {
   FONT_STACKS,
   GLASS_TARGETS,
-  PRESET_APPEARANCES,
-  PRESET_IDS,
-  PRESET_META,
   TEXT_SCOPES,
   applyAppearance,
   applyPresetGlobal,
@@ -20,14 +17,17 @@ import {
   normalizeAppearance,
   saveAppearance,
   savePageAppearance,
+  saveUserPreset,
   type Appearance,
-  type AppearancePresetId,
   type AppearanceTheme,
   type FontFamilyKey,
   type GlassProfile,
   type GlassTarget,
+  type SystemPresetId,
   type TextScope,
+  type UserPreset,
 } from '../../utils/appearance'
+import PresetPicker from './AppearancePresetPicker'
 
 type Props = {
   pageKey: string
@@ -66,19 +66,6 @@ const FONT_META: Record<FontFamilyKey, { zh: string; en: string; sample: string 
   xingkai: { zh: '行楷', en: 'Xingkai', sample: '永 Aa' },
   songti: { zh: '宋体', en: 'Song', sample: '永 Aa' },
   mono: { zh: '等宽', en: 'Mono', sample: 'Aa 01' },
-}
-
-/** 预设缩略预览：直接用预设的卡片档渲染一小块玻璃，所见即所得。 */
-function presetSwatchStyle(presetId: AppearancePresetId) {
-  const card = PRESET_APPEARANCES[presetId].glass_profiles.card
-  return {
-    background: `color-mix(in srgb, var(--glass-frost-bg) ${card.opacity}%, transparent)`,
-    backdropFilter: `blur(${card.blur}px)`,
-    WebkitBackdropFilter: `blur(${card.blur}px)`,
-    border: `1px solid color-mix(in srgb, #fff ${card.border}%, var(--glass-border))`,
-    borderRadius: `${card.radius}px`,
-    boxShadow: `0 ${card.shadow * 0.3}px ${card.shadow * 0.8}px rgba(0, 0, 0, .14)`,
-  }
 }
 
 const isColor = (value: string) => /^(#(?:[0-9a-f]{3,8})|rgba?\([^)]*\)|hsla?\([^)]*\)|oklch\([^)]*\))$/i.test(value.trim())
@@ -171,12 +158,15 @@ export default function AppearanceStudio({ pageKey, pageName, lang }: Props) {
   const [pick, setPick] = useState(false)
   const [editTarget, setEditTarget] = useState<GlassTarget>('card')
   const [syncAll, setSyncAll] = useState(true)
+  /** 正在编辑的用户自定义预设 id；null 表示未载入用户预设。 */
+  const [editingPresetId, setEditingPresetId] = useState<string | null>(null)
   const pickedRef = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
     setDraft(loadAppearanceForPage(pageKey))
     setSavedPage(hasPageAppearance(pageKey))
     setScope('page')
+    setEditingPresetId(null)
     setFlash('')
   }, [pageKey])
 
@@ -341,16 +331,50 @@ export default function AppearanceStudio({ pageKey, pageName, lang }: Props) {
     }))
   }
 
-  /** 一键全局套用预设：写入全站默认、清除本页独立配置并立即生效，必要时同步主题。 */
-  const applyPresetGlobalAction = (presetId: AppearancePresetId) => {
+  /** 系统预设 1/2：一键全局套用，写入全站默认、清除本页独立配置并立即生效。 */
+  const applyPresetGlobalAction = (presetId: SystemPresetId) => {
     const { appearance: next, theme } = applyPresetGlobal(presetId)
     clearPageAppearance(pageKey)
     setSavedPage(false)
     setScope('global')
+    setEditingPresetId(null)
     setDraft(loadAppearanceForPage(pageKey))
     if (theme) chooseTheme(theme)
     void next
     setFlash(label(lang, '已一键套用预设并应用到全站', 'Preset applied across the whole site'))
+  }
+
+  /** 点击用户自定义预设：载入到当前草稿进行调节（含背景照片）。 */
+  const handleSelectUserPreset = (preset: UserPreset) => {
+    setEditingPresetId(preset.id)
+    setScope('page')
+    setDraft({ ...preset.appearance })
+    setFlash(label(lang, `已载入 ${preset.name}，调节后点击“保存预设”`, `Loaded ${preset.name}; tune it and save the preset`))
+  }
+
+  /** 保存当前草稿为用户自定义预设（含背景照片等全部外观）。 */
+  const handleSaveUserPreset = (id: string, name: string, appearance: Appearance) => {
+    const next = normalizeAppearance(appearance)
+    saveUserPreset({ id, name, appearance: next })
+    if (scope === 'page') {
+      savePageAppearance(pageKey, next)
+      setSavedPage(true)
+    } else {
+      saveAppearance(next)
+    }
+    applyAppearance(next)
+    setDraft(loadAppearanceForPage(pageKey))
+    setFlash(label(lang, `已保存预设 ${name} 并应用`, `Preset ${name} saved and applied`))
+  }
+
+  const handleDeleteUserPreset = (id: string) => {
+    setEditingPresetId((current) => (current === id ? null : current))
+    setFlash(label(lang, '已删除自定义预设', 'Custom preset deleted'))
+  }
+
+  const handleCancelUserPreset = () => {
+    setEditingPresetId(null)
+    setDraft(loadAppearanceForPage(pageKey))
   }
 
   const chooseTheme = (mode: ThemeMode) => {
@@ -528,26 +552,18 @@ export default function AppearanceStudio({ pageKey, pageName, lang }: Props) {
                 <button type="button" onClick={() => chooseTargets('card')}>{label(lang, '仅卡片', 'Cards only')}</button>
               </div>
 
-              <div className="ws-studio-section-label">
-                <span>{label(lang, '预设（一键全局使用）', 'Presets (one-click global)')}</span>
-                <span>{label(lang, '预览后一键套用到全站', 'Preview then apply site-wide')}</span>
-              </div>
-              <div className="ws-studio-presets">
-                {PRESET_IDS.map((presetId) => (
-                  <button
-                    key={presetId}
-                    type="button"
-                    className="ws-studio-preset"
-                    onClick={() => applyPresetGlobalAction(presetId)}
-                    title={label(lang, PRESET_META[presetId].zh, PRESET_META[presetId].en)}
-                  >
-                    <span className="ws-studio-preset-swatch" style={presetSwatchStyle(presetId)} />
-                    <span className="ws-studio-preset-label">{label(lang, PRESET_META[presetId].zh, PRESET_META[presetId].en)}</span>
-                  </button>
-                ))}
-              </div>
+              <PresetPicker
+                lang={lang}
+                editingId={editingPresetId}
+                currentAppearance={draft}
+                onSystemApply={applyPresetGlobalAction}
+                onUserSelect={handleSelectUserPreset}
+                onSaveUser={handleSaveUserPreset}
+                onUserDelete={handleDeleteUserPreset}
+                onUserCancel={handleCancelUserPreset}
+              />
               <div className="ws-studio-mini-actions">
-                <button type="button" className="ws-studio-clear-all" onClick={clearAll}>
+                <button type="button" className="ws-clear-all-btn" onClick={clearAll}>
                   <Trash2 size={11} /> {label(lang, '一键清除全部自定义调节', 'Clear all custom adjustments')}
                 </button>
               </div>
