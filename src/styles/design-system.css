@@ -197,6 +197,78 @@ html[data-font-size="large"] { --text-xs: 12px; --text-sm: 13.5px; --text-base: 
 html[data-density="compact"] { --leading-body: 1.58; }
 html[data-density="spacious"] { --leading-body: 1.82; }
 
+/* ==========================================================================
+   统一响应式布局系统 + 统一信息密度系统
+   布局尺寸必须由组件角色、屏幕空间与内容需求自动适配；信息密度不能只改
+   字体大小，而要联动间距、内边距、控件尺寸与留白。
+   以下令牌是全站唯一来源，页面不得再各自写死间距与栏宽。
+   ========================================================================== */
+
+html {
+  /* ---- 布局尺寸：栏宽 / 高度 / 内容最大宽度 ---- */
+  --ws-sidebar-width: 264px;
+  --ws-sidebar-collapsed-width: 0px;
+  --ws-nav-height: 68px;
+  --ws-content-max: 1280px;
+  --ws-content-max-wide: 1440px;
+  --ws-content-pad: 24px;
+
+  /* ---- 间距尺度（舒适 = 默认）---- */
+  --ws-space-3xs: 2px;
+  --ws-space-2xs: 4px;
+  --ws-space-xs: 6px;
+  --ws-space-sm: 10px;
+  --ws-space-md: 16px;
+  --ws-space-lg: 24px;
+  --ws-space-xl: 32px;
+  --ws-space-2xl: 48px;
+
+  /* ---- 卡片 / 容器 ---- */
+  --ws-card-pad: 16px;
+  --ws-card-gap: 16px;
+  --ws-card-radius: 14px;
+  --ws-section-gap: 24px;
+
+  /* ---- 控件 ---- */
+  --ws-control-min-h: 34px;
+  --ws-control-px: 10px;
+  --ws-control-radius: 8px;
+
+  /* ---- 导航条目 ---- */
+  --ws-nav-item-pad-y: 10px;
+  --ws-nav-item-pad-x: 12px;
+}
+
+html[data-density="compact"] {
+  --leading-body: 1.58;
+  --ws-content-pad: 16px;
+  --ws-space-md: 12px;
+  --ws-space-lg: 16px;
+  --ws-space-xl: 22px;
+  --ws-card-pad: 10px;
+  --ws-card-gap: 10px;
+  --ws-section-gap: 16px;
+  --ws-control-min-h: 30px;
+  --ws-control-px: 8px;
+  --ws-nav-item-pad-y: 7px;
+  --ws-nav-item-pad-x: 10px;
+}
+
+html[data-density="spacious"] {
+  --leading-body: 1.82;
+  --ws-content-pad: 34px;
+  --ws-space-md: 20px;
+  --ws-space-lg: 32px;
+  --ws-space-xl: 44px;
+  --ws-card-pad: 22px;
+  --ws-card-gap: 22px;
+  --ws-section-gap: 34px;
+  --ws-control-min-h: 42px;
+  --ws-control-px: 14px;
+  --ws-nav-item-pad-y: 13px;
+  --ws-nav-item-pad-x: 14px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.001ms !important;

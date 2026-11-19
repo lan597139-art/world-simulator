@@ -387,8 +387,8 @@ export default function ChatPage({ worldId, product = 'game' }: {
   if (!worldId) return <div style={{ padding: '2rem', color: 'var(--text-muted)' }}>请先进入一个世界。</div>
 
   return (
-    <div className="chat-page" style={{ padding: '1rem', display: 'flex', gap: '12px', height: 'calc(100vh - 60px)', boxSizing: 'border-box' }}>
-      <div className="ws-glass-surface" style={{ ...card, width: '250px' }}>
+    <div className="chat-page" style={{ padding: '1rem', display: 'flex', gap: '12px', height: 'calc(100vh - var(--ws-nav-height, 68px))', boxSizing: 'border-box' }}>
+      <div className="ws-glass-surface" style={{ ...card, width: '250px', maxWidth: '100%' }}>
         <h3 style={{ margin: 0, fontSize: '14px' }}>{companion ? 'AI 伴侣角色' : 'AI 角色聊天'}</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           <select value={selectedChar} onChange={(e) => setSelectedChar(e.target.value)} style={input}>
@@ -540,7 +540,7 @@ export default function ChatPage({ worldId, product = 'game' }: {
         </div>
       </div>
 
-      <div className="ws-glass-surface" style={{ ...card, width: '300px', overflowY: 'auto' }}>
+      <div className="ws-glass-surface" style={{ ...card, width: '300px', maxWidth: '100%', overflowY: 'auto' }}>
         <h3 style={{ margin: 0, fontSize: '13px' }}>我的身份</h3>
         <div style={{ ...hint }}>角色会知道你在世界中的身份；留空则按外来交谈者处理。</div>
         {selfCharacters.length > 0 && (

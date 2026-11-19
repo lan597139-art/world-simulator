@@ -89,6 +89,7 @@ export default function CreationCenterSidebar({
   onCollapse,
   collapsed = false,
   autoHidden = false,
+  drawerOpen = false,
   canAccessYunbao = false,
 }: {
   lang: Lang
@@ -98,11 +99,12 @@ export default function CreationCenterSidebar({
   onCollapse: () => void
   collapsed?: boolean
   autoHidden?: boolean
+  drawerOpen?: boolean
   canAccessYunbao?: boolean
 }) {
   return (
     <aside
-      className={`cc-sidebar${collapsed ? ' is-collapsed' : ''}${autoHidden ? ' is-auto-hidden' : ''}`}
+      className={`cc-sidebar${collapsed ? ' is-collapsed' : ''}${autoHidden ? ' is-auto-hidden' : ''}${drawerOpen ? ' is-drawer-open' : ''}`}
       aria-label={lang === 'zh' ? '全局导航' : 'Global navigation'}
       aria-hidden={collapsed || autoHidden ? true : undefined}
     >

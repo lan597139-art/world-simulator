@@ -265,7 +265,7 @@ export default function WorldDataPage({ worldId }: { worldId?: string }) {
 
             {/* ✅ 悬浮表单面板 (全面UI升级) */}
             <div className="ws-glass-surface" style={{
-              position: 'absolute', top: '20px', width: '300px', zIndex: 20,
+              position: 'absolute', top: '20px', width: '300px', maxWidth: 'calc(100vw - 40px)', zIndex: 20,
               ...(isLeftSide ? { right: '20px' } : { left: '20px' }),
               padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px',
               transition: 'all 0.3s ease', 

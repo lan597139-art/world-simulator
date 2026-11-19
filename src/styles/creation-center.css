@@ -205,8 +205,8 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  height: 68px;
-  flex: 0 0 68px;
+  height: var(--ws-nav-height, 68px);
+  flex: 0 0 var(--ws-nav-height, 68px);
   padding: 0 32px;
   box-sizing: border-box;
   border-bottom: 1px solid rgba(0, 0, 0, 0.075);
@@ -216,7 +216,9 @@
 }
 
 .cc-breadcrumb {
-  flex: 0 0 auto;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -768,7 +770,7 @@ button.cc-status-chip:hover {
 
 .cc-content {
   width: 100%;
-  max-width: 1280px;
+  max-width: var(--ws-content-max, 1280px);
   margin: 0 auto;
   padding: 29px 36px 34px;
   box-sizing: border-box;
@@ -1396,6 +1398,26 @@ button.cc-status-chip:hover {
 @media (max-width: 560px) {
   .cc-scenes-grid { grid-template-columns: 1fr; }
   .cc-recent-grid { grid-template-columns: 1fr; }
+}
+
+/* 平板宽度：顶栏整体收紧，面包屑可收缩，搜索与状态条让位，避免挤压主内容。 */
+@media (max-width: 1024px) {
+  .cc-topbar {
+    gap: 10px;
+    padding: 0 18px;
+  }
+  .cc-search {
+    flex: 0 1 150px;
+    min-width: 0;
+    width: auto;
+  }
+  .cc-status-chip {
+    padding: 0 7px;
+    font-size: 8.5px;
+  }
+  .cc-status-chip span:not(.cc-status-dot) {
+    display: none;
+  }
 }
 
 /* 手机宽度：顶栏只保留返回、页面名、提醒与个人入口，避免搜索和状态条把内容挤出屏幕。 */

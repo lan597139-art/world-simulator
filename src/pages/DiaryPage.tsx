@@ -100,7 +100,7 @@ export default function DiaryPage({
       </div>
 
       <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-        <div className="glass-card" style={{ width: '310px', padding: '10px', display: 'flex', flexDirection: 'column', gap: '7px', maxHeight: 'calc(100vh - 210px)', overflowY: 'auto' }}>
+        <div className="glass-card" style={{ width: '310px', maxWidth: '100%', padding: '10px', display: 'flex', flexDirection: 'column', gap: '7px', maxHeight: 'calc(100vh - 210px)', overflowY: 'auto' }}>
           {entries.length === 0 && <div style={{ fontSize: '12px', color: 'var(--text-muted)', padding: '12px' }}>还没有日记。日记不需要先创建世界。</div>}
           {entries.map((entry) => (
             <button key={entry.id} type="button" onClick={() => startEdit(entry)}

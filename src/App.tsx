@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import { Cloud, PanelLeftClose, PanelLeftOpen, Sparkles } from 'lucide-react'
+import { Cloud, Menu, PanelLeftClose, PanelLeftOpen, Sparkles } from 'lucide-react'
 import './App.css'
 import './styles/creation-center.css'
 import ErrorBoundary from './components/ErrorBoundary'
@@ -12,8 +12,11 @@ import { resolveMediaUrl } from './api/media'
 import { AUTH_USER_KEY } from './api/authToken'
 import AIAssistantPanel from './components/AIAssistantPanel'
 import UnifiedDesignStudio from './components/appearance/UnifiedDesignStudio'
+import Breadcrumb from './components/navigation/Breadcrumb'
 import { applyAppearance, loadAppearance } from './utils/appearance'
 import { setAssistantPage } from './api/assistantContext'
+import { useIsNarrow } from './hooks/useMediaQuery'
+import { buildBreadcrumb } from './navigation/navRegistry'
 import CreationCenterSidebar, { type HomeNavTarget } from './components/creation-center/CreationCenterSidebar'
 import CreationCenterTopbar from './components/creation-center/CreationCenterTopbar'
 import YunbaoGroupNav from './components/creation-center/YunbaoGroupNav'
@@ -71,7 +74,7 @@ const WorksPage = lazy(() => import('./pages/WorksPage'))
 const SpiritEconomyPage = lazy(() => import('./pages/SpiritEconomyPage'))
 const YunbaoOverviewPage = lazy(() => import('./components/creation-center/YunbaoOverviewPage'))
 
-type PageKey = 
+export type PageKey = 
   | 'home'
   | 'user-center'
   | 'community'
@@ -267,6 +270,11 @@ export default function App() {
   const autoCollapseRef = useRef(false)
   const contentScrollRef = useRef<HTMLDivElement>(null)
 
+  // 统一响应式断点：平板/移动端把侧边栏转为抽屉。
+  const isNarrow = useIsNarrow()
+  const [sidebarDrawerOpen, setSidebarDrawerOpen] = useState(false)
+  const openNav = () => setSidebarDrawerOpen(true)
+
   useEffect(() => {
     // 窄屏自动收起属于临时布局，不写入用户偏好。
     if (autoCollapseRef.current) {
@@ -276,9 +284,9 @@ export default function App() {
     try { localStorage.setItem(SIDEBAR_COLLAPSED_KEY, sidebarCollapsed ? '1' : '0') } catch { /* ignore */ }
   }, [sidebarCollapsed])
 
-  // 窄屏自动收起全局侧边栏，避免 800px 左右窗口只剩一条被裁切的主区域。
+  // 窄屏自动收起全局侧边栏，避免中等窗口只剩一条被裁切的主区域。
   useEffect(() => {
-    const media = window.matchMedia('(max-width: 900px)')
+    const media = window.matchMedia('(max-width: 1024px)')
     const apply = () => {
       if (!media.matches) return
       setSidebarCollapsed((prev) => {
@@ -892,6 +900,9 @@ export default function App() {
     (world) => !world.is_product_workspace && world.product_scene === product,
   )
 
+  // 全站统一面包屑：由真实产品导航结构派生，随路由自动更新。
+  const crumbs = buildBreadcrumb({ page: activePage, product, productConfig, lang })
+
   return (
     <div className="app-shell" style={{ display: 'flex', height: '100vh', overflow: 'hidden', backgroundColor: 'transparent' }}>
       
@@ -903,11 +914,12 @@ export default function App() {
           onToggleLang={() => changeLanguage(lang === 'zh' ? 'en' : 'zh')}
           onCollapse={() => setSidebarCollapsed(true)}
           collapsed={sidebarCollapsed}
+          drawerOpen={isNarrow && sidebarDrawerOpen}
           canAccessYunbao={Boolean(authUser?.is_owner)}
         />
       )}
 
-      <aside className={`sidebar app-sidebar${sidebarCollapsed ? ' is-collapsed' : ''}`} style={{ width: sidebarCollapsed ? 0 : 260, height: '100%', padding: sidebarCollapsed ? 0 : undefined, minWidth: 0, overflow: 'hidden', borderRight: sidebarCollapsed ? 'none' : '1px solid var(--card-border)', display: isGlobalShell || isProductWorkspace ? 'none' : 'flex', flexDirection: 'column' }}>
+      <aside className={`sidebar app-sidebar${sidebarCollapsed ? ' is-collapsed' : ''}${isNarrow && sidebarDrawerOpen ? ' is-drawer-open' : ''}`} style={{ width: isNarrow ? undefined : sidebarCollapsed ? 0 : 260, height: '100%', padding: isNarrow || sidebarCollapsed ? 0 : undefined, minWidth: 0, overflow: 'hidden', borderRight: sidebarCollapsed ? 'none' : '1px solid var(--card-border)', display: isGlobalShell || isProductWorkspace ? 'none' : 'flex', flexDirection: 'column' }}>
         
         <div className="brand" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div className="brand-mark" style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'var(--ws-surface-bg)', color: 'var(--text-main)', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 'bold', fontSize: '20px' }}>W</div>
@@ -1043,7 +1055,16 @@ export default function App() {
         </button>
       )}
 
-      <main className="main-area" style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: 'transparent', overflow: 'hidden', marginLeft: sidebarCollapsed ? 0 : 260 }}>
+      {isNarrow && sidebarDrawerOpen && (
+        <button
+          type="button"
+          className="sidebar-drawer-backdrop is-open"
+          onClick={() => setSidebarDrawerOpen(false)}
+          aria-label={lang === 'zh' ? '关闭导航' : 'Close navigation'}
+        />
+      )}
+
+      <main className={`main-area${sidebarCollapsed ? ' is-sidebar-collapsed' : ''}`} style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: 'transparent', overflow: 'hidden', }}>
         {isYunbaoWorkspace && (
           <>
             <header className="yb-pinned-nav">
@@ -1081,14 +1102,14 @@ export default function App() {
                       lang={lang}
                       page={isProductWorkspace ? 'workspace' : isUserCenter ? 'identity' : isCommunity ? 'community' : isCommunitySocial ? 'community-social' : isBusiness ? 'business' : isSpirit ? 'spirit-economy' : isAiCenter ? 'ai-center' : isGameCenter ? 'game-center' : isContentStore ? 'content-store' : isCreatorAssets ? 'assets' : isWorks ? 'works' : 'home'}
                       productLabel={isProductWorkspace ? (lang === 'zh' ? productConfig.label : localizedProduct(productConfig.key, productConfig.label).label) : undefined}
-                      productKey={isProductWorkspace ? product : undefined}
+                      crumbs={crumbs}
+                      onOpenNav={openNav}
                       currentWorldName={isProductWorkspace ? (productConfig.auto_workspace ? productConfig.workspace_name || currentWorldName : currentWorldName) : undefined}
                       currentWorldId={isProductWorkspace ? currentWorldId : undefined}
                       worlds={isProductWorkspace ? topbarWorlds : undefined}
                       onSelectWorld={handleTopbarWorldSelect}
                       onOpenWorlds={navigationProductConfig.allowed_modules.includes('world-management') ? () => navigate('world-management') : undefined}
                       onCreateWorld={navigationProductConfig.permissions.world_management ? () => openWorldBuilding() : undefined}
-                      onBackToCenter={() => handleHomeNav('home')}
                       user={authUser}
                       backendStatus={backendStatus}
                       hasPersonalAi={hasPersonalAi}
@@ -1100,40 +1121,17 @@ export default function App() {
                               />
                 ) : (
                   <header className="topbar app-topbar" style={{ height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2rem', borderBottom: '1px solid var(--card-border)' }}>
-                    <div className="breadcrumb" style={{ fontSize: '13px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}>
-                      {isHome ? (
-                        <>
-                          <strong style={{ color: 'var(--text-main)', fontSize: 14 }}>{lang === 'zh' ? '选择产品' : 'Choose product'}</strong>
-                          <span style={{ margin: '0 8px' }}>/</span>
-                          <span>{lang === 'zh' ? '四大创作产品 · 云宝独立工作台' : 'Four products · Yunbao workspace'}</span>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            type="button"
-                            onClick={goBack}
-                            title={lang === 'zh' ? '返回上一页' : 'Back'}
-                            style={{ marginRight: '12px', padding: '5px 10px', borderRadius: '7px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)', cursor: 'pointer', fontSize: '12px' }}
-                          >
-                            {lang === 'zh' ? '← 返回' : '← Back'}
-                          </button>
-                          {currentWorldId ? (
-                            <>
-                              <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 8, border: '1px solid var(--card-border)', marginRight: 8 }}>{productConfig.icon} {productConfig.short}</span>
-                              <span style={{ color: 'var(--primary-color)', fontWeight: 600 }}>[{currentWorldName}]</span>
-                              <span style={{ margin: '0 8px' }}>/</span>
-                              <strong style={{ color: 'var(--text-main)' }}>{pageLabel(activePage, dict, lang)}</strong>
-                            </>
-                          ) : (
-                            <>
-                              <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 8, border: '1px solid var(--card-border)', marginRight: 8 }}>{productConfig.icon} {productConfig.short}</span>
-                              <span>{dict.workbench}</span><span style={{ margin: '0 8px' }}>/</span>
-                              <strong style={{ color: 'var(--text-main)' }}>{pageLabel(activePage, dict, lang)}</strong>
-                            </>
-                          )}
-                        </>
-                      )}
-                    </div>
+                    {isNarrow && (
+                      <button
+                        type="button"
+                        className="cc-nav-toggle"
+                        onClick={openNav}
+                        aria-label={lang === 'zh' ? '打开导航' : 'Open navigation'}
+                      >
+                        <Menu size={17} strokeWidth={1.8} aria-hidden="true" />
+                      </button>
+                    )}
+                    <Breadcrumb crumbs={crumbs} onNavigate={(page) => navigate(page as PageKey)} lang={lang} />
                     <div className="topbar-right" style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '12px', color: 'var(--text-muted)' }}>
                       <button
                         type="button"
@@ -1223,7 +1221,6 @@ export default function App() {
             <CommunitySocialPage
               lang={lang}
               currentUserId={authUser?.id}
-              onBack={() => setActivePage('home')}
             />
           ) : activePage === 'community' ? (
             <CommunityPage
@@ -1323,7 +1320,7 @@ export default function App() {
           ) : activePage === 'world-structure' ? (
             <WorldStructurePage worldId={currentWorldId} worldName={currentWorldName} />
           ) : activePage === 'spirit-economy' ? (
-            <SpiritEconomyPage lang={lang} user={authUser} onBack={() => setActivePage('home')} />
+            <SpiritEconomyPage lang={lang} user={authUser} />
           ) : activePage === 'works' ? (
             <WorksPage
               lang={lang}

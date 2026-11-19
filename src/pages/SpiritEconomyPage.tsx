@@ -3,7 +3,6 @@ import {
   AlertCircle,
   Award,
   ArrowDownLeft,
-  ArrowLeft,
   ArrowLeftRight,
   ArrowUpRight,
   CheckCircle2,
@@ -78,11 +77,9 @@ function formatDate(value: string, lang: Lang) {
 export default function SpiritEconomyPage({
   lang,
   user,
-  onBack,
 }: {
   lang: Lang
   user?: User
-  onBack?: () => void
 }) {
   const [summary, setSummary] = useState<SpiritSummary | null>(null)
   const [loading, setLoading] = useState(true)
@@ -257,11 +254,6 @@ export default function SpiritEconomyPage({
     <div className="spirit-page cc-page-scroll">
       <header className="spirit-head">
         <div className="spirit-head-main">
-          {onBack && (
-            <button type="button" className="spirit-back" onClick={onBack} aria-label={zh ? '返回' : 'Back'}>
-              <ArrowLeft size={16} />
-            </button>
-          )}
           <div>
             <span className="spirit-eyebrow"><Sprout size={14} /> {zh ? '资源与交易' : 'Resources & Exchange'}</span>
             <h1>{zh ? '灵果资源中心' : 'Spirit Fruit Center'}</h1>

@@ -139,7 +139,7 @@ export default function TimelinePage({ worldId, onNavigate }: { worldId?: string
 
       {detailEvent && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999 }} onClick={() => setDetailEvent(null)}>
-          <div style={{ width: '600px', background: '#ffffff', padding: '32px', borderRadius: '12px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }} onClick={e => e.stopPropagation()}>
+          <div style={{ width: '600px', maxWidth: '100vw', boxSizing: 'border-box', background: '#ffffff', padding: '32px', borderRadius: '12px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }} onClick={e => e.stopPropagation()}>
             <h2 style={{ margin: '0 0 16px 0', fontSize: '24px', color: '#111827' }}>{detailEvent.name}</h2>
             <div style={{ marginBottom: '20px', fontSize: '15px', color: '#2563eb', fontWeight: 600 }}>⏳ {detailEvent.story_time}</div>
             <p style={{ margin: '0 0 24px 0', fontSize: '16px', color: '#374151', lineHeight: 1.8 }}>{detailEvent.description}</p>

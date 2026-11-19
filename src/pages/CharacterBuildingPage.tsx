@@ -2430,7 +2430,7 @@ return (
              {/* ✅ 全局事件导入弹窗 */}
       {isEventImportModalOpen && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
-          <div className="glass-card" style={{ width: '600px', maxHeight: '80vh', display: 'flex', flexDirection: 'column', background: 'var(--bg-color)', padding: '24px' }}>
+          <div className="glass-card" style={{ width: '600px', maxWidth: '100vw', boxSizing: 'border-box', maxHeight: '80vh', display: 'flex', flexDirection: 'column', background: 'var(--bg-color)', padding: '24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h3 style={{ margin: 0, color: 'var(--text-main)' }}>从全局事件库导入</h3>
               <button onClick={() => setIsEventImportModalOpen(false)} style={{ background: 'transparent', border: 'none', fontSize: '20px', cursor: 'pointer', color: 'var(--text-muted)' }}>×</button>
@@ -2463,7 +2463,7 @@ return (
       {/* 👇 新增：运行态说明弹窗 👇 */}
       {showRuntimeInfo && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999 }}>
-          <div className="glass-card" style={{ width: '500px', padding: '24px', background: 'var(--bg-color)', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: '0 10px 40px rgba(0,0,0,0.2)' }}>
+          <div className="glass-card" style={{ width: '500px', maxWidth: '100vw', boxSizing: 'border-box', padding: '24px', background: 'var(--bg-color)', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: '0 10px 40px rgba(0,0,0,0.2)' }}>
             <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--text-main)' }}>运行态编辑说明</h3>
             <p style={{ margin: 0, fontSize: '13px', lineHeight: 1.7, color: 'var(--text-main)' }}>
               你正在编辑<strong>当前运行态</strong>：02–05 的当前值会随经历、认知与选择变化，但不会覆盖种子底色。保存运行态会同步 06 的生命经历；01 基础档案与 07 初始状态仍属于种子层，请切回“种子设定”保存。事件本身不直接决定变化，先记录人物如何理解、归因和反应，再回到这里确认成长。

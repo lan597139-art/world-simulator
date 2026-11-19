@@ -145,6 +145,7 @@ export default function WorldStructurePage({ worldId, worldName }: { worldId: st
       <aside
         style={{
           width: '212px',
+          maxWidth: '100%',
           flexShrink: 0,
           borderRight: '1px solid var(--card-border)',
           padding: '18px 14px',

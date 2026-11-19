@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import {
-  ArrowLeft,
   ArrowUpRight,
   Bell,
   Check,
@@ -148,11 +147,9 @@ function Empty({ title, hint }: { title: string; hint?: string }) {
 export default function CommunitySocialPage({
   lang,
   currentUserId,
-  onBack,
 }: {
   lang: Lang
   currentUserId?: string
-  onBack: () => void
 }) {
   const [tab, setTab] = useState<Tab>('feed')
   const [socialProfileId, setSocialProfileId] = useState('')
@@ -393,7 +390,6 @@ export default function CommunitySocialPage({
     <div className="cs-page">
       <header className="cs-hero">
         <div>
-          <button type="button" style={ghost} onClick={onBack}><ArrowLeft size={14} /> {lang === 'zh' ? '返回创作中心' : 'Back to Creation Center'}</button>
           <span className="cs-kicker">COMMUNITY SOCIAL</span>
           <h1>{lang === 'zh' ? '社区社交' : 'Community Social'}</h1>
           <p>{lang === 'zh' ? '讨论、兴趣小组、关注、好友与动态，让创作者之间的交流真正发生。' : 'Discussions, groups, follows, friends and posts — where creators actually meet.'}</p>

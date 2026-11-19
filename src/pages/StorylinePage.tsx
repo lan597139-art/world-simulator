@@ -308,6 +308,7 @@ const popoverStyle: React.CSSProperties = {
   left: '0',
   marginTop: '12px',
   width: '320px',
+  maxWidth: 'calc(100vw - 32px)',
   background: 'var(--bg-color, #1e1e24)',
   border: '1px solid var(--card-border, #333)',
   borderRadius: '12px',
@@ -673,7 +674,7 @@ export default function StorylinePage({ worldId, onOpenEvents, lang = 'zh' }: { 
       {/* 选择事件弹窗 */}
       {picker && (
         <div className="slx-picker-overlay" role="dialog" aria-modal="true" aria-label="选择事件" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setPicker(null)}>
-          <div className="slx-picker" onClick={e => e.stopPropagation()} style={{ width: '500px', background: 'var(--bg-color)', borderRadius: '12px', border: '1px solid var(--card-border)', display: 'flex', flexDirection: 'column', maxHeight: '80vh' }}>
+          <div className="slx-picker" onClick={e => e.stopPropagation()} style={{ width: '500px', maxWidth: '100vw', boxSizing: 'border-box', background: 'var(--bg-color)', borderRadius: '12px', border: '1px solid var(--card-border)', display: 'flex', flexDirection: 'column', maxHeight: '80vh' }}>
             <header className="slx-picker-head" style={{ padding: '16px 20px', borderBottom: '1px solid var(--card-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{picker.position === 'above' ? '上方新增' : picker.position === 'below' ? '下方新增' : '侧边新增'}</span>

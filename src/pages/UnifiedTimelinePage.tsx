@@ -346,7 +346,7 @@ export default function UnifiedTimelinePage({ worldId, worldName, mode = 'world'
         >
           <div
             onClick={(event) => event.stopPropagation()}
-            style={{ ...card, width: '640px', maxHeight: '82vh', overflow: 'auto', padding: '20px', background: 'var(--bg-color)' }}
+            style={{ ...card, width: '640px', maxWidth: '100vw', boxSizing: 'border-box', maxHeight: '82vh', overflow: 'auto', padding: '20px', background: 'var(--bg-color)' }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '12px' }}>
               <div style={{ fontSize: '15px', color: 'var(--text-main)' }}>

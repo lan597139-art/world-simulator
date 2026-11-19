@@ -590,7 +590,7 @@ export default function RelationshipsPage({
 
       {/* ================= 左上角悬浮操作面板 ================= */}
       <div style={{
-        position: 'absolute', top: '20px', left: '20px', zIndex: 10, width: '300px',
+        position: 'absolute', top: '20px', left: '20px', zIndex: 10, width: '300px', maxWidth: 'calc(100vw - 40px)',
         transition: 'all 0.3s ease',
         transform: isSidebarOpen ? 'translateX(0)' : 'translateX(-320px)',
         opacity: isSidebarOpen ? 1 : 0,
