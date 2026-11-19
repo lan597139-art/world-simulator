@@ -79,6 +79,12 @@
 - 背景模糊透明度受可读性最低值保护；高对比预设会同时打开文字背景。
 - 正文、卡片、导航分别设置，文字背景通过 `box-decoration-break: clone` 保持多行文本的圆角与厚度。
 
+## 首屏性能
+
+- 生产环境曾把所有页面打进单个 3.85MB JS 包，且 Vercel 对该包的传输速度约 10–13KB/s，浏览器在 `interactive` 状态长时间阻塞、`#root` 一直为空，表现为 Safari 打不开、白屏超时。
+- 修复：`App.tsx` 将全部页面组件改为 `React.lazy(() => import(...))` + `Suspense`（外层仍由 `ErrorBoundary` 包裹，并加 `PageLoading` 占位）。首屏只加载外壳 `index-*.js`（约 405KB / gzip 124KB），重型依赖（`three`、`3d-force-graph`、`@tiptap`、`react-zoom-pan-pinch`、`@dnd-kit` 等）随对应页面按需加载。
+- 结果：首屏 JS 体积降低约 87%，生产入口首屏在数秒内完成解析并渲染，Safari 可正常打开。
+
 ## 验收
 
 - `tsc --noEmit`、`vite build` 通过。
