@@ -463,6 +463,57 @@ export function getAppliedAppearance(): Appearance {
   return currentAppearance
 }
 
+/* ------------------------------------------------------------------ *
+ * 统一材质：全局单一参数源
+ * 用户只面对一套玻璃材质参数。调节一次即同步写入全部玻璃档位
+ * （nav / card / modal / control / liquid），各组件再按自身渲染能力
+ * 消费同一组设计令牌，从而做到“调整一次，全站同步”。
+ * 底层仍保留各档位 profile，用于组件内部适配，但不再暴露给用户。
+ * ------------------------------------------------------------------ */
+
+export const GLASS_PROFILE_FIELDS: (keyof GlassProfile)[] = [
+  'blur', 'opacity', 'border', 'refraction', 'dispersion', 'frost',
+  'tint', 'gradient', 'thickness', 'radius', 'shadow',
+]
+
+/** 统一材质的展示基准档：以卡片档为准。 */
+export const GLOBAL_MATERIAL_TARGET: GlassTarget = 'card'
+
+/** 读取当前统一材质（以卡片档为基准，兼容历史分档数据）。 */
+export function readMaterialGlobal(appearance: Appearance): GlassProfile {
+  return { ...appearance.glass_profiles[GLOBAL_MATERIAL_TARGET] }
+}
+
+/** 把单个材质参数同步写入全部玻璃档位，返回新的 Appearance。 */
+export function setMaterialGlobal(
+  appearance: Appearance,
+  field: keyof GlassProfile,
+  value: number,
+): Appearance {
+  const profiles = cloneProfiles(appearance.glass_profiles)
+  for (const target of GLASS_TARGETS) {
+    profiles[target] = { ...profiles[target], [field]: value }
+  }
+  const next = { ...appearance, glass_profiles: profiles }
+  // 兼容旧字段：全局模糊/透明同步，避免设计系统别名与分档数据打架。
+  if (field === 'blur') next.glass_blur = value
+  if (field === 'opacity') next.glass_opacity = value
+  return next
+}
+
+/** 批量同步多个材质参数到全部玻璃档位。 */
+export function setMaterialGlobalPatch(
+  appearance: Appearance,
+  patch: Partial<GlassProfile>,
+): Appearance {
+  let next = appearance
+  for (const field of Object.keys(patch) as (keyof GlassProfile)[]) {
+    const value = patch[field]
+    if (typeof value === 'number') next = setMaterialGlobal(next, field, value)
+  }
+  return next
+}
+
 let backgroundToneToken = 0
 
 /** 采样自定义背景的亮度/色彩/细节，给毛玻璃一个可读性下限。 */

@@ -11,8 +11,8 @@ import { authLogout, type AuthUser } from './api/auth'
 import { resolveMediaUrl } from './api/media'
 import { AUTH_USER_KEY } from './api/authToken'
 import AIAssistantPanel from './components/AIAssistantPanel'
-import AppearanceStudio from './components/appearance/AppearanceStudio'
-import { applyAppearance, appearancePageKey, loadAppearanceForPage } from './utils/appearance'
+import UnifiedDesignStudio from './components/appearance/UnifiedDesignStudio'
+import { applyAppearance, loadAppearance } from './utils/appearance'
 import { setAssistantPage } from './api/assistantContext'
 import CreationCenterSidebar, { type HomeNavTarget } from './components/creation-center/CreationCenterSidebar'
 import CreationCenterTopbar from './components/creation-center/CreationCenterTopbar'
@@ -760,7 +760,7 @@ export default function App() {
 
   // 外观按“产品 + 页面 + 世界”独立保存；切换页面立即应用该页配置。
   useEffect(() => {
-    applyAppearance(loadAppearanceForPage(appearancePageKey(product, activePage, currentWorldId)))
+    applyAppearance(loadAppearance())
   }, [product, activePage, currentWorldId])
 
   useEffect(() => {
@@ -1210,7 +1210,6 @@ export default function App() {
               lang={lang}
               user={authUser}
               onUserUpdated={handleUserUpdated}
-              onLangChange={(next) => changeLanguage(next)}
               onOpenAiSettings={() => setAiAccessOpen(true)}
               onLogout={() => { void authLogout().then(() => window.location.reload()) }}
             />
@@ -1415,10 +1414,9 @@ export default function App() {
         onSaved={() => setHasPersonalAi(hasPersonalAiKey())}
       />
       <AIAssistantPanel product={product} onNavigate={(page) => { if (page === 'personas') openYunbao(); else navigate(page as PageKey) }} onOpenYunbao={openYunbao} />
-      <AppearanceStudio
-        pageKey={appearancePageKey(product, activePage, currentWorldId)}
-        pageName={pageLabel(activePage, dict, lang)}
+      <UnifiedDesignStudio
         lang={lang}
+        onLangChange={changeLanguage}
       />
     </div>
   )

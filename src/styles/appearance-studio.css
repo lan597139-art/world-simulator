@@ -1190,3 +1190,158 @@ html[data-ws-pick="1"] :is(
   outline-offset: 2px;
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary-color) 12%, transparent) !important;
 }
+
+/* ------------------------------------------------------------------ *
+ * UNIFIED UI DESIGN STUDIO — 模块组件样式
+ * ------------------------------------------------------------------ */
+
+/* 模块标签：图标 + 名称竖排 */
+.ws-studio-tabs button {
+  flex-direction: column;
+  gap: 3px;
+  line-height: 1.1;
+}
+.ws-studio-tabs button svg {
+  display: block;
+  margin: 0 auto;
+}
+
+/* 01 APPEARANCE：偏好选择 */
+.ws-studio-select-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+.ws-studio-select {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 9.5px;
+  font-weight: 550;
+  color: var(--text-muted);
+}
+.ws-studio-select select {
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid color-mix(in srgb, var(--text-main) 14%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--text-main) 4%, transparent);
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 10px;
+  outline: none;
+  cursor: pointer;
+}
+.ws-studio-select select:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 16%, transparent);
+}
+
+/* 开关列表 */
+.ws-studio-toggle-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 10px 0 4px;
+}
+.ws-studio-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid color-mix(in srgb, var(--text-main) 12%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--text-main) 3%, transparent);
+  color: var(--text-main);
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+}
+.ws-studio-toggle:hover { border-color: color-mix(in srgb, var(--primary-color) 40%, transparent); }
+.ws-studio-toggle-dot {
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+  margin-top: 1px;
+  border-radius: 50%;
+  border: 1.5px solid color-mix(in srgb, var(--text-main) 35%, transparent);
+  background: transparent;
+  transition: background .15s ease, border-color .15s ease;
+}
+.ws-studio-toggle.is-on .ws-studio-toggle-dot {
+  border-color: var(--primary-color);
+  background: var(--primary-color);
+}
+.ws-studio-toggle span:last-child { display: flex; flex-direction: column; gap: 2px; }
+.ws-studio-toggle strong { font-size: 10.5px; font-weight: 600; }
+.ws-studio-toggle small { font-size: 9px; line-height: 1.45; color: var(--text-muted); }
+
+/* 04 BACKGROUND：上传行 / 预览 / 官方素材 / 焦点 */
+.ws-studio-background-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.ws-studio-input {
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+  padding: 0 9px;
+  border: 1px solid color-mix(in srgb, var(--text-main) 14%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--text-main) 4%, transparent);
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 10px;
+  outline: none;
+}
+.ws-studio-input:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 16%, transparent);
+}
+.ws-studio-background-preview {
+  height: 62px;
+  margin-top: 8px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--text-main) 12%, transparent);
+  background-size: cover;
+  background-position: center;
+}
+.ws-studio-official-current {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 7px;
+  padding: 8px 9px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--text-main) 4%, transparent);
+  font-size: 9px;
+  line-height: 1.4;
+}
+.ws-studio-official-current strong { font-size: 10px; font-weight: 600; }
+.ws-studio-official-current span { color: var(--text-muted); }
+
+.ws-studio-focus-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+}
+.ws-studio-focus-grid button {
+  height: 34px;
+  border: 1px solid color-mix(in srgb, var(--text-main) 11%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--text-main) 3%, transparent);
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+.ws-studio-focus-grid button.is-active {
+  border-color: var(--primary-color);
+  background: color-mix(in srgb, var(--primary-color) 12%, transparent);
+  color: var(--text-main);
+}
+
+@media (max-width: 620px) {
+  .ws-studio-select-grid { grid-template-columns: 1fr; }
+}

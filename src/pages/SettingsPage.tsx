@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import {
   Activity,
@@ -8,15 +8,12 @@ import {
   Database,
   Download,
   Flag,
-  ImagePlus,
   Info,
   KeyRound,
-  Layers,
   LockKeyhole,
   LogOut,
   MonitorSmartphone,
   RefreshCw,
-  RotateCcw,
   Save,
   ShieldCheck,
   SlidersHorizontal,
@@ -25,8 +22,6 @@ import {
   UserRound,
 } from 'lucide-react'
 import type { AuthUser } from '../api/auth'
-import { OFFICIAL_BACKGROUNDS, isOfficialBackground } from '../data/officialBackgrounds'
-import OfficialAssetPicker from '../components/media/OfficialAssetPicker'
 import {
   changePassword,
   exportSettingsData,
@@ -39,7 +34,6 @@ import {
   type AuthSessionRow,
   type SettingsData,
   type SettingsNotifications,
-  type SettingsPreferences,
   type SettingsPrivacy,
 } from '../api/settings'
 import { uploadMedia, resolveMediaUrl } from '../api/media'
@@ -56,20 +50,6 @@ import '../styles/admin-sanctions.css'
 import '../styles/admin-backups.css'
 import '../styles/account-sanctions.css'
 import { applyExperience } from '../utils/experience'
-import {
-  GLASS_TARGETS,
-  applyAppearance,
-  applyPresetGlobal,
-  clearAllAppearance,
-  defaultAppearance,
-  loadAppearance,
-  saveAppearance,
-  saveUserPreset,
-  type Appearance,
-  type SystemPresetId,
-  type UserPreset,
-} from '../utils/appearance'
-import PresetPicker from '../components/appearance/AppearancePresetPicker'
 import { tr } from '../i18n'
 
 type Lang = 'zh' | 'en'
@@ -171,14 +151,12 @@ export default function SettingsPage({
   lang,
   user,
   onUserUpdated,
-  onLangChange,
   onOpenAiSettings,
   onLogout,
 }: {
   lang: Lang
   user: AuthUser | null
   onUserUpdated: (user: AuthUser) => void
-  onLangChange: (lang: Lang) => void
   onOpenAiSettings: () => void
   onLogout: () => void
 }) {
@@ -188,14 +166,6 @@ export default function SettingsPage({
   const [about, setAbout] = useState<Awaited<ReturnType<typeof getSettingsAbout>> | null>(null)
   const [profileDraft, setProfileDraft] = useState({ display_name: '', bio: '', avatar: '', avatar_url: '' })
   const [avatarUploading, setAvatarUploading] = useState(false)
-  const [skin, setSkin] = useState(() => localStorage.getItem('ws.ui.skin') || 'default')
-  const [glass, setGlass] = useState(() => localStorage.getItem('ws.ui.glass') || 'medium')
-  const [appearance, setAppearance] = useState<Appearance>(() => loadAppearance())
-  /** 正在编辑的用户自定义预设 id；null 表示未载入用户预设。 */
-  const [editingPresetId, setEditingPresetId] = useState<string | null>(null)
-  const appearanceMounted = useRef(false)
-  const backgroundUpload = useRef<HTMLInputElement>(null)
-  const [backgroundBusy, setBackgroundBusy] = useState(false)
   const [passwords, setPasswords] = useState({ current_password: '', new_password: '', confirm: '' })
   
   // 密码可见性状态
@@ -209,7 +179,6 @@ export default function SettingsPage({
   const [reports, setReports] = useState<ContentReport[]>([])
   const [reportBusy, setReportBusy] = useState('')
   const [sanctionVersion, setSanctionVersion] = useState(0)
-  const [officialOpen, setOfficialOpen] = useState(false)
 
   useEffect(() => {
     if (section !== 'moderation' || !user?.is_owner) return
@@ -219,112 +188,6 @@ export default function SettingsPage({
       .catch(() => { if (live) setReports([]) })
     return () => { live = false }
   }, [section, user?.is_owner])
-
-  useEffect(() => {
-    document.documentElement.dataset.skin = skin
-    localStorage.setItem('ws.ui.skin', skin)
-  }, [skin])
-
-  useEffect(() => {
-    if (glass === 'medium') delete document.documentElement.dataset.glass
-    else document.documentElement.dataset.glass = glass
-    localStorage.setItem('ws.ui.glass', glass)
-  }, [glass])
-
-  useEffect(() => {
-    // App/main already applied the current page or global look. Do not overwrite
-    // a page-specific look just because the user opened Settings.
-    if (!appearanceMounted.current) {
-      appearanceMounted.current = true
-      return
-    }
-    applyAppearance(appearance)
-    saveAppearance(appearance)
-  }, [appearance])
-
-  const updateAppearance = (patch: Partial<Appearance>) => {
-    setAppearance((current) => {
-      const next = { ...current, ...patch }
-      const profiles = { ...current.glass_profiles }
-      let touched = false
-      for (const target of GLASS_TARGETS) {
-        const profile = { ...profiles[target] }
-        if (patch.glass_blur !== undefined) { profile.blur = Math.min(50, patch.glass_blur); touched = true }
-        if (patch.glass_opacity !== undefined) { profile.opacity = patch.glass_opacity; touched = true }
-        if (touched) profiles[target] = profile
-      }
-      if (touched) next.glass_profiles = profiles
-      return next
-    })
-  }
-
-  const chooseGlass = (value: string) => {
-    setGlass(value)
-    const presets: Record<string, Pick<Appearance, 'glass_blur' | 'glass_opacity'>> = {
-      low: { glass_blur: 14, glass_opacity: 100 },
-      medium: { glass_blur: 40, glass_opacity: 100 },
-      high: { glass_blur: 56, glass_opacity: 100 },
-      solid: { glass_blur: 0, glass_opacity: 96 },
-    }
-    const preset = presets[value]
-    if (preset) updateAppearance(preset)
-  }
-
-  /** 系统预设 1/2：一键全局套用，并同步主题父级。 */
-  const applySystemPreset = (presetId: SystemPresetId) => {
-    const { appearance: next, theme } = applyPresetGlobal(presetId)
-    setAppearance(next)
-    if (theme) preference('theme', theme)
-    setFlash(tr(lang, '已套用预设并应用到全站', 'Preset applied across the whole site'))
-  }
-
-  /** 点击用户自定义预设：载入到当前外观进行调节（含背景照片）。 */
-  const handleSelectUserPreset = (preset: UserPreset) => {
-    setEditingPresetId(preset.id)
-    setAppearance({ ...preset.appearance })
-    setFlash(tr(lang, `已载入 ${preset.name}，调节后点击“保存预设”`, `Loaded ${preset.name}; tune it and save the preset`))
-  }
-
-  /** 保存当前外观为用户自定义预设，并同步保存与应用。 */
-  const handleSaveUserPreset = (id: string, name: string, appearance: Appearance) => {
-    saveUserPreset({ id, name, appearance })
-    setFlash(tr(lang, `已保存预设 ${name}`, `Preset ${name} saved`))
-  }
-
-  const handleDeleteUserPreset = (id: string) => {
-    setEditingPresetId((current) => (current === id ? null : current))
-    setFlash(tr(lang, '已删除自定义预设', 'Custom preset deleted'))
-  }
-
-  const handleCancelUserPreset = () => {
-    setEditingPresetId(null)
-    setAppearance(loadAppearance())
-  }
-
-  /** 一键清除全站默认与所有页面的独立调节，恢复出厂默认。 */
-  const clearAllAppearanceAction = () => {
-    const next = clearAllAppearance()
-    setAppearance(next)
-    setFlash(tr(lang, '已清除全部自定义调节，恢复默认', 'All custom adjustments cleared; defaults restored'))
-  }
-
-  const uploadBackground = async (file?: File) => {
-    if (!file) return
-    if (!file.type.startsWith('image/')) { setError(tr(lang, '背景图需要图片文件', 'Background must be an image file')); return }
-    if (file.size > 12 * 1024 * 1024) { setError(tr(lang, '背景图不能超过 12MB', 'Background image must be under 12MB')); return }
-    setError('')
-    setBackgroundBusy(true)
-    try {
-      const uploaded = await uploadMedia(file)
-      updateAppearance({ background_url: uploaded.file_url })
-      setFlash(tr(lang, '背景图已上传并应用', 'Background uploaded and applied'))
-    } catch (err) {
-      setError(err instanceof Error ? err.message : tr(lang, '背景图上传失败', 'Background upload failed'))
-    } finally {
-      setBackgroundBusy(false)
-      if (backgroundUpload.current) backgroundUpload.current.value = ''
-    }
-  }
 
   const load = async () => {
     setError('')
@@ -355,12 +218,6 @@ export default function SettingsPage({
     return () => window.clearTimeout(timer)
   }, [flash])
 
-  const preference = <K extends keyof SettingsPreferences>(key: K, value: SettingsPreferences[K]) => {
-    setData((current) => current ? { ...current, preferences: { ...current.preferences, [key]: value } } : current)
-    const next = data ? { ...data.preferences, [key]: value } : null
-    if (next) applyExperience(next)
-    if (key === 'language' && (value === 'zh' || value === 'en') && value !== lang) onLangChange(value)
-  }
   const privacy = <K extends keyof SettingsPrivacy>(key: K, value: SettingsPrivacy[K]) => {
     setData((current) => current ? { ...current, privacy: { ...current.privacy, [key]: value } } : current)
   }
@@ -686,170 +543,31 @@ export default function SettingsPage({
           )}
 
           {section === 'experience' && (
-            <Panel title={tr(lang, '使用体验', 'Experience')} subtitle={tr(lang, '调整语言、主题、信息密度与动效。设置会保存到当前账号。', 'Adjust language, theme, density and motion. Settings are saved to this account.')} aside={<button type="button" style={primary} disabled={busy === 'settings'} onClick={() => void saveSettings()}><Save size={14} /> {tr(lang, '保存体验设置', 'Save experience')}</button>}>
-              <div className="settings-two-col">
-                <Field label={tr(lang, '界面语言', 'Language')} hint={tr(lang, '切换后立即生效。', 'Applies immediately.')}>
-                  <select style={input} value={data.preferences.language} onChange={(e) => preference('language', e.target.value as SettingsPreferences['language'])}>
-                    <option value="zh">简体中文</option><option value="en">English</option>
-                  </select>
-                </Field>
-                <Field label={tr(lang, '主题', 'Theme')}>
-                  <select style={input} value={data.preferences.theme} onChange={(e) => preference('theme', e.target.value as SettingsPreferences['theme'])}>
-                    <option value="system">{tr(lang, '跟随系统', 'System')}</option><option value="light">{tr(lang, '浅色', 'Light')}</option><option value="dark">{tr(lang, '深色', 'Dark')}</option>
-                  </select>
-                </Field>
-                <Field label={tr(lang, '信息密度', 'Density')}>
-                  <select style={input} value={data.preferences.density} onChange={(e) => preference('density', e.target.value as SettingsPreferences['density'])}>
-                    <option value="compact">{tr(lang, '紧凑', 'Compact')}</option><option value="comfortable">{tr(lang, '舒适', 'Comfortable')}</option><option value="spacious">{tr(lang, '宽松', 'Spacious')}</option>
-                  </select>
-                </Field>
-                <Field label={tr(lang, '正文大小', 'Reading size')}>
-                  <select style={input} value={data.preferences.font_size} onChange={(e) => preference('font_size', e.target.value as SettingsPreferences['font_size'])}>
-                    <option value="small">{tr(lang, '小', 'Small')}</option><option value="medium">{tr(lang, '中', 'Medium')}</option><option value="large">{tr(lang, '大', 'Large')}</option>
-                  </select>
-                </Field>
-              </div>
-              <div className="settings-toggle-list">
-                <Toggle checked={data.preferences.reduce_motion} onChange={(v) => preference('reduce_motion', v)} title={tr(lang, '减少动效', 'Reduce motion')} desc={tr(lang, '关闭大部分过渡与动画，适合对动态效果敏感的用户。', 'Disable most transitions and animations.')} />
-                <Toggle checked={data.preferences.show_tips} onChange={(v) => preference('show_tips', v)} title={tr(lang, '显示操作提示', 'Show tips')} desc={tr(lang, '在复杂编辑器中显示简短说明与引导。', 'Show short guidance in complex editors.')} />
-                <Toggle checked={data.preferences.auto_save} onChange={(v) => preference('auto_save', v)} title={tr(lang, '自动保存草稿', 'Auto-save drafts')} desc={tr(lang, '在写作与编辑页面自动保存本地草稿。', 'Save local drafts while writing and editing.')} />
-              </div>
-              <div className="settings-two-col" style={{ marginTop: 14 }}>
-                <Field label={tr(lang, '视觉皮肤', 'Visual skin')} hint={tr(lang, '只改变环境光与玻璃折射，不改变内容结构。', 'Changes ambient light and glass only.')}>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    {[
-                      ['default', tr(lang, '极简', 'Minimal')], ['aurora', tr(lang, '极光', 'Aurora')], ['sand', tr(lang, '暖砂', 'Sand')], ['mono', tr(lang, '单色', 'Mono')],
-                    ].map(([value, label]) => (
-                      <button key={value} type="button" onClick={() => setSkin(value)}
-                        style={{ ...ghost, borderColor: skin === value ? 'var(--text-main)' : 'var(--card-border)', background: skin === value ? 'var(--text-main)' : 'transparent', color: skin === value ? 'var(--bg-color)' : 'var(--text-main)' }}>
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </Field>
-                <Field label={tr(lang, '玻璃强度', 'Glass strength')} hint={tr(lang, '低性能设备建议使用“低”或“实色”。', 'Use Low or Solid on slower devices.')}>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    {[
-                      ['low', tr(lang, '低', 'Low')], ['medium', tr(lang, '标准', 'Standard')], ['high', tr(lang, '高', 'High')], ['solid', tr(lang, '实色', 'Solid')],
-                    ].map(([value, label]) => (
-                      <button key={value} type="button" onClick={() => chooseGlass(value)}
-                        style={{ ...ghost, borderColor: glass === value ? 'var(--text-main)' : 'var(--card-border)', background: glass === value ? 'var(--text-main)' : 'transparent', color: glass === value ? 'var(--bg-color)' : 'var(--text-main)' }}>
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </Field>
-              </div>
-              <div className="settings-appearance-heading">
-                <div>
-                  <strong>{tr(lang, '背景与玻璃细节', 'Background & glass')}</strong>
-                  <span>{tr(lang, '全部即时生效，只保存在当前浏览器；上传图片走创作者媒体库。', 'Applied immediately and stored in this browser. Uploads use the creator media library.')}</span>
+            <Panel
+              title={tr(lang, '使用体验', 'Experience')}
+              subtitle={tr(lang, '全站外观现在由统一的 UI 设计工作室集中管理：一次调整，所有页面与组件同步。', 'All site appearance is managed by the unified UI design studio. One change syncs every page and component.')}
+              aside={<button type="button" style={primary} onClick={() => window.dispatchEvent(new Event('ws:open-appearance-studio'))}><SlidersHorizontal size={14} /> {tr(lang, '打开统一设计工作室', 'Open unified studio')}</button>}
+            >
+              <div className="settings-unified-card">
+                <div className="settings-unified-eyebrow">UNIFIED UI DESIGN STUDIO</div>
+                <strong>{tr(lang, '统一外观控制台', 'Unified appearance console')}</strong>
+                <p>
+                  {tr(lang, '外观、材质、字体、背景与预设只保留一个入口。无需理解组件的并列、嵌套与父子关系，调整一次即全站同步。', 'Appearance, material, typography, background and presets now share one entry point. No need to understand parallel, nested or parent-child components; one change syncs the whole site.')}
+                </p>
+                <div className="settings-unified-modules">
+                  {[
+                    [tr(lang, '外观', 'Appearance')],
+                    [tr(lang, '材质', 'Material')],
+                    [tr(lang, '字体', 'Typography')],
+                    [tr(lang, '背景', 'Background')],
+                    [tr(lang, '预设', 'Presets')],
+                  ].map(([text]) => (
+                    <span key={text}>{text}</span>
+                  ))}
                 </div>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  <button type="button" style={{ ...ghost, borderColor: 'var(--primary-color)', color: 'var(--text-main)' }} onClick={() => window.dispatchEvent(new Event('ws:open-appearance-studio'))}>
-                    <SlidersHorizontal size={13} /> {tr(lang, '打开悬浮调节器', 'Open floating studio')}
-                  </button>
-                  <button type="button" style={ghost} onClick={() => setAppearance(defaultAppearance())}><RotateCcw size={13} /> {tr(lang, '恢复默认', 'Reset')}</button>
-                </div>
-              </div>
-              <div className="settings-preset-row">
-                <PresetPicker
-                  lang={lang}
-                  editingId={editingPresetId}
-                  currentAppearance={appearance}
-                  onSystemApply={applySystemPreset}
-                  onUserSelect={handleSelectUserPreset}
-                  onSaveUser={handleSaveUserPreset}
-                  onUserDelete={handleDeleteUserPreset}
-                  onUserCancel={handleCancelUserPreset}
-                />
-                <div className="settings-preset-clear-wrap">
-                  <button type="button" className="ws-clear-all-btn" onClick={clearAllAppearanceAction}>
-                    <Trash2 size={12} />
-                    {tr(lang, '一键清除全部自定义调节', 'Clear all custom adjustments')}
-                  </button>
-                </div>
-              </div>
-              <div className="settings-appearance-grid">
-                <Field label={tr(lang, '背景图', 'Background image')} hint={tr(lang, '支持图片 URL，或直接上传到当前账号的媒体库。', 'Use an image URL or upload to your media library.')}>
-                  <div className="settings-background-row">
-                    <input
-                      style={input}
-                      placeholder={tr(lang, "https://…（上传后自动填入）", "https://… (filled after upload)")}
-                      value={appearance.background_url}
-                      onChange={(e) => updateAppearance({ background_url: e.target.value })}
-                    />
-                    <button type="button" style={ghost} disabled={backgroundBusy} onClick={() => backgroundUpload.current?.click()}>
-                      <ImagePlus size={14} /> {backgroundBusy ? tr(lang, '上传中…', 'Uploading…') : tr(lang, '上传', 'Upload')}
-                    </button>
-                    {appearance.background_url && (
-                      <button type="button" style={ghost} onClick={() => updateAppearance({ background_url: '' })}>
-                        <Trash2 size={14} /> {tr(lang, '清除', 'Clear')}
-                      </button>
-                    )}
-                  </div>
-                  <input ref={backgroundUpload} type="file" accept="image/*" hidden onChange={(e) => void uploadBackground(e.target.files?.[0])} />
-                  {appearance.background_url && (
-                    <div className="settings-background-preview" style={{ backgroundImage: `url(${JSON.stringify(resolveMediaUrl(appearance.background_url))})` }} />
-                  )}
-                </Field>
-                <Field
-                  label={tr(lang, '官方背景库', 'Official backgrounds')}
-                  hint={tr(lang, '内置场景，可直接使用；上传图片仍会覆盖当前背景。', 'Built-in scenes; an uploaded image still overrides the current background.')}
-                >
-                  <button type="button" style={{ ...ghost, width: '100%', justifyContent: 'flex-start' }} onClick={() => setOfficialOpen(true)}>
-                    <ImagePlus size={15} />
-                    {tr(lang, `打开官方素材库（${OFFICIAL_BACKGROUNDS.length} 张照片/插画）`, `Open official library (${OFFICIAL_BACKGROUNDS.length} photos/illustrations)`)}
-                  </button>
-                  <div className="settings-official-current">
-                    {isOfficialBackground(appearance.background_url)
-                      ? (() => {
-                          const current = OFFICIAL_BACKGROUNDS.find((item) => item.url === appearance.background_url)
-                          return current ? <><strong>{lang === 'zh' ? current.nameZh : current.nameEn}</strong><span>{current.kind === 'photo' ? tr(lang, '官方照片', 'Official photo') : tr(lang, '官方插画', 'Official illustration')} · {current.credit || tr(lang, '站内素材', 'Built-in')}</span></> : null
-                        })()
-                      : <span>{tr(lang, '当前使用自定义图片或未设置官方素材。', 'Using a custom image or no official asset.')}</span>}
-                  </div>
-                </Field>
-                <Field label={tr(lang, '背景图透明度', 'Background opacity')} hint={`${appearance.background_opacity}%`}>
-                  <input className="settings-range" type="range" min={0} max={100} value={appearance.background_opacity} onChange={(e) => updateAppearance({ background_opacity: Number(e.target.value) })} />
-                </Field>
-                <Field label={tr(lang, '背景图模糊度', 'Background blur')} hint={`${appearance.background_blur}px`}>
-                  <input className="settings-range" type="range" min={0} max={40} value={appearance.background_blur} onChange={(e) => updateAppearance({ background_blur: Number(e.target.value) })} />
-                </Field>
-                <Field label={tr(lang, '背景焦点 / 裁切', 'Background focal point / crop')} hint={tr(lang, '照片会以该位置为中心裁切', 'Photos crop around this point')}>
-                  <div className="settings-focus-grid">
-                    {([
-                      ['left top', '↖'], ['center top', '↑'], ['right top', '↗'],
-                      ['left center', '←'], ['center', '•'], ['right center', '→'],
-                      ['left bottom', '↙'], ['center bottom', '↓'], ['right bottom', '↘'],
-                    ] as [string, string][]).map(([value, icon]) => (
-                      <button key={value} type="button" className={appearance.background_position === value ? 'is-active' : ''} onClick={() => updateAppearance({ background_position: value })} aria-label={value}>{icon}</button>
-                    ))}
-                  </div>
-                </Field>
-                <Field label={tr(lang, '玻璃模糊度', 'Glass blur')} hint={`${appearance.glass_blur}px`}>
-                  <input className="settings-range" type="range" min={0} max={72} value={appearance.glass_blur} onChange={(e) => updateAppearance({ glass_blur: Number(e.target.value) })} />
-                </Field>
-                <Field label={tr(lang, '玻璃透明度', 'Glass opacity')} hint={`${appearance.glass_opacity}%`}>
-                  <input className="settings-range" type="range" min={25} max={100} value={appearance.glass_opacity} onChange={(e) => updateAppearance({ glass_opacity: Number(e.target.value) })} />
-                </Field>
-                <Field label={tr(lang, '辉光强度', 'Glow')} hint={`${appearance.glow}%`}>
-                  <input className="settings-range" type="range" min={0} max={80} value={appearance.glow} onChange={(e) => updateAppearance({ glow: Number(e.target.value) })} />
-                </Field>
-              </div>
-              <div className="settings-inline-note"><SlidersHorizontal size={14} /> {tr(lang, '主题、皮肤、背景与玻璃细节会应用到整个工作区；右上角悬浮滑杆可为每一页单独保存字体、文字和玻璃材质。', 'Theme, skin, background and glass apply across the workspace; the floating slider at top right saves type, text and glass per page.')}</div>
-              <div className="settings-inline-note"><Layers size={14} /> {tr(lang, '毛玻璃用于导航、侧栏、普通卡片与弹窗；液态玻璃只用于首页场景卡和登录等重点入口。', 'Frosted glass is used for navigation, sidebars, regular cards and dialogs; liquid glass is reserved for scene cards and key entry points.')}</div>
-              <div className="settings-material-demo" aria-label={tr(lang, '材质示例', 'Material examples')}>
-                <div className="settings-material-card is-frost">
-                  <span>FROSTED</span>
-                  <strong>{tr(lang, '毛玻璃 · 常规容器', 'Frosted · regular containers')}</strong>
-                  <small>{tr(lang, '导航、侧栏、卡片、弹窗', 'Navigation, sidebars, cards, dialogs')}</small>
-                </div>
-                <div className="settings-material-card is-liquid">
-                  <span>LIQUID</span>
-                  <strong>{tr(lang, '液态玻璃 · 重点入口', 'Liquid · key entry points')}</strong>
-                  <small>{tr(lang, '场景卡、登录、核心视觉', 'Scene cards, sign-in, hero visuals')}</small>
-                </div>
+                <button type="button" style={primary} onClick={() => window.dispatchEvent(new Event('ws:open-appearance-studio'))}>
+                  <SlidersHorizontal size={14} /> {tr(lang, '打开统一设计工作室', 'Open unified studio')}
+                </button>
               </div>
             </Panel>
           )}
@@ -1003,14 +721,6 @@ export default function SettingsPage({
           )}
         </div>
       </div>
-      <OfficialAssetPicker
-        open={officialOpen}
-        lang={lang}
-        selectedUrl={appearance.background_url}
-        onClose={() => setOfficialOpen(false)}
-        onSelect={(url) => updateAppearance({ background_url: url })}
-        title={tr(lang, '选择界面背景', 'Choose a background')}
-      />
     </div>
   )
 }
