@@ -162,9 +162,9 @@ export default function InformationSourcesPage({ worldId }: { worldId?: string }
             <article key={row.id} style={card}>
               <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                 <strong style={{ fontSize: 12.5 }}>{row.title || '未命名来源'}</strong>
-                <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 9, background: 'rgba(128,128,128,.12)' }}>{row.source_type_label || TYPE_LABEL[row.source_type]}</span>
-                <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 9, border: `1px solid ${row.status === 'confirmed' ? 'var(--primary-color)' : row.status === 'inference' ? 'var(--warning-color,#b45309)' : 'var(--card-border)'}`, color: row.status === 'confirmed' ? 'var(--primary-color)' : row.status === 'inference' ? 'var(--warning-color,#b45309)' : 'var(--text-muted)' }}>{STATUS_LABEL[row.status]}</span>
-                <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>{row.source_date} · 可信度 {Number(row.confidence).toFixed(1)}</span>
+                <span style={{ fontSize: 'var(--text-2xs)', padding: '2px 6px', borderRadius: 9, background: 'rgba(128,128,128,.12)' }}>{row.source_type_label || TYPE_LABEL[row.source_type]}</span>
+                <span style={{ fontSize: 'var(--text-2xs)', padding: '2px 6px', borderRadius: 9, border: `1px solid ${row.status === 'confirmed' ? 'var(--primary-color)' : row.status === 'inference' ? 'var(--warning-color,#b45309)' : 'var(--card-border)'}`, color: row.status === 'confirmed' ? 'var(--primary-color)' : row.status === 'inference' ? 'var(--warning-color,#b45309)' : 'var(--text-muted)' }}>{STATUS_LABEL[row.status]}</span>
+                <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>{row.source_date} · 可信度 {Number(row.confidence).toFixed(1)}</span>
                 <span style={{ flex: 1 }} />
                 <button type="button" style={smallBtn} onClick={() => edit(row)}>编辑</button>
                 {row.source_type === 'ai_inference' && row.status !== 'confirmed' && <button type="button" style={smallBtn} onClick={() => void confirm(row)}>确认推断</button>}

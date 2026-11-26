@@ -1,10 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import {
-  ArrowUpRight,
   Bell,
   Check,
-  ChevronRight,
   CircleHelp,
   Compass,
   HeartHandshake,
@@ -52,7 +50,6 @@ import {
   type CommunityGroup,
   type CommunityNotification,
   type CommunityTopic,
-  type FeedItem,
   type Friend,
   type FriendRequest,
   type GroupDetail,
@@ -67,7 +64,7 @@ import SocialProfileSheet from '../components/social/SocialProfileSheet'
 import '../styles/community-social.css'
 
 type Lang = 'zh' | 'en'
-type Tab = 'feed' | 'dynamics' | 'topics' | 'groups' | 'people' | 'friends' | 'messages'
+type Tab = 'dynamics' | 'topics' | 'groups' | 'people' | 'friends' | 'messages'
 
 const input: CSSProperties = {
   width: '100%', boxSizing: 'border-box', padding: '9px 11px', borderRadius: 8,
@@ -85,7 +82,7 @@ const ghost: CSSProperties = {
   border: '1px solid var(--card-border)', background: 'transparent',
   color: 'var(--text-main)', fontSize: 10.5, cursor: 'pointer',
 }
-const tiny: CSSProperties = { ...ghost, padding: '5px 8px', fontSize: 9.5 }
+const tiny: CSSProperties = { ...ghost, padding: '5px 8px', fontSize: 'var(--text-2xs)' }
 const danger: CSSProperties = { ...tiny, color: 'var(--danger-color)' }
 
 const TOPIC_CATEGORIES = [
@@ -151,12 +148,10 @@ export default function CommunitySocialPage({
   lang: Lang
   currentUserId?: string
 }) {
-  const [tab, setTab] = useState<Tab>('feed')
+  const [tab, setTab] = useState<Tab>('dynamics')
   const [socialProfileId, setSocialProfileId] = useState('')
   const [messagePeerId, setMessagePeerId] = useState('')
   const [overview, setOverview] = useState<SocialOverview | null>(null)
-  const [feedScope, setFeedScope] = useState<'following' | 'friends' | 'all'>('following')
-  const [feed, setFeed] = useState<FeedItem[]>([])
   const [topics, setTopics] = useState<CommunityTopic[]>([])
   const [topicCategory, setTopicCategory] = useState('all')
   const [topicQuery, setTopicQuery] = useState('')
@@ -187,9 +182,8 @@ export default function CommunitySocialPage({
 
   const loadOverview = async () => {
     try {
-      const data = await getSocialOverview(feedScope)
+      const data = await getSocialOverview()
       setOverview(data)
-      setFeed(data.feed)
       setNotifications(data.notifications)
       if (!people.length) setPeople(data.suggestions)
     } catch (err) { fail(err) }
@@ -213,7 +207,7 @@ export default function CommunitySocialPage({
     } catch (err) { fail(err) }
   }
 
-  useEffect(() => { void loadOverview() }, [feedScope])
+  useEffect(() => { void loadOverview() }, [])
   useEffect(() => { if (tab === 'topics') void loadTopics() }, [tab, topicCategory])
   useEffect(() => { if (tab === 'groups') void loadGroups() }, [tab, groupScope])
   useEffect(() => { if (tab === 'people') void loadPeople() }, [tab])
@@ -369,13 +363,12 @@ export default function CommunitySocialPage({
     try {
       const detail = await getSocialUser(user.id)
       setPeople((rows) => rows.some((row) => row.id === detail.id) ? rows.map((row) => row.id === detail.id ? detail : row) : [detail, ...rows])
-      notify(`@${detail.username}：${detail.follower_count} 粉丝 · ${detail.following_count} 关注`)
+      notify(`@${detail.username}：Lv.${detail.creator_level?.level ?? 1} ${detail.creator_level?.label ?? ''} · ${detail.follower_count} 粉丝`)
     } catch (err) { fail(err) } finally { setBusy('') }
   }
 
   const unread = notifications.filter((item) => !item.read).length || overview?.counts.unread_notifications || 0
   const tabs: { key: Tab; zh: string; en: string; icon: ReactNode }[] = [
-    { key: 'feed', zh: '社区动态', en: 'Feed', icon: <Compass size={14} /> },
     { key: 'dynamics', zh: '个人动态', en: 'Posts', icon: <Sparkles size={14} /> },
     { key: 'topics', zh: '讨论交流', en: 'Discussions', icon: <MessageCircle size={14} /> },
     { key: 'groups', zh: '兴趣小组', en: 'Groups', icon: <Users size={14} /> },
@@ -390,9 +383,9 @@ export default function CommunitySocialPage({
     <div className="cs-page">
       <header className="cs-hero">
         <div>
-          <span className="cs-kicker">COMMUNITY SOCIAL</span>
-          <h1>{lang === 'zh' ? '社区社交' : 'Community Social'}</h1>
-          <p>{lang === 'zh' ? '讨论、兴趣小组、关注、好友与动态，让创作者之间的交流真正发生。' : 'Discussions, groups, follows, friends and posts — where creators actually meet.'}</p>
+          <span className="cs-kicker">PLAZA</span>
+          <h1>{lang === 'zh' ? '广场' : 'Plaza'}</h1>
+          <p>{lang === 'zh' ? '讨论、兴趣小组、关注与好友，让创作者之间的交流真正发生。' : 'Discussions, groups, follows and friends — where creators actually meet.'}</p>
         </div>
         <div className="cs-hero-side">
           <div className="cs-stat-row">
@@ -409,7 +402,7 @@ export default function CommunitySocialPage({
       {error && <div className="cs-message is-error">{error}<button type="button" style={tiny} onClick={() => setError('')}>关闭</button></div>}
       {flash && <div className="cs-message is-ok"><Check size={14} /> {flash}</div>}
 
-      <nav className="cs-tabs" aria-label={lang === 'zh' ? '社区社交分类' : 'Community sections'}>
+      <nav className="cs-tabs" aria-label={lang === 'zh' ? '广场分类' : 'Plaza sections'}>
         {tabs.map((item) => (
           <button key={item.key} type="button" className={`cs-tab ${tab === item.key ? 'is-active' : ''}`} onClick={() => { setTab(item.key); setSearchResults(null); setError('') }}>
             {item.icon}<span>{lang === 'zh' ? item.zh : item.en}</span>
@@ -417,58 +410,11 @@ export default function CommunitySocialPage({
         ))}
       </nav>
 
-      {tab === 'feed' && (
-        <section className="cs-layout">
-          <div className="cs-main">
-            <div className="cs-section-head">
-              <div><span className="cs-kicker">ACTIVITY</span><h2>社区动态</h2></div>
-              <select style={{ ...input, width: 132 }} value={feedScope} onChange={(e) => setFeedScope(e.target.value as typeof feedScope)}>
-                <option value="following">关注动态</option><option value="friends">好友动态</option><option value="all">全社区</option>
-              </select>
-            </div>
-            {feed.length === 0 ? <Empty title="还没有动态" hint="关注创作者、加入小组或发布讨论后，这里会出现真实更新。" /> : (
-              <div className="cs-feed-list">
-                {feed.map((item) => (
-                  <article className="cs-feed-card" key={item.id}>
-                    <div className="cs-feed-top"><Avatar user={item.author} size={28} /><span>{item.author?.display_name || item.author?.username || '创作者'}</span><time>{formatDate(item.created_at)}</time></div>
-                    <h3>{item.title}</h3>
-                    <p>{item.summary}</p>
-                    <div className="cs-feed-foot">
-                      <span>{item.type === 'topic' ? '讨论' : item.type === 'group_post' ? `小组 · ${item.group?.name || ''}` : '公开作品'}</span>
-                      {item.type === 'topic' && <button type="button" style={tiny} onClick={() => void openTopic(item.target.id)}>查看讨论 <ChevronRight size={12} /></button>}
-                      {item.type === 'group_post' && item.target.group_id && <button type="button" style={tiny} onClick={() => void openGroup(item.target.group_id!)}>进入小组 <ChevronRight size={12} /></button>}
-                      {item.type === 'publication' && <button type="button" style={tiny} onClick={() => window.location.assign('/?page=community#community-public-works')}>查看公开作品 <ArrowUpRight size={12} /></button>}
-                    </div>
-                  </article>
-                ))}
-              </div>
-            )}
-          </div>
-          <aside className="cs-side">
-            <div className="cs-side-card">
-              <div className="cs-section-head"><div><span className="cs-kicker">PEOPLE</span><h2>推荐关注</h2></div></div>
-              {(overview?.suggestions || []).length === 0 ? <Empty title="暂无其他用户" /> : overview?.suggestions.map((user) => (
-                <UserLine key={user.id} user={user}>
-                  {user.id !== currentUserId && <button type="button" style={tiny} onClick={() => void doFollow(user)} disabled={busy === `follow:${user.id}`}>{user.is_following ? '已关注' : '关注'}</button>}
-                </UserLine>
-              ))}
-            </div>
-            <div className="cs-side-card">
-              <div className="cs-section-head"><div><span className="cs-kicker">GROUPS</span><h2>推荐小组</h2></div><button type="button" style={tiny} onClick={() => setTab('groups')}>全部</button></div>
-              {(overview?.groups || []).length === 0 ? <Empty title="还没有小组" /> : overview?.groups.slice(0, 4).map((group) => (
-                <button type="button" className="cs-mini-group" key={group.id} onClick={() => void openGroup(group.id)}><strong>{group.name}</strong><span>{group.member_count} 成员 · {group.category_label}</span></button>
-              ))}
-            </div>
-          </aside>
-        </section>
-      )}
-
       {tab === 'dynamics' && (
         <SocialDynamicsPanel
           lang={lang}
           currentUserId={currentUserId}
           onOpenProfile={setSocialProfileId}
-          onOpenMessages={(userId) => { setMessagePeerId(userId); setTab('messages') }}
         />
       )}
 
@@ -549,8 +495,8 @@ export default function CommunitySocialPage({
                 <div className="cs-person-card" key={user.id}>
                   <Avatar user={user} size={40} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <button type="button" className="cs-person-name" onClick={() => void openUser(user)}>{user.display_name || user.username}{user.is_owner ? <small>开发者</small> : null}</button>
-                    <span>@{user.username} · {user.follower_count} 粉丝{user.bio ? ` · ${user.bio}` : ''}</span>
+                    <button type="button" className="cs-person-name" onClick={() => { void openUser(user); setSocialProfileId(user.id) }}>{user.display_name || user.username}{user.is_owner ? <small>开发者</small> : null}</button>
+                    <span>@{user.username} · {user.follower_count} 粉丝{user.creator_level ? ` · 创作 ${user.creator_level.label}` : ''}{user.follower_level ? ` · 粉丝 ${user.follower_level.label}` : ''}{user.bio ? ` · ${user.bio}` : ''}</span>
                   </div>
                   {user.id !== currentUserId && (
                     <div className="cs-person-actions">
@@ -696,7 +642,7 @@ export default function CommunitySocialPage({
       )}
 
       {topicForm.open && (
-        <Modal title="发起讨论" subtitle="讨论会公开在内容社区，任何登录用户都可以回复。" onClose={() => setTopicForm((form) => ({ ...form, open: false }))}>
+        <Modal title="发起讨论" subtitle="讨论会公开在作品集，任何登录用户都可以回复。" onClose={() => setTopicForm((form) => ({ ...form, open: false }))}>
           <label className="cs-field"><span>分类</span><select style={input} value={topicForm.category} onChange={(e) => setTopicForm((form) => ({ ...form, category: e.target.value }))}>{TOPIC_CATEGORIES.filter((item) => item.key !== 'all').map((item) => <option key={item.key} value={item.key}>{item.zh}</option>)}</select></label>
           <label className="cs-field"><span>标题</span><input style={input} maxLength={120} value={topicForm.title} onChange={(e) => setTopicForm((form) => ({ ...form, title: e.target.value }))} placeholder="例如：如何让世界观规则更可信？" /></label>
           <label className="cs-field"><span>正文</span><textarea style={textarea} maxLength={20000} value={topicForm.body} onChange={(e) => setTopicForm((form) => ({ ...form, body: e.target.value }))} placeholder="分享经验、提出问题或说明你的观点…" /></label>

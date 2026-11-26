@@ -37,7 +37,7 @@ from i18n_errors import localized_http_exception_handler
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from products import router as products_router
 from settings import router as settings_router
-from billing import router as billing_router, record_ai_usage
+from ai_usage import record_ai_usage
 from information_sources import router as information_sources_router
 from auth import auth_disabled, current_user, router as auth_router, auth_middleware
 from geography import router as geography_router
@@ -80,6 +80,8 @@ from sanctions import router as sanctions_router
 from backups import router as backups_router
 from portability import router as portability_router
 from collaboration import router as collaboration_router
+from world_creation import router as world_creation_router
+from world_reset import router as world_reset_router
 
 # SQLite 保留增量迁移；PostgreSQL 新库直接由模型建表，避免执行 SQLite 专用 DDL。
 models.Base.metadata.create_all(bind=engine)
@@ -180,12 +182,13 @@ for router in (
     chat_router,
     creator_assets_router,
     settings_router,
-    billing_router,
     community_social_router,
     creative_works_router,
     spirit_economy_router,
     comic_works_router,
     social_core_router,
+    world_creation_router,
+    world_reset_router,
 ):
     app.include_router(router)
 app.include_router(platform_tools_router)

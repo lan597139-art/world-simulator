@@ -53,7 +53,7 @@
 }
 
 .ng-hint {
-  font-size: 9.5px;
+  font-size: var(--text-2xs);
   line-height: 1.6;
   color: var(--text-muted);
   text-align: right;
@@ -76,7 +76,7 @@
   border-radius: 16px;
   background: radial-gradient(ellipse at 50% 40%, color-mix(in srgb, var(--primary-color) 7%, transparent), transparent 58%),
     color-mix(in srgb, var(--ws-surface-bg) 42%, transparent);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .2);
+  box-shadow: inset 0 1px 0 var(--ws-rim-strong);
 }
 
 .ng-stage > .react-transform-wrapper {
@@ -153,7 +153,7 @@
 }
 
 .ng-helix-shadow {
-  stroke: color-mix(in srgb, #2f9e6f 28%, transparent);
+  stroke: color-mix(in srgb, var(--ws-pal-green-1) 28%, transparent);
   stroke-dasharray: 5 7;
 }
 
@@ -165,13 +165,13 @@
 
 .ng-relation path {
   fill: none;
-  stroke: color-mix(in srgb, #8b5cf6 36%, transparent);
+  stroke: color-mix(in srgb, var(--ws-pal-purple-1) 36%, transparent);
   stroke-width: 1.2;
   stroke-dasharray: 4 4;
 }
 
 .ng-relation.is-hot path {
-  stroke: #8b5cf6;
+  stroke: var(--ws-pal-purple-1);
   stroke-width: 1.8;
   opacity: .9;
 }
@@ -203,7 +203,7 @@
 .ng-event rect:first-of-type {
   fill: color-mix(in srgb, var(--card-bg) 88%, transparent);
   stroke-width: 1;
-  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, .12));
+  filter: drop-shadow(var(--ws-shadow-sm));
   transition: fill .16s ease, stroke-width .16s ease;
 }
 
@@ -220,23 +220,23 @@
 }
 
 .ng-event .ng-event-sub {
-  font-size: 9px;
+  font-size: var(--text-2xs);
   font-weight: 450;
   fill: var(--text-muted);
 }
 
 .ng-event.is-related rect:first-of-type {
   stroke-width: 1.7;
-  filter: drop-shadow(0 0 9px rgba(139, 92, 246, .34));
+  filter: drop-shadow(0 0 9px var(--ws-pal-purple-4));
 }
 
 .ng-event.is-active rect:first-of-type {
   stroke-width: 2;
-  filter: url(#ng-glow) drop-shadow(0 10px 22px rgba(79, 124, 255, .22));
+  filter: url(#ng-glow) drop-shadow(0 10px 22px var(--ws-pal-blue-14));
 }
 
 .ng-event-live {
-  fill: #2f9e6f;
+  fill: var(--ws-pal-green-1);
   animation: ng-pulse 1.6s ease-in-out infinite;
 }
 
@@ -255,19 +255,19 @@
 }
 
 .ng-entity text {
-  font-size: 9.5px;
+  font-size: var(--text-2xs);
   font-weight: 600;
   fill: var(--text-main);
   pointer-events: none;
 }
 
-.ng-entity.is-character rect { stroke: #2f9e6f; }
-.ng-entity.is-location rect { stroke: #d08437; }
-.ng-entity.is-organization rect { stroke: #8b5cf6; }
+.ng-entity.is-character rect { stroke: var(--ws-pal-green-1); }
+.ng-entity.is-location rect { stroke: var(--ws-pal-amber-5); }
+.ng-entity.is-organization rect { stroke: var(--ws-pal-purple-1); }
 
 .ng-entity.is-character { color: var(--success-strong); }
 .ng-entity.is-location { color: var(--warning-strong); }
-.ng-entity.is-organization { color: #8b5cf6; }
+.ng-entity.is-organization { color: var(--ws-pal-purple-1); }
 
 .ng-entity-link {
   stroke: currentColor;
@@ -288,7 +288,7 @@
   border-radius: 8px;
   background: color-mix(in srgb, var(--ws-surface-bg) 80%, transparent);
   backdrop-filter: blur(12px);
-  font-size: 9px;
+  font-size: var(--text-2xs);
   color: var(--text-muted);
   pointer-events: none;
 }
@@ -327,7 +327,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 8.5px;
+  font-size: var(--text-2xs);
   letter-spacing: .09em;
   font-weight: 700;
   color: var(--primary-color);
@@ -362,7 +362,7 @@
   padding: 4px 6px;
   border: 1px solid var(--card-border);
   border-radius: 6px;
-  font-size: 9px;
+  font-size: var(--text-2xs);
   color: var(--text-muted);
 }
 
@@ -371,7 +371,7 @@
   padding: 9px 10px;
   border: 1px dashed var(--card-border);
   border-radius: 8px;
-  font-size: 9.5px;
+  font-size: var(--text-2xs);
   line-height: 1.55;
   color: var(--text-muted);
 }
@@ -384,7 +384,7 @@
 
 .ng-entity-group h4 {
   margin: 0 0 7px;
-  font-size: 9px;
+  font-size: var(--text-2xs);
   font-weight: 700;
   letter-spacing: .06em;
   color: var(--text-muted);
@@ -406,13 +406,13 @@
   border-radius: 999px;
   background: transparent;
   color: var(--text-main);
-  font-size: 9.5px;
+  font-size: var(--text-2xs);
   cursor: pointer;
 }
 
-.ng-chip.is-character { border-color: color-mix(in srgb, #2f9e6f 40%, var(--card-border)); }
-.ng-chip.is-location { border-color: color-mix(in srgb, #d08437 40%, var(--card-border)); }
-.ng-chip.is-organization { border-color: color-mix(in srgb, #8b5cf6 40%, var(--card-border)); }
+.ng-chip.is-character { border-color: color-mix(in srgb, var(--ws-pal-green-1) 40%, var(--card-border)); }
+.ng-chip.is-location { border-color: color-mix(in srgb, var(--ws-pal-amber-5) 40%, var(--card-border)); }
+.ng-chip.is-organization { border-color: color-mix(in srgb, var(--ws-pal-purple-1) 40%, var(--card-border)); }
 
 .ng-related-list {
   display: flex;
@@ -443,7 +443,7 @@
 }
 
 .ng-related-list span {
-  font-size: 8.5px;
+  font-size: var(--text-2xs);
   color: var(--text-muted);
 }
 
@@ -455,7 +455,7 @@
   margin-top: 14px;
   padding-top: 10px;
   border-top: 1px solid var(--card-border);
-  font-size: 8.5px;
+  font-size: var(--text-2xs);
   color: var(--text-muted);
 }
 
@@ -478,7 +478,7 @@
 .ng-panel-placeholder p {
   max-width: 200px;
   margin: 0;
-  font-size: 9.5px;
+  font-size: var(--text-2xs);
   line-height: 1.65;
 }
 
@@ -523,14 +523,14 @@
 }
 
 .ng-axis-label {
-  font-size: 8px;
+  font-size: var(--text-2xs);
   font-weight: 700;
   letter-spacing: .12em;
   fill: var(--text-muted);
 }
 
 .ng-time-label {
-  font-size: 7.5px;
+  font-size: var(--text-3xs);
   fill: var(--text-muted);
   opacity: .72;
 }
@@ -571,7 +571,7 @@
   outline: none;
   background: transparent;
   color: var(--text-main);
-  font-size: 9px;
+  font-size: var(--text-2xs);
   cursor: pointer;
 }
 

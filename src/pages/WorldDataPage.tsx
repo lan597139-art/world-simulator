@@ -2,16 +2,20 @@ import { useState, useEffect } from 'react';
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import OfficialAssetPicker from '../components/media/OfficialAssetPicker';
 import { API_ORIGIN } from '../api/config';
+import { uploadMedia, resolveMediaUrl } from '../api/media';
+import * as structureApi from '../api/structure';
 
 // ✅ 预设地形与气候数据
 const TERRAIN_PRESETS = ['平原', '山地', '丘陵', '森林', '沙漠', '沼泽', '水域', '冰川', '盆地', '城市建筑群'];
 const CLIMATE_PRESETS = ['温带', '寒带', '热带', '干旱', '湿润', '极地', '高原气候', '多风暴', '魔法紊乱'];
 
 export default function WorldDataPage({ worldId }: { worldId?: string }) {
-  const [activeTab, setActiveTab] = useState<'map' | 'org'>('map');
+  const [activeTab, setActiveTab] = useState<'map' | 'org' | 'resource'>('map');
   
   const [locations, setLocations] = useState<any[]>([]);
   const [organizations, setOrganizations] = useState<any[]>([]);
+  const [resources, setResources] = useState<any[]>([]);
+  const [resourceTypes, setResourceTypes] = useState<any[]>([]);
   const [worldInfo, setWorldInfo] = useState<any>(null);
   const [mapUrlInput, setMapUrlInput] = useState('');
   const [officialOpen, setOfficialOpen] = useState(false);
@@ -25,6 +29,7 @@ export default function WorldDataPage({ worldId }: { worldId?: string }) {
   const [isTypeModalOpen, setIsTypeModalOpen] = useState(false);
 
   const [orgForm, setOrgForm] = useState({ name: '', description: '' });
+  const [resForm, setResForm] = useState({ name: '', description: '', quantity: '0', resource_type_id: '' });
 
   const loadData = async () => {
     try {
@@ -34,7 +39,16 @@ export default function WorldDataPage({ worldId }: { worldId?: string }) {
       ]);
       setLocations(await locRes.json());
       setOrganizations(await orgRes.json());
-      
+
+      if (worldId) {
+        const [resRes, typeRes] = await Promise.all([
+          structureApi.listResources(worldId),
+          structureApi.listResourceTypes(worldId),
+        ]);
+        setResources(resRes);
+        setResourceTypes(typeRes);
+      }
+
       if (worldId) {
         const worldRes = await fetch(`${API_ORIGIN}/api/worlds/${worldId}`);
         const wData = await worldRes.json();
@@ -50,36 +64,22 @@ export default function WorldDataPage({ worldId }: { worldId?: string }) {
     setLocForm({ name: '', description: '', terrain: '', climate: '', nation: '', x: 50, y: 50, geo_type: '城市/都市' });
   }, [worldId]);
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (!file.type.startsWith('image/')) return alert("请选择图片文件。");
     if (file.size > 30 * 1024 * 1024) return alert("图片过大！请选择小于 30MB 的图片。");
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
-        const maxWidth = 2560; 
-
-        if (width > maxWidth) {
-          height = Math.round((height * maxWidth) / width);
-          width = maxWidth;
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(img, 0, 0, width, height);
-          setMapUrlInput(canvas.toDataURL('image/jpeg', 0.85));
-        }
-      };
-      img.src = event.target?.result as string;
-    };
-    reader.readAsDataURL(file);
+    try {
+      // 上传到后端媒体库并保存相对地址，避免把 base64 大字符串写进数据库。
+      const uploaded = await uploadMedia(file);
+      setMapUrlInput(uploaded.file_url);
+      alert("地图底图已上传，点击「应用」保存。");
+    } catch (error) {
+      console.error("地图底图上传失败", error);
+      alert("地图底图上传失败，请重试。");
+    } finally {
+      e.target.value = '';
+    }
   };
 
   const handleSaveMapUrl = async () => {
@@ -140,6 +140,22 @@ export default function WorldDataPage({ worldId }: { worldId?: string }) {
     loadData();
   };
 
+  const handleAddResource = async () => {
+    if (!worldId) return;
+    if (!resForm.name.trim()) return alert("请输入资源名称");
+    if (!resForm.resource_type_id) return alert("请选择资源类型");
+    try {
+      await structureApi.createResource(worldId, {
+        name: resForm.name,
+        description: resForm.description,
+        quantity: Number(resForm.quantity) || 0,
+        resource_type_id: resForm.resource_type_id,
+      });
+      setResForm({ name: '', description: '', quantity: '0', resource_type_id: '' });
+      loadData();
+    } catch (error) { console.error(error); }
+  };
+
   const isLeftSide = locForm.x < 50;
 
   const getPinIcon = (type: string) => {
@@ -179,6 +195,9 @@ export default function WorldDataPage({ worldId }: { worldId?: string }) {
           </button>
           <button onClick={() => setActiveTab('org')} style={{ padding: '8px 24px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: activeTab === 'org' ? 'var(--primary-color)' : 'transparent', color: activeTab === 'org' ? 'var(--primary-text)' : 'var(--text-muted)', fontWeight: 600, transition: 'all 0.2s' }}>
             🏛️ 势力与组织
+          </button>
+          <button onClick={() => setActiveTab('resource')} style={{ padding: '8px 24px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: activeTab === 'resource' ? 'var(--primary-color)' : 'transparent', color: activeTab === 'resource' ? 'var(--primary-text)' : 'var(--text-muted)', fontWeight: 600, transition: 'all 0.2s' }}>
+            🧱 物品与植物
           </button>
         </div>
 
@@ -231,7 +250,7 @@ export default function WorldDataPage({ worldId }: { worldId?: string }) {
                           }}
                           style={{ position: 'relative', cursor: 'crosshair', width: 'fit-content' }}
                         >
-                          <img src={worldInfo.map_image_url} alt="Map" draggable={false} style={{ display: 'block', maxWidth: 'none', height: 'auto' }} />
+                          <img src={resolveMediaUrl(worldInfo.map_image_url)} alt="Map" draggable={false} style={{ display: 'block', maxWidth: 'none', height: 'auto' }} />
                           
                           {locations.map(loc => {
                             const pin = getPinIcon(loc.geo_type);
@@ -401,6 +420,37 @@ export default function WorldDataPage({ worldId }: { worldId?: string }) {
               })}
             </div>
           </>
+        )}
+
+        {activeTab === 'resource' && (
+          <div className="world-data-orgs">
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
+              <select value={resForm.resource_type_id} onChange={e => setResForm({...resForm, resource_type_id: e.target.value})} style={{ padding: '10px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)' }}>
+                <option value="">选择资源类型</option>
+                {resourceTypes.map(t => <option key={t.id} value={t.id}>{t.name}{t.unit ? `（${t.unit}）` : ''}</option>)}
+              </select>
+              <input type="text" placeholder="物品 / 植物名称" value={resForm.name} onChange={e => setResForm({...resForm, name: e.target.value})} style={{ flex: 1, minWidth: '160px', padding: '10px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)' }} />
+              <input type="text" placeholder="数量" value={resForm.quantity} onChange={e => setResForm({...resForm, quantity: e.target.value})} style={{ width: '90px', padding: '10px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)' }} />
+              <input type="text" placeholder="描述" value={resForm.description} onChange={e => setResForm({...resForm, description: e.target.value})} style={{ flex: 2, minWidth: '160px', padding: '10px', borderRadius: '6px', border: '1px solid var(--card-border)', background: 'transparent', color: 'var(--text-main)' }} />
+              <button onClick={handleAddResource} style={{ padding: '0 20px', background: 'var(--primary-color)', color: 'var(--primary-text)', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>添加</button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
+              {resources.length === 0 && <div style={{ color: 'var(--text-muted)', fontSize: '13px' }}>还没有物品或植物，先在上方选择资源类型并添加。</div>}
+              {resources.map(res => {
+                const type = resourceTypes.find(t => t.id === res.resource_type_id);
+                return (
+                  <div key={res.id} className="ws-glass-surface" style={{ padding: '16px', borderRadius: '8px' }}>
+                    <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '15px' }}>{res.name}</div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>
+                      {type?.name || '未分类'} · 数量 {res.quantity} {res.unit || type?.unit || ''}
+                    </div>
+                    <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '8px', lineHeight: 1.5 }}>{res.description || '暂无描述'}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         )}
 
         {activeTab === 'org' && (

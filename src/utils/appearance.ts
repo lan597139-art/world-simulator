@@ -571,6 +571,75 @@ function analyzeBackgroundTone(url: string): void {
   image.src = url
 }
 
+/**
+ * 解析当前生效的玻璃档位。
+ * 优先取 <html> 上的 data-glass（由偏好路径 applyExperience 与外观工作台写入），
+ * 兜底读取本地偏好，保证偏好尚未加载或离线时档位同样生效。
+ * 返回 'medium' / 未识别值时视为「标准」，走外观自定义值。
+ */
+function resolveGlassTier(): string | undefined {
+  const fromDom = document.documentElement.dataset.glass
+  if (fromDom) return fromDom
+  try {
+    const stored = localStorage.getItem('ws.ui.glass')
+    return stored || undefined
+  } catch { /* private mode */ return undefined }
+}
+
+/** 解析当前生效的字号档位（服务端偏好，无本地兜底）。 */
+function resolveFontSizeTier(): string | undefined {
+  return document.documentElement.dataset.fontSize || undefined
+}
+
+/** 玻璃基础模糊 / 透明：仅在无档位时由外观自定义值驱动。 */
+function setGlassBase(root: HTMLElement, appearance: Appearance): void {
+  root.style.setProperty('--glass-blur', `${appearance.glass_blur}px`)
+  root.style.setProperty('--glass-opacity', `${appearance.glass_opacity / 100}`)
+}
+
+/** 字号阶：由外观自定义的正文字号派生。 */
+function setTypeScale(root: HTMLElement, appearance: Appearance): void {
+  const { font_size } = appearance.text
+  root.style.setProperty('--text-base', `${font_size}px`)
+  root.style.setProperty('--text-sm', `${Math.max(9, font_size - 2)}px`)
+  root.style.setProperty('--text-xs', `${Math.max(8, font_size - 4)}px`)
+  root.style.setProperty('--text-lg', `${font_size + 3}px`)
+  root.style.setProperty('--text-xl', `${font_size + 6}px`)
+  root.style.setProperty('--text-2xl', `${font_size + 13}px`)
+  root.style.setProperty('--text-3xl', `${font_size + 21}px`)
+}
+
+/**
+ * 应用「偏好驱动」的令牌覆写：玻璃档位与字号档位。
+ *
+ * 这两个全局设置由 html[data-glass] / html[data-font-size] 的 CSS 规则驱动，
+ * 而 applyAppearance 会用内联样式写入同名令牌——内联优先级高于样式表规则，
+ * 会直接遮蔽档位，导致偏好路径下全局设置失效。
+ *
+ * 因此统一在写入外观内联值之后调用：先用外观值打底，再把当前生效档位所覆盖的
+ * 令牌从行内样式中移除，交回 CSS 规则。由 applyAppearance 末尾与 applyExperience
+ * 共同调用，保证首次加载、切换页面、改动偏好三条路径一致。
+ */
+export function applyPreferenceTokens(): void {
+  const root = document.documentElement
+  setGlassBase(root, currentAppearance)
+  setTypeScale(root, currentAppearance)
+
+  const glassTier = resolveGlassTier()
+  if (glassTier === 'low' || glassTier === 'high' || glassTier === 'solid') {
+    root.style.removeProperty('--glass-blur')
+    root.style.removeProperty('--glass-opacity')
+  }
+  // 字号档位规则（design-system.css）只覆盖到 --text-lg，故仅移除这四个令牌，
+  // xl 及以上仍由外观自定义值驱动。
+  const fontTier = resolveFontSizeTier()
+  if (fontTier === 'small' || fontTier === 'large') {
+    for (const token of ['--text-xs', '--text-sm', '--text-base', '--text-lg']) {
+      root.style.removeProperty(token)
+    }
+  }
+}
+
 export function applyAppearance(input: Appearance): void {
   const appearance = normalizeAppearance(input)
   currentAppearance = appearance
@@ -580,8 +649,9 @@ export function applyAppearance(input: Appearance): void {
   root.style.setProperty('--ws-bg-position', appearance.background_position || 'center')
   root.style.setProperty('--ws-bg-blur', `${appearance.background_blur}px`)
   root.style.setProperty('--ws-bg-opacity', `${appearance.background_opacity / 100}`)
-  root.style.setProperty('--glass-blur', `${appearance.glass_blur}px`)
-  root.style.setProperty('--glass-opacity', `${appearance.glass_opacity / 100}`)
+  // 玻璃基础模糊 / 透明由外观自定义值驱动；若处于低 / 高 / 实色档位，
+  // 稍后由 applyPreferenceTokens 移除内联值、交回 html[data-glass] 规则。
+  setGlassBase(root, appearance)
   root.style.setProperty('--glass-glow', `${appearance.glow / 100}`)
   root.dataset.customBackground = image ? 'true' : 'false'
 
@@ -622,13 +692,9 @@ export function applyAppearance(input: Appearance): void {
   root.style.setProperty('--ws-text-offset', `${text.offset}`)
   root.style.setProperty('--ws-text-line-height', `${text.line_height}`)
   root.style.setProperty('--ws-text-size', `${text.font_size}px`)
-  root.style.setProperty('--text-base', `${text.font_size}px`)
-  root.style.setProperty('--text-sm', `${Math.max(9, text.font_size - 2)}px`)
-  root.style.setProperty('--text-xs', `${Math.max(8, text.font_size - 4)}px`)
-  root.style.setProperty('--text-lg', `${text.font_size + 3}px`)
-  root.style.setProperty('--text-xl', `${text.font_size + 6}px`)
-  root.style.setProperty('--text-2xl', `${text.font_size + 13}px`)
-  root.style.setProperty('--text-3xl', `${text.font_size + 21}px`)
+  // 字号阶由外观自定义字号派生；若处于小 / 大字号档位，
+  // 稍后由 applyPreferenceTokens 移除档位覆盖的令牌、交回 html[data-font-size] 规则。
+  setTypeScale(root, appearance)
   root.style.setProperty('--ws-text-bg-color', text.background_auto ? 'var(--glass-frost-bg)' : text.background_color)
   root.style.setProperty('--ws-text-bg-opacity', `${text.background_opacity}`)
   root.style.setProperty('--ws-text-bg-thickness', `${text.background_thickness}`)
@@ -642,6 +708,9 @@ export function applyAppearance(input: Appearance): void {
     delete root.dataset.bgTone
     root.style.removeProperty('--ws-bg-luminance')
   }
+
+  // 偏好驱动的档位（玻璃 / 字号）最后统一处理，确保其覆盖外观内联值。
+  applyPreferenceTokens()
 
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent<Appearance>('ws:appearance-change', { detail: appearance }))

@@ -67,6 +67,11 @@ MODULES = [
     "m055_social_core",
     "m056_spirit_rewards",
     "m057_invite_tiers",
+    "m058_spirit_currency_rework",
+    "m059_community_experience",
+    "m060_user_analytics",
+    "m061_world_creation_nav",
+    "m062_spirit_plant_expiry",
 ]
 
 

@@ -55,7 +55,7 @@ export default function CompanionRuntimePage({ onOpenPersonas }: { onOpenPersona
                 <strong style={{ fontSize: 15 }}>{profile.name}</strong>
                 <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{profile.identity || '全局 AI 人格'} · {profile.current_state?.label}</div>
               </div>
-              <span style={{ marginLeft: 'auto', fontSize: 9, padding: '3px 8px', borderRadius: 10, border: `1px solid ${active ? 'var(--primary-color)' : 'var(--card-border)'}`, color: active ? 'var(--primary-color)' : 'var(--text-muted)' }}>
+              <span style={{ marginLeft: 'auto', fontSize: 'var(--text-2xs)', padding: '3px 8px', borderRadius: 10, border: `1px solid ${active ? 'var(--primary-color)' : 'var(--card-border)'}`, color: active ? 'var(--primary-color)' : 'var(--text-muted)' }}>
                 {active ? '后台运行中' : '已暂停'}
               </span>
             </div>
@@ -91,7 +91,7 @@ export default function CompanionRuntimePage({ onOpenPersonas }: { onOpenPersona
 
 function Metric({ label, value }: { label: string; value: number }) {
   return <div style={{ border: '1px solid var(--card-border)', borderRadius: 7, padding: '6px 7px' }}>
-    <div style={{ fontSize: 9, color: 'var(--text-muted)' }}>{label}</div>
+    <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>{label}</div>
     <div style={{ fontSize: 15, fontWeight: 700 }}>{value}</div>
   </div>
 }

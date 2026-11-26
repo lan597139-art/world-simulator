@@ -22,7 +22,7 @@
   gap: 8px;
   min-height: 56px;
   padding: 0 24px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  border-bottom: 1px solid var(--card-border);
   background: color-mix(in srgb, var(--bg-color) 84%, transparent);
   backdrop-filter: blur(20px) saturate(150%);
   -webkit-backdrop-filter: blur(20px) saturate(150%);
@@ -52,7 +52,7 @@
 }
 
 .yb-pinned-tab:hover {
-  border-color: rgba(0, 0, 0, 0.1);
+  border-color: var(--card-border);
   background: color-mix(in srgb, var(--ws-surface-bg) 62%, transparent);
   color: var(--text-main);
 }
@@ -74,7 +74,7 @@
   min-height: 46px;
   padding: 0 24px;
   overflow-x: auto;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+  border-bottom: 1px solid var(--card-border);
   background: color-mix(in srgb, var(--bg-color) 78%, transparent);
   scrollbar-width: none;
 }
@@ -87,7 +87,7 @@
   flex: none;
   margin-right: 10px;
   color: var(--text-muted);
-  font-size: 9px;
+  font-size: var(--text-2xs);
   font-weight: 650;
   letter-spacing: 0.08em;
   white-space: nowrap;
@@ -137,7 +137,7 @@
 .yb-overview-eyebrow {
   display: block;
   color: var(--text-muted);
-  font-size: 8.5px;
+  font-size: var(--text-2xs);
   font-weight: 700;
   letter-spacing: 1.5px;
   text-transform: uppercase;
@@ -178,7 +178,7 @@
   color: var(--text-main);
   text-align: left;
   cursor: pointer;
-  box-shadow: 0 14px 38px rgba(0, 0, 0, 0.045);
+  box-shadow: 0 14px 38px var(--ws-shadow-md);
   backdrop-filter: blur(24px) saturate(150%);
   -webkit-backdrop-filter: blur(24px) saturate(150%);
   transition: transform 170ms ease, border-color 170ms ease, box-shadow 170ms ease;
@@ -187,7 +187,7 @@
 .yb-overview-card:hover {
   transform: translateY(-2px);
   border-color: color-mix(in srgb, var(--primary-color) 26%, transparent);
-  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.075);
+  box-shadow: 0 18px 44px var(--ws-shadow-md);
 }
 
 .yb-overview-card-top {
@@ -202,7 +202,7 @@
   place-items: center;
   width: 42px;
   height: 42px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--card-border);
   border-radius: 11px;
   background: color-mix(in srgb, var(--ws-surface-bg) 62%, transparent);
   color: var(--text-main);
@@ -210,7 +210,7 @@
 
 .yb-overview-card-count {
   color: var(--text-muted);
-  font-size: 9px;
+  font-size: var(--text-2xs);
   letter-spacing: 0.04em;
 }
 

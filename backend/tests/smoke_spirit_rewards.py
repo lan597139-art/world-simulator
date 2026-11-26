@@ -38,6 +38,22 @@ def run():
     db.commit()
     db.close()
 
+    # 清理上一轮遗留的领取记录，并恢复全局默认值，保证测试可重复运行、
+    # 不污染其他用例（注册奖励 500、世界灵植 100、OC 灵植 30）。
+    db = SessionLocal()
+    db.query(models.SpiritRewardClaim).filter(models.SpiritRewardClaim.user_id == owner_id).delete(synchronize_session=False)
+    world_row = db.query(models.SpiritPlantType).filter(models.SpiritPlantType.key == "world_seed").first()
+    if world_row:
+        world_row.price_fruit = 100
+    oc_row = db.query(models.SpiritPlantType).filter(models.SpiritPlantType.key == "oc_seed").first()
+    if oc_row:
+        oc_row.price_fruit = 30
+    reg_rule = db.query(models.SpiritRewardRule).filter(models.SpiritRewardRule.key == "registration_bonus").first()
+    if reg_rule:
+        reg_rule.fruit_amount = 500
+    db.commit()
+    db.close()
+
     listed = client.get("/api/spirit/rewards")
     check("奖励列表", listed.status_code == 200, listed.text)
     keys = {row["key"] for row in listed.json()["items"]}
@@ -73,6 +89,8 @@ def run():
     plant = overview.json()["plants"][0]
     price = client.patch(f"/api/spirit/admin/plants/{plant['id']}", json={"price_fruit": 75})
     check("后台调价", price.status_code == 200 and price.json()["price_fruit"] == 75, price.text)
+    # 调价仅为验证能力，立即恢复默认价，避免污染其他用例。
+    client.patch(f"/api/spirit/admin/plants/{plant['id']}", json={"price_fruit": 100})
     new_plant = client.post("/api/spirit/admin/plants", json={
         "key": f"event_plant_{suffix}", "name": "活动灵植", "category": "world",
         "price_fruit": 40, "description": "D4 测试",
@@ -100,7 +118,7 @@ def run():
     invited_account = db.query(models.SpiritAccount).filter(models.SpiritAccount.user_id == invited_id).first()
     invited_balance = invited_account.fruit_balance if invited_account else None
     db.close()
-    check("被邀请人奖励入账", invited_balance == 145, str(invited_balance))
+    check("被邀请人奖励入账", invited_balance == 525, str(invited_balance))
     owner_after = client.get("/api/spirit/summary").json()["account"]["fruit_balance"]
     check("邀请人奖励入账", owner_after == owner_before + 10, f"{owner_before}->{owner_after}")
 
@@ -124,6 +142,9 @@ def run():
     invited2_balance = invited2_account.fruit_balance if invited2_account else None
     db.close()
     check("注册奖励读取后台配置", invited2_balance == 200, str(invited2_balance))
+
+    # 测试临时改动了全局注册奖励，恢复为迁移默认值，避免影响其他用例。
+    client.patch(f"/api/spirit/admin/rewards/{registration_rule['id']}", json={"fruit_amount": 500})
 
     db = SessionLocal()
     invite_row = db.query(models.InviteCode).filter(models.InviteCode.id == invite_id).first()
@@ -162,6 +183,16 @@ def run():
         check("幂等重复拒绝", getattr(exc, "status_code", None) == 409, str(exc))
     db.rollback()
     db.close()
+
+    # 清理本次创建的临时规则/灵植与测试用户，避免污染其他用例。
+    db = SessionLocal()
+    try:
+        db.query(models.SpiritRewardRule).filter(models.SpiritRewardRule.key == f"event_{suffix}").delete(synchronize_session=False)
+        db.query(models.SpiritPlantType).filter(models.SpiritPlantType.key == f"event_plant_{suffix}").delete(synchronize_session=False)
+        db.query(models.AppUser).filter(models.AppUser.username.in_([f"spirit_user_{suffix}"])).delete(synchronize_session=False)
+        db.commit()
+    finally:
+        db.close()
 
     print(f"\n===== {passed} passed, {failed} failed =====")
     raise SystemExit(1 if failed else 0)

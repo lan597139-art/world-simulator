@@ -1,11 +1,34 @@
 import { useEffect, useMemo, useState } from 'react'
 import * as journal from '../api/journal'
 import * as grants from '../api/aiGrants'
-import { listMyPublications, publishBiography, publishEntry, withdrawPublication, type AuthorPublication } from '../api/community'
+import { listMyPublications, publishBiography, publishEntry, updatePublicationPermissions, withdrawPublication, type AuthorPublication } from '../api/community'
 import { getYunbao } from '../api/yunbao'
 import { listInformationSources, type InformationSource } from '../api/informationSources'
+import '../styles/journal.css'
 
 type Tab = 'entries' | 'people' | 'biographies' | 'grants' | 'published'
+
+/**
+ * 两个一级域（需求 1.3）：日记页曾把 5 个域平铺成 5 个并列 tab，
+ * 现在先分「记录」「传记与授权」，域内再切子页签。
+ */
+type JournalDomain = 'record' | 'bio'
+
+const JOURNAL_DOMAINS: Array<{ key: JournalDomain; label: string; tabs: Array<[Tab, string]> }> = [
+  {
+    key: 'record',
+    label: '记录与关系',
+    tabs: [['entries', '日记与经历'], ['people', '云宝的关系网']],
+  },
+  {
+    key: 'bio',
+    label: '传记与授权',
+    tabs: [['biographies', '云宝的传记'], ['grants', 'AI 授权'], ['published', '云宝的发布']],
+  },
+]
+
+const domainOf = (tab: Tab): JournalDomain =>
+  JOURNAL_DOMAINS.find((domain) => domain.tabs.some(([key]) => key === tab))?.key || 'record'
 
 const today = () => new Date().toISOString().slice(0, 10)
 
@@ -64,6 +87,11 @@ export default function JournalPage({
   const [grantRows, setGrantRows] = useState<grants.AiGrant[]>([])
   const [accessLogs, setAccessLogs] = useState<grants.AiAccessLog[]>([])
   const [publications, setPublications] = useState<AuthorPublication[]>([])
+  const [permTarget, setPermTarget] = useState<AuthorPublication | null>(null)
+  const [permPublicVisible, setPermPublicVisible] = useState(true)
+  const [permExperienceEnabled, setPermExperienceEnabled] = useState(false)
+  const [permExperienceFruit, setPermExperienceFruit] = useState('')
+  const [permBusy, setPermBusy] = useState(false)
   const [grantLevel, setGrantLevel] = useState(2)
   const [grantEntryId, setGrantEntryId] = useState('')
   const [grantMemory, setGrantMemory] = useState(false)
@@ -121,6 +149,33 @@ export default function JournalPage({
     setSelectedId('')
     setDraft(emptyDraft())
     setLog('')
+  }
+
+  const openPermissions = (row: AuthorPublication) => {
+    setPermTarget(row)
+    setPermPublicVisible(row.public_visible)
+    setPermExperienceEnabled(row.experience_enabled)
+    setPermExperienceFruit(row.experience_fruit === null ? '' : String(row.experience_fruit))
+    setLog('')
+  }
+
+  const savePermissions = async () => {
+    if (!permTarget) return
+    setPermBusy(true)
+    try {
+      await updatePublicationPermissions(permTarget.id, {
+        public_visible: permPublicVisible,
+        experience_enabled: permExperienceEnabled,
+        experience_fruit: permExperienceFruit === '' ? null : Number(permExperienceFruit),
+      })
+      setPermTarget(null)
+      await listMyPublications().then(setPublications)
+      setLog(permExperienceEnabled ? '灵果体验权限已更新。' : '作品内容权限已更新。')
+    } catch (error: any) {
+      setLog(`❌ ${error.message || error}`)
+    } finally {
+      setPermBusy(false)
+    }
   }
 
   const startEdit = (entry: journal.JournalEntry) => {
@@ -239,12 +294,36 @@ export default function JournalPage({
 
   return (
     <div style={{ padding: '1.5rem', maxWidth: 1180, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-        {([['entries', '日记与经历'], ['people', '云宝的关系网'], ['biographies', '云宝的传记'], ['grants', 'AI 授权'], ['published', '云宝的发布']] as Array<[Tab, string]>).map(([key, label]) => (
-          <button key={key} onClick={() => setTab(key)} style={{
-            ...buttonStyle, borderColor: tab === key ? 'var(--primary-color)' : 'var(--card-border)',
-            color: tab === key ? 'var(--primary-color)' : 'var(--text-main)',
-          }}>{label}</button>
+      <div className="jr-domains" role="tablist" aria-label="日记与传记分区">
+        {JOURNAL_DOMAINS.map((domain) => {
+          const active = domainOf(tab) === domain.key
+          return (
+            <button
+              key={domain.key}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              className={`jr-domain${active ? ' is-active' : ''}`}
+              onClick={() => { if (!active) setTab(domain.tabs[0][0]) }}
+            >
+              {domain.label}
+              <small>{domain.tabs.length}</small>
+            </button>
+          )
+        })}
+      </div>
+
+      <div className="jr-subtabs">
+        {(JOURNAL_DOMAINS.find((domain) => domain.key === domainOf(tab))?.tabs || []).map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            className={`jr-subtab${tab === key ? ' is-active' : ''}`}
+            aria-current={tab === key ? 'page' : undefined}
+            onClick={() => setTab(key)}
+          >
+            {label}
+          </button>
         ))}
       </div>
 
@@ -271,7 +350,7 @@ export default function JournalPage({
                   <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{entry.entry_date}</span>
                 </span>
                 <span style={{ fontSize: 11, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.content}</span>
-                <span style={{ fontSize: 9, color: 'var(--primary-color)' }}>{entry.entry_type_label} · {entry.sensitivity}</span>
+                <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--primary-color)' }}>{entry.entry_type_label} · {entry.sensitivity}</span>
               </button>
             ))}
           </div>
@@ -497,11 +576,68 @@ export default function JournalPage({
               <div style={{ flex: 1 }}>
                 <strong style={{ fontSize: 13 }}>{row.title}</strong>
                 <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--primary-color)' }}>{row.status}</span>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>{row.work_type} · {row.author_display} · 阅读 {row.view_count}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>{row.work_type} · {row.author_display} · 阅读 {row.view_count} · 点击 {row.click_count}</div>
               </div>
-              {row.status === 'published' && <button style={{ ...buttonStyle, color: 'var(--danger-color)' }} onClick={() => void withdrawPublication(row.id).then(() => listMyPublications()).then(setPublications)}>撤回</button>}
+              {row.status === 'published' && (
+                <>
+                  <button style={{ ...buttonStyle, color: 'var(--primary-color)' }} onClick={() => openPermissions(row)}>权限</button>
+                  <button style={{ ...buttonStyle, color: 'var(--danger-color)' }} onClick={() => void withdrawPublication(row.id).then(() => listMyPublications()).then(setPublications)}>撤回</button>
+                </>
+              )}
             </div>
           ))}
+        </div>
+      )}
+
+      {permTarget && (
+        <div
+          onClick={() => setPermTarget(null)}
+          style={{ position: 'fixed', inset: 0, zIndex: 90, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, background: 'rgba(12, 16, 26, 0.66)' }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={`作品权限 ${permTarget.title}`}
+            onClick={(event) => event.stopPropagation()}
+            className="glass-card"
+            style={{ width: 'min(440px, 100%)', padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}
+          >
+            <strong style={{ fontSize: 14 }}>作品内容权限 · {permTarget.title}</strong>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+              <input type="checkbox" checked={permPublicVisible} onChange={(event) => setPermPublicVisible(event.target.checked)} />
+              <span>普通公开内容（普通体验可见）</span>
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+              <input type="checkbox" checked={permExperienceEnabled} onChange={(event) => setPermExperienceEnabled(event.target.checked)} />
+              <span>开放灵果体验</span>
+            </label>
+            {permExperienceEnabled ? (
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13 }}>
+                <span>灵果消耗数量</span>
+                <input
+                  className="field"
+                  type="number"
+                  min="0"
+                  value={permExperienceFruit}
+                  onChange={(event) => setPermExperienceFruit(event.target.value)}
+                  placeholder="留空则不开放收费体验"
+                />
+              </label>
+            ) : null}
+            <p style={{ margin: 0, fontSize: 11, color: 'var(--text-muted)' }}>
+              消耗数量与创作者收益规则以产品确认为准；留空时不开放收费体验，不虚构定价。
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+              <button style={{ ...buttonStyle }} onClick={() => setPermTarget(null)}>关闭</button>
+              <button
+                style={{ ...buttonStyle, background: 'var(--primary-color)', color: '#fff', borderColor: 'var(--primary-color)' }}
+                disabled={permBusy}
+                onClick={() => void savePermissions()}
+              >
+                {permBusy ? '保存中…' : '保存'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

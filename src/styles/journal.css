@@ -1,0 +1,73 @@
+/* 日记与传记：两个一级域 + 域内子页签（原 5 个并列 tab 收敛） */
+
+.jr-domains {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.jr-domain {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 15px;
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: color 150ms ease, border-color 150ms ease, background 150ms ease;
+}
+
+.jr-domain small {
+  padding: 0 5px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-main) 10%, transparent);
+  font-size: var(--text-2xs);
+  line-height: 1.7;
+  color: var(--text-muted);
+}
+
+.jr-domain:hover {
+  color: var(--text-main);
+}
+
+.jr-domain.is-active {
+  border-color: color-mix(in srgb, var(--primary-color, var(--ws-pal-blue-1)) 45%, var(--card-border));
+  color: var(--primary-color, var(--ws-pal-blue-1));
+  font-weight: 600;
+}
+
+.jr-subtabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding-bottom: 2px;
+}
+
+.jr-subtab {
+  padding: 5px 12px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 11.5px;
+  cursor: pointer;
+  transition: color 150ms ease, background 150ms ease, border-color 150ms ease;
+}
+
+.jr-subtab:hover {
+  color: var(--text-main);
+}
+
+.jr-subtab.is-active {
+  border-color: var(--card-border);
+  background: color-mix(in srgb, var(--text-main) 8%, transparent);
+  color: var(--text-main);
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .jr-domain { padding: 7px 12px; font-size: 12px; }
+}

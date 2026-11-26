@@ -11,6 +11,8 @@ export type SpiritPlant = {
   unit: string
   sort_order: number
   is_active: boolean
+  expires_at: string | null
+  is_expired: boolean
 }
 
 export type SpiritInventoryItem = {
@@ -152,10 +154,32 @@ export const claimSpiritReward = (key: string, claimKey?: string) =>
 export const getSpiritAdminOverview = (q = '') =>
   request<SpiritAdminOverview>(`/api/spirit/admin/overview?q=${encodeURIComponent(q)}`)
 
+export type UserActivityRow = {
+  user_id: string
+  username: string
+  display_name: string
+  is_owner: boolean
+  posts: number
+  comments: number
+  works: number
+  reads: number
+  likes_given: number
+  favorites_given: number
+  following: number
+  followers: number
+  activity_level: { level: number; label: string; score: number; next_threshold: number | null; progress: number }
+  last_login_at: string | null
+  last_active_at: string | null
+  created_at: string | null
+}
+
+export const getUserActivityOverview = (q = '') =>
+  request<{ items: UserActivityRow[] }>(`/api/admin/user-activity?q=${encodeURIComponent(q)}`)
+
 export const updateSpiritRewardRule = (id: string, payload: Partial<SpiritRewardRule> & { condition?: { type?: string } }) =>
   request<SpiritRewardRule>(`/api/spirit/admin/rewards/${id}`, { method: 'PATCH', body: JSON.stringify(payload) })
 
-export const updateSpiritPlant = (id: string, payload: { price_fruit?: number; is_active?: boolean; name?: string; description?: string }) =>
+export const updateSpiritPlant = (id: string, payload: { price_fruit?: number; is_active?: boolean; name?: string; description?: string; expires_at?: string | null }) =>
   request<SpiritPlant>(`/api/spirit/admin/plants/${id}`, { method: 'PATCH', body: JSON.stringify(payload) })
 
 export const createSpiritRewardRule = (payload: {

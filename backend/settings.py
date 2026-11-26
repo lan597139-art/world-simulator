@@ -29,6 +29,9 @@ DEFAULT_PREFERENCES = {
 DEFAULT_PRIVACY = {
     "public_profile": True,
     "show_activity": True,
+    # 用户画像分析（已发布作品 / 草稿 / 阅读 / 点击 / 互动等统计）默认不对外展示。
+    # 本人始终可见自己的统计；该开关只控制他人查看公开资料时是否展示。
+    "show_stats": False,
     "allow_follow": True,
     "allow_friend_requests": True,
     "allow_group_invites": True,

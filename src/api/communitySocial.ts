@@ -1,4 +1,5 @@
 import { API_ORIGIN } from './config'
+import type { LevelInfo } from './socialCore'
 
 export type SocialUser = {
   id: string
@@ -12,6 +13,9 @@ export type SocialUser = {
   friend_request: '' | 'incoming' | 'outgoing'
   follower_count: number
   following_count: number
+  /** 创作等级与粉丝等级，由用户画像分析下发。 */
+  creator_level?: LevelInfo
+  follower_level?: LevelInfo
 }
 
 export type CommunityTopic = {

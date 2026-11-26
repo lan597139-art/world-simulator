@@ -43,4 +43,13 @@ backend/uploads/
 backend/backups/
 
 # Local visual verification artifacts
-.verify/
+# 基线 JSON 需要入库（团队共用一份对照），截图与临时脚本不入库。
+.verify/*
+!.verify/baseline/
+.verify/baseline/shots/
+.verify/baseline/*.prev.json
+# 基线脚本要共用
+!.verify/visual_baseline.py
+!.verify/cdp_shot.py
+!.verify/token_inheritance_audit.py
+!.verify/token_inheritance_audit_focus.py

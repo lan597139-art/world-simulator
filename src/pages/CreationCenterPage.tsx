@@ -1,17 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   ArrowUpRight,
   BookOpen,
-  CalendarDays,
+  FolderKanban,
   Gamepad2,
   Globe2,
-  History,
-  Link2,
   NotebookPen,
   PanelsTopLeft,
-  PenLine,
-  PlayCircle,
-  Route,
+  Plus,
   Sparkles,
   UserRound,
   type LucideIcon,
@@ -21,7 +17,9 @@ import { listWorks, type CreativeWork } from '../api/creativeWorks'
 import { resolveMediaUrl } from '../api/media'
 import { getAllWorlds } from '../services/worldService'
 import type { ProductKey } from '../product/types'
-import { LiquidGlass } from '../components/LiquidGlass';
+import { LiquidGlass } from '../components/LiquidGlass'
+import './../styles/creation-center.css'
+
 type Lang = 'zh' | 'en'
 
 export type CreationToolKey =
@@ -36,7 +34,7 @@ export type CreationToolKey =
 
 export type CreationAssetKey = 'worlds' | 'characters' | 'works'
 
-type CreationScene = ProductKey | 'comic'
+export type CreationScene = ProductKey | 'comic'
 
 type Scene = {
   product: CreationScene
@@ -47,18 +45,13 @@ type Scene = {
   icon: LucideIcon
 }
 
-type Tool = {
-  page: CreationToolKey
-  number: string
-  label: string
-  icon: LucideIcon
-}
-
 type Asset = {
   key: CreationAssetKey
   label: string
   unit: string
 }
+
+type WorldLite = { id: string; name: string; product_scene?: string | null; updated_at?: string }
 
 function sceneCopy(lang: Lang): Scene[] {
   return lang === 'zh'
@@ -78,65 +71,58 @@ function sceneCopy(lang: Lang): Scene[] {
       ]
 }
 
-function toolCopy(lang: Lang): Tool[] {
-  return lang === 'zh'
-    ? [
-        { page: 'world-management', number: '02', label: '世界管理', icon: Globe2 },
-        { page: 'character-management', number: '03', label: '人物管理', icon: UserRound },
-        { page: 'relationships', number: '04', label: '关系与组织', icon: Link2 },
-        { page: 'events', number: '05', label: '事件管理', icon: CalendarDays },
-        { page: 'timeline', number: '06', label: '时间线', icon: History },
-        { page: 'simulation', number: '07', label: '模拟运行', icon: PlayCircle },
-        { page: 'storyline', number: '', label: '故事线管理', icon: Route },
-        { page: 'writing', number: '08', label: '写作辅助', icon: PenLine },
-      ]
-    : [
-        { page: 'world-management', number: '02', label: 'World Management', icon: Globe2 },
-        { page: 'character-management', number: '03', label: 'Character Management', icon: UserRound },
-        { page: 'relationships', number: '04', label: 'Relationships & Organizations', icon: Link2 },
-        { page: 'events', number: '05', label: 'Event Management', icon: CalendarDays },
-        { page: 'timeline', number: '06', label: 'Timeline', icon: History },
-        { page: 'simulation', number: '07', label: 'Simulation', icon: PlayCircle },
-        { page: 'storyline', number: '', label: 'Storyline Management', icon: Route },
-        { page: 'writing', number: '08', label: 'Writing Assistant', icon: PenLine },
-      ]
-}
-
 function assetCopy(lang: Lang): Asset[] {
   return lang === 'zh'
     ? [
-        { key: 'worlds', label: '我的世界', unit: '个世界' },
-        { key: 'characters', label: '我的 OC', unit: '位人物' },
-        { key: 'works', label: '我的作品', unit: '部作品' },
+        { key: 'worlds', label: '世界', unit: '个' },
+        { key: 'characters', label: '人物', unit: '位' },
+        { key: 'works', label: '作品', unit: '部' },
       ]
     : [
-        { key: 'worlds', label: 'My worlds', unit: 'worlds' },
-        { key: 'characters', label: 'My OCs', unit: 'characters' },
-        { key: 'works', label: 'My works', unit: 'works' },
+        { key: 'worlds', label: 'Worlds', unit: '' },
+        { key: 'characters', label: 'Characters', unit: '' },
+        { key: 'works', label: 'Works', unit: '' },
       ]
 }
 
 type AssetCounts = Record<CreationAssetKey, number | null>
+
+const SCENE_LABEL: Record<string, string> = {
+  game: '游戏创作',
+  literature: '文学创作',
+  companion: '虚拟角色',
+  diary: '日记与传记',
+  comic: '漫画创作',
+}
 
 export default function CreationCenterPage({
   lang,
   onOpenScene,
   onOpenTool,
   onOpenAsset,
+  onOpenWorld,
+  onOpenLibrary,
 }: {
   lang: Lang
   onOpenScene: (product: CreationScene) => void
   onOpenTool: (page: CreationToolKey) => void
   onOpenAsset: (asset: CreationAssetKey) => void
+  /** 继续创作：直接进入某个世界（缺省时退回世界列表）。 */
+  onOpenWorld?: (id: string) => void
+  /** 打开创作者资产库（收纳入口）。 */
+  onOpenLibrary?: () => void
 }) {
   const [counts, setCounts] = useState<AssetCounts>({ worlds: null, characters: null, works: null })
   const [recentWorks, setRecentWorks] = useState<CreativeWork[]>([])
+  const [worlds, setWorlds] = useState<WorldLite[]>([])
 
   useEffect(() => {
     let cancelled = false
     void getAllWorlds(false)
-      .then((worlds) => {
-        if (!cancelled) setCounts((current) => ({ ...current, worlds: worlds.length }))
+      .then((list) => {
+        if (cancelled) return
+        setCounts((current) => ({ ...current, worlds: list.length }))
+        setWorlds((list as WorldLite[]).slice(0, 3))
       })
       .catch(() => undefined)
     void fetch(`${API_ORIGIN}/api/characters`)
@@ -151,7 +137,7 @@ export default function CreationCenterPage({
       .then((works) => {
         if (!cancelled && Array.isArray(works)) {
           setCounts((current) => ({ ...current, works: works.length }))
-          setRecentWorks(works.slice(0, 4))
+          setRecentWorks(works.slice(0, 3))
         }
       })
       .catch(() => undefined)
@@ -160,10 +146,24 @@ export default function CreationCenterPage({
     }
   }, [])
 
-  const scenes = sceneCopy(lang)
-  const tools = toolCopy(lang)
-  const assets = assetCopy(lang)
+  const scenes = useMemo(() => sceneCopy(lang), [lang])
+  const assets = useMemo(() => assetCopy(lang), [lang])
   const number = (value: number | null) => (value === null ? '—' : String(value))
+  const hasRecent = worlds.length > 0 || recentWorks.length > 0
+
+  const quickActions = lang === 'zh'
+    ? [
+        { key: 'world', label: '新建世界', icon: Globe2, run: () => onOpenTool('world-management') },
+        { key: 'character', label: '新建人物', icon: UserRound, run: () => onOpenTool('character-management') },
+        { key: 'work', label: '新建作品', icon: Plus, run: () => onOpenAsset('works') },
+        { key: 'library', label: '创作资产库', icon: FolderKanban, run: () => (onOpenLibrary ? onOpenLibrary() : onOpenAsset('worlds')) },
+      ]
+    : [
+        { key: 'world', label: 'New world', icon: Globe2, run: () => onOpenTool('world-management') },
+        { key: 'character', label: 'New character', icon: UserRound, run: () => onOpenTool('character-management') },
+        { key: 'work', label: 'New work', icon: Plus, run: () => onOpenAsset('works') },
+        { key: 'library', label: 'Creator library', icon: FolderKanban, run: () => (onOpenLibrary ? onOpenLibrary() : onOpenAsset('worlds')) },
+      ]
 
   return (
     <div className="cc-content">
@@ -172,16 +172,18 @@ export default function CreationCenterPage({
           <div className="cc-eyebrow">Creation Center</div>
           <h1>{lang === 'zh' ? '创作中心' : 'Creation Center'}</h1>
           <p className="cc-hero-subtitle">
-            {lang === 'zh' ? '选择创作场景，开始你的创作。' : 'Choose a creation scene and begin.'}
+            {lang === 'zh'
+              ? '先选创作场景开始；专业模块在各自工作台里，不在这里平铺。'
+              : 'Pick a scene to start; professional modules live inside each workspace.'}
           </p>
         </div>
         <div className="cc-hero-meta" aria-hidden="true">
-          <strong>05</strong>
+          <strong>{String(scenes.length).padStart(2, '0')}</strong>
           <span>{lang === 'zh' ? '创作场景 · 独立工作台' : 'Creative scenes · Separate workspaces'}</span>
         </div>
       </section>
 
-            <section className="cc-scenes-grid" aria-label={lang === 'zh' ? '创作场景' : 'Creation scenes'}>
+      <section className="cc-scenes-grid" aria-label={lang === 'zh' ? '创作场景' : 'Creation scenes'}>
         {scenes.map((scene) => {
           const Icon = scene.icon
           return (
@@ -206,73 +208,36 @@ export default function CreationCenterPage({
         })}
       </section>
 
-      <section className="cc-section">
-        <div className="cc-section-head">
-          <h2>{lang === 'zh' ? '专业创作工具' : 'Professional tools'}</h2>
-          <p>{lang === 'zh' ? '统一模块 · 按场景权限开放' : 'Unified modules · Access follows scene permissions'}</p>
-        </div>
-        <div className="cc-tools-grid">
-          {tools.map((tool) => {
-            const Icon = tool.icon
-            return (
-              <button
-                key={tool.page}
-                type="button"
-                className="cc-tool"
-                onClick={() => onOpenTool(tool.page)}
-                aria-label={tool.label}
-              >
-                {tool.number && <span className="cc-tool-number">{tool.number}</span>}
-                <span className="cc-tool-icon"><Icon aria-hidden="true" strokeWidth={1.6} /></span>
-                <span className="cc-tool-name">{tool.label}</span>
-                <ArrowUpRight className="cc-tool-arrow" aria-hidden="true" strokeWidth={1.8} />
-              </button>
-            )
-          })}
-        </div>
-      </section>
-
-      <section className="cc-section">
-        <div className="cc-section-head">
-          <h2>{lang === 'zh' ? '我的创作资产' : 'My creative assets'}</h2>
-          <p>{lang === 'zh' ? '当前系统数据' : 'Live system data'}</p>
-        </div>
-        <div className="cc-assets-grid">
-          {assets.map((asset) => (
-            <button
-              key={asset.key}
-              type="button"
-              className="cc-asset"
-              onClick={() => onOpenAsset(asset.key)}
-              aria-label={`${asset.label}: ${number(counts[asset.key])} ${asset.unit}`}
-            >
-              <span className="cc-asset-copy">
-                <span className="cc-asset-label">{asset.label}</span>
-                <span className="cc-asset-value" aria-live="polite">
-                  {number(counts[asset.key])} <small>{asset.unit}</small>
-                </span>
-              </span>
-              <ArrowUpRight className="cc-asset-arrow" aria-hidden="true" strokeWidth={1.8} />
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {recentWorks.length > 0 && (
+      {hasRecent && (
         <section className="cc-section">
           <div className="cc-section-head">
-            <h2>{lang === 'zh' ? '最近作品' : 'Recent works'}</h2>
-            <p>{lang === 'zh' ? '封面与更新状态 · 点击进入作品管理' : 'Covers and status · open work management'}</p>
+            <h2>{lang === 'zh' ? '最近创作' : 'Continue creating'}</h2>
+            <p>{lang === 'zh' ? '直接回到上次的世界或作品' : 'Jump back into your latest world or work'}</p>
           </div>
-          <div className="cc-recent-grid">
+          <div className="cc-recent-row">
+            {worlds.map((world) => (
+              <button
+                key={`w-${world.id}`}
+                type="button"
+                className="cc-recent-item"
+                onClick={() => (onOpenWorld ? onOpenWorld(world.id) : onOpenTool('world-management'))}
+              >
+                <span className="cc-recent-badge">{lang === 'zh' ? '世界' : 'World'}</span>
+                <span className="cc-recent-copy">
+                  <strong>{world.name}</strong>
+                  <small>{SCENE_LABEL[world.product_scene || ''] || (lang === 'zh' ? '创作世界' : 'Creative world')}</small>
+                </span>
+                <ArrowUpRight size={12} aria-hidden="true" />
+              </button>
+            ))}
             {recentWorks.map((work) => (
-              <button key={work.id} type="button" className="cc-recent-work" onClick={() => onOpenAsset('works')}>
+              <button key={`k-${work.id}`} type="button" className="cc-recent-item" onClick={() => onOpenAsset('works')}>
                 <span className="cc-recent-cover">
-                  {work.cover_url ? <img src={resolveMediaUrl(work.cover_url)} alt="" loading="lazy" /> : <BookOpen size={18} strokeWidth={1.3} aria-hidden="true" />}
+                  {work.cover_url ? <img src={resolveMediaUrl(work.cover_url)} alt="" loading="lazy" /> : <BookOpen size={15} strokeWidth={1.3} aria-hidden="true" />}
                 </span>
                 <span className="cc-recent-copy">
                   <strong>{work.title}</strong>
-                  <small>{work.category} · {work.status === 'completed' ? (lang === 'zh' ? '已完成' : 'Completed') : work.status === 'in_progress' ? (lang === 'zh' ? '创作中' : 'In progress') : work.status === 'archived' ? (lang === 'zh' ? '已归档' : 'Archived') : (lang === 'zh' ? '草稿' : 'Draft')}</small>
+                  <small>{SCENE_LABEL[work.scene] || work.category}</small>
                 </span>
                 <ArrowUpRight size={12} aria-hidden="true" />
               </button>
@@ -280,6 +245,37 @@ export default function CreationCenterPage({
           </div>
         </section>
       )}
+
+      <section className="cc-section">
+        <div className="cc-section-head">
+          <h2>{lang === 'zh' ? '快捷操作' : 'Quick actions'}</h2>
+          <p>{lang === 'zh' ? '常用起点 · 具体管理在各工作台内' : 'Common starting points · manage inside workspaces'}</p>
+        </div>
+        <div className="cc-quick-row">
+          {quickActions.map((action) => {
+            const Icon = action.icon
+            return (
+              <button key={action.key} type="button" className="cc-quick" onClick={action.run}>
+                <Icon aria-hidden="true" strokeWidth={1.6} />
+                <span>{action.label}</span>
+              </button>
+            )
+          })}
+        </div>
+      </section>
+
+      <section className="cc-asset-line" aria-label={lang === 'zh' ? '创作资产摘要' : 'Creative asset summary'}>
+        <span className="cc-asset-line-label">{lang === 'zh' ? '创作资产' : 'Assets'}</span>
+        {assets.map((asset) => (
+          <button key={asset.key} type="button" className="cc-asset-chip" onClick={() => onOpenAsset(asset.key)}>
+            {asset.label}
+            <strong aria-live="polite">{number(counts[asset.key])}<small>{asset.unit}</small></strong>
+          </button>
+        ))}
+        <span className="cc-asset-line-hint">
+          {lang === 'zh' ? '计数来自服务端 · 作品与原子资产分开统计' : 'Counts from server · works and assets counted separately'}
+        </span>
+      </section>
     </div>
   )
 }

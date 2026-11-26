@@ -1,84 +1,37 @@
-import {
-  BriefcaseBusiness,
-  Cloud,
-  Compass,
-  Gamepad2,
-  BookOpen,
-  IdCard,
-  MessagesSquare,
-  FolderKanban,
-  PanelLeftClose,
-  Settings,
-  ShoppingBag,
-  Sparkles,
-  Sprout,
-  Users,
-  type LucideIcon,
-} from 'lucide-react'
+/**
+ * 全局侧边栏（唯一渲染实现）。
+ *
+ * 分组与条目全部来自 navigation/globalNav.ts 的 GLOBAL_NAV / TOOL_NAV，
+ * 不再在本文件硬编码——侧边栏与面包屑消费同一份定义，避免双轨漂移。
+ *
+ * 结构：创作与体验（创作中心 / 作品集 / 广场）/ 创作管理 / 账户服务，
+ * 底部固定工具入口：云宝工作台（开发者）、设置、语言切换。
+ * 「个人中心」已按信息架构规划移入侧栏个人入口，不再占业务区域。
+ *
+ * 平铺导航：取消分组上下级选择，创作管理、账户服务等全部条目平铺展示，
+ * 与面包屑共用同一 GLOBAL_NAV 定义，避免双轨漂移。
+ */
+import { ChevronLeft, Cloud, PanelLeftClose } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
+import type { ReactNode } from 'react'
+import { GLOBAL_NAV, TOOL_NAV } from '../../navigation/globalNav'
+import type { Lang, PageKey } from '../../navigation/types'
+import type { AuthUser } from '../../api/auth'
+import SidebarSearch from './SidebarSearch'
+import SidebarAccount from './SidebarAccount'
 
+/**
+ * 侧边栏向外的导航目标。
+ * 除真实页面 key 外，保留顶栏个人菜单等历史别名，避免调用方改动：
+ * identity → 个人中心；assets 为旧分区名。
+ */
 export type HomeNavTarget =
-  | 'home'
+  | PageKey
   | 'identity'
-  | 'community'
-  | 'community-social'
-  | 'ai-interaction'
-  | 'game-experience'
-  | 'content-store'
-  | 'yunbao'
-  | 'business'
-  | 'spirit-economy'
   | 'assets'
-  | 'works'
-  | 'settings'
 
-type Lang = 'zh' | 'en'
-
-type NavItem = {
-  target: HomeNavTarget
-  label: string
-  icon: LucideIcon
-  active?: boolean
-}
-
-type NavGroup = {
-  label: string
-  items: NavItem[]
-}
-
-function groups(lang: Lang, active: 'home' | 'identity' | 'community' | 'community-social' | 'ai-interaction' | 'game-experience' | 'content-store' | 'business' | 'spirit-economy' | 'assets' | 'works'): NavGroup[] {
-  return [
-    {
-      label: lang === 'zh' ? '个人空间' : 'Personal Space',
-      items: [
-        { target: 'identity', label: lang === 'zh' ? '用户与身份中心' : 'User & Identity Center', icon: IdCard, active: active === 'identity' },
-      ],
-    },
-    {
-      label: lang === 'zh' ? '创作与体验' : 'Creation & Experience',
-      items: [
-        { target: 'home', label: lang === 'zh' ? '创作中心' : 'Creation Center', icon: Compass, active: active === 'home' },
-        { target: 'community', label: lang === 'zh' ? '内容社区' : 'Content Community', icon: MessagesSquare, active: active === 'community' },
-        { target: 'community-social', label: lang === 'zh' ? '社区社交' : 'Community Social', icon: Users, active: active === 'community-social' },
-        { target: 'ai-interaction', label: lang === 'zh' ? 'AI 互动中心' : 'AI Interaction Center', icon: Sparkles, active: active === 'ai-interaction' },
-        { target: 'game-experience', label: lang === 'zh' ? '游戏体验中心' : 'Game Experience Center', icon: Gamepad2, active: active === 'game-experience' },
-        { target: 'content-store', label: lang === 'zh' ? '内容商城' : 'Content Store', icon: ShoppingBag, active: active === 'content-store' },
-      ],
-    },
-    {
-      label: lang === 'zh' ? '创作管理' : 'Creation Management',
-      items: [
-        { target: 'assets', label: lang === 'zh' ? '创作者资产库' : 'Creator Assets', icon: FolderKanban },
-        { target: 'works', label: lang === 'zh' ? '我的作品' : 'My Works', icon: BookOpen, active: active === 'works' },
-      ],
-    },
-    {
-      label: lang === 'zh' ? '账户服务' : 'Account Services',
-      items: [
-        { target: 'spirit-economy', label: lang === 'zh' ? '灵果资源' : 'Spirit Resources', icon: Sprout, active: active === 'spirit-economy' },
-        { target: 'business', label: lang === 'zh' ? '商业与服务中心' : 'Business & Services', icon: BriefcaseBusiness, active: active === 'business' },
-      ],
-    },
-  ]
+function isActive(active: PageKey, key: PageKey): boolean {
+  return active === key
 }
 
 export default function CreationCenterSidebar({
@@ -90,30 +43,89 @@ export default function CreationCenterSidebar({
   collapsed = false,
   autoHidden = false,
   drawerOpen = false,
+  narrow = false,
   canAccessYunbao = false,
+  user = null,
+  backendStatus = 'loading',
+  hasPersonalAi = false,
+  onOpenAi,
+  onOpenSettings,
+  onOpenIdentity,
+  onLogout,
+  onBackToProducts,
 }: {
   lang: Lang
-  active: 'home' | 'identity' | 'community' | 'community-social' | 'ai-interaction' | 'game-experience' | 'content-store' | 'business' | 'spirit-economy' | 'assets' | 'works'
+  active: PageKey
   onNavigate: (target: HomeNavTarget) => void
   onToggleLang: () => void
   onCollapse: () => void
   collapsed?: boolean
   autoHidden?: boolean
   drawerOpen?: boolean
+  /** 窄屏抽屉态：导航后自动关闭，并把语义切换为 modal 对话框。 */
+  narrow?: boolean
   canAccessYunbao?: boolean
+  user?: AuthUser | null
+  backendStatus?: 'loading' | 'connected' | 'error'
+  hasPersonalAi?: boolean
+  onOpenAi: () => void
+  onOpenSettings: () => void
+  onOpenIdentity: () => void
+  onLogout: () => void
+  /** 产品工作台下的返回入口：不单独占用导航，折叠为符号按钮。 */
+  onBackToProducts?: () => void
 }) {
+  // 抽屉里点任一条目即完成任务，立即收起，避免遮住刚打开的页面。
+  const handleNavigate = (target: HomeNavTarget) => {
+    onNavigate(target)
+    if (narrow) onCollapse()
+  }
+
+  // 平铺导航：取消分组上下级选择，全部条目平铺展示。
+  const toolItems: Array<{ key: PageKey; label: string; icon: LucideIcon | null }> = [
+    ...(canAccessYunbao ? [{ key: 'yunbao' as PageKey, label: lang === 'zh' ? '云宝工作台' : 'Yunbao Workspace', icon: Cloud }] : []),
+    ...TOOL_NAV.map((item) => ({ key: item.key, label: lang === 'zh' ? item.label.zh : item.label.en, icon: item.icon })),
+  ]
+
+  const renderNavItem = (key: PageKey, label: string, icon: ReactNode, extra?: ReactNode) => (
+    <button
+      key={key}
+      type="button"
+      className={`cc-nav-item${isActive(active, key) ? ' active' : ''}`}
+      onClick={() => handleNavigate(key)}
+      aria-current={isActive(active, key) ? 'page' : undefined}
+    >
+      {icon}
+      <span>{label}</span>
+      {extra}
+    </button>
+  )
+
   return (
     <aside
       className={`cc-sidebar${collapsed ? ' is-collapsed' : ''}${autoHidden ? ' is-auto-hidden' : ''}${drawerOpen ? ' is-drawer-open' : ''}`}
       aria-label={lang === 'zh' ? '全局导航' : 'Global navigation'}
       aria-hidden={collapsed || autoHidden ? true : undefined}
+      role={drawerOpen ? 'dialog' : undefined}
+      aria-modal={drawerOpen ? true : undefined}
+      id="cc-global-nav"
     >
       <div className="cc-brand">
-        <div className="cc-brand-mark" aria-hidden="true">W</div>
         <div className="cc-brand-copy">
-          <strong>{lang === 'zh' ? '世界模拟器' : 'World Simulator'}</strong>
-          <span>World Simulator</span>
+          <strong>{'foster'}</strong>
+          <span>foster</span>
         </div>
+        {onBackToProducts && (
+          <button
+            type="button"
+            className="cc-sidebar-back"
+            onClick={onBackToProducts}
+            title={lang === 'zh' ? '上一级' : 'Previous level'}
+            aria-label={lang === 'zh' ? '上一级' : 'Previous level'}
+          >
+            <ChevronLeft size={16} strokeWidth={1.9} aria-hidden="true" />
+          </button>
+        )}
         <button
           type="button"
           className="cc-sidebar-collapse"
@@ -125,41 +137,46 @@ export default function CreationCenterSidebar({
         </button>
       </div>
 
+      <SidebarSearch lang={lang} onNavigate={(page) => handleNavigate(page as HomeNavTarget)} />
+
+      <SidebarAccount
+        lang={lang}
+        user={user}
+        backendStatus={backendStatus}
+        hasPersonalAi={hasPersonalAi}
+        onOpenAi={onOpenAi}
+        onOpenSettings={onOpenSettings}
+        onOpenIdentity={onOpenIdentity}
+        onLogout={onLogout}
+        onNavigate={(page) => handleNavigate(page as HomeNavTarget)}
+      />
+
       <nav className="cc-nav-scroll">
-        {groups(lang, active).map((group) => (
-          <div className="cc-nav-group" key={group.label}>
-            <p className="cc-nav-label">{group.label}</p>
-            {group.items.map((item) => {
-              const Icon = item.icon
-              return (
-                <button
-                  key={item.target}
-                  type="button"
-                  className={`cc-nav-item${item.active ? ' active' : ''}`}
-                  onClick={() => onNavigate(item.target)}
-                  aria-current={item.active ? 'page' : undefined}
-                >
-                  <Icon className="cc-nav-icon" aria-hidden="true" strokeWidth={1.6} />
-                  <span>{item.label}</span>
-                </button>
-              )
-            })}
-          </div>
-        ))}
+        <div className="cc-nav-group">
+          {GLOBAL_NAV.flatMap((group) => group.items.map((item) => {
+            const Icon = item.icon
+            return renderNavItem(
+              item.key,
+              lang === 'zh' ? item.label.zh : item.label.en,
+              <Icon className="cc-nav-icon" aria-hidden="true" strokeWidth={1.6} />,
+            )
+          }))}
+        </div>
+        <div className="cc-nav-group">
+          {toolItems.map((item) => {
+            const isYunbao = item.key === 'yunbao'
+            const Icon = item.icon
+            return renderNavItem(
+              item.key,
+              item.label,
+              Icon ? <Icon className="cc-nav-icon" aria-hidden="true" strokeWidth={1.6} /> : null,
+              isYunbao ? <small>{lang === 'zh' ? '开发者' : 'Dev'}</small> : undefined,
+            )
+          })}
+        </div>
       </nav>
 
       <div className="cc-sidebar-bottom">
-        {canAccessYunbao && (
-          <button type="button" className="cc-nav-item cc-yunbao-entry" onClick={() => onNavigate('yunbao')}>
-            <Cloud className="cc-nav-icon" aria-hidden="true" strokeWidth={1.6} />
-            <span>{lang === 'zh' ? '云宝工作台' : 'Yunbao Workspace'}</span>
-            <small>{lang === 'zh' ? '开发者' : 'Dev'}</small>
-          </button>
-        )}
-        <button type="button" className="cc-nav-item" onClick={() => onNavigate('settings')}>
-          <Settings className="cc-nav-icon" aria-hidden="true" strokeWidth={1.6} />
-          <span>{lang === 'zh' ? '设置' : 'Settings'}</span>
-        </button>
         <div className="cc-sidebar-footline">
           <button
             type="button"

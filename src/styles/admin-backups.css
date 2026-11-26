@@ -13,5 +13,5 @@
 .admin-backup-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--card-border);border-radius:8px;background:var(--workspace-glass-bg);font-size:10px;color:var(--text-main);flex-wrap:wrap}
 .admin-backup-row span{font-family:var(--font-mono,monospace);font-size:10px}
 .admin-backup-row small{color:var(--text-muted);margin-left:auto}
-.admin-backup-row button{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--card-border);background:transparent;color:var(--text-muted);border-radius:6px;padding:3px 7px;font-size:9px;cursor:pointer}
+.admin-backup-row button{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--card-border);background:transparent;color:var(--text-muted);border-radius:6px;padding:3px 7px;font-size: var(--text-2xs);cursor:pointer}
 @media(max-width:640px){.admin-backup-row small{margin-left:0;width:100%}}

@@ -38,10 +38,10 @@ button {
   flex-direction: column;
   width: 248px;
   padding: 25px 17px 18px;
-  background: rgba(23, 29, 41, 0.86);
+  background: var(--ws-pal-scrim-9);
   -webkit-backdrop-filter: blur(24px) saturate(150%);
   backdrop-filter: blur(24px) saturate(150%);
-  color: #f1f3f7;
+  color: var(--ws-pal-light-1);
   transition: width 220ms ease, padding 220ms ease, visibility 0s linear 0s;
 }
 
@@ -58,18 +58,18 @@ button {
   height: 28px;
   margin-left: auto;
   padding: 0;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid var(--ws-pal-gray-42);
   border-radius: 7px;
-  background: rgba(255, 255, 255, 0.035);
-  color: #aeb8c8;
+  background: var(--ws-pal-gray-43);
+  color: var(--ws-pal-surface-10);
   cursor: pointer;
   transition: color 160ms ease, background 160ms ease, border-color 160ms ease;
 }
 
 .sidebar-collapse:hover {
-  color: #f1f3f7;
-  background: rgba(255, 255, 255, 0.09);
-  border-color: rgba(255, 255, 255, 0.22);
+  color: var(--ws-pal-light-1);
+  background: var(--ws-pal-gray-44);
+  border-color: var(--ws-pal-gray-45);
 }
 
 .sidebar-reveal-tab {
@@ -87,7 +87,7 @@ button {
   border-radius: 0 9px 9px 0;
   background: var(--ws-nav-bg);
   color: var(--sidebar-text);
-  box-shadow: 4px 0 18px rgba(0, 0, 0, 0.14);
+  box-shadow: 4px 0 18px var(--ws-pal-scrim-10);
   cursor: pointer;
   transform: translateY(-50%);
   transition: width 160ms ease, box-shadow 160ms ease;
@@ -95,7 +95,7 @@ button {
 
 .sidebar-reveal-tab:hover {
   width: 31px;
-  box-shadow: 6px 0 22px rgba(0, 0, 0, 0.2);
+  box-shadow: 6px 0 22px var(--ws-pal-scrim-11);
 }
 
 .brand {
@@ -112,7 +112,7 @@ button {
   width: 39px;
   height: 39px;
   border-radius: 11px;
-  background: #526b9d;
+  background: var(--ws-pal-blue-23);
   color: white;
   font-family: Georgia, serif;
   font-size: 23px;
@@ -131,16 +131,16 @@ button {
 }
 
 .brand-text span {
-  color: #8792a5;
-  font-size: 9px;
+  color: var(--ws-pal-gray-46);
+  font-size: var(--text-2xs);
   letter-spacing: 1.4px;
 }
 
 .workspace-label {
   padding: 0 10px;
   margin-bottom: 16px;
-  color: #758197;
-  font-size: 9px;
+  color: var(--ws-pal-gray-19);
+  font-size: var(--text-2xs);
   letter-spacing: 1.5px;
   font-weight: 650;
 }
@@ -159,7 +159,7 @@ button {
 
 .nav-group-title {
   padding: 0 10px 8px;
-  color: #8290a5;
+  color: var(--ws-pal-blue-24);
   font-size: 11px;
 }
 
@@ -172,7 +172,7 @@ button {
   border: 0;
   border-radius: 7px;
   background: transparent;
-  color: #b5becc;
+  color: var(--ws-pal-surface-11);
   text-align: left;
   font-size: 13px;
   cursor: pointer;
@@ -180,18 +180,18 @@ button {
 }
 
 .nav-item:hover {
-  background: #252e3d;
+  background: var(--ws-pal-blue-25);
   color: var(--card-bg);
 }
 
 .nav-item.active {
-  background: #34435c;
+  background: var(--ws-pal-blue-26);
   color: var(--card-bg);
 }
 
 .nav-icon {
   width: 17px;
-  color: #aab8d0;
+  color: var(--ws-pal-surface-12);
   font-size: 17px;
   text-align: center;
 }
@@ -202,8 +202,8 @@ button {
   gap: 9px;
   margin-top: auto;
   padding: 15px 9px 2px;
-  border-top: 1px solid #303948;
-  color: #aeb8c7;
+  border-top: 1px solid var(--ws-pal-blue-27);
+  color: var(--ws-pal-surface-13);
   font-size: 11px;
 }
 
@@ -212,12 +212,12 @@ button {
   height: 7px;
   flex-shrink: 0;
   border-radius: 50%;
-  background: #5ba88b;
+  background: var(--ws-pal-green-21);
 }
 
 .version {
   margin-left: auto;
-  color: #758197;
+  color: var(--ws-pal-gray-19);
   font-size: 10px;
 }
 
@@ -284,7 +284,7 @@ button {
   width: 31px;
   height: 31px;
   border-radius: 50%;
-  background: rgba(128, 128, 128, 0.14);
+  background: var(--ws-pal-gray-16);
   color: var(--text-main);
   font-size: 12px;
   font-weight: 650;
@@ -314,7 +314,7 @@ button {
 
 .eyebrow {
   margin-bottom: 12px;
-  color: #8490a2;
+  color: var(--ws-pal-gray-47);
   font-size: 10px;
   font-weight: 650;
   letter-spacing: 1.5px;
@@ -381,7 +381,7 @@ button {
   width: 29px;
   height: 29px;
   border-radius: 7px;
-  background: rgba(128, 128, 128, 0.12);
+  background: var(--ws-pal-gray-1);
   color: var(--text-main);
   font-size: 17px;
 }
@@ -442,9 +442,9 @@ button {
 .panel-tag {
   padding: 5px 8px;
   border-radius: 4px;
-  background: rgba(128, 128, 128, 0.12);
+  background: var(--ws-pal-gray-1);
   color: var(--text-muted);
-  font-size: 9px;
+  font-size: var(--text-2xs);
   letter-spacing: 0.8px;
 }
 
@@ -465,7 +465,7 @@ button {
   margin-bottom: 17px;
   border: 1px solid var(--card-border);
   border-radius: 17px;
-  background: rgba(128, 128, 128, 0.08);
+  background: var(--ws-pal-gray-6);
   color: var(--text-main);
   font-size: 29px;
 }
@@ -495,14 +495,14 @@ button {
 }
 
 .secondary-button:hover {
-  background: rgba(128, 128, 128, 0.12);
+  background: var(--ws-pal-gray-1);
 }
 
 .simple-empty {
   display: grid;
   place-items: center;
   min-height: 125px;
-  color: #a0a7b2;
+  color: var(--ws-pal-gray-48);
   font-size: 11px;
 }
 
@@ -522,7 +522,7 @@ button {
   width: 34px;
   height: 34px;
   border-radius: 9px;
-  background: rgba(128, 128, 128, 0.12);
+  background: var(--ws-pal-gray-1);
   color: var(--text-main);
   font-family: Georgia, serif;
   font-size: 19px;
@@ -568,7 +568,7 @@ button {
   height: 58px;
   margin-bottom: 16px;
   border-radius: 15px;
-  background: rgba(128, 128, 128, 0.12);
+  background: var(--ws-pal-gray-1);
   color: var(--text-main);
   font-size: 27px;
 }
@@ -657,7 +657,7 @@ button {
 .character-status-light {
   font-size: 11px;
   color: var(--text-main);
-  background: rgba(128, 128, 128, 0.12);
+  background: var(--ws-pal-gray-1);
   padding: 6px 12px;
   border-radius: 4px;
 }
@@ -704,7 +704,7 @@ button {
 }
 
 .stepper-item.active {
-  background: rgba(128, 128, 128, 0.12);
+  background: var(--ws-pal-gray-1);
   border-color: var(--text-main);
 }
 
@@ -771,7 +771,7 @@ button {
 .module-index-light {
   font-size: 60px;
   font-weight: 800;
-  color: rgba(128, 128, 128, 0.12);
+  color: var(--ws-pal-gray-1);
   line-height: 1;
 }
 
@@ -797,7 +797,7 @@ button {
 .workspace-count-light {
   font-size: 11px;
   color: var(--text-main);
-  background: rgba(128, 128, 128, 0.12);
+  background: var(--ws-pal-gray-1);
   padding: 4px 10px;
   border-radius: 12px;
 }
@@ -822,7 +822,7 @@ button {
 
 .module-group-card-light:hover {
   border-color: var(--text-main);
-  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.08);
+  box-shadow: 0 2px 8px var(--ws-pal-purple-9);
   transform: translateY(-1px);
 }
 
@@ -874,7 +874,7 @@ button {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: rgba(128, 128, 128, 0.12);
+  background: var(--ws-pal-gray-1);
   color: var(--text-main);
   display: flex;
   align-items: center;
@@ -966,7 +966,7 @@ button {
   font-size: 15px !important;
   font-weight: 400 !important;
   color: var(--text-main) !important;
-  background: rgba(128, 128, 128, 0.1) !important;
+  background: var(--ws-pal-gray-2) !important;
   border: 1px solid transparent !important;
   padding: 6px 12px !important;
 }
@@ -985,7 +985,7 @@ button {
   color: var(--text-main) !important; 
   background: var(--ws-surface-bg) !important; 
   border: 1px solid var(--card-border) !important;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05) !important;
+  box-shadow: 0 2px 8px var(--ws-pal-scrim-12) !important;
 }
 /* 四产品主页 */
 .product-home-card {
@@ -994,14 +994,14 @@ button {
 .product-home-card:hover {
   transform: translateY(-3px);
   border-color: var(--primary-color) !important;
-  box-shadow: 0 20px 55px rgba(0,0,0,0.12) !important;
+  box-shadow: 0 20px 55px var(--ws-pal-scrim-13) !important;
 }
 .product-home-card:focus-visible {
   outline: 2px solid var(--primary-color);
   outline-offset: 3px;
 }
 .home-product-link:hover {
-  background: rgba(128,128,128,0.13) !important;
+  background: var(--ws-pal-gray-18) !important;
 }
 
 
@@ -1011,7 +1011,7 @@ button {
     margin-left: 0 !important;
   }
   .cc-sidebar {
-    box-shadow: 24px 0 60px rgba(0, 0, 0, 0.28);
+    box-shadow: 24px 0 60px var(--ws-pal-scrim-14);
   }
   .topbar {
     padding: 0 16px;

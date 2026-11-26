@@ -2,53 +2,21 @@
  * 统一导航注册表：全站面包屑的层级来源。
  *
  * 面包屑必须根据项目真实的模块结构与路由关系生成，不允许虚构层级。
- * 一级分组来自全局侧边栏（GLOBAL_NAV_GROUPS），二级分组来自各产品的
- * nav_groups（ProductConfig），因此面包屑与侧边栏、分组导航始终同源，
- * 不会出现两套互相漂移的层级定义。
+ * 一级分组来自全局导航真源（navigation/globalNav.ts）的 GLOBAL_NAV，
+ * 二级分组来自各产品的 nav_groups（ProductConfig），因此面包屑与侧边栏、
+ * 分组导航始终同源，不会出现两套互相漂移的层级定义。
+ *
+ * 体验中心已合并进作品集，作品发现、作品详情与普通/灵果体验统一在
+ * 作品集完成，不再有独立的体验中心入口，面包屑中不再出现该层级。
  */
 import type { ProductConfig, ProductKey } from '../product/types'
 import { NAV_GROUP_EN, PAGE_LABELS_EN, PRODUCT_EN } from '../product/labels'
+import { GLOBAL_NAV, TOOL_NAV } from './globalNav'
+import type { GlobalNavItem } from './globalNav'
+import type { Lang, PageKey } from './types'
 
-export type PageKey =
-  | 'home'
-  | 'user-center'
-  | 'community'
-  | 'settings'
-  | 'community-social'
-  | 'business'
-  | 'spirit-economy'
-  | 'ai-center'
-  | 'game-center'
-  | 'content-store'
-  | 'yunbao'
-  | 'workspace-home'
-  | 'overview'
-  | 'world-management'
-  | 'character-management'
-  | 'relationships'
-  | 'events'
-  | 'timeline'
-  | 'simulation'
-  | 'multipath'
-  | 'storyline'
-  | 'chat'
-  | 'writing'
-  | 'world-building'
-  | 'world-data'
-  | 'world-structure'
-  | 'archive'
-  | 'trash'
-  | 'time-machine'
-  | 'diary'
-  | 'personas'
-  | 'yunbao-seed'
-  | 'memories'
-  | 'companion-runtime'
-  | 'information-sources'
-  | 'creator-assets'
-  | 'works'
-
-export type Lang = 'zh' | 'en'
+export type { Lang, PageKey } from './types'
+export type { GlobalNavGroup, GlobalNavItem } from './globalNav'
 
 export interface BreadcrumbCrumb {
   /** 稳定标识，用于 React key 与折叠状态。 */
@@ -60,63 +28,13 @@ export interface BreadcrumbCrumb {
   isCurrent?: boolean
 }
 
-interface GlobalNavItem {
-  page: PageKey
-  label: { zh: string; en: string }
-}
-
-export interface GlobalNavGroup {
-  title: { zh: string; en: string }
-  items: GlobalNavItem[]
-}
-
-/**
- * 全局侧边栏的唯一分组定义。
- * 该数组同时用于侧边栏渲染与面包屑生成，避免两处漂移。
- */
-export const GLOBAL_NAV_GROUPS: GlobalNavGroup[] = [
-  {
-    title: { zh: '个人空间', en: 'Personal Space' },
-    items: [
-      { page: 'user-center', label: { zh: '用户与身份中心', en: 'User & Identity Center' } },
-    ],
-  },
-  {
-    title: { zh: '创作与体验', en: 'Create & Explore' },
-    items: [
-      { page: 'home', label: { zh: '创作中心', en: 'Creation Center' } },
-      { page: 'community', label: { zh: '内容社区', en: 'Content Community' } },
-      { page: 'community-social', label: { zh: '社区社交', en: 'Community Social' } },
-      { page: 'ai-center', label: { zh: 'AI 互动中心', en: 'AI Interaction Center' } },
-      { page: 'game-center', label: { zh: '游戏体验中心', en: 'Game Experience Center' } },
-      { page: 'content-store', label: { zh: '内容商城', en: 'Content Store' } },
-    ],
-  },
-  {
-    title: { zh: '创作管理', en: 'Creation Management' },
-    items: [
-      { page: 'creator-assets', label: { zh: '创作者资产库', en: 'Creator Assets' } },
-      { page: 'works', label: { zh: '我的作品', en: 'My Works' } },
-    ],
-  },
-  {
-    title: { zh: '账户服务', en: 'Account Services' },
-    items: [
-      { page: 'spirit-economy', label: { zh: '灵果资源', en: 'Spirit Resources' } },
-      { page: 'business', label: { zh: '商业与服务中心', en: 'Business & Services' } },
-    ],
-  },
-]
-
-/** 设置中心独立于分组，作为一级入口单独成层。 */
-export const GLOBAL_SETTINGS: GlobalNavItem = {
-  page: 'settings',
-  label: { zh: '设置中心', en: 'Settings Center' },
-}
+/** 兼容旧引用的别名：全局导航分组与工具入口。 */
+export const GLOBAL_NAV_GROUPS = GLOBAL_NAV
+export const GLOBAL_SETTINGS: GlobalNavItem = TOOL_NAV[0]
 
 /**
  * 产品工作空间中未出现在 nav_groups 的页面（历史保留入口或专用工作流），
- * 为其补充真实归属分组，避免面包屑出现“无父级”的孤立层级。
+ * 为其补充真实归属分组，避免面包屑出现"无父级"的孤立层级。
  */
 const EXTRA_GROUP: Partial<Record<PageKey, { zh: string; en: string }>> = {
   'world-building': { zh: '世界构建', en: 'World Building' },
@@ -129,16 +47,27 @@ const EXTRA_GROUP: Partial<Record<PageKey, { zh: string; en: string }>> = {
   'information-sources': { zh: '经历与来源', en: 'Experience & Sources' },
   'workspace-home': { zh: '工作区总览', en: 'Workspace Overview' },
   yunbao: { zh: '云宝工作台', en: 'Yunbao Workspace' },
+  'world-background': { zh: '背景', en: 'Background' },
+  'world-map': { zh: '地图', en: 'Maps' },
+  'world-works': { zh: '作品', en: 'Works' },
+  'world-illustration': { zh: '插画集', en: 'Illustrations' },
+  'world-cocreation': { zh: '共创', en: 'Co-creation' },
+  'world-community': { zh: '社区', en: 'Community' },
 }
 
 /** 全局中心页面（不属于任何产品工作空间）。 */
 const GLOBAL_PAGES: PageKey[] = [
-  'home', 'user-center', 'community', 'community-social', 'business', 'spirit-economy',
-  'ai-center', 'game-center', 'content-store', 'settings', 'creator-assets', 'works',
+  'home', 'user-center', 'community', 'community-social', 'spirit-economy',
+  'settings',
+  'creator-assets', 'works',
 ]
 
 function pick(zh: string, en: string, lang: Lang): string {
   return lang === 'en' ? en : zh
+}
+
+function itemLabel(item: GlobalNavItem, lang: Lang): string {
+  return lang === 'en' ? item.label.en : item.label.zh
 }
 
 function pageName(page: PageKey, fallback: string, lang: Lang): string {
@@ -153,6 +82,15 @@ function productLabel(product: ProductKey, config: ProductConfig | null, lang: L
   const english = PRODUCT_EN[product]
   if (lang === 'en' && english) return english.label
   return config?.label || english?.label || product
+}
+
+/** 找到全局导航中承载某页面的分组与条目（消费体验子页会命中其分区）。 */
+function findGlobalEntry(page: PageKey): { group: (typeof GLOBAL_NAV)[number]; item: GlobalNavItem } | null {
+  for (const group of GLOBAL_NAV) {
+    const item = group.items.find((entry) => entry.key === page)
+    if (item) return { group, item }
+  }
+  return null
 }
 
 /**
@@ -174,22 +112,35 @@ export function buildBreadcrumb(options: {
 
   if (GLOBAL_PAGES.includes(page)) {
     if (page === 'settings') {
+      const settings = GLOBAL_SETTINGS
       return [
         root,
-        { key: 'settings-group', label: pick('设置', 'Settings', lang), page: 'settings' },
-        { key: 'current', label: pick(GLOBAL_SETTINGS.label.zh, GLOBAL_SETTINGS.label.en, lang), isCurrent: true },
+        { key: 'settings-group', label: itemLabel(settings, lang), page: 'settings' },
+        { key: 'current', label: itemLabel(settings, lang), isCurrent: true },
       ]
     }
-    for (const group of GLOBAL_NAV_GROUPS) {
-      const item = group.items.find((entry) => entry.page === page)
-      if (item) {
-        return [
-          root,
-          { key: `group:${group.title.zh}`, label: pick(group.title.zh, group.title.en, lang), page: group.items[0].page },
-          { key: 'current', label: pick(item.label.zh, item.label.en, lang), isCurrent: true },
-        ]
-      }
+
+    // 个人中心已从业务区域移入顶栏个人入口，不再挂在一级分组下。
+    if (page === 'user-center') {
+      return [
+        root,
+        { key: 'current', label: pick('个人中心', 'Personal Center', lang), isCurrent: true },
+      ]
     }
+
+    const entry = findGlobalEntry(page)
+    if (entry) {
+      return [
+        root,
+        {
+          key: `group:${entry.group.title.zh}`,
+          label: pick(entry.group.title.zh, entry.group.title.en, lang),
+          page: entry.group.items[0].key,
+        },
+        { key: 'current', label: itemLabel(entry.item, lang), isCurrent: true },
+      ]
+    }
+
     return [root, { key: 'current', label: pick('创作中心', 'Creation Center', lang), isCurrent: true }]
   }
 
@@ -226,3 +177,4 @@ export function buildBreadcrumb(options: {
 
   return [root, productCrumb, { key: 'current', label: pageName(page, page, lang), isCurrent: true }]
 }
+

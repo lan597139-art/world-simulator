@@ -21,23 +21,20 @@ function fmt(value: string | null, lang: Lang): string {
 }
 
 function channelLabel(channel: string, lang: Lang): string {
-  if (channel === 'content') return lang === 'zh' ? '内容社区' : 'Content'
-  return lang === 'zh' ? '社交社区' : 'Social'
+  if (channel === 'content') return lang === 'zh' ? '作品集' : 'Works'
+  return lang === 'zh' ? '广场' : 'Plaza'
 }
 
 export default function SocialDynamicsPanel({
-  lang, currentUserId, onOpenProfile, onOpenMessages,
+  lang, currentUserId, onOpenProfile,
 }: {
   lang: Lang
   currentUserId?: string
   onOpenProfile: (userId: string) => void
-  onOpenMessages: (userId: string) => void
 }) {
   const [posts, setPosts] = useState<SocialPost[]>([])
-  const [channel, setChannel] = useState<'all' | 'content' | 'social'>('all')
-  const [scope, setScope] = useState<'discover' | 'following' | 'mine'>('discover')
+  const [scope, setScope] = useState<'discover' | 'following' | 'mine'>('mine')
   const [body, setBody] = useState('')
-  const [channels, setChannels] = useState<('content' | 'social')[]>(['content', 'social'])
   const [visibility, setVisibility] = useState<'public' | 'friends' | 'private'>('public')
   const [media, setMedia] = useState<string[]>([])
   const [uploading, setUploading] = useState(false)
@@ -50,24 +47,18 @@ export default function SocialDynamicsPanel({
 
   const load = async () => {
     setBusy('load')
-    try { setPosts(await listSocialPosts(channel, scope)); setError('') }
+    try { setPosts(await listSocialPosts('all', scope)); setError('') }
     catch (reason) { setError(reason instanceof Error ? reason.message : '动态加载失败') }
     finally { setBusy('') }
   }
-  useEffect(() => { void load() /* eslint-disable-line react-hooks/exhaustive-deps */ }, [channel, scope])
-
-  const toggleChannel = (value: 'content' | 'social') => {
-    setChannels((current) => current.includes(value)
-      ? (current.length === 1 ? current : current.filter((item) => item !== value))
-      : [...current, value])
-  }
+  useEffect(() => { void load() /* eslint-disable-line react-hooks/exhaustive-deps */ }, [scope])
 
   const publish = async () => {
     if (!body.trim() && media.length === 0) { setError(lang === 'zh' ? '写点什么或添加图片' : 'Add text or an image'); return }
     setBusy('publish'); setError('')
     try {
-      await createSocialPost({ body: body.trim(), media_urls: media, channels, visibility })
-      setBody(''); setMedia([]); setVisibility('public'); setChannels(['content', 'social']); await load()
+      await createSocialPost({ body: body.trim(), media_urls: media, channels: ['social'], visibility })
+      setBody(''); setMedia([]); setVisibility('public'); await load()
     } catch (reason) { setError(reason instanceof Error ? reason.message : '发布失败') }
     finally { setBusy('') }
   }
@@ -184,11 +175,6 @@ export default function SocialDynamicsPanel({
           </div>
         )}
         <div className="sc-composer-options">
-          <div className="sc-chip-group" aria-label={lang === 'zh' ? '投放位置' : 'Channels'}>
-            {(['content', 'social'] as const).map((item) => (
-              <button key={item} type="button" className={`sc-chip${channels.includes(item) ? ' is-on' : ''}`} onClick={() => toggleChannel(item)}>{channelLabel(item, lang)}</button>
-            ))}
-          </div>
           <select value={visibility} onChange={(event) => setVisibility(event.target.value as typeof visibility)} aria-label={lang === 'zh' ? '可见范围' : 'Visibility'}>
             <option value="public">{lang === 'zh' ? '公开' : 'Public'}</option>
             <option value="friends">{lang === 'zh' ? '仅好友' : 'Friends'}</option>
@@ -199,7 +185,7 @@ export default function SocialDynamicsPanel({
           <button type="button" className="sc-btn" disabled={uploading || media.length >= 9} onClick={() => fileRef.current?.click()}><ImagePlus size={15} />{uploading ? (lang === 'zh' ? '上传中…' : 'Uploading…') : (lang === 'zh' ? '图片' : 'Image')}</button>
           <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={(event) => void addFiles(event.target.files)} />
           <span className="sc-composer-count">{body.length}/2000</span>
-          <button type="button" className="sc-btn is-primary" disabled={busy === 'publish'} onClick={() => void publish()}>{busy === 'publish' ? <Loader2 className="spin" size={14} /> : <Send size={14} />}{lang === 'zh' ? '发布' : 'Publish'}</button>
+          <button type="button" className="sc-btn is-primary" disabled={busy === 'publish'} onClick={() => void publish()}>{busy === 'publish' ? <Loader2 className="spin" size={14} /> : <Send size={14} />}{lang === 'zh' ? '发布到广场' : 'Publish to plaza'}</button>
         </div>
       </div>
 
@@ -207,10 +193,7 @@ export default function SocialDynamicsPanel({
 
       <div className="sc-feed-head">
         <div className="sc-segment">
-          {(['all', 'content', 'social'] as const).map((item) => <button key={item} type="button" className={channel === item ? 'is-on' : ''} onClick={() => setChannel(item)}>{item === 'all' ? (lang === 'zh' ? '全部' : 'All') : channelLabel(item, lang)}</button>)}
-        </div>
-        <div className="sc-segment">
-          {(['discover', 'following', 'mine'] as const).map((item) => <button key={item} type="button" className={scope === item ? 'is-on' : ''} onClick={() => setScope(item)}>{item === 'discover' ? (lang === 'zh' ? '发现' : 'Discover') : item === 'following' ? (lang === 'zh' ? '关注' : 'Following') : (lang === 'zh' ? '我的' : 'Mine')}</button>)}
+          {(['discover', 'following', 'mine'] as const).map((item) => <button key={item} type="button" className={scope === item ? 'is-on' : ''} onClick={() => setScope(item)}>{item === 'discover' ? (lang === 'zh' ? '广场大厅' : 'Plaza hall') : item === 'following' ? (lang === 'zh' ? '关注' : 'Following') : (lang === 'zh' ? '我的' : 'Mine')}</button>)}
         </div>
       </div>
 

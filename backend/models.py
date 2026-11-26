@@ -196,6 +196,64 @@ class WorldCollaborator(Base):
     )
 
 
+class WorldMap(Base):
+    """世界地图册条目：一个世界可有多张大小不一的地图。"""
+
+    __tablename__ = "world_maps"
+
+    id = Column(String, primary_key=True, index=True, default=_uuid)
+    world_id = Column(String, ForeignKey("worlds.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String, nullable=False)
+    description = Column(Text, default="")
+    image_url = Column(String, default="")
+    # 地图尺度：world / region / city / district / building / other
+    map_scale = Column(String, default="world")
+    sort_order = Column(Integer, default=0)
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now)
+
+    __table_args__ = (
+        Index("ix_world_maps_world_sort", "world_id", "sort_order"),
+    )
+
+
+class WorldIllustration(Base):
+    """世界插画集条目：与世界相关的插画、概念图。"""
+
+    __tablename__ = "world_illustrations"
+
+    id = Column(String, primary_key=True, index=True, default=_uuid)
+    world_id = Column(String, ForeignKey("worlds.id", ondelete="CASCADE"), nullable=False, index=True)
+    title = Column(String, nullable=False)
+    description = Column(Text, default="")
+    image_url = Column(String, default="")
+    sort_order = Column(Integer, default=0)
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now)
+
+    __table_args__ = (
+        Index("ix_world_illustrations_world_sort", "world_id", "sort_order"),
+    )
+
+
+class WorldCocreationChoice(Base):
+    """世界共创的开发选择：邀请协作与创作方向的可配置项。"""
+
+    __tablename__ = "world_cocreation_choices"
+
+    id = Column(String, primary_key=True, index=True, default=_uuid)
+    world_id = Column(String, ForeignKey("worlds.id", ondelete="CASCADE"), nullable=False, index=True)
+    title = Column(String, nullable=False)
+    description = Column(Text, default="")
+    sort_order = Column(Integer, default=0)
+    created_at = Column(DateTime, default=_now)
+    updated_at = Column(DateTime, default=_now)
+
+    __table_args__ = (
+        Index("ix_world_cocreation_choices_world_sort", "world_id", "sort_order"),
+    )
+
+
 class SchemaMigration(Base):
     __tablename__ = "schema_migrations"
 
@@ -1901,6 +1959,13 @@ class CommunityPublication(Base):
     published_at = Column(DateTime)
     withdrawn_at = Column(DateTime)
     view_count = Column(Integer, default=0)
+    # 点击量：作品入口点击的计数，与阅读量（view_count）口径分离。
+    click_count = Column(Integer, default=0)
+    # 作者内容权限：普通体验的公开范围，以及灵果体验是否开放与消耗。
+    # experience_fruit 未配置时为 NULL，表示灵果体验尚未定价，不虚构数值。
+    public_visible = Column(Boolean, default=True)
+    experience_enabled = Column(Boolean, default=False)
+    experience_fruit = Column(Integer)
     created_at = Column(DateTime, default=_now)
     updated_at = Column(DateTime, default=_now)
 
@@ -1921,6 +1986,8 @@ class CommunityPublicationVersion(Base):
     title = Column(String, nullable=False)
     summary = Column(Text, default="")
     content_snapshot = Column(JSON, default=dict)
+    # 灵果体验的深度内容；未配置为 NULL，表示该版本没有可付费体验的深度内容。
+    experience_snapshot = Column(JSON)
     source_refs = Column(JSON, default=list)
     content_hash = Column(String, default="")
     change_summary = Column(String, default="")
@@ -1962,6 +2029,45 @@ class CommunityFavorite(Base):
 
     __table_args__ = (
         UniqueConstraint("publication_id", "owner_user_id", name="uq_community_favorite"),
+    )
+
+
+class CommunityLike(Base):
+    """内容社区作品点赞。同一用户对同一作品唯一，防止重复点赞。"""
+    __tablename__ = "community_likes"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    publication_id = Column(
+        String, ForeignKey("community_publications.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+    owner_user_id = Column(String, nullable=False, index=True)
+    created_at = Column(DateTime, default=_now)
+
+    __table_args__ = (
+        UniqueConstraint("publication_id", "owner_user_id", name="uq_community_like"),
+    )
+
+
+class CommunityExperienceGrant(Base):
+    """灵果体验授权：用户对某作品完成灵果扣除后获得的体验权限。
+
+    同一用户对同一作品唯一，配合唯一约束防止重复扣费。
+    """
+    __tablename__ = "community_experience_grants"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    publication_id = Column(
+        String, ForeignKey("community_publications.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+    user_id = Column(String, nullable=False, index=True)
+    fruit_amount = Column(Integer, nullable=False, default=0)
+    transaction_id = Column(String)
+    created_at = Column(DateTime, default=_now)
+
+    __table_args__ = (
+        UniqueConstraint("publication_id", "user_id", name="uq_community_experience_grant"),
     )
 
 
@@ -2036,6 +2142,8 @@ class CommunityTopic(Base):
 
     id = Column(String, primary_key=True, default=_uuid)
     owner_user_id = Column(String, nullable=False, index=True)
+    # 所属世界；NULL 表示全站公共讨论，非 NULL 表示该世界下的讨论区。
+    world_id = Column(String, index=True)
     category = Column(String, default="discussion", index=True)
     title = Column(String, nullable=False)
     body = Column(Text, default="")
@@ -2066,6 +2174,8 @@ class CommunityGroup(Base):
 
     id = Column(String, primary_key=True, default=_uuid)
     owner_user_id = Column(String, nullable=False, index=True)
+    # 所属世界；NULL 表示全站公共群组，非 NULL 表示该世界下的群组。
+    world_id = Column(String, index=True)
     name = Column(String, nullable=False)
     description = Column(Text, default="")
     category = Column(String, default="interest", index=True)
@@ -2239,6 +2349,91 @@ class ContentReport(Base):
 
 
 # =====================================================================
+# 用户活跃与个人内容沉淀：登录 / 签到 / 收藏夹 / 推荐 / 浏览历史
+# =====================================================================
+class UserCheckin(Base):
+    """用户签到记录。按用户 + 日期唯一，用于活跃等级与连续签到。"""
+
+    __tablename__ = "user_checkins"
+    __table_args__ = (UniqueConstraint("user_id", "checkin_date", name="uq_user_checkin_day"),)
+
+    id = Column(String, primary_key=True, default=_uuid)
+    user_id = Column(String, nullable=False, index=True)
+    checkin_date = Column(String, nullable=False, index=True)
+    streak = Column(Integer, default=1, nullable=False)
+    created_at = Column(DateTime, default=_now)
+
+
+class FavoriteFolder(Base):
+    """用户自建收藏夹。仅记录用户显式创建的分组。"""
+
+    __tablename__ = "favorite_folders"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    user_id = Column(String, nullable=False, index=True)
+    name = Column(String, nullable=False)
+    sort_order = Column(Integer, default=0, nullable=False)
+    created_at = Column(DateTime, default=_now)
+
+
+class UserFavorite(Base):
+    """用户收藏：作品 / 角色 / 世界 / 动态等统一收藏目标，可选归属收藏夹。
+
+    以 (用户, 目标类型, 目标 id) 唯一，避免重复收藏。
+    """
+
+    __tablename__ = "user_favorites"
+    __table_args__ = (
+        UniqueConstraint("user_id", "target_type", "target_id", name="uq_user_favorite_target"),
+        Index("ix_user_favorites_user_time", "user_id", "created_at"),
+    )
+
+    id = Column(String, primary_key=True, default=_uuid)
+    user_id = Column(String, nullable=False, index=True)
+    target_type = Column(String, nullable=False, index=True)
+    target_id = Column(String, nullable=False, index=True)
+    folder_id = Column(String, ForeignKey("favorite_folders.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime, default=_now)
+
+
+class UserCheer(Base):
+    """一键四连（点赞 / 收藏 / 推荐 / 打赏）记录。
+
+    打赏为不消耗灵果额度的免费鼓励；额外付费打赏仍走灵果流水。
+    同一用户对同一目标同一动作唯一。
+    """
+
+    __tablename__ = "user_cheers"
+    __table_args__ = (
+        UniqueConstraint("user_id", "target_type", "target_id", "kind", name="uq_user_cheer"),
+        Index("ix_user_cheers_user_time", "user_id", "created_at"),
+    )
+
+    id = Column(String, primary_key=True, default=_uuid)
+    user_id = Column(String, nullable=False, index=True)
+    target_type = Column(String, nullable=False, index=True)
+    target_id = Column(String, nullable=False, index=True)
+    kind = Column(String, nullable=False, index=True)  # like/favorite/recommend/tip
+    created_at = Column(DateTime, default=_now)
+
+
+class ViewHistory(Base):
+    """浏览历史：记录用户查看过的作品 / 角色 / 世界。"""
+
+    __tablename__ = "view_history"
+    __table_args__ = (
+        Index("ix_view_history_user_time", "user_id", "created_at"),
+        Index("ix_view_history_target", "target_type", "target_id"),
+    )
+
+    id = Column(String, primary_key=True, default=_uuid)
+    user_id = Column(String, nullable=False, index=True)
+    target_type = Column(String, nullable=False, index=True)
+    target_id = Column(String, nullable=False, index=True)
+    created_at = Column(DateTime, default=_now)
+
+
+# =====================================================================
 # 商业与服务中心：账户、会员、订单、流水、AI 用量、创作者结算
 # =====================================================================
 class SpiritAccount(Base):
@@ -2268,6 +2463,8 @@ class SpiritPlantType(Base):
     unit = Column(String, default="株")
     sort_order = Column(Integer, default=0, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
+    # 活动灵植的福利截止时间；为空表示长期有效。
+    expires_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=_now)
     updated_at = Column(DateTime, default=_now)
 

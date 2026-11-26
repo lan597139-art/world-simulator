@@ -299,10 +299,6 @@ function GameHome({ lang, activeWorld, characters, events, stories, storyProject
 
   return (
     <div className="pwh-page pwh-page--game">
-      <div className="pwh-lead">
-        <div><h2>{lang === 'zh' ? '世界指挥台' : 'World command deck'}</h2><p>{lang === 'zh' ? '先看世界现在的状态，再决定推进哪条人物线、事件或结局分支。' : 'See what is happening, then decide which character, event or ending to push forward.'}</p></div>
-        <div className="pwh-pills"><span className="pwh-pill"><i className="pwh-dot" />{lang === 'zh' ? '运行正常' : 'Healthy'}</span><span className="pwh-pill">{events.length} {lang === 'zh' ? '个事件' : 'events'}</span></div>
-      </div>
       <ErrorLine error={error} />
 
       <div className="pwh-game-hero">

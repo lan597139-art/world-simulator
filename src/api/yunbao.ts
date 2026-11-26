@@ -49,6 +49,16 @@ export type YunbaoProfile = {
   read_only: boolean
 }
 
+export type YunbaoVersion = {
+  id: string
+  definition_id: string
+  version_no: number
+  status: string
+  created_by: string
+  created_at: string
+  payload: Record<string, any>
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_ORIGIN}/api${path}`, {
     ...init,
@@ -88,3 +98,21 @@ export const createYunbaoMemory = (content: string, importance = 0.6) =>
   request<PersonaMemory>('/yunbao/memories', { method: 'POST', body: JSON.stringify({ content, importance }) })
 export const deleteYunbaoMemory = (memoryId: string) =>
   request<{ status: string }>(`/yunbao/memories/${encodeURIComponent(memoryId)}`, { method: 'DELETE' })
+
+export const listYunbaoVersions = () => request<YunbaoVersion[]>('/yunbao/versions')
+
+export const createYunbaoDraft = (payload: Record<string, any>) =>
+  request<YunbaoVersion>('/yunbao/versions/draft', { method: 'POST', body: JSON.stringify(payload) })
+
+export const publishYunbaoVersion = (versionId: string) =>
+  request<{ persona: YunbaoProfile; version: YunbaoVersion }>(
+    `/yunbao/versions/${encodeURIComponent(versionId)}/publish`,
+    { method: 'POST' },
+  )
+
+export const rollbackYunbaoVersion = (versionId: string) =>
+  request<{ persona: YunbaoProfile; version: YunbaoVersion }>(
+    `/yunbao/versions/${encodeURIComponent(versionId)}/rollback`,
+    { method: 'POST' },
+  )
+

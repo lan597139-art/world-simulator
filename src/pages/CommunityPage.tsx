@@ -2,9 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   ArrowUpRight,
   BookOpen,
-  CalendarDays,
   Compass,
-  Flame,
   Globe2,
   Handshake,
   LayoutGrid,
@@ -14,7 +12,6 @@ import {
   Share2,
   Sparkles,
   UserRound,
-  Users,
   X,
 } from 'lucide-react'
 import type { AuthUser } from '../api/auth'
@@ -22,11 +19,25 @@ import { API_ORIGIN } from '../api/config'
 import { listStories as listStoryProjects, type StoryProject } from '../api/storyline'
 import { createStory, listStories, type StoryItem } from '../api/writing'
 import { publishDirect } from '../api/community'
+import { quadCheer } from '../api/socialCore'
 import CommunityPublicWorks from '../components/CommunityPublicWorks'
+import CommunityWorkCard from '../components/CommunityWorkCard'
+import CommunityWorkDetail, { type CommunityDetailTarget } from '../components/CommunityWorkDetail'
 import type { World } from '../types/world'
 import './../styles/community.css'
 
 type Lang = 'zh' | 'en'
+type CommunityTab = 'all' | 'works' | 'worlds' | 'ocs' | 'stories' | 'creators'
+
+const COMMUNITY_TABS: Array<{ key: CommunityTab; zh: string; en: string }> = [
+  { key: 'all', zh: '全部', en: 'All' },
+  { key: 'works', zh: '作品', en: 'Works' },
+  { key: 'worlds', zh: '世界', en: 'Worlds' },
+  { key: 'ocs', zh: 'OC', en: 'OCs' },
+  { key: 'stories', zh: '剧情', en: 'Stories' },
+  { key: 'creators', zh: '创作者', en: 'Creators' },
+]
+
 type CommunityFilter = 'all' | 'works' | 'worlds' | 'characters' | 'storylines'
 
 type CharacterCard = {
@@ -45,6 +56,7 @@ type SearchResult = {
   summary: string
   meta: string
   updated: string
+  worldId?: string
   work?: StoryItem
 }
 
@@ -74,7 +86,7 @@ function text(lang: Lang) {
   return lang === 'zh'
     ? {
         eyebrow: 'CONTENT COMMUNITY',
-        title: '内容社区',
+        title: '作品集',
         subtitle: '发现世界、角色与故事，和创作者一起把想象继续写下去。',
         publish: '发布作品',
         composeKicker: 'NEW WORK',
@@ -144,7 +156,7 @@ function text(lang: Lang) {
         creatorZoneKicker: 'CREATOR PROFILE',
         creatorWorks: '创作者作品',
         creatorSince: '加入于',
-        identityCenter: '进入身份中心',
+        identityCenter: '进入个人中心',
         hotZone: '热门榜单',
         hotZoneKicker: 'TRENDING',
         hotWorks: '作品榜',
@@ -169,6 +181,15 @@ function text(lang: Lang) {
         socialNote: '点赞、评论与收藏将在互动模块开放；当前可阅读与分享真实作品。',
         close: '关闭',
         contents: '全部内容',
+        permissionKicker: 'PERMISSIONS',
+        permissionTitle: '作者内容权限',
+        permissionHint: '普通体验展示你允许公开的内容；灵果体验需明确开启，并填写消耗数量与深度内容。消耗数量留空即不开放收费体验。',
+        publicContent: '普通公开内容',
+        enableExperience: '开放灵果体验',
+        experienceFruit: '灵果消耗数量',
+        experienceContent: '深度体验内容',
+        experienceContentPlaceholder: '灵果体验用户进入后将看到的深度内容…',
+        pricePending: '未填写消耗数量，灵果体验暂不开放',
         loading: '正在读取社区内容…',
       }
     : {
@@ -268,6 +289,15 @@ function text(lang: Lang) {
         socialNote: 'Likes, comments, and favorites will open with social features. Real works can be read and shared now.',
         close: 'Close',
         contents: 'All content',
+        permissionKicker: 'PERMISSIONS',
+        permissionTitle: 'Author content permissions',
+        permissionHint: 'Normal experience shows the content you allow publicly; spirit-fruit experience requires an explicit toggle plus a cost and deep content. Leave the cost empty to keep it unpaid.',
+        publicContent: 'Public content',
+        enableExperience: 'Open spirit-fruit experience',
+        experienceFruit: 'Spirit-fruit cost',
+        experienceContent: 'Deep experience content',
+        experienceContentPlaceholder: 'The deep content spirit-fruit users will see…',
+        pricePending: 'No cost set, spirit-fruit experience is not open',
         loading: 'Loading community content…',
       }
 }
@@ -335,6 +365,11 @@ export default function CommunityPage({
   onOpenCharacters,
   onOpenStorylines,
   onOpenIdentity,
+  onOpenChat,
+  onOpenRelationships,
+  onOpenEvents,
+  onOpenMemories,
+  onOpenSimulation,
 }: {
   lang: Lang
   user: AuthUser | null
@@ -343,15 +378,24 @@ export default function CommunityPage({
   onOpenCharacters: () => void
   onOpenStorylines: () => void
   onOpenIdentity: () => void
+  onOpenChat?: (worldId: string, characterId?: string) => void
+  onOpenRelationships?: () => void
+  onOpenEvents?: () => void
+  onOpenMemories?: () => void
+  onOpenSimulation?: () => void
 }) {
   const copy = text(lang)
+  const [quadNotice, setQuadNotice] = useState('')
   const [works, setWorks] = useState<StoryItem[] | null>(null)
   const [worlds, setWorlds] = useState<World[]>([])
   const [characters, setCharacters] = useState<CharacterCard[]>([])
   const [stories, setStories] = useState<StoryProject[]>([])
+  const [tab, setTab] = useState<CommunityTab>('all')
+  // 分区可见性：'all' 显示全部；其余页签只显示对应分区（区块保留在 DOM，不重挂载数据）。
+  const shows = (key: CommunityTab) => tab === 'all' || tab === key
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<CommunityFilter>('all')
-  const [reading, setReading] = useState<StoryItem | null>(null)
+  const [detailTarget, setDetailTarget] = useState<CommunityDetailTarget | null>(null)
   const [composerOpen, setComposerOpen] = useState(false)
   const [composeTitle, setComposeTitle] = useState('')
   const [composeContent, setComposeContent] = useState('')
@@ -359,6 +403,10 @@ export default function CommunityPage({
   const [composeStatus, setComposeStatus] = useState<'draft' | 'published'>('published')
   const [composeSubmitting, setComposeSubmitting] = useState(false)
   const [composeError, setComposeError] = useState('')
+  const [composePublicVisible, setComposePublicVisible] = useState(true)
+  const [composeExperienceEnabled, setComposeExperienceEnabled] = useState(false)
+  const [composeExperienceFruit, setComposeExperienceFruit] = useState('')
+  const [composeExperienceContent, setComposeExperienceContent] = useState('')
   const [publishNotice, setPublishNotice] = useState('')
   const [shareState, setShareState] = useState<'idle' | 'copied' | 'manual'>('idle')
   const [loaded, setLoaded] = useState(false)
@@ -407,13 +455,13 @@ export default function CommunityPage({
   }, [])
 
   useEffect(() => {
-    if (!reading) return
+    if (!detailTarget) return
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setReading(null)
+      if (event.key === 'Escape') setDetailTarget(null)
     }
     document.addEventListener('keydown', closeOnEscape)
     return () => document.removeEventListener('keydown', closeOnEscape)
-  }, [reading])
+  }, [detailTarget])
 
   useEffect(() => {
     if (!composerOpen) return
@@ -493,6 +541,7 @@ export default function CommunityPage({
             summary: character.intro,
             meta: `${character.role}${character.worldName ? ` · ${character.worldName}` : ''}`,
             updated: '',
+            worldId: character.worldId,
           })
         }
       }
@@ -519,13 +568,13 @@ export default function CommunityPage({
 
   const openResult = (result: SearchResult) => {
     if (result.type === 'works' && result.work) {
-      setReading(result.work)
+      setDetailTarget({ kind: 'story', work: result.work })
     } else if (result.type === 'worlds') {
-      onOpenWorld()
+      setDetailTarget({ kind: 'world', id: result.id, title: result.title, summary: result.summary, meta: result.meta })
     } else if (result.type === 'characters') {
-      onOpenCharacters()
+      setDetailTarget({ kind: 'character', id: result.id, title: result.title, summary: result.summary, meta: result.meta, characterId: result.id, worldId: result.worldId || '' })
     } else {
-      onOpenStorylines()
+      setDetailTarget({ kind: 'storyline', id: result.id, title: result.title, summary: result.summary, meta: result.meta })
     }
   }
 
@@ -535,6 +584,10 @@ export default function CommunityPage({
     setComposeWorldId(worlds[0]?.id || '')
     setComposeStatus('published')
     setComposeError('')
+    setComposePublicVisible(true)
+    setComposeExperienceEnabled(false)
+    setComposeExperienceFruit('')
+    setComposeExperienceContent('')
     setComposerOpen(true)
   }
 
@@ -557,7 +610,18 @@ export default function CommunityPage({
     setComposeError('')
     try {
       if (status === 'published') {
-        await publishDirect({ title: composeTitle.trim(), content: composeContent, work_type: 'diary_essay', anonymous: false })
+        await publishDirect({
+          title: composeTitle.trim(),
+          content: composeContent,
+          work_type: 'diary_essay',
+          anonymous: false,
+          public_visible: composePublicVisible,
+          experience_enabled: composeExperienceEnabled,
+          experience_fruit: composeExperienceFruit === '' ? null : Number(composeExperienceFruit),
+          experience_snapshot: composeExperienceContent.trim()
+            ? { kind: 'direct', items: [{ title: '深度体验', content: composeExperienceContent }] }
+            : null,
+        })
         setPublishNotice(copy.publishCreated)
       } else {
         const draft = await createStory({
@@ -584,9 +648,19 @@ export default function CommunityPage({
     setShareState(await copyText(communityUrl) ? 'copied' : 'manual')
   }
 
+  const runQuad = async (targetType: 'world' | 'character' | 'storyline', targetId: string) => {
+    setQuadNotice('')
+    try {
+      await quadCheer(targetType, targetId)
+      setQuadNotice(lang === 'zh' ? '已点赞、收藏、推荐并送上打赏鼓励（不消耗灵果）' : 'Liked, saved, recommended and cheered (no fruit spent)')
+    } catch (reason) {
+      setQuadNotice(reason instanceof Error ? reason.message : (lang === 'zh' ? '一键四连失败' : 'Quad failed'))
+    }
+  }
+
   const openWork = (work: StoryItem) => {
     setShareState('idle')
-    setReading(work)
+    setDetailTarget({ kind: 'story', work })
   }
 
   const filterItems: Array<{ key: CommunityFilter; label: string; count: number }> = [
@@ -599,6 +673,7 @@ export default function CommunityPage({
 
   return (
     <div className="cm-content">
+      {quadNotice ? <div className="cm-notice cm-notice--ok">{quadNotice}</div> : null}
       <section className="cm-hero">
         <div className="cm-hero-copy">
           <div className="cm-eyebrow">{copy.eyebrow}</div>
@@ -619,7 +694,7 @@ export default function CommunityPage({
         </div>
       </section>
 
-      <CommunityPublicWorks key={publishNotice} />
+      <CommunityPublicWorks key={publishNotice} onOpen={(work) => setDetailTarget({ kind: 'publication', work })} />
 
       <section className="cm-toolbar" aria-label={copy.contents}>
         <div className="cm-search">
@@ -685,8 +760,22 @@ export default function CommunityPage({
           )}
         </section>
       ) : (
-        <div className="cm-discovery">
-          <section className="cm-section cm-recommend">
+        <div className="cm-discovery" data-tab={tab}>
+          <div className="cm-tabs" role="tablist" aria-label={lang === 'zh' ? '内容分区' : 'Content sections'}>
+            {COMMUNITY_TABS.map((item) => (
+              <button
+                key={item.key}
+                type="button"
+                role="tab"
+                aria-selected={tab === item.key}
+                className={`cm-tab${tab === item.key ? ' is-active' : ''}`}
+                onClick={() => setTab(item.key)}
+              >
+                {lang === 'zh' ? item.zh : item.en}
+              </button>
+            ))}
+          </div>
+          <section className="cm-section cm-recommend" hidden={!shows('works')}>
             <div className="cm-section-head">
               <div>
                 <span className="cm-kicker">{copy.recommendedKicker}</span>
@@ -747,8 +836,8 @@ export default function CommunityPage({
             )}
           </section>
 
-          <div className="cm-two-col">
-            <section className="cm-section cm-world-zone">
+          <div className="cm-two-col" hidden={!(shows('worlds') || shows('ocs'))}>
+            <section className="cm-section cm-world-zone" hidden={!shows('worlds')}>
               <div className="cm-section-head">
                 <div>
                   <span className="cm-kicker">{copy.worldZoneKicker}</span>
@@ -759,25 +848,23 @@ export default function CommunityPage({
               {worlds.length === 0 ? (
                 <div className="cm-empty"><Globe2 aria-hidden="true" strokeWidth={1.4} /><strong>{copy.noWorlds}</strong></div>
               ) : worlds.map((world) => (
-                <article className="cm-world-card" key={world.id}>
-                  <div className="cm-world-top">
-                    <span className={`cm-type worlds`}>{(WORLD_TYPE_LABELS[world.type] || { zh: world.type, en: world.type })[lang]}</span>
-                    <span>{characters.filter((character) => character.worldId === world.id).length} {copy.characterCount}</span>
-                  </div>
-                  <h3>{world.name}</h3>
-                  <p>{excerpt(String(world.description || world.background || ''), 150)}</p>
-                  {world.background && world.description && (
-                    <p className="cm-world-lore">{excerpt(world.background, 140)}</p>
-                  )}
-                  <div className="cm-world-foot">
-                    <span>{stories.filter((story) => story.world_id === world.id).length} {copy.storyCount}</span>
-                    <button type="button" onClick={onOpenWorld}>{copy.enterWorld} <ArrowUpRight aria-hidden="true" strokeWidth={1.8} /></button>
-                  </div>
-                </article>
+                <CommunityWorkCard
+                  key={world.id}
+                  lang={lang}
+                  type="worlds"
+                  typeLabel={(WORLD_TYPE_LABELS[world.type] || { zh: world.type, en: world.type })[lang]}
+                  title={world.name}
+                  author={user?.display_name}
+                  meta={`${characters.filter((character) => character.worldId === world.id).length} ${copy.characterCount}`}
+                  content={excerpt([String(world.description || ''), String(world.background || '')].filter(Boolean).join(' '), 150)}
+                  entryLabel={copy.enterWorld}
+                  onOpen={() => setDetailTarget({ kind: 'world', id: world.id, title: world.name, summary: excerpt(String(world.description || world.background || ''), 150), meta: (WORLD_TYPE_LABELS[world.type] || { zh: world.type, en: world.type })[lang] })}
+                  onQuad={() => void runQuad('world', world.id)}
+                />
               ))}
             </section>
 
-            <section className="cm-section cm-oc-zone">
+            <section className="cm-section cm-oc-zone" hidden={!shows('ocs')}>
               <div className="cm-section-head">
                 <div>
                   <span className="cm-kicker">{copy.ocZoneKicker}</span>
@@ -792,22 +879,27 @@ export default function CommunityPage({
               ) : (
                 <div className="cm-oc-grid">
                   {characters.slice(0, 6).map((character) => (
-                    <button type="button" className="cm-oc-card" key={character.id} onClick={onOpenCharacters}>
-                      <span className="cm-oc-avatar">{character.name.charAt(0)}</span>
-                      <span className="cm-oc-copy">
-                        <strong>{character.name}</strong>
-                        <span>{character.role}</span>
-                        <p>{excerpt(character.intro, 52) || character.worldName}</p>
-                      </span>
-                    </button>
+                    <CommunityWorkCard
+                      key={character.id}
+                      lang={lang}
+                      type="characters"
+                      typeLabel={copy.characters}
+                      title={character.name}
+                      author={user?.display_name}
+                      meta={character.role}
+                      content={excerpt(character.intro || character.worldName, 150)}
+                      entryLabel={copy.openCharacters}
+                      onOpen={() => setDetailTarget({ kind: 'character', id: character.id, title: character.name, summary: excerpt(character.intro, 150), meta: character.role, characterId: character.id, worldId: character.worldId })}
+                      onQuad={() => void runQuad('character', character.id)}
+                    />
                   ))}
                 </div>
               )}
             </section>
           </div>
 
-          <div className="cm-two-col cm-two-col-wide">
-            <section className="cm-section cm-story-zone">
+          <div className="cm-two-col cm-two-col-wide" hidden={!(shows('stories') || shows('works'))}>
+            <section className="cm-section cm-story-zone" hidden={!shows('stories')}>
               <div className="cm-section-head">
                 <div>
                   <span className="cm-kicker">{copy.storyZoneKicker}</span>
@@ -818,22 +910,23 @@ export default function CommunityPage({
               {stories.length === 0 ? (
                 <div className="cm-empty"><Route aria-hidden="true" strokeWidth={1.4} /><strong>{copy.noStories}</strong></div>
               ) : stories.slice(0, 3).map((story) => (
-                <article className="cm-story-card" key={story.id}>
-                  <div className="cm-story-top">
-                    <span className={`cm-type storylines`}>{copy.storylines}</span>
-                    <span>{STORY_STATUS_LABELS[story.status]?.[lang] || story.status}</span>
-                  </div>
-                  <h3>{story.title}</h3>
-                  <p>{excerpt(story.premise, 135) || '—'}</p>
-                  <div className="cm-story-foot">
-                    <span>{worldNames.get(story.world_id) || '—'}</span>
-                    <button type="button" onClick={onOpenStorylines}>{copy.openStoryline} <ArrowUpRight aria-hidden="true" strokeWidth={1.8} /></button>
-                  </div>
-                </article>
+                <CommunityWorkCard
+                  key={story.id}
+                  lang={lang}
+                  type="storylines"
+                  typeLabel={copy.storylines}
+                  title={story.title}
+                  author={user?.display_name}
+                  meta={worldNames.get(story.world_id) || STORY_STATUS_LABELS[story.status]?.[lang] || story.status}
+                  content={excerpt(story.premise, 150)}
+                  entryLabel={copy.openStoryline}
+                  onOpen={() => setDetailTarget({ kind: 'storyline', id: story.id, title: story.title, summary: excerpt(story.premise, 150), meta: STORY_STATUS_LABELS[story.status]?.[lang] || story.status })}
+                  onQuad={() => void runQuad('storyline', story.id)}
+                />
               ))}
             </section>
 
-            <section className="cm-section cm-feed">
+            <section className="cm-section cm-feed" hidden={!shows('works')}>
               <div className="cm-section-head">
                 <div>
                   <span className="cm-kicker">{copy.creationFeedKicker}</span>
@@ -861,7 +954,7 @@ export default function CommunityPage({
             </section>
           </div>
 
-          <div className="cm-two-col cm-two-col-wide cm-creator-row">
+          <div className="cm-two-col cm-two-col-wide cm-creator-row is-single" hidden={!shows('creators')}>
             <section className="cm-section cm-creator-zone">
               <div className="cm-section-head">
                 <div>
@@ -894,105 +987,41 @@ export default function CommunityPage({
               </div>
             </section>
 
-            <section className="cm-section cm-following">
-              <div className="cm-section-head">
-                <div>
-                  <span className="cm-kicker">{copy.followingKicker}</span>
-                  <h2>{copy.following}</h2>
-                </div>
-                <Users aria-hidden="true" strokeWidth={1.5} />
-              </div>
-              <div className="cm-follow-counts">
-                <div><strong>0</strong><span>{copy.followingCount}</span></div>
-                <div><strong>0</strong><span>{copy.followerCount}</span></div>
-              </div>
-              <div className="cm-empty compact">
-                <Users aria-hidden="true" strokeWidth={1.4} />
-                <strong>{copy.followingEmpty}</strong>
-                <p>{copy.followingHint}</p>
-              </div>
-            </section>
           </div>
 
-          <div className="cm-two-col">
-            <section className="cm-section cm-hot-zone">
-              <div className="cm-section-head">
-                <div>
-                  <span className="cm-kicker">{copy.hotZoneKicker}</span>
-                  <h2>{copy.hotZone}</h2>
-                </div>
-                <Flame aria-hidden="true" strokeWidth={1.5} />
+          <section className="cm-soon" aria-label={lang === 'zh' ? '筹备中' : 'In progress'} hidden={!shows('creators')}>
+            <div className="cm-section-head">
+              <div>
+                <span className="cm-kicker">{copy.followingKicker}</span>
+                <h2>{lang === 'zh' ? '关注动态 · 热门榜单 · 共创专区' : 'Following · Rankings · Co-creation'}</h2>
               </div>
-              <div className="cm-hot-columns">
-                {[copy.hotWorks, copy.hotCharacters, copy.hotWorlds].map((label) => (
-                  <div key={label}><span>{label}</span><strong>—</strong><small>{copy.waitingData}</small></div>
-                ))}
-              </div>
-              <p className="cm-empty-note">{copy.hotHint}</p>
-            </section>
-
-            <section className="cm-section cm-co-create">
-              <div className="cm-section-head">
-                <div>
-                  <span className="cm-kicker">{copy.coCreateKicker}</span>
-                  <h2>{copy.coCreateZone}</h2>
-                </div>
-                <Handshake aria-hidden="true" strokeWidth={1.5} />
-              </div>
-              <div className="cm-co-create-empty">
-                <span className="cm-co-icon"><Handshake aria-hidden="true" strokeWidth={1.45} /></span>
-                <strong>{copy.coCreateEmpty}</strong>
-                <p>{copy.coCreateHint}</p>
-              </div>
-            </section>
-          </div>
+              <Handshake aria-hidden="true" strokeWidth={1.5} />
+            </div>
+            <p>
+              {lang === 'zh'
+                ? '这三块能力尚未上线，不再展示 0 值占位。上线前空状态由此行说明，避免页面长期停留在“全是空卡片”。'
+                : 'These features are not live yet, so no zero-value placeholders are shown. This single line replaces the empty cards.'}
+            </p>
+          </section>
         </div>
       )}
 
-      {reading && (
-        <div className="cm-modal-backdrop" onClick={() => setReading(null)}>
-          <article className="cm-reader" role="dialog" aria-modal="true" aria-label={reading.title} onClick={(event) => event.stopPropagation()}>
-            <header className="cm-reader-head">
-              <div className="cm-reader-heading">
-                <span className={`cm-type works`}>{copy.works}</span>
-                <h2>{reading.title}</h2>
-                <div className="cm-reader-meta">
-                  <span><UserRound aria-hidden="true" strokeWidth={1.5} />{copy.readerBy} · {user?.display_name || '本地创作者'}</span>
-                  <span><CalendarDays aria-hidden="true" strokeWidth={1.5} />{copy.readerUpdated} · {formatDate(reading.updated_at, lang)}</span>
-                  <span>{reading.status === 'published' ? copy.published : copy.draft}</span>
-                </div>
-              </div>
-              <button type="button" className="cm-modal-close" onClick={() => setReading(null)} aria-label={copy.close}>
-                <X aria-hidden="true" strokeWidth={1.8} />
-              </button>
-            </header>
-            <div className="cm-reader-stats">
-              <div><span>{copy.readerStatus}</span><strong>{reading.status === 'published' ? copy.published : copy.draft}</strong></div>
-              <div><span>{copy.readerMode}</span><strong>{reading.mode === 'architect' ? copy.architect : copy.explorer}</strong></div>
-              <div><span>{copy.readerWords}</span><strong>{reading.word_count}</strong></div>
-              <div><span>{copy.readerUpdated}</span><strong>{formatDate(reading.updated_at, lang)}</strong></div>
-            </div>
-            <div className="cm-reader-body">
-              {reading.plain_text?.trim() ? (
-                <div className="cm-prose">{reading.plain_text}</div>
-              ) : (
-                <div className="cm-empty"><BookOpen aria-hidden="true" strokeWidth={1.4} /><strong>{lang === 'zh' ? '正文尚未填写' : 'No content yet'}</strong></div>
-              )}
-            </div>
-            <footer className="cm-reader-foot">
-              <p>{copy.socialNote}</p>
-              <div>
-                <button type="button" className="cm-ghost" onClick={() => void shareCommunity()}>
-                  <Share2 aria-hidden="true" strokeWidth={1.7} />
-                  {shareState === 'copied' ? copy.shared : copy.share}
-                </button>
-                <button type="button" className="cm-primary" onClick={() => { setReading(null); onOpenWorkbench() }}>
-                  {copy.openWorkbench} <ArrowUpRight aria-hidden="true" strokeWidth={1.8} />
-                </button>
-              </div>
-            </footer>
-          </article>
-        </div>
+      {detailTarget && (
+        <CommunityWorkDetail
+          lang={lang}
+          user={user}
+          target={detailTarget}
+          onClose={() => setDetailTarget(null)}
+          onOpenWorkbench={onOpenWorkbench}
+          onOpenWorld={onOpenWorld}
+          onOpenCharacters={onOpenCharacters}
+          onOpenStorylines={onOpenStorylines}
+          onOpenChat={onOpenChat}
+          onOpenRelationships={onOpenRelationships}
+          onOpenEvents={onOpenEvents}
+          onOpenMemories={onOpenMemories}
+          onOpenSimulation={onOpenSimulation}
+        />
       )}
 
       {composerOpen && (
@@ -1043,6 +1072,42 @@ export default function CommunityPage({
                 />
                 <small>{composeContent.length} {copy.charCount}</small>
               </label>
+              <div className="cm-field cm-field-body">
+                <span>{copy.permissionKicker} · {copy.permissionTitle}</span>
+                <p className="cm-notice">{copy.permissionHint}</p>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, marginTop: 10 }}>
+                  <input type="checkbox" checked={composePublicVisible} onChange={(event) => setComposePublicVisible(event.target.checked)} />
+                  <span>{copy.publicContent}</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, marginTop: 8 }}>
+                  <input type="checkbox" checked={composeExperienceEnabled} onChange={(event) => setComposeExperienceEnabled(event.target.checked)} />
+                  <span>{copy.enableExperience}</span>
+                </label>
+                {composeExperienceEnabled ? (
+                  <>
+                    <label className="cm-field" style={{ marginTop: 10 }}>
+                      <span>{copy.experienceFruit}</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={composeExperienceFruit}
+                        onChange={(event) => setComposeExperienceFruit(event.target.value)}
+                        placeholder="0"
+                      />
+                      <small>{composeExperienceFruit === '' ? copy.pricePending : `${copy.experienceFruit}：${composeExperienceFruit}`}</small>
+                    </label>
+                    <label className="cm-field cm-field-body" style={{ marginTop: 10 }}>
+                      <span>{copy.experienceContent}</span>
+                      <textarea
+                        value={composeExperienceContent}
+                        onChange={(event) => setComposeExperienceContent(event.target.value)}
+                        placeholder={copy.experienceContentPlaceholder}
+                        rows={4}
+                      />
+                    </label>
+                  </>
+                ) : null}
+              </div>
               {composeError && <p className="cm-form-error" role="alert">{composeError}</p>}
             </div>
             <footer className="cm-composer-foot">

@@ -40,18 +40,23 @@ const nav = (title: string, items: [string, string][]) => ({
 })
 
 const MODULE_LABELS: Record<string, string> = {
-  overview: '01 世界总览',
-  'world-management': '02 世界管理',
-  'world-building': '世界建设配置',
+  'world-management': '世界库',
+  'world-building': '世界种子编辑',
   'character-management': '03 人物管理',
   chat: 'AI 角色聊天',
   'world-structure': '世界结构',
   'world-data': '世界设定',
+  'world-background': '背景',
+  'world-map': '地图',
+  'world-works': '作品',
+  'world-illustration': '插画集',
+  'world-cocreation': '共创',
+  'world-community': '社区',
   relationships: '04 关系与组织',
   events: '05 事件管理',
   timeline: '06 时间线',
   simulation: '07 模拟运行',
-  storyline: '故事线管理',
+  storyline: '故事线',
   writing: '08 写作辅助',
   multipath: '多路径沙盒',
   'time-machine': '时光机',
@@ -106,7 +111,7 @@ function config(
     short: PRODUCT_SHORT[key],
     icon: PRODUCT_ICONS[key],
     description: PRODUCT_DESCRIPTIONS[key],
-    home: key === 'game' ? 'overview' : key === 'literature' ? 'world-management' : key === 'companion' ? 'character-management' : key === 'yunbao' ? 'yunbao' : 'diary',
+    home: key === 'game' ? 'world-management' : key === 'literature' ? 'world-management' : key === 'companion' ? 'character-management' : key === 'yunbao' ? 'yunbao' : 'diary',
     auto_workspace: key === 'companion' || key === 'diary' || key === 'yunbao',
     workspace_name: key === 'companion' ? '虚拟角色空间' : key === 'diary' ? '人生记录空间' : key === 'yunbao' ? '云宝领域' : null,
     allowed_modules: allowed,
@@ -181,20 +186,30 @@ export function navigationConfig(config: ProductConfig): ProductConfig {
 
 export const FALLBACK_PRODUCTS: ProductConfig[] = [
   config('game', [
-    nav('世界构建', [
-      ['overview', MODULE_LABELS.overview],
+    nav('世界库', [
       ['world-management', MODULE_LABELS['world-management']],
-      ['character-management', MODULE_LABELS['character-management']],
-      ['chat', 'AI 角色聊天（NPC）'],
+    ]),
+    nav('创作导航', [
+      ['world-background', MODULE_LABELS['world-background']],
+      ['world-works', MODULE_LABELS['world-works']],
+      ['world-cocreation', MODULE_LABELS['world-cocreation']],
+      ['world-community', MODULE_LABELS['world-community']],
+    ]),
+    nav('世界构建', [
+      ['world-building', MODULE_LABELS['world-building']],
       ['world-structure', MODULE_LABELS['world-structure']],
-      ['world-data', MODULE_LABELS['world-data']],
+      ['world-map', MODULE_LABELS['world-map']],
+    ]),
+    nav('人物创作', [
+      ['character-management', MODULE_LABELS['character-management']],
+      ['world-illustration', MODULE_LABELS['world-illustration']],
+    ]),
+    nav('叙事推演', [
       ['relationships', MODULE_LABELS.relationships],
       ['events', MODULE_LABELS.events],
-    ]),
-    nav('模拟与推演', [
       ['timeline', MODULE_LABELS.timeline],
-      ['simulation', '模拟与写作'],
       ['storyline', MODULE_LABELS.storyline],
+      ['simulation', '模拟与写作'],
     ]),
     nav('数据安全', [
       ['time-machine', MODULE_LABELS['time-machine']],
@@ -204,18 +219,29 @@ export const FALLBACK_PRODUCTS: ProductConfig[] = [
   ], {
     'character-management': 'full', events: 'narrative', timeline: 'world', simulation: 'full',
     writing: 'narrative', chat: 'npc', relationships: 'world', personas: 'hidden',
-  }, ['world-building', 'multipath', 'writing']),
+  }, ['world-building', 'multipath', 'writing', 'chat', 'world-data']),
   config('literature', [
-    nav('世界构建', [
+    nav('世界库', [
       ['world-management', MODULE_LABELS['world-management']],
-      ['character-management', MODULE_LABELS['character-management']],
-      ['chat', 'AI 角色聊天'],
+    ]),
+    nav('创作导航', [
+      ['world-background', MODULE_LABELS['world-background']],
+      ['world-works', MODULE_LABELS['world-works']],
+      ['world-cocreation', MODULE_LABELS['world-cocreation']],
+      ['world-community', MODULE_LABELS['world-community']],
+    ]),
+    nav('世界构建', [
+      ['world-building', MODULE_LABELS['world-building']],
       ['world-structure', MODULE_LABELS['world-structure']],
-      ['world-data', MODULE_LABELS['world-data']],
+      ['world-map', MODULE_LABELS['world-map']],
+    ]),
+    nav('人物创作', [
+      ['character-management', MODULE_LABELS['character-management']],
+      ['world-illustration', MODULE_LABELS['world-illustration']],
+    ]),
+    nav('叙事推演', [
       ['relationships', MODULE_LABELS.relationships],
       ['events', MODULE_LABELS.events],
-    ]),
-    nav('故事创作', [
       ['timeline', MODULE_LABELS.timeline],
       ['storyline', MODULE_LABELS.storyline],
       ['simulation', '模拟与写作'],
@@ -228,7 +254,7 @@ export const FALLBACK_PRODUCTS: ProductConfig[] = [
   ], {
     'character-management': 'full', events: 'narrative', timeline: 'world', simulation: 'auxiliary',
     writing: 'narrative', chat: 'npc', relationships: 'world', personas: 'hidden',
-  }, ['world-building', 'multipath', 'writing']),
+  }, ['world-building', 'multipath', 'writing', 'chat', 'world-data']),
   config('companion', [
     nav('虚拟角色空间', [
       ['character-management', '03 人物管理 · 轻量'],

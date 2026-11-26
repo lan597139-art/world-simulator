@@ -28,11 +28,14 @@ def main_test():
     cfg = client.get("/api/products/config").json()
     products = {row["key"]: row for row in cfg.get("products", [])}
     check("产品矩阵包含四大创作产品与云宝", set(products) == {"game", "literature", "companion", "diary", "yunbao"}, list(products))
-    check("游戏首页保留 01 世界总览", products["game"]["home"] == "overview", products["game"]["home"])
-    check("文学首页为 02 世界管理", products["literature"]["home"] == "world-management", products["literature"]["home"])
-    check("文学移除 01 世界总览", "overview" not in products["literature"]["allowed_modules"], products["literature"]["allowed_modules"])
+    check("游戏首页为世界库（已删除总览）", products["game"]["home"] == "world-management", products["game"]["home"])
+    check("文学首页为世界库", products["literature"]["home"] == "world-management", products["literature"]["home"])
+    check("游戏移除总览模块", "overview" not in products["game"]["allowed_modules"], products["game"]["allowed_modules"])
+    check("文学移除总览模块", "overview" not in products["literature"]["allowed_modules"], products["literature"]["allowed_modules"])
+    game_nav = [item["page"] for group in products["game"]["nav_groups"] for item in group["items"]]
     lit_nav = [item["page"] for group in products["literature"]["nav_groups"] for item in group["items"]]
-    check("文学侧栏不出现世界总览", "overview" not in lit_nav, lit_nav)
+    check("游戏侧栏不出现总览", "overview" not in game_nav, game_nav)
+    check("文学侧栏不出现总览", "overview" not in lit_nav, lit_nav)
     check("四产品描述逐字一致", [products[key]["description"] for key in ("game", "literature", "companion", "diary")] == [
         "人物、NPC、世界规则、任务事件与多结局。",
         "人物关系、事件、故事线、平行空间与写作。",

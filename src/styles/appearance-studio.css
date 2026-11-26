@@ -49,14 +49,14 @@ html[data-glass-targets~="nav"] :is(.app-sidebar, .cc-sidebar) {
   backdrop-filter:
     blur(calc(var(--ws-g-nav-blur) + (var(--ws-g-nav-frost) * 0.35px)))
     saturate(calc(100% + (var(--ws-g-nav-refraction) * 0.9%))) !important;
-  border-color: color-mix(in srgb, #fff calc(var(--ws-g-nav-border) * 1%), var(--glass-border)) !important;
+  border-color: color-mix(in srgb, var(--ws-light) calc(var(--ws-g-nav-border) * 1%), var(--glass-border)) !important;
   border-radius: calc(var(--ws-g-nav-radius) * 1px) !important;
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, calc(var(--ws-g-nav-border) * 0.008)) inset,
-    0 0 calc(var(--ws-g-nav-thickness) * 0.45px) rgba(255, 255, 255, calc(var(--ws-g-nav-border) * 0.004)) inset,
-    0 0 0 1px rgba(255, 86, 170, calc(var(--ws-g-nav-dispersion) * 0.004)),
-    0 0 calc(var(--ws-g-nav-shadow) * 0.35px) rgba(90, 190, 255, calc(var(--ws-g-nav-dispersion) * 0.012)),
-    0 calc(var(--ws-g-nav-shadow) * 0.09px) calc(var(--ws-g-nav-shadow) * 0.34px) rgba(0, 0, 0, calc(0.05 + var(--ws-g-nav-shadow) * 0.0012)) !important;
+    0 1px 0 rgba(var(--ws-light-rgb), calc(var(--ws-g-nav-border) * 0.008)) inset,
+    0 0 calc(var(--ws-g-nav-thickness) * 0.45px) rgba(var(--ws-light-rgb), calc(var(--ws-g-nav-border) * 0.004)) inset,
+    0 0 0 1px rgba(var(--ws-dispersion-a-rgb), calc(var(--ws-g-nav-dispersion) * 0.004)),
+    0 0 calc(var(--ws-g-nav-shadow) * 0.35px) rgba(var(--ws-dispersion-b-rgb), calc(var(--ws-g-nav-dispersion) * 0.012)),
+    0 calc(var(--ws-g-nav-shadow) * 0.09px) calc(var(--ws-g-nav-shadow) * 0.34px) rgba(var(--ws-dark-rgb), calc(0.05 + var(--ws-g-nav-shadow) * 0.0012)) !important;
 }
 
 html[data-glass-targets~="nav"] :is(.app-topbar, .cc-topbar, .yb-pinned-nav) {
@@ -74,14 +74,14 @@ html[data-glass-targets~="nav"] :is(.app-topbar, .cc-topbar, .yb-pinned-nav) {
   backdrop-filter:
     blur(calc(var(--ws-g-nav-blur) + (var(--ws-g-nav-frost) * 0.35px)))
     saturate(calc(100% + (var(--ws-g-nav-refraction) * 0.9%))) !important;
-  border-color: color-mix(in srgb, #fff calc(var(--ws-g-nav-border) * 1%), var(--glass-border)) !important;
+  border-color: color-mix(in srgb, var(--ws-light) calc(var(--ws-g-nav-border) * 1%), var(--glass-border)) !important;
   border-radius: calc(var(--ws-g-nav-radius) * 1px) !important;
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, calc(var(--ws-g-nav-border) * 0.008)) inset,
-    0 0 calc(var(--ws-g-nav-thickness) * 0.45px) rgba(255, 255, 255, calc(var(--ws-g-nav-border) * 0.004)) inset,
-    0 0 0 1px rgba(255, 86, 170, calc(var(--ws-g-nav-dispersion) * 0.004)),
-    0 0 calc(var(--ws-g-nav-shadow) * 0.35px) rgba(90, 190, 255, calc(var(--ws-g-nav-dispersion) * 0.012)),
-    0 calc(var(--ws-g-nav-shadow) * 0.09px) calc(var(--ws-g-nav-shadow) * 0.34px) rgba(0, 0, 0, calc(0.05 + var(--ws-g-nav-shadow) * 0.0012)) !important;
+    0 1px 0 rgba(var(--ws-light-rgb), calc(var(--ws-g-nav-border) * 0.008)) inset,
+    0 0 calc(var(--ws-g-nav-thickness) * 0.45px) rgba(var(--ws-light-rgb), calc(var(--ws-g-nav-border) * 0.004)) inset,
+    0 0 0 1px rgba(var(--ws-dispersion-a-rgb), calc(var(--ws-g-nav-dispersion) * 0.004)),
+    0 0 calc(var(--ws-g-nav-shadow) * 0.35px) rgba(var(--ws-dispersion-b-rgb), calc(var(--ws-g-nav-dispersion) * 0.012)),
+    0 calc(var(--ws-g-nav-shadow) * 0.09px) calc(var(--ws-g-nav-shadow) * 0.34px) rgba(var(--ws-dark-rgb), calc(0.05 + var(--ws-g-nav-shadow) * 0.0012)) !important;
 }
 
 html[data-glass-targets~="card"] :is(
@@ -90,7 +90,6 @@ html[data-glass-targets~="card"] :is(
   .sim-page,
   .slx-card, .slx-canvas-wrap, .slx-node,
   .tlx-page, .tlx-head, .tlx-controls, .tlx-canvas, .tlx-item,
-  .cc-tool, .cc-asset, .cc-recent-work,
   .world-data-shell, .world-data-surface, .world-data-orgs,
   .rel-universe,
   .settings-material-card, .settings-card,
@@ -116,7 +115,7 @@ html[data-glass-targets~="card"] :is(
   .st-status, .st-asset-card, .st-market-empty,
   .cm-hero-stats, .cm-result-card, .cm-feature-card, .cm-feature-cover,
   .cm-world-card, .cm-oc-card, .cm-story-card, .cm-creator-profile,
-  .cm-co-create-empty, .cm-empty,
+  .cm-empty,
   .uc-profile-cover, .uc-identity-row, .uc-achievement, .uc-membership-status, .uc-balance,
   .pw-tabs-wrap, .pwh-world-visual, .pwh-book-cover,
   .wp-immersive-exit,
@@ -126,10 +125,9 @@ html[data-glass-targets~="card"] :is(
   .ng-stage,
   /* 卡片内的统计小格：同样接入卡片档，避免各页透明度不一致 */
   .ai-stat-pair > div, .gx-progress-stats > div, .st-seller-stats > div,
-  .cm-follow-counts > div, .cm-hot-columns > div,
   .uc-follow-counts > div, .uc-favorite-counts > div, .uc-order-metrics > div,
   [data-ai-assistant],
-  /* 社区社交：动态卡片、推荐卡片、标签容器等此前未接入卡片档 */
+  /* 广场：动态卡片、推荐卡片、标签容器等此前未接入卡片档 */
   .cs-feed-card, .cs-side-card, .cs-person-card, .cs-group-card, .cs-topic-card,
   .cs-tabs, .cs-stat-row, .cs-message, .cs-inline-search, .cs-search-bar,
   .cs-field, .cs-modal, .cs-notification, .cs-pending-members, .cs-request,
@@ -167,14 +165,14 @@ html[data-glass-targets~="card"] :is(
   backdrop-filter:
     blur(calc(var(--ws-g-card-blur) + (var(--ws-g-card-frost) * 0.35px)))
     saturate(calc(100% + (var(--ws-g-card-refraction) * 0.9%))) !important;
-  border-color: color-mix(in srgb, #fff calc(var(--ws-g-card-border) * 1%), var(--glass-border)) !important;
+  border-color: color-mix(in srgb, var(--ws-light) calc(var(--ws-g-card-border) * 1%), var(--glass-border)) !important;
   border-radius: calc(var(--ws-g-card-radius) * 1px) !important;
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, calc(var(--ws-g-card-border) * 0.008)) inset,
-    0 0 calc(var(--ws-g-card-thickness) * 0.45px) rgba(255, 255, 255, calc(var(--ws-g-card-border) * 0.004)) inset,
-    0 0 0 1px rgba(255, 86, 170, calc(var(--ws-g-card-dispersion) * 0.004)),
-    0 0 calc(var(--ws-g-card-shadow) * 0.35px) rgba(90, 190, 255, calc(var(--ws-g-card-dispersion) * 0.012)),
-    0 calc(var(--ws-g-card-shadow) * 0.09px) calc(var(--ws-g-card-shadow) * 0.34px) rgba(0, 0, 0, calc(0.05 + var(--ws-g-card-shadow) * 0.0012)) !important;
+    0 1px 0 rgba(var(--ws-light-rgb), calc(var(--ws-g-card-border) * 0.008)) inset,
+    0 0 calc(var(--ws-g-card-thickness) * 0.45px) rgba(var(--ws-light-rgb), calc(var(--ws-g-card-border) * 0.004)) inset,
+    0 0 0 1px rgba(var(--ws-dispersion-a-rgb), calc(var(--ws-g-card-dispersion) * 0.004)),
+    0 0 calc(var(--ws-g-card-shadow) * 0.35px) rgba(var(--ws-dispersion-b-rgb), calc(var(--ws-g-card-dispersion) * 0.012)),
+    0 calc(var(--ws-g-card-shadow) * 0.09px) calc(var(--ws-g-card-shadow) * 0.34px) rgba(var(--ws-dark-rgb), calc(0.05 + var(--ws-g-card-shadow) * 0.0012)) !important;
 }
 
 /* 选中 / 激活态：此前多个页面用实心 var(--text-main) 做选中背景，
@@ -220,7 +218,7 @@ html[data-glass-targets~="card"] .nav-orb.is-open {
   background-image: none !important;
   color: var(--bg-color) !important;
   border-color: var(--text-main) !important;
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.18) !important;
+  box-shadow: var(--ws-shadow-sm) !important;
 }
 
 html[data-glass-targets~="modal"] [role="dialog"] :is(
@@ -244,14 +242,14 @@ html[data-glass-targets~="modal"] :is(
   backdrop-filter:
     blur(calc(var(--ws-g-modal-blur) + (var(--ws-g-modal-frost) * 0.35px)))
     saturate(calc(100% + (var(--ws-g-modal-refraction) * 0.9%))) !important;
-  border-color: color-mix(in srgb, #fff calc(var(--ws-g-modal-border) * 1%), var(--glass-border)) !important;
+  border-color: color-mix(in srgb, var(--ws-light) calc(var(--ws-g-modal-border) * 1%), var(--glass-border)) !important;
   border-radius: calc(var(--ws-g-modal-radius) * 1px) !important;
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, calc(var(--ws-g-modal-border) * 0.008)) inset,
-    0 0 calc(var(--ws-g-modal-thickness) * 0.45px) rgba(255, 255, 255, calc(var(--ws-g-modal-border) * 0.004)) inset,
-    0 0 0 1px rgba(255, 86, 170, calc(var(--ws-g-modal-dispersion) * 0.004)),
-    0 0 calc(var(--ws-g-modal-shadow) * 0.4px) rgba(90, 190, 255, calc(var(--ws-g-modal-dispersion) * 0.012)),
-    0 calc(var(--ws-g-modal-shadow) * 0.1px) calc(var(--ws-g-modal-shadow) * 0.36px) rgba(0, 0, 0, calc(0.06 + var(--ws-g-modal-shadow) * 0.0012)) !important;
+    0 1px 0 rgba(var(--ws-light-rgb), calc(var(--ws-g-modal-border) * 0.008)) inset,
+    0 0 calc(var(--ws-g-modal-thickness) * 0.45px) rgba(var(--ws-light-rgb), calc(var(--ws-g-modal-border) * 0.004)) inset,
+    0 0 0 1px rgba(var(--ws-dispersion-a-rgb), calc(var(--ws-g-modal-dispersion) * 0.004)),
+    0 0 calc(var(--ws-g-modal-shadow) * 0.4px) rgba(var(--ws-dispersion-b-rgb), calc(var(--ws-g-modal-dispersion) * 0.012)),
+    0 calc(var(--ws-g-modal-shadow) * 0.1px) calc(var(--ws-g-modal-shadow) * 0.36px) rgba(var(--ws-dark-rgb), calc(0.06 + var(--ws-g-modal-shadow) * 0.0012)) !important;
 }
 
 /* 弹窗遮罩：各页面写死的 rgba(0,0,0,.3~.6) 深色遮罩统一接入“弹窗”档，
@@ -264,7 +262,7 @@ html[data-glass-targets~="modal"] :is(
 ) {
   background-color: color-mix(
     in srgb,
-    #000000 calc(var(--ws-g-modal-opacity, 90) * 0.5%),
+    var(--ws-dark) calc(var(--ws-g-modal-opacity, 90) * 0.5%),
     transparent
   ) !important;
   -webkit-backdrop-filter: blur(calc(var(--ws-g-modal-blur, 32) * 0.4px)) !important;
@@ -291,18 +289,17 @@ html[data-glass-targets~="control"] :is(
   background-image: linear-gradient(180deg, color-mix(in srgb, var(--primary-color) calc(var(--ws-g-control-tint) * 0.18%), transparent), transparent) !important;
   -webkit-backdrop-filter: blur(calc(var(--ws-g-control-blur) + (var(--ws-g-control-frost) * 0.25px))) !important;
   backdrop-filter: blur(calc(var(--ws-g-control-blur) + (var(--ws-g-control-frost) * 0.25px))) !important;
-  border-color: color-mix(in srgb, #fff calc(var(--ws-g-control-border) * 1%), var(--field-border)) !important;
+  border-color: color-mix(in srgb, var(--ws-light) calc(var(--ws-g-control-border) * 1%), var(--field-border)) !important;
   border-radius: calc(var(--ws-g-control-radius) * 1px) !important;
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, calc(var(--ws-g-control-border) * 0.008)) inset,
-    0 0 calc(var(--ws-g-control-thickness) * 0.45px) rgba(255, 255, 255, calc(var(--ws-g-control-border) * 0.004)) inset,
-    0 calc(var(--ws-g-control-shadow) * 0.1px) calc(var(--ws-g-control-shadow) * 0.3px) rgba(0, 0, 0, calc(0.04 + var(--ws-g-control-shadow) * 0.0012)) !important;
+    0 1px 0 rgba(var(--ws-light-rgb), calc(var(--ws-g-control-border) * 0.008)) inset,
+    0 0 calc(var(--ws-g-control-thickness) * 0.45px) rgba(var(--ws-light-rgb), calc(var(--ws-g-control-border) * 0.004)) inset,
+    0 calc(var(--ws-g-control-shadow) * 0.1px) calc(var(--ws-g-control-shadow) * 0.3px) rgba(var(--ws-dark-rgb), calc(0.04 + var(--ws-g-control-shadow) * 0.0012)) !important;
 }
 
 html[data-glass-targets~="liquid"] :is(
   .glass-liquid,
-  .cc-scene-card[data-liquid-glass="fallback"], .cc-scene-card[data-liquid-glass="pending"],
-  .cc-tool, .cc-asset, .cc-recent-work
+  .cc-scene-card[data-liquid-glass="fallback"], .cc-scene-card[data-liquid-glass="pending"]
 ) {
   background-color: color-mix(
     in srgb,
@@ -318,14 +315,14 @@ html[data-glass-targets~="liquid"] :is(
   backdrop-filter:
     blur(calc(var(--ws-g-liquid-blur) + (var(--ws-g-liquid-frost) * 0.35px)))
     saturate(calc(100% + (var(--ws-g-liquid-refraction) * 0.7%))) !important;
-  border-color: color-mix(in srgb, #fff calc(var(--ws-g-liquid-border) * 1%), var(--glass-border)) !important;
+  border-color: color-mix(in srgb, var(--ws-light) calc(var(--ws-g-liquid-border) * 1%), var(--glass-border)) !important;
   border-radius: calc(var(--ws-g-liquid-radius) * 1px) !important;
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, calc(var(--ws-g-liquid-border) * 0.008)) inset,
-    0 0 calc(var(--ws-g-liquid-thickness) * 0.45px) rgba(255, 255, 255, calc(var(--ws-g-liquid-border) * 0.004)) inset,
-    0 0 0 1px rgba(255, 86, 170, calc(var(--ws-g-liquid-dispersion) * 0.004)),
-    0 0 calc(var(--ws-g-liquid-shadow) * 0.4px) rgba(90, 190, 255, calc(var(--ws-g-liquid-dispersion) * 0.012)),
-    0 calc(var(--ws-g-liquid-shadow) * 0.1px) calc(var(--ws-g-liquid-shadow) * 0.36px) rgba(0, 0, 0, calc(0.06 + var(--ws-g-liquid-shadow) * 0.0012)) !important;
+    0 1px 0 rgba(var(--ws-light-rgb), calc(var(--ws-g-liquid-border) * 0.008)) inset,
+    0 0 calc(var(--ws-g-liquid-thickness) * 0.45px) rgba(var(--ws-light-rgb), calc(var(--ws-g-liquid-border) * 0.004)) inset,
+    0 0 0 1px rgba(var(--ws-dispersion-a-rgb), calc(var(--ws-g-liquid-dispersion) * 0.004)),
+    0 0 calc(var(--ws-g-liquid-shadow) * 0.4px) rgba(var(--ws-dispersion-b-rgb), calc(var(--ws-g-liquid-dispersion) * 0.012)),
+    0 calc(var(--ws-g-liquid-shadow) * 0.1px) calc(var(--ws-g-liquid-shadow) * 0.36px) rgba(var(--ws-dark-rgb), calc(0.06 + var(--ws-g-liquid-shadow) * 0.0012)) !important;
 }
 
 /* WebGL 场景卡已由 canvas 负责，CSS 只保留文字和交互。 */
@@ -346,7 +343,7 @@ html[data-text-scopes~="nav"] :is(.app-sidebar, .cc-sidebar, .app-topbar, .cc-to
 html[data-text-scopes~="card"] :is(
   .glass-card, .glass-frost, .glass-panel, .ws-glass-surface,
   .cc-card, .cw-card, .sim-page, .sim-panel, .sim-console, .tlx-item,
-  .cc-tool, .cc-asset, .cc-recent-work, .world-data-shell
+  .world-data-shell
 ) {
   --font-sans: var(--ws-font-family);
   font-family: var(--ws-font-family) !important;
@@ -367,7 +364,7 @@ html[data-text-custom="true"][data-text-scopes~="nav"] :is(.app-topbar, .cc-topb
 html[data-text-custom="true"][data-text-scopes~="card"] :is(
   .glass-card, .glass-frost, .glass-panel, .ws-glass-surface,
   .cc-card, .cw-card, .sim-page, .sim-panel, .sim-console, .tlx-item,
-  .cc-tool, .cc-asset, .cc-recent-work, .world-data-shell
+  .world-data-shell
 ) {
   --text-main: color-mix(in srgb, var(--ws-text-color) calc(var(--ws-text-opacity) * 1%), transparent);
   --text-muted: color-mix(in srgb, var(--ws-text-color) calc(var(--ws-text-opacity) * 0.72%), transparent);
@@ -408,7 +405,7 @@ html[data-text-background="true"][data-text-scopes~="nav"] :is(.sidebar-nav-item
   padding-block: calc(var(--ws-text-bg-thickness) * 0.28px) !important;
   -webkit-backdrop-filter: blur(var(--ws-text-bg-blur)) !important;
   backdrop-filter: blur(var(--ws-text-bg-blur)) !important;
-  box-shadow: 0 1px 0 color-mix(in srgb, #fff 22%, transparent) inset !important;
+  box-shadow: 0 1px 0 var(--ws-rim-strong) inset !important;
 }
 html[data-text-background="true"][data-text-scopes~="card"] :is(
   .glass-card, .glass-frost, .glass-panel, .ws-glass-surface, .cc-card, .cw-card
@@ -424,8 +421,8 @@ html[data-text-background="true"][data-text-scopes~="body"] main :where(p, li, b
   -webkit-backdrop-filter: blur(var(--ws-text-bg-blur)) !important;
   backdrop-filter: blur(var(--ws-text-bg-blur)) !important;
   box-shadow:
-    0 1px 0 color-mix(in srgb, #fff 20%, transparent) inset,
-    0 4px 14px rgba(0, 0, 0, .035) !important;
+    0 1px 0 var(--ws-rim-strong) inset,
+    var(--ws-shadow-sm) !important;
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
 }
@@ -446,14 +443,14 @@ html[data-text-background="true"][data-text-scopes~="body"] main :where(p, li, b
   border-radius: 50%;
   border: 1px solid var(--ws-studio-panel-border);
   background:
-    radial-gradient(circle at 32% 24%, rgba(255,255,255,.48), transparent 32%),
+    radial-gradient(circle at 32% 24%, var(--ws-rim-hi), transparent 32%),
     color-mix(in srgb, var(--glass-frost-bg) 74%, transparent);
   color: var(--text-main);
   -webkit-backdrop-filter: blur(24px) saturate(160%);
   backdrop-filter: blur(24px) saturate(160%);
   box-shadow:
-    0 12px 30px rgba(0, 0, 0, .16),
-    0 1px 0 rgba(255, 255, 255, .34) inset,
+    var(--ws-shadow-sm),
+    0 1px 0 var(--ws-rim-strong) inset,
     0 0 0 5px color-mix(in srgb, var(--primary-color) 5%, transparent);
   cursor: pointer;
   transition: transform .16s ease, box-shadow .16s ease, background .16s ease;
@@ -473,7 +470,7 @@ html[data-text-background="true"][data-text-scopes~="body"] main :where(p, li, b
   border: 2px solid var(--bg-color);
   background: var(--primary-color);
   color: var(--primary-text);
-  font-size: 8px;
+  font-size: var(--text-2xs);
   font-weight: 700;
   line-height: 1;
 }
@@ -482,7 +479,7 @@ html[data-text-background="true"][data-text-scopes~="body"] main :where(p, li, b
   position: fixed;
   inset: 0;
   z-index: 1500;
-  background: rgba(0, 0, 0, .05);
+  background: var(--ws-scrim-soft);
 }
 
 .ws-studio-panel {
@@ -498,14 +495,14 @@ html[data-text-background="true"][data-text-scopes~="body"] main :where(p, li, b
   border-radius: 22px;
   border: 1px solid var(--ws-studio-panel-border);
   background:
-    linear-gradient(150deg, rgba(255,255,255,.18), transparent 38%),
+    linear-gradient(150deg, var(--ws-rim), transparent 38%),
     var(--ws-studio-panel-bg);
   color: var(--text-main);
   -webkit-backdrop-filter: blur(30px) saturate(160%);
   backdrop-filter: blur(30px) saturate(160%);
   box-shadow:
-    0 30px 80px rgba(0, 0, 0, .28),
-    0 1px 0 rgba(255, 255, 255, .32) inset,
+    var(--ws-shadow-lg),
+    0 1px 0 var(--ws-rim-strong) inset,
     0 0 0 1px color-mix(in srgb, var(--text-main) 5%, transparent);
   font-family: var(--font-sans);
   animation: ws-studio-in .18s cubic-bezier(.2,.75,.2,1);
@@ -526,7 +523,7 @@ html[data-text-background="true"][data-text-scopes~="body"] main :where(p, li, b
 }
 .ws-studio-head-copy { flex: 1; min-width: 0; }
 .ws-studio-eyebrow {
-  font-size: 9px;
+  font-size: var(--text-2xs);
   letter-spacing: .14em;
   text-transform: uppercase;
   color: var(--text-muted);
@@ -588,14 +585,14 @@ html[data-text-background="true"][data-text-scopes~="body"] main :where(p, li, b
 .ws-studio-scope-row button.is-active {
   background: var(--primary-color);
   color: var(--primary-text);
-  box-shadow: 0 5px 12px rgba(0,0,0,.12);
+  box-shadow: var(--ws-shadow-sm);
 }
 .ws-studio-page-note {
   margin: 7px 1px 12px;
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 9.5px;
+  font-size: var(--text-2xs);
   line-height: 1.5;
   color: var(--text-muted);
 }
@@ -643,7 +640,7 @@ html[data-text-background="true"][data-text-scopes~="body"] main :where(p, li, b
   border: 0;
   background: transparent;
   color: var(--text-muted);
-  font-size: 9.5px;
+  font-size: var(--text-2xs);
   padding: 0;
   cursor: pointer;
   text-decoration: underline;
@@ -676,7 +673,7 @@ html[data-text-background="true"][data-text-scopes~="body"] main :where(p, li, b
   border-radius: 8px;
 }
 .ws-preset-label {
-  font-size: 9.5px;
+  font-size: var(--text-2xs);
   line-height: 1.3;
   text-align: center;
   white-space: nowrap;
@@ -685,7 +682,7 @@ html[data-text-background="true"][data-text-scopes~="body"] main :where(p, li, b
   text-overflow: ellipsis;
 }
 .ws-preset-badge {
-  font-size: 8px;
+  font-size: var(--text-2xs);
   line-height: 1.2;
   padding: 1px 5px;
   border-radius: 999px;
@@ -788,7 +785,7 @@ html[data-text-background="true"][data-text-scopes~="body"] main :where(p, li, b
 .ws-studio-tabs button.is-active {
   background: color-mix(in srgb, var(--glass-frost-bg) 88%, transparent);
   color: var(--text-main);
-  box-shadow: 0 3px 8px rgba(0,0,0,.09), 0 1px 0 rgba(255,255,255,.28) inset;
+  box-shadow: var(--ws-shadow-sm), 0 1px 0 var(--ws-rim-strong) inset;
 }
 
 .ws-studio-tab-body { padding-top: 12px; }
@@ -807,7 +804,7 @@ html[data-text-background="true"][data-text-scopes~="body"] main :where(p, li, b
 }
 .ws-studio-field-head output,
 .ws-studio-field-head .ws-studio-num {
-  font-size: 9.5px;
+  font-size: var(--text-2xs);
   font-variant-numeric: tabular-nums;
   color: var(--text-muted);
 }
@@ -837,7 +834,7 @@ html[data-text-background="true"][data-text-scopes~="body"] main :where(p, li, b
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 16%, transparent);
 }
 .ws-studio-field-head .ws-studio-unit {
-  font-size: 9.5px;
+  font-size: var(--text-2xs);
   color: var(--text-muted);
   margin-left: 2px;
 }
@@ -850,7 +847,7 @@ html[data-text-background="true"][data-text-scopes~="body"] main :where(p, li, b
 }
 .ws-studio-hint {
   margin: 4px 0 0;
-  font-size: 9px;
+  font-size: var(--text-2xs);
   line-height: 1.5;
   color: var(--text-muted);
 }
@@ -859,7 +856,7 @@ html[data-text-background="true"][data-text-scopes~="body"] main :where(p, li, b
   border-radius: 9px;
   background: color-mix(in srgb, var(--primary-color) 7%, transparent);
   border: 1px solid color-mix(in srgb, var(--primary-color) 14%, transparent);
-  font-size: 9.5px;
+  font-size: var(--text-2xs);
   line-height: 1.55;
   color: var(--text-muted);
   margin-bottom: 10px;
@@ -885,7 +882,7 @@ html[data-text-background="true"][data-text-scopes~="body"] main :where(p, li, b
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 12%, transparent);
 }
 .ws-studio-font-grid strong { font-size: 14px; font-weight: 500; line-height: 1.1; }
-.ws-studio-font-grid span { font-size: 8px; color: var(--text-muted); }
+.ws-studio-font-grid span { font-size: var(--text-2xs); color: var(--text-muted); }
 
 .ws-studio-segment { display: flex; gap: 4px; }
 .ws-studio-segment button {
@@ -895,7 +892,7 @@ html[data-text-background="true"][data-text-scopes~="body"] main :where(p, li, b
   padding: 6px 4px;
   background: transparent;
   color: var(--text-muted);
-  font-size: 9.5px;
+  font-size: var(--text-2xs);
   cursor: pointer;
 }
 .ws-studio-segment button.is-active {
@@ -940,7 +937,7 @@ html[data-text-background="true"][data-text-scopes~="body"] main :where(p, li, b
 }
 .ws-studio-preview-label {
   display: block;
-  font-size: 8px;
+  font-size: var(--text-2xs);
   letter-spacing: .14em;
   color: var(--text-muted);
   margin-bottom: 6px;
@@ -990,8 +987,8 @@ html[data-text-background="true"][data-text-scopes~="body"] main :where(p, li, b
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  color: #15803d;
-  font-size: 9.5px;
+  color: var(--success-strong);
+  font-size: var(--text-2xs);
 }
 
 @media (max-width: 620px) {
@@ -1017,7 +1014,7 @@ html[data-text-background="true"][data-text-scopes~="body"] main :where(p, li, b
 html[data-text-auto="true"][data-text-scopes~="card"] :is(
   .glass-card, .glass-frost, .glass-panel, .ws-glass-surface,
   .cc-card, .cw-card, .sim-page, .sim-panel, .sim-console, .tlx-item,
-  .cc-tool, .cc-asset, .cc-recent-work, .world-data-shell
+  .world-data-shell
 ) {
   --text-main: var(--ws-auto-text) !important;
   --text-muted: var(--ws-auto-text-muted) !important;
@@ -1083,7 +1080,7 @@ html[data-glass-targets~="liquid"] .cc-scene-card::after {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 9.5px;
+  font-size: var(--text-2xs);
   color: var(--text-muted);
 }
 .ws-studio-theme-buttons {
@@ -1105,7 +1102,7 @@ html[data-glass-targets~="liquid"] .cc-scene-card::after {
   padding: 7px 4px;
   background: transparent;
   color: var(--text-muted);
-  font-size: 9.5px;
+  font-size: var(--text-2xs);
   font-weight: 600;
   line-height: 1;
   cursor: pointer;
@@ -1117,7 +1114,7 @@ html[data-glass-targets~="liquid"] .cc-scene-card::after {
 .ws-studio-theme-buttons button.is-active {
   background: color-mix(in srgb, var(--glass-frost-bg) 92%, transparent);
   color: var(--text-main);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, .08), 0 1px 0 rgba(255, 255, 255, .24) inset;
+  box-shadow: var(--ws-shadow-sm), 0 1px 0 var(--ws-rim-strong) inset;
 }
 .ws-studio-theme-buttons button:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--primary-color) 65%, transparent);
@@ -1159,13 +1156,13 @@ html[data-glass-targets~="liquid"] .cc-scene-card::after {
   color: var(--primary-text);
 }
 .ws-studio-pick-row span {
-  font-size: 9px;
+  font-size: var(--text-2xs);
   line-height: 1.45;
   color: var(--text-muted);
 }
 
 html[data-ws-pick="1"] :is(
-  .cc-scene-card, .cc-tool, .cc-asset, .cc-recent-work, .cc-card, .cw-card,
+  .cc-scene-card, .cc-card, .cw-card,
   .glass-card, .glass-frost, .glass-panel, .ws-glass-surface,
   .tlx-page, .tlx-head, .tlx-controls, .tlx-canvas, .tlx-item,
   .sim-page, .sim-panel, .sim-console,
@@ -1174,15 +1171,15 @@ html[data-ws-pick="1"] :is(
   .cc-nav-item, .sidebar-nav-item, .app-sidebar, .cc-sidebar, .app-topbar, .cc-topbar,
   .settings-card, .settings-material-card
 ) {
-  outline: 1px dashed rgba(255, 255, 255, 0.82);
+  outline: 1px dashed color-mix(in srgb, var(--ws-light) 82%, transparent);
   outline-offset: 1px;
 }
 html[data-ws-pick="1"] :is(
   h1, h2, h3, h4, h5, h6, p, li, strong, em, blockquote,
-  .cc-scene-title, .cc-scene-desc, .cc-tool-name, .cc-asset-label,
+  .cc-scene-title, .cc-scene-desc,
   .tlx-item-title, .tlx-item-desc, .wp-title-input
 ) {
-  outline: 1px dashed rgba(255, 255, 255, 0.55);
+  outline: 1px dashed color-mix(in srgb, var(--ws-light) 55%, transparent);
   outline-offset: 1px;
 }
 .ws-picked {
@@ -1216,7 +1213,7 @@ html[data-ws-pick="1"] :is(
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 9.5px;
+  font-size: var(--text-2xs);
   font-weight: 550;
   color: var(--text-muted);
 }
@@ -1275,7 +1272,7 @@ html[data-ws-pick="1"] :is(
 }
 .ws-studio-toggle span:last-child { display: flex; flex-direction: column; gap: 2px; }
 .ws-studio-toggle strong { font-size: 10.5px; font-weight: 600; }
-.ws-studio-toggle small { font-size: 9px; line-height: 1.45; color: var(--text-muted); }
+.ws-studio-toggle small { font-size: var(--text-2xs); line-height: 1.45; color: var(--text-muted); }
 
 /* 04 BACKGROUND：上传行 / 预览 / 官方素材 / 焦点 */
 .ws-studio-background-row {
@@ -1316,7 +1313,7 @@ html[data-ws-pick="1"] :is(
   padding: 8px 9px;
   border-radius: 9px;
   background: color-mix(in srgb, var(--text-main) 4%, transparent);
-  font-size: 9px;
+  font-size: var(--text-2xs);
   line-height: 1.4;
 }
 .ws-studio-official-current strong { font-size: 10px; font-weight: 600; }

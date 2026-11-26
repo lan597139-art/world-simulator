@@ -29,7 +29,7 @@ import { ensureProductWorkspace, fetchProductMatrix } from './api/productConfig'
 import { FALLBACK_MATRIX, getStoredProduct, navigationConfig, productByKey, storeProduct, YUNBAO_HIDDEN_PAGES } from './product/products'
 import { localizedProduct, NAV_GROUP_EN, PAGE_LABELS_EN } from './product/labels'
 import type { ProductConfig, ProductKey, ProductMatrix } from './product/types'
-import type { CreationAssetKey, CreationToolKey } from './pages/CreationCenterPage'
+import type { CreationAssetKey, CreationScene, CreationToolKey } from './pages/CreationCenterPage'
 import type { UserAssetTarget } from './pages/UserCenterPage'
 
 /* 页面级组件按需懒加载：首屏只拉取外壳与当前页，重型依赖
@@ -48,6 +48,12 @@ const ChatPage = lazy(() => import('./pages/ChatPage'))
 const WritingPage = lazy(() => import('./pages/WritingPage'))
 const SimulationWritingPage = lazy(() => import('./pages/SimulationWritingPage'))
 const WorldDataPage = lazy(() => import('./pages/WorldDataPage'))
+const WorldBackgroundPage = lazy(() => import('./pages/WorldBackgroundPage'))
+const WorldMapPage = lazy(() => import('./pages/WorldMapPage'))
+const WorldWorksPage = lazy(() => import('./pages/WorldWorksPage'))
+const WorldIllustrationPage = lazy(() => import('./pages/WorldIllustrationPage'))
+const WorldCocreationPage = lazy(() => import('./pages/WorldCocreationPage'))
+const WorldCommunityPage = lazy(() => import('./pages/WorldCommunityPage'))
 const WorldStructurePage = lazy(() => import('./pages/WorldStructurePage'))
 const ArchivePage = lazy(() => import('./pages/ArchivePage'))
 const CreatorAssetsPage = lazy(() => import('./pages/CreatorAssetsPage'))
@@ -55,7 +61,6 @@ const TrashPage = lazy(() => import('./pages/TrashPage'))
 const JournalPage = lazy(() => import('./pages/JournalPage'))
 const TimeMachinePage = lazy(() => import('./pages/TimeMachinePage'))
 const PersonaPage = lazy(() => import('./pages/PersonaPage'))
-const YunbaoWorkspacePage = lazy(() => import('./pages/YunbaoWorkspacePage'))
 const YunbaoSeedPage = lazy(() => import('./pages/YunbaoSeedPage'))
 const MemoryPage = lazy(() => import('./pages/MemoryPage'))
 const CompanionRuntimePage = lazy(() => import('./pages/CompanionRuntimePage'))
@@ -65,53 +70,13 @@ const ProductWorkspaceHome = lazy(() => import('./pages/ProductWorkspaceHome'))
 const UserCenterPage = lazy(() => import('./pages/UserCenterPage'))
 const CommunityPage = lazy(() => import('./pages/CommunityPage'))
 const CommunitySocialPage = lazy(() => import('./pages/CommunitySocialPage'))
-const AICenterPage = lazy(() => import('./pages/AICenterPage'))
-const GameCenterPage = lazy(() => import('./pages/GameCenterPage'))
-const ContentStorePage = lazy(() => import('./pages/ContentStorePage'))
 const SettingsPage = lazy(() => import('./pages/SettingsPage'))
-const BillingCenterPage = lazy(() => import('./pages/BillingCenterPage'))
 const WorksPage = lazy(() => import('./pages/WorksPage'))
 const SpiritEconomyPage = lazy(() => import('./pages/SpiritEconomyPage'))
 const YunbaoOverviewPage = lazy(() => import('./components/creation-center/YunbaoOverviewPage'))
 
-export type PageKey = 
-  | 'home'
-  | 'user-center'
-  | 'community'
-  | 'settings'
-  | 'community-social'
-  | 'business'
-  | 'spirit-economy'
-  | 'ai-center'
-  | 'game-center'
-  | 'content-store'
-  | 'yunbao'
-  | 'workspace-home'
-  | 'overview' 
-  | 'world-management' 
-  | 'character-management' 
-  | 'relationships' 
-  | 'events' 
-  | 'timeline' 
-  | 'simulation' 
-  | 'multipath'
-  | 'storyline'
-  | 'chat'
-  | 'writing' 
-  | 'world-building'
-  | 'world-data' 
-  | 'world-structure'
-  | 'archive'
-  | 'trash'
-  | 'time-machine'
-  | 'diary'
-  | 'personas'
-  | 'yunbao-seed'
-  | 'memories'
-  | 'companion-runtime'
-  | 'information-sources'
-  | 'creator-assets'
-  | 'works'
+import type { PageKey } from './navigation/types'
+export type { PageKey }
 
 export type Language = 'zh' | 'en'
 
@@ -147,15 +112,18 @@ export const t = {
 function pageLabel(key: PageKey, dict: Record<string, string>, lang: string): string {
   if (lang === 'en') return PAGE_LABELS_EN[key] || dict[key] || key
   const map: Partial<Record<PageKey, string>> = {
-    'user-center': '用户与身份中心 / 个人管理',
-    community: '内容社区 / 发现',
-    'ai-center': 'AI 互动中心 / 角色与关系',
-    'game-center': '游戏体验中心 / 剧情与探索',
-    'content-store': '内容商城 / 资产与授权',
+    'user-center': '个人中心 / 个人管理',
+    community: '作品集 / 发现',
     overview: dict.overview,
     'world-building': dict.worldBuilding,
     'world-structure': dict.worldStructure || '世界结构',
-    'world-data': '世界设定',
+    'world-data': '设定',
+    'world-background': '背景',
+    'world-map': '地图',
+    'world-works': '作品',
+    'world-illustration': '插画集',
+    'world-cocreation': '共创',
+    'world-community': '社区',
     'world-management': dict.worldManagement,
     'character-management': dict.characterManagement,
     chat: 'AI 角色聊天',
@@ -173,8 +141,7 @@ function pageLabel(key: PageKey, dict: Record<string, string>, lang: string): st
     personas: '云宝人格',
     'yunbao-seed': '人物种子编辑器',
     settings: '设置中心',
-    'community-social': '社区社交',
-    business: '商业与服务中心',
+    'community-social': '广场',
     'spirit-economy': '灵果资源',
     yunbao: '云宝工作台',
     memories: '记忆管理',
@@ -191,22 +158,26 @@ const initialWorldId = initialParams.get('world') || sessionStorage.getItem('ws.
 const initialProduct = getStoredProduct()
 const hasWorkbenchLink = ['product', 'page', 'world'].some((key) => initialParams.has(key))
 const WORKSPACE_PRODUCTS: ProductKey[] = ['game', 'literature', 'companion', 'diary', 'yunbao']
+const CREATION_PRODUCTS: ProductKey[] = ['game', 'literature']
 const usesWorkspaceShell = (key: ProductKey) => WORKSPACE_PRODUCTS.includes(key)
+// 创作中心（游戏 / 文学）不再展示「工作区总览」，进入即落到「世界库」。
+const creationLanding = (key: ProductKey): PageKey =>
+  CREATION_PRODUCTS.includes(key) ? 'world-management' : 'workspace-home'
 const fallbackProductConfig = productByKey(FALLBACK_MATRIX.products, initialProduct)
-const fallbackHome = (usesWorkspaceShell(initialProduct) ? 'workspace-home' : fallbackProductConfig.home) as PageKey
+const fallbackHome = (usesWorkspaceShell(initialProduct) ? creationLanding(initialProduct) : fallbackProductConfig.home) as PageKey
 const SIDEBAR_COLLAPSED_KEY = 'ws.sidebarCollapsed.v2'
 
 const initialPage: PageKey = hasWorkbenchLink
   ? ((initialParams.get('page') as PageKey) || fallbackHome)
   : 'home'
 const WORLD_FREE_PAGES: PageKey[] = [
-  'home', 'user-center', 'community', 'community-social', 'business', 'settings', 'ai-center', 'game-center', 'content-store', 'workspace-home', 'overview', 'world-management', 'world-building', 'diary', 'archive', 'trash',
+  'home', 'user-center', 'community', 'community-social', 'settings', 'workspace-home', 'overview', 'world-management', 'world-building', 'diary', 'archive', 'trash',
   'information-sources', 'personas', 'yunbao-seed', 'memories', 'companion-runtime', 'yunbao',
   'creator-assets', 'works', 'spirit-economy',
 ]
 
 function isGlobalPage(page: PageKey): boolean {
-  return page === 'home' || page === 'user-center' || page === 'community' || page === 'community-social' || page === 'business' || page === 'spirit-economy' || page === 'settings' || page === 'ai-center' || page === 'game-center' || page === 'content-store' || page === 'creator-assets' || page === 'works'
+  return page === 'home' || page === 'user-center' || page === 'community' || page === 'community-social' || page === 'spirit-economy' || page === 'settings' || page === 'creator-assets' || page === 'works'
 }
 
 function readStoredAuthUser(): AuthUser | null {
@@ -219,8 +190,10 @@ function readStoredAuthUser(): AuthUser | null {
 }
 
 export default function App() {
+  // 全局中心页（含消费体验中心）不依赖世界上下文，直接采用 URL/初始页；
+  // 其余页面缺少世界时回到产品首页，避免空白。
   const [activePage, setActivePage] = useState<PageKey>(
-    !initialWorldId && !WORLD_FREE_PAGES.includes(initialPage) ? fallbackHome : initialPage
+    !initialWorldId && !WORLD_FREE_PAGES.includes(initialPage) && !isGlobalPage(initialPage) ? fallbackHome : initialPage
   )
   const [product, setProduct] = useState<ProductKey>(initialProduct)
   useEffect(() => {
@@ -250,6 +223,8 @@ export default function App() {
 
   // ✅ 核心状态：当前所在的世界
   const [currentWorldId, setCurrentWorldId] = useState<string>(initialWorldId)
+  // ✅ 核心状态：当前选中的具体作品；未选中时共创及后续工作工具导航不出现。
+  const [currentWorkId, setCurrentWorkId] = useState<string>(() => sessionStorage.getItem('ws.workId') || '')
   const [focusCharacterId, setFocusCharacterId] = useState<string | null>(null)
   const [focusYunbao, setFocusYunbao] = useState(false)
   const [writingSeedEventIds, setWritingSeedEventIds] = useState<string[]>([])
@@ -268,12 +243,43 @@ export default function App() {
   const [navAutoHidden, setNavAutoHidden] = useState(false)
   const navHiddenRef = useRef(false)
   const autoCollapseRef = useRef(false)
+  // 窄屏自动收起是否仍生效：回到宽屏时据此恢复展开，避免窄屏状态污染桌面偏好。
+  const restoreOnWideRef = useRef(false)
   const contentScrollRef = useRef<HTMLDivElement>(null)
 
   // 统一响应式断点：平板/移动端把侧边栏转为抽屉。
   const isNarrow = useIsNarrow()
   const [sidebarDrawerOpen, setSidebarDrawerOpen] = useState(false)
   const openNav = () => setSidebarDrawerOpen(true)
+  const closeNav = () => setSidebarDrawerOpen(false)
+
+  /* 抽屉行为（窄屏导航）：切页自动关闭、ESC 关闭、打开时锁背景滚动、
+     打开聚焦首个导航项、关闭把焦点还给顶栏开关。
+     只由 drawerState 驱动，避免各页面各写一套关闭逻辑。 */
+  useEffect(() => {
+    if (!sidebarDrawerOpen) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.stopPropagation()
+        setSidebarDrawerOpen(false)
+      }
+    }
+    document.addEventListener('keydown', onKeyDown)
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const firstItem = document.querySelector<HTMLElement>('.cc-sidebar .cc-nav-item')
+    firstItem?.focus({ preventScroll: true })
+    return () => {
+      document.removeEventListener('keydown', onKeyDown)
+      document.body.style.overflow = previousOverflow
+      document.querySelector<HTMLElement>('.cc-nav-toggle')?.focus({ preventScroll: true })
+    }
+  }, [sidebarDrawerOpen])
+
+  // 路由或产品变化后，抽屉必须收起——否则新页面会被遮在抽屉后面。
+  useEffect(() => {
+    setSidebarDrawerOpen(false)
+  }, [activePage, product])
 
   useEffect(() => {
     // 窄屏自动收起属于临时布局，不写入用户偏好。
@@ -288,7 +294,15 @@ export default function App() {
   useEffect(() => {
     const media = window.matchMedia('(max-width: 1024px)')
     const apply = () => {
-      if (!media.matches) return
+      if (!media.matches) {
+        // 回到宽屏：只撤销「窄屏自动收起」，用户手动折叠的状态保持。
+        if (restoreOnWideRef.current) {
+          restoreOnWideRef.current = false
+          setSidebarCollapsed(false)
+        }
+        return
+      }
+      restoreOnWideRef.current = true
       setSidebarCollapsed((prev) => {
         if (prev) return prev
         autoCollapseRef.current = true
@@ -440,7 +454,7 @@ export default function App() {
     }
   }
 
-  const handleCreationScene = (scene: WorkScene) => {
+  const handleCreationScene = (scene: CreationScene) => {
     if (scene === 'comic') {
       setWorksEntryScene('comic')
       setActivePage('works')
@@ -466,7 +480,7 @@ export default function App() {
     setWritingSeedEventIds([])
     const current = allWorldsList.find((item) => item.id === currentWorldId)
     if (currentWorldId && (!current || current.product_scene !== nextKey)) clearProductWorld()
-    setActivePage(usesWorkspaceShell(nextKey) ? 'workspace-home' : next.home as PageKey)
+    setActivePage(usesWorkspaceShell(nextKey) ? creationLanding(nextKey) : next.home as PageKey)
     // 自动工作空间由下方 effect 统一创建，避免切换时重复 POST。
   }
 
@@ -486,7 +500,7 @@ export default function App() {
     setFocusYunbao(false)
     const world = worldId ? allWorldsList.find((item) => item.id === worldId) : undefined
     if (world && world.product_scene === scene) applyProductWorld(world)
-    setActivePage(usesWorkspaceShell(scene) ? 'workspace-home' : next.home as PageKey)
+    setActivePage(usesWorkspaceShell(scene) ? creationLanding(scene) : next.home as PageKey)
     window.setTimeout(() => document.querySelector('.cc-page-scroll')?.scrollTo({ top: 0 }), 0)
   }
 
@@ -519,7 +533,7 @@ export default function App() {
     const current = allWorldsList.find((item) => item.id === currentWorldId)
     if (currentWorldId && (!current || current.product_scene !== nextKey)) clearProductWorld()
     const blocked = nextKey === 'yunbao' && YUNBAO_HIDDEN_PAGES.has(page)
-    if (page === 'workspace-home' && usesWorkspaceShell(nextKey)) setActivePage('workspace-home')
+    if (page === 'workspace-home' && usesWorkspaceShell(nextKey)) setActivePage(creationLanding(nextKey))
     else if (!blocked && nextNavigation.allowed_modules.includes(page)) setActivePage(page)
   }
 
@@ -549,7 +563,7 @@ export default function App() {
       window.setTimeout(() => document.querySelector('.cc-page-scroll')?.scrollTo({ top: 0 }), 0)
       return
     }
-    if (target === 'identity') {
+    if (target === 'identity' || target === 'user-center') {
       setNavStack([])
       setFocusCharacterId(null)
       setFocusYunbao(false)
@@ -581,39 +595,7 @@ export default function App() {
       window.setTimeout(() => document.querySelector('.cc-page-scroll')?.scrollTo({ top: 0 }), 0)
       return
     }
-    if (target === 'business') {
-      setNavStack([])
-      setFocusCharacterId(null)
-      setFocusYunbao(false)
-      setActivePage('business')
-      window.setTimeout(() => document.querySelector('.cc-page-scroll')?.scrollTo({ top: 0 }), 0)
-      return
-    }
-    if (target === 'ai-interaction') {
-      setNavStack([])
-      setFocusCharacterId(null)
-      setFocusYunbao(false)
-      setActivePage('ai-center')
-      window.setTimeout(() => document.querySelector('.cc-page-scroll')?.scrollTo({ top: 0 }), 0)
-      return
-    }
-    if (target === 'game-experience') {
-      setNavStack([])
-      setFocusCharacterId(null)
-      setFocusYunbao(false)
-      setActivePage('game-center')
-      window.setTimeout(() => document.querySelector('.cc-page-scroll')?.scrollTo({ top: 0 }), 0)
-      return
-    }
-    if (target === 'content-store') {
-      setNavStack([])
-      setFocusCharacterId(null)
-      setFocusYunbao(false)
-      setActivePage('content-store')
-      window.setTimeout(() => document.querySelector('.cc-page-scroll')?.scrollTo({ top: 0 }), 0)
-      return
-    }
-    if (target === 'assets') {
+    if (target === 'assets' || target === 'creator-assets') {
       setNavStack([])
       setFocusCharacterId(null)
       setFocusYunbao(false)
@@ -625,7 +607,9 @@ export default function App() {
       openYunbao()
       return
     }
-    openProductPage('game', 'archive')
+    // 兜底：未识别的导航目标回到创作中心，绝不静默跳到无关页面。
+    setNavStack([])
+    setActivePage('home')
   }
 
   const handleOpenTool = (page: CreationToolKey) => {
@@ -733,18 +717,21 @@ export default function App() {
   // 产品级路由守卫：未开放模块不可通过 URL、快捷键或遗留入口直接进入。
   useEffect(() => {
     if (isGlobalPage(activePage)) return
-    if (activePage === 'workspace-home' && usesWorkspaceShell(product)) return
+    if (activePage === 'workspace-home' && usesWorkspaceShell(product)) {
+      if (product === 'game' || product === 'literature') { setActivePage('world-management'); return }
+      return
+    }
     if (product === 'yunbao' && activePage === 'yunbao') {
       setActivePage('workspace-home')
       return
     }
     const hiddenByProduct = product === 'yunbao' && YUNBAO_HIDDEN_PAGES.has(activePage)
     if (hiddenByProduct || !navigationProductConfig.allowed_modules.includes(activePage)) {
-      setActivePage(usesWorkspaceShell(product) ? 'workspace-home' : navigationProductConfig.home as PageKey)
+      setActivePage(usesWorkspaceShell(product) ? creationLanding(product) : navigationProductConfig.home as PageKey)
       return
     }
     if (!WORLD_FREE_PAGES.includes(activePage) && !currentWorldId) {
-      setActivePage(navigationProductConfig.permissions.world_management ? 'world-management' : (usesWorkspaceShell(product) ? 'workspace-home' : navigationProductConfig.home as PageKey))
+      setActivePage(navigationProductConfig.permissions.world_management ? 'world-management' : (usesWorkspaceShell(product) ? creationLanding(product) : navigationProductConfig.home as PageKey))
     }
   }, [product, navigationProductConfig, activePage, currentWorldId])
 
@@ -752,7 +739,7 @@ export default function App() {
     if (isGlobalPage(activePage)) return
     if (productConfig.auto_workspace && !currentWorldId) {
       // 防止空白：正在创建工作空间时显示产品首页的空状态，而不是通用世界页。
-      if (activePage === 'world-management') setActivePage(usesWorkspaceShell(product) ? 'workspace-home' : productConfig.home as PageKey)
+      if (activePage === 'world-management') setActivePage(usesWorkspaceShell(product) ? creationLanding(product) : productConfig.home as PageKey)
     }
   }, [product, productConfig, currentWorldId, activePage])
 
@@ -776,7 +763,8 @@ export default function App() {
       window.history.replaceState(null, '', window.location.pathname)
       return
     }
-    if (activePage === 'user-center' || activePage === 'community' || activePage === 'community-social' || activePage === 'business' || activePage === 'spirit-economy' || activePage === 'settings' || activePage === 'ai-center' || activePage === 'game-center' || activePage === 'content-store') {
+    // 全局中心页（含消费体验中心）统一写 ?page=，与 isGlobalPage 同源，避免新增页面漏配。
+    if (isGlobalPage(activePage)) {
       window.history.replaceState(null, '', `${window.location.pathname}?page=${activePage}`)
       return
     }
@@ -806,8 +794,11 @@ export default function App() {
           // 缓存的世界已被删除：清掉失效状态，避免进入一个不存在的世界导致整页空白
           setCurrentWorldId('')
           setCurrentWorldName('')
+          setCurrentWorkId('')
           sessionStorage.removeItem('ws.worldId')
           sessionStorage.removeItem('ws.worldName')
+          sessionStorage.removeItem('ws.workId')
+          sessionStorage.removeItem('ws.workName')
           setActivePage((page) => (WORLD_FREE_PAGES.includes(page) ? page : 'world-management'))
         }
       }
@@ -827,78 +818,70 @@ export default function App() {
       setCurrentWorldName(world.name);
       sessionStorage.setItem('ws.worldId', id);
       sessionStorage.setItem('ws.worldName', world.name);
+      // 切换世界后作品选择失效：清空后先回到「作品」页重新选择。
+      setCurrentWorkId('');
+      sessionStorage.removeItem('ws.workId');
+      sessionStorage.removeItem('ws.workName');
       window.history.replaceState(null, '', `?world=${id}`);
-      navigate('character-management');
+      navigate(product === 'game' || product === 'literature' ? 'world-works' : 'character-management');
     }
   }
 
-  // 顶栏世界下拉：切换世界但停留在当前模块。
-  function handleTopbarWorldSelect(id: string) {
-    const world = allWorldsList.find((item) => item.id === id)
-    if (!world) return
-    const nextProduct = (world.product_scene || product) as ProductKey
-    if (nextProduct !== product) {
-      const nextConfig = productByKey(productMatrix.products, nextProduct)
-      const nextNavigation = navigationConfig(nextConfig)
-      storeProduct(nextProduct)
-      setProduct(nextProduct)
-      setNavStack([])
-      setWritingSeedEventIds([])
-      if (activePage !== 'workspace-home' && !nextNavigation.allowed_modules.includes(activePage)) {
-        setActivePage('workspace-home')
-      }
-    }
-    setCurrentWorldId(world.id)
-    setCurrentWorldName(world.name)
-    sessionStorage.setItem('ws.worldId', world.id)
-    sessionStorage.setItem('ws.worldName', world.name)
+  // ✅ 选中具体作品：锁定当前工作对象，解锁共创及后续工作工具导航。
+  function handleEnterWork(work: { id: string; title: string }) {
+    setCurrentWorkId(work.id);
+    sessionStorage.setItem('ws.workId', work.id);
   }
 
   // ✅ 退出世界：清空状态，回到书架
   function handleExitWorld() {
     setCurrentWorldId("");
     setCurrentWorldName("");
+    setCurrentWorkId('');
     sessionStorage.removeItem('ws.worldId');
     sessionStorage.removeItem('ws.worldName');
+    sessionStorage.removeItem('ws.workId');
+    sessionStorage.removeItem('ws.workName');
     window.history.replaceState(null, '', window.location.pathname);
     setNavStack([]);
-    setActivePage(usesWorkspaceShell(product) ? 'workspace-home' : (productConfig.auto_workspace ? productConfig.home : 'world-management') as PageKey);
+    setActivePage(usesWorkspaceShell(product) ? creationLanding(product) : (productConfig.auto_workspace ? productConfig.home : 'world-management') as PageKey);
   }
   const navIcons: Record<string, string> = {
     overview: '◫', 'world-management': '◎', 'character-management': '♙', chat: '✉',
-    'world-structure': '◈', 'world-data': '🌍', relationships: '⛓', events: '◇',
+    'world-structure': '◈', 'world-data': '🌍', 'world-background': '🏔',
+    'world-map': '🗺', 'world-works': '📚', 'world-illustration': '🎨',
+    'world-cocreation': '🤝', 'world-community': '💬', relationships: '⛓', events: '◇',
     timeline: '⏱', simulation: '▷', storyline: '☰', writing: '▤',
     'time-machine': '⏳', archive: '▣', trash: '♻', personas: '✦', memories: '◉',
     'companion-runtime': '◌', 'information-sources': '⌕', diary: '✎',
   }
-  const navigation: { title: string; items: { key: PageKey; label: string; icon: string }[] }[] =
-    productConfig.nav_groups.map((group) => ({
+  // 创作中心按「选中具体作品」收口导航：未选中作品时隐藏共创与后续工作工具。
+  const workGatedModules = new Set(['world-community'])
+  const isCreationProduct = product === 'game' || product === 'literature'
+  const navigation: { title: string; items: { key: PageKey; label: string; icon: string }[] }[] = productConfig.nav_groups
+    .map((group, groupIndex) => ({
       title: group.title,
-      items: group.items.map((item) => ({
-        key: item.page as PageKey,
-        label: item.label,
-        icon: navIcons[item.module] || '•',
-      })),
+      items: group.items
+        .filter((item) => !(isCreationProduct && !currentWorkId && (groupIndex > 1 || workGatedModules.has(item.module))))
+        .map((item) => ({
+          key: item.page as PageKey,
+          label: item.label,
+          icon: navIcons[item.module] || '•',
+        })),
     }))
+    .filter((group) => group.items.length > 0)
 
   const isHome = activePage === 'home'
   const isUserCenter = activePage === 'user-center'
   const isCommunity = activePage === 'community'
-  const isAiCenter = activePage === 'ai-center'
-  const isGameCenter = activePage === 'game-center'
-  const isContentStore = activePage === 'content-store'
   const isSettings = activePage === 'settings'
   const isCommunitySocial = activePage === 'community-social'
-  const isBusiness = activePage === 'business'
   const isSpirit = activePage === 'spirit-economy'
   const isCreatorAssets = activePage === 'creator-assets'
   const isWorks = activePage === 'works'
-  const isGlobalShell = isHome || isUserCenter || isCommunity || isCommunitySocial || isBusiness || isSpirit || isSettings || isAiCenter || isGameCenter || isContentStore || isCreatorAssets || isWorks
+  const isGlobalShell = isHome || isUserCenter || isCommunity || isCommunitySocial || isSpirit || isSettings || isCreatorAssets || isWorks
   const isProductWorkspace = !isGlobalShell && usesWorkspaceShell(product)
   const isYunbaoWorkspace = isProductWorkspace && product === 'yunbao'
-  const topbarWorlds = allWorldsList.filter(
-    (world) => !world.is_product_workspace && world.product_scene === product,
-  )
 
   // 全站统一面包屑：由真实产品导航结构派生，随路由自动更新。
   const crumbs = buildBreadcrumb({ page: activePage, product, productConfig, lang })
@@ -909,13 +892,22 @@ export default function App() {
       {(isGlobalShell || isProductWorkspace) && (
         <CreationCenterSidebar
           lang={lang}
-          active={isUserCenter ? 'identity' : isCommunity ? 'community' : isCommunitySocial ? 'community-social' : isBusiness ? 'business' : isSpirit ? 'spirit-economy' : isAiCenter ? 'ai-interaction' : isGameCenter ? 'game-experience' : isContentStore ? 'content-store' : isCreatorAssets ? 'assets' : isWorks ? 'works' : 'home'}
+          active={activePage}
           onNavigate={handleHomeNav}
           onToggleLang={() => changeLanguage(lang === 'zh' ? 'en' : 'zh')}
-          onCollapse={() => setSidebarCollapsed(true)}
-          collapsed={sidebarCollapsed}
+          onCollapse={() => (isNarrow ? closeNav() : setSidebarCollapsed(true))}
+          collapsed={isNarrow ? false : sidebarCollapsed}
           drawerOpen={isNarrow && sidebarDrawerOpen}
+          narrow={isNarrow}
           canAccessYunbao={Boolean(authUser?.is_owner)}
+          user={authUser}
+          backendStatus={backendStatus}
+          hasPersonalAi={hasPersonalAi}
+          onOpenAi={() => setAiAccessOpen(true)}
+          onOpenSettings={() => handleHomeNav('settings')}
+          onOpenIdentity={() => handleHomeNav('identity')}
+          onLogout={() => { void authLogout().then(() => window.location.reload()) }}
+          onBackToProducts={isProductWorkspace ? () => handleHomeNav('home') : undefined}
         />
       )}
 
@@ -958,7 +950,7 @@ export default function App() {
                 <span style={{ fontSize: 19, lineHeight: 1.3 }}>{item.icon}</span>
                 <span style={{ minWidth: 0 }}>
                   <strong style={{ display: 'block', fontSize: 13 }}>{lang === 'zh' ? item.label : localizedProduct(item.key, item.label).label}</strong>
-                  <span style={{ display: 'block', marginTop: 3, fontSize: 9.5, lineHeight: 1.55, color: 'var(--sidebar-text-muted)' }}>{lang === 'zh' ? item.description : localizedProduct(item.key, item.label, item.description).description}</span>
+                  <span style={{ display: 'block', marginTop: 3, fontSize: 'var(--text-2xs)', lineHeight: 1.55, color: 'var(--sidebar-text-muted)' }}>{lang === 'zh' ? item.description : localizedProduct(item.key, item.label, item.description).description}</span>
                 </span>
               </button>
             ))}
@@ -977,10 +969,10 @@ export default function App() {
                 <span style={{ fontSize: 16 }}>{productConfig.icon}</span>
                 <span style={{ minWidth: 0 }}>
                   <strong style={{ display: 'block', fontSize: 11.5, color: 'var(--sidebar-text)' }}>{lang === 'zh' ? productConfig.label : localizedProduct(productConfig.key, productConfig.label).label}</strong>
-                  <span style={{ display: 'block', fontSize: 9, color: 'var(--sidebar-text-muted)' }}>{lang === 'zh' ? '当前工作台 · 仅显示本产品功能' : 'Current workspace · product-only modules'}</span>
+                  <span style={{ display: 'block', fontSize: 'var(--text-2xs)', color: 'var(--sidebar-text-muted)' }}>{lang === 'zh' ? '当前工作台 · 仅显示本产品功能' : 'Current workspace · product-only modules'}</span>
                 </span>
               </div>
-              {productError && <div style={{ marginTop: 6, fontSize: 9.5, color: 'var(--danger-color)', lineHeight: 1.5 }}>{productError}</div>}
+              {productError && <div style={{ marginTop: 6, fontSize: 'var(--text-2xs)', color: 'var(--danger-color)', lineHeight: 1.5 }}>{productError}</div>}
             </div>
 
             {/* 隐藏产品工作空间不允许退出；普通世界可返回书架 */}
@@ -1059,7 +1051,7 @@ export default function App() {
         <button
           type="button"
           className="sidebar-drawer-backdrop is-open"
-          onClick={() => setSidebarDrawerOpen(false)}
+          onClick={closeNav}
           aria-label={lang === 'zh' ? '关闭导航' : 'Close navigation'}
         />
       )}
@@ -1100,25 +1092,25 @@ export default function App() {
                 (isProductWorkspace || isGlobalShell) ? (
                     <CreationCenterTopbar
                       lang={lang}
-                      page={isProductWorkspace ? 'workspace' : isUserCenter ? 'identity' : isCommunity ? 'community' : isCommunitySocial ? 'community-social' : isBusiness ? 'business' : isSpirit ? 'spirit-economy' : isAiCenter ? 'ai-center' : isGameCenter ? 'game-center' : isContentStore ? 'content-store' : isCreatorAssets ? 'assets' : isWorks ? 'works' : 'home'}
-                      productLabel={isProductWorkspace ? (lang === 'zh' ? productConfig.label : localizedProduct(productConfig.key, productConfig.label).label) : undefined}
+                      page={isProductWorkspace ? 'workspace' : isUserCenter ? 'identity' : isCommunity ? 'community' : isCommunitySocial ? 'community-social' : isSpirit ? 'spirit-economy' : isCreatorAssets ? 'assets' : isWorks ? 'works' : 'home'}
                       crumbs={crumbs}
                       onOpenNav={openNav}
-                      currentWorldName={isProductWorkspace ? (productConfig.auto_workspace ? productConfig.workspace_name || currentWorldName : currentWorldName) : undefined}
-                      currentWorldId={isProductWorkspace ? currentWorldId : undefined}
-                      worlds={isProductWorkspace ? topbarWorlds : undefined}
-                      onSelectWorld={handleTopbarWorldSelect}
-                      onOpenWorlds={navigationProductConfig.allowed_modules.includes('world-management') ? () => navigate('world-management') : undefined}
-                      onCreateWorld={navigationProductConfig.permissions.world_management ? () => openWorldBuilding() : undefined}
-                      user={authUser}
-                      backendStatus={backendStatus}
-                      hasPersonalAi={hasPersonalAi}
-                      onOpenAi={() => setAiAccessOpen(true)}
-                      onOpenSettings={() => handleHomeNav('settings')}
-                      onOpenIdentity={() => handleHomeNav('identity')}
-                      onLogout={() => { void authLogout().then(() => window.location.reload()) }}
+                      navOpen={sidebarDrawerOpen}
                       onNavigate={(page) => navigate(page as PageKey)}
-                              />
+                    >
+                      {isProductWorkspace && !isYunbaoWorkspace && (
+                        <ProductWorkspaceNav
+                          lang={lang}
+                          product={product}
+                          productConfig={navigationProductConfig}
+                          activePage={activePage}
+                          onNavigate={(page) => navigate(page as PageKey)}
+                          inline
+                          worldSelected={Boolean(currentWorldId)}
+                          workSelected={Boolean(currentWorkId)}
+                        />
+                      )}
+                    </CreationCenterTopbar>
                 ) : (
                   <header className="topbar app-topbar" style={{ height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2rem', borderBottom: '1px solid var(--card-border)' }}>
                     {isNarrow && (
@@ -1168,22 +1160,12 @@ export default function App() {
                 ...(isGlobalShell || isProductWorkspace ? { padding: 0, maxWidth: 'none' } : {}),
               }}
             >
-              {isProductWorkspace && !isYunbaoWorkspace && (
-                <ProductWorkspaceNav
-                  lang={lang}
-                  product={product}
-                  productConfig={navigationProductConfig}
-                  activePage={activePage}
-                  error={productError}
-                  onNavigate={(page) => navigate(page as PageKey)}
-                />
-              )}
           {!isGlobalShell && product === 'yunbao' && authUser && !authUser.is_owner && (
             <div className="pw-access-note">
               云宝工作台当前为只读访问。你可以查看世界、人物、日记与创作数据；所有编辑、删除与状态切换仅限开发者「兰哆哆」。
             </div>
           )}
-          <ErrorBoundary key={`${product}:${activePage}:${currentWorldId}`} onReset={() => setActivePage(usesWorkspaceShell(product) ? 'workspace-home' : productConfig.home as PageKey)}>
+          <ErrorBoundary key={`${product}:${activePage}:${currentWorldId}`} onReset={() => setActivePage(usesWorkspaceShell(product) ? creationLanding(product) : productConfig.home as PageKey)}>
           <Suspense fallback={<PageLoading label={lang === 'zh' ? '加载中…' : 'Loading…'} />}>
           {activePage === 'home' ? (
             <CreationCenterPage
@@ -1191,6 +1173,8 @@ export default function App() {
               onOpenScene={handleCreationScene}
               onOpenTool={handleOpenTool}
               onOpenAsset={handleOpenAsset}
+              onOpenWorld={handleEnterWorld}
+              onOpenLibrary={() => handleHomeNav('creator-assets')}
             />
           ) : activePage === 'user-center' ? (
             <UserCenterPage
@@ -1201,21 +1185,14 @@ export default function App() {
               onOpenWorks={() => handleOpenUserAsset('works')}
               onLogout={() => { void authLogout().then(() => window.location.reload()) }}
               onOpenSettings={() => setActivePage('settings')}
-              onOpenBusiness={() => setActivePage('business')}
+              onOpenSpirit={() => setActivePage('spirit-economy')}
             />
           ) : activePage === 'settings' ? (
             <SettingsPage
               lang={lang}
               user={authUser}
-              onUserUpdated={handleUserUpdated}
               onOpenAiSettings={() => setAiAccessOpen(true)}
               onLogout={() => { void authLogout().then(() => window.location.reload()) }}
-            />
-          ) : activePage === 'business' ? (
-            <BillingCenterPage
-              lang={lang}
-              user={authUser}
-              onOpenAi={() => setAiAccessOpen(true)}
             />
           ) : activePage === 'community-social' ? (
             <CommunitySocialPage
@@ -1231,42 +1208,15 @@ export default function App() {
               onOpenCharacters={() => handleOpenUserAsset('characters')}
               onOpenStorylines={() => handleOpenUserAsset('storylines')}
               onOpenIdentity={() => { setNavStack([]); setActivePage('user-center') }}
-            />
-          ) : activePage === 'ai-center' ? (
-            <AICenterPage
-              lang={lang}
-              user={authUser}
               onOpenChat={openCenterChat}
-              onOpenCharacters={() => handleOpenUserAsset('characters')}
               onOpenRelationships={() => openCenterGamePage('relationships')}
               onOpenEvents={() => openCenterGamePage('events')}
               onOpenMemories={() => openProductPage('yunbao', 'memories')}
               onOpenSimulation={() => openCenterGamePage('simulation')}
             />
-          ) : activePage === 'game-center' ? (
-            <GameCenterPage
-              lang={lang}
-              onOpenMultipath={() => openCenterGamePage('multipath')}
-              onOpenSimulation={() => openCenterGamePage('simulation')}
-              onOpenStoryline={() => handleOpenUserAsset('storylines')}
-              onOpenCharacters={() => handleOpenUserAsset('characters')}
-              onOpenWorld={() => handleOpenUserAsset('worlds')}
-              onOpenWorldData={() => openCenterGamePage('world-data')}
-              onOpenWorldStructure={() => openCenterGamePage('world-structure')}
-              onOpenRelationships={() => openCenterGamePage('relationships')}
-            />
-          ) : activePage === 'content-store' ? (
-            <ContentStorePage
-              lang={lang}
-              user={authUser}
-              onOpenWorld={() => handleOpenUserAsset('worlds')}
-              onOpenCharacters={() => handleOpenUserAsset('characters')}
-              onOpenStorylines={() => handleOpenUserAsset('storylines')}
-              onOpenWorks={() => handleOpenUserAsset('works')}
-            />
           ) : activePage === 'workspace-home' && isYunbaoWorkspace ? (
             <YunbaoOverviewPage onNavigate={(page) => navigate(page as PageKey)} />
-          ) : activePage === 'workspace-home' && usesWorkspaceShell(product) ? (
+          ) : activePage === 'workspace-home' && (product === 'companion' || product === 'diary' || product === 'yunbao') ? (
             <ProductWorkspaceHome
               product={product}
               lang={lang}
@@ -1290,6 +1240,7 @@ export default function App() {
             <WorldsPage 
               lang={lang} dict={dict} product={product}
               readOnly={product === 'yunbao' && !!authUser && !authUser.is_owner}
+              currentWorldId={currentWorldId}
               onEnterWorld={handleEnterWorld}
               onOpenWorldBuilding={(id) => openWorldBuilding(id)}
             />
@@ -1317,6 +1268,18 @@ export default function App() {
             />
                      ) : activePage === 'world-data' ? (
             <WorldDataPage worldId={currentWorldId} />
+          ) : activePage === 'world-background' ? (
+            <WorldBackgroundPage worldId={currentWorldId} />
+          ) : activePage === 'world-map' ? (
+            <WorldMapPage worldId={currentWorldId} />
+          ) : activePage === 'world-works' ? (
+            <WorldWorksPage worldId={currentWorldId} onSelectWork={handleEnterWork} />
+          ) : activePage === 'world-illustration' ? (
+            <WorldIllustrationPage worldId={currentWorldId} />
+          ) : activePage === 'world-cocreation' ? (
+            <WorldCocreationPage worldId={currentWorldId} />
+          ) : activePage === 'world-community' ? (
+            <WorldCommunityPage worldId={currentWorldId} />
           ) : activePage === 'world-structure' ? (
             <WorldStructurePage worldId={currentWorldId} worldName={currentWorldName} />
           ) : activePage === 'spirit-economy' ? (
@@ -1347,8 +1310,6 @@ export default function App() {
               }}
               onNavigate={(page) => navigate(page as PageKey)}
             />
-          ) : activePage === 'yunbao' ? (
-            <YunbaoWorkspacePage onNavigate={(page) => navigate(page as PageKey)} />
           ) : activePage === 'yunbao-seed' ? (
             <YunbaoSeedPage onBack={() => setActivePage('personas')} />
           ) : activePage === 'personas' ? (

@@ -1,15 +1,17 @@
 import type { PageKey } from '../App'
 
 export const PAGE_LABELS_EN: Partial<Record<PageKey, string>> = {
-  home: 'Creation Center', 'user-center': 'Identity Center', community: 'Content Community',
-  'community-social': 'Community Social', 'ai-center': 'AI Interaction', 'game-center': 'Game Experience',
-  'content-store': 'Content Store', overview: '01 World Overview', 'world-management': '02 World Management',
+  home: 'Creation Center', 'user-center': 'Identity Center', community: 'Creator Works',
+  'community-social': 'Plaza',
+  overview: '01 World Overview', 'world-management': '02 World Management',
   'world-building': 'World Building', 'character-management': '03 Characters', chat: 'AI Character Chat',
-  'world-structure': 'World Structure', 'world-data': 'World Settings', relationships: '04 Relations & Groups',
+  'world-structure': 'World Structure', 'world-data': 'World Settings', 'world-background': 'Background',
+  'world-map': 'Maps', 'world-works': 'Works', 'world-illustration': 'Illustrations',
+  'world-cocreation': 'Co-creation', 'world-community': 'Community', relationships: '04 Relations & Groups',
   events: '05 Events', timeline: '06 Timeline', simulation: '07 Simulation', storyline: 'Storyline',
   writing: '08 Writing', 'time-machine': 'Time Machine', archive: 'Archive', trash: 'Trash',
   'creator-assets': 'Creator Assets', works: 'My Works', personas: 'Yunbao Personas',
-  'yunbao-seed': 'Persona Seed Editor', settings: 'Settings Center', business: 'Business Center',
+  'yunbao-seed': 'Persona Seed Editor', settings: 'Settings Center',
   'spirit-economy': 'Spirit Fruit', yunbao: 'Yunbao Workspace', memories: 'Memory',
   'companion-runtime': 'Persona Runtime', 'information-sources': 'Information Sources',
   diary: 'Diary & Biography', 'workspace-home': 'Workspace Overview', multipath: 'Multipath Sandbox',

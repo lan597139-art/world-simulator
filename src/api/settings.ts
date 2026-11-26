@@ -13,6 +13,7 @@ export type SettingsPreferences = {
 export type SettingsPrivacy = {
   public_profile: boolean
   show_activity: boolean
+  show_stats: boolean
   allow_follow: boolean
   allow_friend_requests: boolean
   allow_group_invites: boolean

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import { API_ORIGIN } from '../api/config'
-import { loadAiSettings } from '../api/aiSettings'
 import {
   getYunbao, listYunbaoMessages, listYunbaoThreads, switchYunbaoState,
   type YunbaoProfile, type YunbaoState,
@@ -436,16 +435,11 @@ export default function AIAssistantPanel({
       setSending(true)
       setUnread(false)
       try {
-        const settings = loadAiSettings()
-        const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-        if (settings.apiKey) {
-          headers['X-AI-API-Key'] = settings.apiKey
-          if (settings.baseUrl) headers['X-AI-Base-URL'] = settings.baseUrl
-          if (settings.model) headers['X-AI-Model'] = settings.model
-        }
+        // AI 头（X-AI-API-Key / X-AI-Base-URL / X-AI-Model）由全局 fetch 桥接
+        // （installApiOriginBridge）按 /api/assistant/chat 统一注入，此处不重复实现。
         const response = await fetch(`${API_ORIGIN}/api/assistant/chat`, {
           method: 'POST',
-          headers,
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             messages: nextMessages
               .filter((message) => !message.error)
@@ -677,7 +671,7 @@ export default function AIAssistantPanel({
           0%, 80%, 100% { opacity: 0.25; transform: translateY(0); }
           40% { opacity: 1; transform: translateY(-2px); }
         }
-        .ws-assistant-dot { display: inline-block; font-size: 8px; animation: ws-assistant-dot-pulse 1.2s infinite ease-in-out; }
+        .ws-assistant-dot { display: inline-block; font-size: var(--text-2xs); animation: ws-assistant-dot-pulse 1.2s infinite ease-in-out; }
         .ws-assistant-dot:nth-child(2) { animation-delay: 0.15s; }
         .ws-assistant-dot:nth-child(3) { animation-delay: 0.3s; }
       `}</style>
@@ -826,7 +820,7 @@ export default function AIAssistantPanel({
           </header>
 
           <div style={{ padding: '8px 14px', borderBottom: '1px solid var(--card-border)', display: 'flex', gap: 5, flexWrap: 'wrap', alignItems: 'center' }}>
-            <span style={{ fontSize: 9, color: 'var(--text-muted)', marginRight: 2 }}>当前常态</span>
+            <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)', marginRight: 2 }}>当前常态</span>
             {(yunbao?.states || []).map((item) => {
               const active = item.key === yunbao?.active_state
               return (
@@ -840,7 +834,7 @@ export default function AIAssistantPanel({
                     padding: '4px 7px', borderRadius: 12, cursor: yunbao ? 'pointer' : 'default',
                     border: `1px solid ${active ? 'var(--primary-color)' : 'var(--card-border)'}`,
                     background: active ? 'color-mix(in srgb, var(--primary-color) 12%, transparent)' : 'transparent',
-                    color: active ? 'var(--primary-color)' : 'var(--text-muted)', fontSize: 9.5,
+                    color: active ? 'var(--primary-color)' : 'var(--text-muted)', fontSize: 'var(--text-2xs)',
                     fontWeight: active ? 700 : 400,
                   }}
                 >
@@ -848,7 +842,7 @@ export default function AIAssistantPanel({
                 </button>
               )
             })}
-            {!yunbao && <span style={{ fontSize: 9.5, color: 'var(--text-muted)' }}>正在读取常态…</span>}
+            {!yunbao && <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>正在读取常态…</span>}
           </div>
 
           {backendState === 'missing' && (

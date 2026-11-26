@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties, Dispatch, ReactNode, SetStateAction } from 'react'
 import * as api from '../api/yunbao'
-import type { YunbaoGrowth, YunbaoProfile } from '../api/yunbao'
+import type { YunbaoGrowth, YunbaoProfile, YunbaoVersion } from '../api/yunbao'
 
 const cardSurface: CSSProperties = {
   border: '1px solid var(--card-border)', borderRadius: 14, background: 'var(--ws-surface-bg)',
@@ -68,18 +68,18 @@ export function YunbaoCard({ onOpen, actionLabel = '云宝人格设计' }: { onO
       <div style={{ flex: 1, minWidth: 240 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <strong style={{ fontSize: 17 }}>{profile?.name || '云宝'}</strong>
-          <span style={{ fontSize: 9, padding: '2px 7px', borderRadius: 10, border: '1px solid var(--card-border)', color: 'var(--text-muted)' }}>
+          <span style={{ fontSize: 'var(--text-2xs)', padding: '2px 7px', borderRadius: 10, border: '1px solid var(--card-border)', color: 'var(--text-muted)' }}>
             全局 AI 人格
           </span>
           {profile && (
             <span style={{
-              fontSize: 9, padding: '2px 7px', borderRadius: 10,
+              fontSize: 'var(--text-2xs)', padding: '2px 7px', borderRadius: 10,
               border: `1px solid ${profile.current_state ? 'var(--primary-color)' : 'var(--card-border)'}`,
               color: profile.current_state ? 'var(--primary-color)' : 'var(--text-muted)',
             }}>{profile.current_state?.label || '状态未设置'}</span>
           )}
           {profile && (
-            <span style={{ fontSize: 9, padding: '2px 7px', borderRadius: 10, border: '1px solid var(--card-border)', color: 'var(--text-muted)' }}>
+            <span style={{ fontSize: 'var(--text-2xs)', padding: '2px 7px', borderRadius: 10, border: '1px solid var(--card-border)', color: 'var(--text-muted)' }}>
               {profile.can_edit ? '所有者可编辑' : '只读'}
             </span>
           )}
@@ -106,7 +106,7 @@ function Metric({ label: text, value }: { label: string; value: string }) {
   return (
     <span style={{
       display: 'inline-flex', gap: 5, alignItems: 'center', padding: '4px 8px', borderRadius: 7,
-      background: 'rgba(128,128,128,0.08)', fontSize: 9.5, color: 'var(--text-muted)',
+      background: 'rgba(128,128,128,0.08)', fontSize: 'var(--text-2xs)', color: 'var(--text-muted)',
     }}>
       {text}<strong style={{ color: 'var(--text-main)', fontWeight: 600 }}>{value}</strong>
     </span>
@@ -125,9 +125,14 @@ export function YunbaoProfilePanel({
   const [profile, setProfile] = useState<YunbaoProfile | null>(null)
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState<Record<string, any>>({})
+  const [versions, setVersions] = useState<YunbaoVersion[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+
+  const loadVersions = async () => {
+    try { setVersions(await api.listYunbaoVersions()) } catch { setVersions([]) }
+  }
 
   const load = async () => {
     setError('')
@@ -135,6 +140,7 @@ export function YunbaoProfilePanel({
       const data = await api.getYunbao()
       setProfile(data)
       setDraft({})
+      void loadVersions()
     } catch (err: any) { setError(String(err?.message || err)) }
   }
 
@@ -187,32 +193,79 @@ export function YunbaoProfilePanel({
     }))
   }
 
+  const buildPayload = () => {
+    const parse = (key: string) => {
+      if (typeof draft[key] !== 'string') return draft[key]
+      try { return JSON.parse(draft[key] || '{}') } catch { throw new Error(`${key} 不是合法 JSON`) }
+    }
+    return {
+      identity: draft.identity,
+      description: draft.description,
+      maturity: draft.maturity,
+      biography: draft.biography,
+      traits: String(draft.traits || '').split(/[、,，]/).map((item) => item.trim()).filter(Boolean),
+      tools: String(draft.tools || '').split(/[、,，]/).map((item) => item.trim()).filter(Boolean),
+      growth_experience: draft.growth_experience || [],
+      esa: parse('esa'),
+      cognition: parse('cognition'),
+      expression: parse('expression'),
+      interaction: parse('interaction'),
+      memory_policy: parse('memory_policy'),
+      public_profile: parse('public_profile'),
+    }
+  }
+
   const save = async () => {
     setBusy(true); setError(''); setNotice('')
     try {
-      const parse = (key: string) => {
-        if (typeof draft[key] !== 'string') return draft[key]
-        try { return JSON.parse(draft[key] || '{}') } catch { throw new Error(`${key} 不是合法 JSON`) }
-      }
-      const payload = {
-        identity: draft.identity,
-        description: draft.description,
-        maturity: draft.maturity,
-        biography: draft.biography,
-        traits: String(draft.traits || '').split(/[、,，]/).map((item) => item.trim()).filter(Boolean),
-        tools: String(draft.tools || '').split(/[、,，]/).map((item) => item.trim()).filter(Boolean),
-        growth_experience: draft.growth_experience || [],
-        esa: parse('esa'),
-        cognition: parse('cognition'),
-        expression: parse('expression'),
-        interaction: parse('interaction'),
-        memory_policy: parse('memory_policy'),
-        public_profile: parse('public_profile'),
-      }
-      const updated = await api.updateYunbao(payload)
+      const updated = await api.updateYunbao(buildPayload())
       setProfile(updated)
       setEditing(false)
-      setNotice('云宝人格已保存')
+      setNotice('云宝人格已保存并记录为新版本')
+      void loadVersions()
+    } catch (err: any) {
+      setError(String(err?.message || err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const saveDraft = async () => {
+    setBusy(true); setError(''); setNotice('')
+    try {
+      await api.createYunbaoDraft(buildPayload())
+      setNotice('草稿已保存，尚未生效；可在版本记录中发布')
+      void loadVersions()
+    } catch (err: any) {
+      setError(String(err?.message || err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const publishVersion = async (versionId: string) => {
+    setBusy(true); setError(''); setNotice('')
+    try {
+      const result = await api.publishYunbaoVersion(versionId)
+      setProfile(result.persona)
+      setEditing(false)
+      setNotice(`草稿 v${result.version.version_no} 已发布生效`)
+      void loadVersions()
+    } catch (err: any) {
+      setError(String(err?.message || err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const rollbackVersion = async (versionId: string) => {
+    setBusy(true); setError(''); setNotice('')
+    try {
+      const result = await api.rollbackYunbaoVersion(versionId)
+      setProfile(result.persona)
+      setEditing(false)
+      setNotice(`已回滚到 v${result.version.version_no}`)
+      void loadVersions()
     } catch (err: any) {
       setError(String(err?.message || err))
     } finally {
@@ -266,11 +319,14 @@ export function YunbaoProfilePanel({
       {editing ? (
         <EditBody
           draft={draft} setDraft={setDraft} updateGrowth={updateGrowth}
-          addGrowth={addGrowth} removeGrowth={removeGrowth} save={save} busy={busy}
+          addGrowth={addGrowth} removeGrowth={removeGrowth} save={save} saveDraft={saveDraft} busy={busy}
           onOpenSeedEditor={onOpenSeedEditor}
         />
       ) : (
-        <ReadBody profile={profile} />
+        <ReadBody
+          profile={profile} versions={versions}
+          onPublish={publishVersion} onRollback={rollbackVersion} busy={busy}
+        />
       )}
     </>
   )
@@ -293,7 +349,15 @@ export function YunbaoProfilePanel({
   )
 }
 
-function ReadBody({ profile }: { profile: YunbaoProfile }) {
+function ReadBody({
+  profile, versions, onPublish, onRollback, busy,
+}: {
+  profile: YunbaoProfile
+  versions: YunbaoVersion[]
+  onPublish: (versionId: string) => void
+  onRollback: (versionId: string) => void
+  busy: boolean
+}) {
   return (
     <div style={{ marginTop: 18, display: 'grid', gap: 13 }}>
       <Section title="人格成熟">
@@ -340,12 +404,18 @@ function ReadBody({ profile }: { profile: YunbaoProfile }) {
         <p style={paragraph}>记忆策略：{valueText(profile.memory_policy)}</p>
         <p style={paragraph}>公共资料：{valueText(profile.public_profile)}</p>
       </Section>
+      <Section title="版本记录">
+        <VersionSection
+          versions={versions} canEdit={profile.can_edit} busy={busy}
+          onPublish={onPublish} onRollback={onRollback}
+        />
+      </Section>
     </div>
   )
 }
 
 function EditBody({
-  draft, setDraft, updateGrowth, addGrowth, removeGrowth, save, busy, onOpenSeedEditor,
+  draft, setDraft, updateGrowth, addGrowth, removeGrowth, save, saveDraft, busy, onOpenSeedEditor,
 }: {
   draft: Record<string, any>
   setDraft: Dispatch<SetStateAction<Record<string, any>>>
@@ -353,6 +423,7 @@ function EditBody({
   addGrowth: () => void
   removeGrowth: (index: number) => void
   save: () => void
+  saveDraft: () => void
   busy: boolean
   onOpenSeedEditor?: () => void
 }) {
@@ -419,6 +490,7 @@ function EditBody({
         ))}
       </div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+        <button type="button" style={ghostBtn} onClick={saveDraft} disabled={busy}>存为草稿（不生效）</button>
         <button type="button" style={primaryBtn} onClick={save} disabled={busy}>{busy ? '保存中…' : '保存云宝人格'}</button>
       </div>
     </div>
@@ -438,10 +510,55 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   )
 }
 
+function VersionSection({
+  versions, canEdit, busy, onPublish, onRollback,
+}: {
+  versions: YunbaoVersion[]
+  canEdit: boolean
+  busy: boolean
+  onPublish: (versionId: string) => void
+  onRollback: (versionId: string) => void
+}) {
+  if (!versions.length) {
+    return <p style={paragraph}>暂无版本记录。保存或发布后会自动生成版本快照。</p>
+  }
+  return (
+    <div style={{ display: 'grid', gap: 7 }}>
+      {versions.map((version) => (
+        <div key={version.id} style={{
+          display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+          padding: '7px 9px', borderRadius: 8, border: '1px solid var(--card-border)',
+          background: 'rgba(128,128,128,.03)',
+        }}>
+          <span style={badge}>v{version.version_no}</span>
+          <span style={{
+            ...badge,
+            borderColor: version.status === 'draft' ? 'var(--primary-color)' : 'var(--card-border)',
+            color: version.status === 'draft' ? 'var(--primary-color)' : 'var(--text-muted)',
+          }}>
+            {version.status === 'draft' ? '草稿' : version.status === 'published' ? '已发布' : version.status}
+          </span>
+          <span style={{ fontSize: 10.5, color: 'var(--text-muted)' }}>
+            {version.created_at ? new Date(version.created_at).toLocaleString('zh-CN') : '—'}
+          </span>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
+            {canEdit && version.status === 'draft' && (
+              <button type="button" style={primaryBtn} onClick={() => onPublish(version.id)} disabled={busy}>发布</button>
+            )}
+            {canEdit && version.status === 'published' && (
+              <button type="button" style={ghostBtn} onClick={() => onRollback(version.id)} disabled={busy}>回滚到此版本</button>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 const paragraph: CSSProperties = { margin: 0, fontSize: 11, lineHeight: 1.8, color: 'var(--text-main)' }
 const badge: CSSProperties = {
   display: 'inline-flex', padding: '3px 8px', borderRadius: 12, border: '1px solid var(--card-border)',
-  fontSize: 9.5, color: 'var(--text-muted)', background: 'transparent',
+  fontSize: 'var(--text-2xs)', color: 'var(--text-muted)', background: 'transparent',
 }
 const errorBox: CSSProperties = {
   marginTop: 11, padding: '8px 10px', borderRadius: 8, border: '1px solid var(--danger-color)',

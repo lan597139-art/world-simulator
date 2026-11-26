@@ -6,10 +6,11 @@ import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import Image from '@tiptap/extension-image'
 import type { Editor } from '@tiptap/core'
+import type { DOMOutputSpec } from '@tiptap/pm/model'
 import * as writingApi from '../api/writing'
 import type { DraftItem, StoryItem, WritingToolPatch } from '../api/writing'
 import { API_ORIGIN } from '../api/config'
-import { recordMediaAsset, uploadMedia } from '../api/media'
+import { recordMediaAsset, resolveMediaUrl, uploadMedia } from '../api/media'
 import WritingToolbox from '../components/writing/WritingToolbox'
 import type { ToolSelection } from '../components/writing/WritingToolbox'
 import WritingReview from '../components/writing/WritingReview'
@@ -34,6 +35,21 @@ const AlignedImage = Image.extend({
         renderHTML: (attributes: Record<string, unknown>) => ({ 'data-align': attributes.align || 'center' }),
       },
     }
+  },
+  // 正文图片统一走 resolveMediaUrl：落库存相对路径，渲染时再拼当前后端域名，
+  // 避免开发域名写进 HTML 后在线上无法加载。
+  renderHTML(props: any): any {
+    const attributes = props.HTMLAttributes
+    const parent = (this as { parent?: { renderHTML?: (p: { node: Node; HTMLAttributes: Record<string, any> }) => unknown } }).parent
+    if (parent?.renderHTML) {
+      const rendered = parent.renderHTML(props)
+      if (Array.isArray(rendered) && rendered.length >= 2) {
+        const [tag, attrs, ...rest] = rendered as unknown as [string, Record<string, unknown>, ...unknown[]]
+        return [tag, { ...attrs, src: resolveMediaUrl(String(attrs.src || '')) }, ...rest] as unknown as DOMOutputSpec
+      }
+      return rendered as unknown as DOMOutputSpec
+    }
+    return ['img', { ...attributes, src: resolveMediaUrl(String(attributes.src || '')) }] as unknown as DOMOutputSpec
   },
 })
 
@@ -533,7 +549,7 @@ export default function WritingPage({
     try {
       for (const file of images) {
         const uploaded = await uploadMedia(file)
-        editor.chain().focus().setImage({ src: uploaded.file_url, alt: file.name.replace(/\.[^.]+$/, '') }).run()
+        editor.chain().focus().setImage({ src: resolveMediaUrl(uploaded.file_url), alt: file.name.replace(/\.[^.]+$/, '') }).run()
         await recordMediaAsset({
           title: `正文插图 · ${file.name.replace(/\.[^.]+$/, '')}`,
           fileUrl: uploaded.file_url,

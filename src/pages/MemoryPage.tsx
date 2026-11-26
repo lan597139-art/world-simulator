@@ -76,8 +76,8 @@ export default function MemoryPage() {
                 <div key={memory.id} style={{ border: '1px solid var(--card-border)', borderRadius: 8, padding: 9 }}>
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                     <span style={badge}>{memory.kind || 'episodic'}</span>
-                    <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>重要度 {Number(memory.importance || 0).toFixed(1)}</span>
-                    {memory.thread_id && <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>来源：{byThread.get(memory.thread_id) || '会话'}</span>}
+                    <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>重要度 {Number(memory.importance || 0).toFixed(1)}</span>
+                    {memory.thread_id && <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>来源：{byThread.get(memory.thread_id) || '会话'}</span>}
                     <span style={{ flex: 1 }} />
                     {profile.can_edit && <button type="button" onClick={() => void remove(memory.id)} style={{ ...smallBtn, color: 'var(--danger-color)' }}>删除</button>}
                   </div>
@@ -95,4 +95,4 @@ export default function MemoryPage() {
 
 const primaryBtn: React.CSSProperties = { padding: '6px 9px', borderRadius: 7, border: '1px solid var(--primary-color)', background: 'var(--primary-color)', color: 'var(--primary-text)', fontSize: 11, cursor: 'pointer' }
 const smallBtn: React.CSSProperties = { padding: '3px 6px', borderRadius: 6, border: '1px solid var(--card-border)', background: 'transparent', fontSize: 10, cursor: 'pointer' }
-const badge: React.CSSProperties = { fontSize: 9, padding: '2px 6px', borderRadius: 10, background: 'rgba(128,128,128,.12)', color: 'var(--text-muted)' }
+const badge: React.CSSProperties = { fontSize: 'var(--text-2xs)', padding: '2px 6px', borderRadius: 10, background: 'rgba(128,128,128,.12)', color: 'var(--text-muted)' }

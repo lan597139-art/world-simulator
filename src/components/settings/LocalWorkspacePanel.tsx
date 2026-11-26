@@ -102,15 +102,15 @@ export default function LocalWorkspacePanel({ lang = 'zh' }: { lang?: Lang }) {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8, marginBottom: 12 }}>
         <div style={{ border: '1px solid var(--card-border)', borderRadius: 9, padding: '9px 10px' }}>
-          <span style={{ display: 'block', fontSize: 9.5, color: 'var(--text-muted)' }}>{tr(lang, '本地草稿', 'Local drafts')}</span>
+          <span style={{ display: 'block', fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>{tr(lang, '本地草稿', 'Local drafts')}</span>
           <strong style={{ fontSize: 16 }}>{drafts.length}</strong>
         </div>
         <div style={{ border: '1px solid var(--card-border)', borderRadius: 9, padding: '9px 10px' }}>
-          <span style={{ display: 'block', fontSize: 9.5, color: 'var(--text-muted)' }}>{tr(lang, '备份', 'Backups')}</span>
+          <span style={{ display: 'block', fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>{tr(lang, '备份', 'Backups')}</span>
           <strong style={{ fontSize: 16 }}>{backups.length}</strong>
         </div>
         <div style={{ border: '1px solid var(--card-border)', borderRadius: 9, padding: '9px 10px' }}>
-          <span style={{ display: 'block', fontSize: 9.5, color: 'var(--text-muted)' }}>{tr(lang, '草稿体积', 'Draft size')}</span>
+          <span style={{ display: 'block', fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>{tr(lang, '草稿体积', 'Draft size')}</span>
           <strong style={{ fontSize: 16 }}>{(storageSize / 1024).toFixed(1)} KB</strong>
         </div>
       </div>
@@ -133,7 +133,7 @@ export default function LocalWorkspacePanel({ lang = 'zh' }: { lang?: Lang }) {
           <div key={draft.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 9px', border: '1px solid var(--card-border)', borderRadius: 8 }}>
             <div style={{ minWidth: 0, flex: 1 }}>
               <strong style={{ display: 'block', fontSize: 10.5 }}>{draft.title}</strong>
-              <span style={{ display: 'block', marginTop: 2, fontSize: 9.5, color: 'var(--text-muted)' }}>{draft.kind} · {formatDate(draft.updatedAt)}</span>
+              <span style={{ display: 'block', marginTop: 2, fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>{draft.kind} · {formatDate(draft.updatedAt)}</span>
             </div>
             <button type="button" style={danger} onClick={() => void remove(draft.id)}><Trash2 size={12} /></button>
           </div>
@@ -144,11 +144,11 @@ export default function LocalWorkspacePanel({ lang = 'zh' }: { lang?: Lang }) {
         <div style={{ marginTop: 10 }}>
           <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 4 }}>{tr(lang, '最近备份', 'Recent backups')}</div>
           {backups.slice(0, 3).map((row) => (
-            <div key={row.id} style={{ fontSize: 9.5, color: 'var(--text-muted)', padding: '3px 0' }}>{row.label} · {formatDate(row.createdAt)}</div>
+            <div key={row.id} style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)', padding: '3px 0' }}>{row.label} · {formatDate(row.createdAt)}</div>
           ))}
         </div>
       )}
-      {mediaCount > 0 && <div style={{ fontSize: 9.5, color: 'var(--text-muted)' }}>{tr(lang, '媒体索引：', 'Media index: ')}{mediaCount}</div>}
+      {mediaCount > 0 && <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>{tr(lang, '媒体索引：', 'Media index: ')}{mediaCount}</div>}
     </section>
   )
 }

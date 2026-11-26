@@ -148,10 +148,10 @@ export default function InviteCodesPanel({ lang = 'zh' }: { lang?: Lang }) {
             <Ticket size={14} />
             <div style={{ minWidth: 0, flex: 1 }}>
               <strong style={{ display: 'block', fontSize: 11 }}>{invite.code_prefix}•••••••• {invite.label ? `· ${invite.label}` : ''}</strong>
-              <span style={{ display: 'block', marginTop: 2, fontSize: 9.5, color: 'var(--text-muted)' }}>
+              <span style={{ display: 'block', marginTop: 2, fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>
                 {invite.used_count}/{invite.max_uses} {tr(lang, '次', 'uses')} · {STATUS_LABELS[invite.status]} · {formatDate(invite.expires_at, lang)}
               </span>
-              <span style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 3, fontSize: 9, color: 'var(--text-muted)' }}>
+              <span style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 3, fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>
                 <b style={{ fontWeight: 600 }}>{kindLabels[invite.kind] || invite.kind}</b>
                 {invite.batch && <span>· {invite.batch}</span>}
                 {invite.reward_fruit > 0 && <span>· {tr(lang, '被邀请', 'Invitee')} +{invite.reward_fruit}</span>}

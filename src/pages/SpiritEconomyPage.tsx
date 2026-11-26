@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
+  Activity,
   AlertCircle,
   Award,
   ArrowDownLeft,
@@ -23,9 +24,11 @@ import {
   getSpiritRewards,
   getSpiritSummary,
   giftSpiritFruit,
+  getUserActivityOverview,
   updateSpiritPlant,
   updateSpiritRewardRule,
   type SpiritAdminOverview,
+  type UserActivityRow,
   type SpiritInventoryItem,
   type SpiritRewardRule,
   type SpiritSummary,
@@ -34,7 +37,7 @@ import {
 import '../styles/spirit-economy.css'
 
 type Lang = 'zh' | 'en'
-type Tab = 'shop' | 'transfer' | 'ledger' | 'rewards' | 'admin'
+type Tab = 'shop' | 'transfer' | 'ledger' | 'rewards' | 'admin' | 'activity'
 
 type User = { id: string; username?: string; display_name?: string; is_owner?: boolean } | null
 
@@ -92,6 +95,9 @@ export default function SpiritEconomyPage({
   const [adjust, setAdjust] = useState({ user_id: '', amount: '100', note: '' })
   const [rewards, setRewards] = useState<SpiritRewardRule[]>([])
   const [admin, setAdmin] = useState<SpiritAdminOverview | null>(null)
+  const [activity, setActivity] = useState<UserActivityRow[]>([])
+  const [activityQuery, setActivityQuery] = useState('')
+  const [activityLoading, setActivityLoading] = useState(false)
   const [claiming, setClaiming] = useState('')
   const zh = lang === 'zh'
 
@@ -103,10 +109,32 @@ export default function SpiritEconomyPage({
       setSummary(nextSummary)
       setRewards(nextRewards.items)
       setAdmin(user?.is_owner ? await getSpiritAdminOverview() : null)
+      if (user?.is_owner) {
+        try {
+          const rows = await getUserActivityOverview()
+          setActivity(rows.items)
+        } catch {
+          /* 活跃概览为辅助能力，失败不影响经济后台主流程 */
+        }
+      }
     } catch (err) {
       setError(String((err as Error)?.message || err))
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadActivity = async () => {
+    setTab('activity')
+    if (!user?.is_owner) return
+    setActivityLoading(true)
+    try {
+      const rows = await getUserActivityOverview(activityQuery)
+      setActivity(rows.items)
+    } catch (err) {
+      setError(String((err as Error)?.message || err))
+    } finally {
+      setActivityLoading(false)
     }
   }
 
@@ -230,6 +258,21 @@ export default function SpiritEconomyPage({
     }
   }
 
+  const savePlantExpiry = async (plantId: string, value: string | null) => {
+    setBusy(`plant:${plantId}`)
+    setError('')
+    try {
+      const updated = await updateSpiritPlant(plantId, { expires_at: value })
+      setAdmin((prev) => prev ? { ...prev, plants: prev.plants.map((row) => row.id === updated.id ? updated : row) } : prev)
+      setSummary((prev) => prev ? { ...prev, plants: prev.plants.map((row) => row.id === updated.id ? updated : row) } : prev)
+      setFlash(zh ? `${updated.name} 截止时间已更新` : `${updated.name} deadline updated`)
+    } catch (err) {
+      setError(String((err as Error)?.message || err))
+    } finally {
+      setBusy('')
+    }
+  }
+
   const submitAdjust = async () => {
     const amount = Number(adjust.amount)
     if (!adjust.user_id.trim() || !Number.isFinite(amount) || amount === 0) {
@@ -316,6 +359,7 @@ export default function SpiritEconomyPage({
         <button type="button" className={tab === 'ledger' ? 'active' : ''} onClick={() => setTab('ledger')}><History size={14} /> {zh ? '灵果流水' : 'Ledger'}</button>
         <button type="button" className={tab === 'rewards' ? 'active' : ''} onClick={() => setTab('rewards')}><Award size={14} /> {zh ? '奖励领取' : 'Rewards'}</button>
         {user?.is_owner && <button type="button" className={tab === 'admin' ? 'active' : ''} onClick={() => setTab('admin')}><ShieldCheck size={14} /> {zh ? '经济后台' : 'Economy admin'}</button>}
+        {user?.is_owner && <button type="button" className={tab === 'activity' ? 'active' : ''} onClick={() => void loadActivity()}><Activity size={14} /> {zh ? '用户活跃' : 'User activity'}</button>}
       </div>
 
       {tab === 'shop' && (
@@ -329,14 +373,24 @@ export default function SpiritEconomyPage({
               const count = Math.max(1, Math.min(99, Number(quantity[plant.id] || 1)))
               const owned = inventoryByPlant[plant.id]?.quantity || 0
               const affordable = (summary?.account.fruit_balance || 0) >= plant.price_fruit * count
+              const deadline = plant.expires_at && new Date(plant.expires_at).getTime() > Date.now()
+                ? new Date(plant.expires_at)
+                : null
+              const expired = Boolean(plant.is_expired) || (Boolean(plant.expires_at) && !deadline)
               return (
-                <article key={plant.id} className="spirit-shop-card">
+                <article key={plant.id} className={`spirit-shop-card${expired ? ' is-expired' : ''}`}>
                   <div className="spirit-shop-top">
                     <span className={`spirit-category is-${plant.category}`}>{categoryLabels[plant.category]?.[lang] || plant.category}</span>
                     <span className="spirit-owned">{zh ? '持有' : 'Held'} {owned}</span>
                   </div>
                   <h3>{plantText(plant, lang).name}</h3>
                   <p>{plantText(plant, lang).description}</p>
+                  {deadline && (
+                    <p className="spirit-deadline">
+                      {zh ? '活动截止' : 'Ends'}：{deadline.toLocaleDateString(zh ? 'zh-CN' : 'en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })}
+                    </p>
+                  )}
+                  {expired && <p className="spirit-expired-flag">{zh ? '活动已截止' : 'Event ended'}</p>}
                   <div className="spirit-price"><strong>{plant.price_fruit}</strong><span>{zh ? '灵果 / 株' : 'fruit / plant'}</span></div>
                   <div className="spirit-buy">
                     <div className="spirit-qty">
@@ -344,7 +398,7 @@ export default function SpiritEconomyPage({
                       <input aria-label={zh ? '兑换数量' : 'Quantity'} type="number" min={1} max={99} value={count} onChange={(event) => setQuantity((prev) => ({ ...prev, [plant.id]: Math.max(1, Math.min(99, Number(event.target.value) || 1)) }))} />
                       <button type="button" onClick={() => setQuantity((prev) => ({ ...prev, [plant.id]: Math.min(99, count + 1) }))}>+</button>
                     </div>
-                    <button type="button" className="spirit-primary" disabled={!affordable || busy === `exchange:${plant.id}`} onClick={() => void exchange(plant.id, plantText(plant, lang).name)}>
+                    <button type="button" className="spirit-primary" disabled={!affordable || expired || busy === `exchange:${plant.id}`} onClick={() => void exchange(plant.id, plantText(plant, lang).name)}>
                       {busy === `exchange:${plant.id}` ? (zh ? '兑换中…' : 'Exchanging…') : `${zh ? '兑换' : 'Exchange'} · ${plant.price_fruit * count}`}
                     </button>
                   </div>
@@ -463,8 +517,13 @@ export default function SpiritEconomyPage({
               <div className="spirit-admin-list">
                 {(admin?.plants || []).map((plant) => (
                   <div key={plant.id} className="spirit-admin-row">
-                    <div><strong>{plantText(plant, lang).name}</strong><span>{plant.key} · {plant.category}</span></div>
+                    <div><strong>{plantText(plant, lang).name}</strong><span>{plant.key} · {plant.category}{plant.expires_at ? ` · ${zh ? '截止' : 'ends'} ${new Date(plant.expires_at).toLocaleDateString(zh ? 'zh-CN' : 'en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })}` : ''}</span></div>
                     <label className="spirit-admin-price"><input type="number" min={1} defaultValue={plant.price_fruit} onBlur={(event) => { if (Number(event.target.value) !== plant.price_fruit) void savePlantPrice(plant.id, event.target.value) }} /><span>{zh ? '灵果' : 'fruit'}</span></label>
+                    <label className="spirit-admin-expiry"><input type="datetime-local" defaultValue={plant.expires_at ? new Date(plant.expires_at).toISOString().slice(0, 16) : ''} onChange={(event) => {
+                      const value = event.target.value
+                      if (value) void savePlantExpiry(plant.id, new Date(value).toISOString())
+                      else void savePlantExpiry(plant.id, null)
+                    }} /><span>{zh ? '截止' : 'Ends'}</span></label>
                   </div>
                 ))}
               </div>
@@ -497,6 +556,54 @@ export default function SpiritEconomyPage({
             <label className="spirit-field"><span>{zh ? '调整数量（可负）' : 'Amount (negative allowed)'}</span><input type="number" value={adjust.amount} onChange={(event) => setAdjust((prev) => ({ ...prev, amount: event.target.value }))} /></label>
             <label className="spirit-field"><span>{zh ? '原因' : 'Reason'}</span><input value={adjust.note} onChange={(event) => setAdjust((prev) => ({ ...prev, note: event.target.value }))} /></label>
             <button type="button" className="spirit-secondary" disabled={busy === 'adjust'} onClick={() => void submitAdjust()}>{busy === 'adjust' ? (zh ? '提交中…' : 'Saving…') : (zh ? '确认调整' : 'Apply')}</button>
+          </div>
+        </section>
+      )}
+
+      {tab === 'activity' && user?.is_owner && (
+        <section className="spirit-panel spirit-activity">
+          <div className="spirit-section-title"><div><h2>{zh ? '用户活跃' : 'User activity'}</h2><p>{zh ? '站长可见：所有用户的登录会话与参与痕迹（动态、评论、作品、互动）。' : 'Owner view: login sessions and participation traces across all users.'}</p></div><Activity size={18} /></div>
+          <div className="spirit-activity-toolbar">
+            <input
+              className="spirit-field-input"
+              placeholder={zh ? '搜索用户名 / 昵称' : 'Search username / name'}
+              value={activityQuery}
+              onChange={(event) => setActivityQuery(event.target.value)}
+              onKeyDown={(event) => { if (event.key === 'Enter') void loadActivity() }}
+            />
+            <button type="button" className="spirit-secondary" onClick={() => void loadActivity()}>{activityLoading ? (zh ? '读取中…' : 'Loading…') : (zh ? '查询' : 'Search')}</button>
+          </div>
+          <div className="spirit-activity-table">
+            <div className="spirit-activity-head">
+              <span>{zh ? '用户' : 'User'}</span>
+              <span>{zh ? '动态' : 'Posts'}</span>
+              <span>{zh ? '评论' : 'Comments'}</span>
+              <span>{zh ? '作品' : 'Works'}</span>
+              <span>{zh ? '阅读' : 'Reads'}</span>
+              <span>{zh ? '点赞 / 收藏' : 'Likes / Favs'}</span>
+              <span>{zh ? '关注 / 粉丝' : 'Following / Fans'}</span>
+              <span>{zh ? '活跃等级' : 'Activity level'}</span>
+              <span>{zh ? '最近登录' : 'Last login'}</span>
+              <span>{zh ? '最近参与' : 'Last active'}</span>
+            </div>
+            {activity.length === 0 ? (
+              <div className="spirit-inline-empty">{activityLoading ? (zh ? '读取中…' : 'Loading…') : (zh ? '暂无用户数据' : 'No users yet')}</div>
+            ) : (
+              activity.map((row) => (
+                <div className="spirit-activity-row" key={row.user_id}>
+                  <span className="spirit-activity-user"><strong>{row.display_name}</strong><small>@{row.username}{row.is_owner ? ` · ${zh ? '站长' : 'Owner'}` : ''}</small></span>
+                  <span>{row.posts}</span>
+                  <span>{row.comments}</span>
+                  <span>{row.works}</span>
+                  <span>{row.reads}</span>
+                  <span>{row.likes_given} / {row.favorites_given}</span>
+                  <span>{row.following} / {row.followers}</span>
+                  <span><b className="spirit-level">Lv.{row.activity_level.level} · {row.activity_level.label}</b></span>
+                  <span>{row.last_login_at ? formatDate(row.last_login_at, lang) : '—'}</span>
+                  <span>{row.last_active_at ? formatDate(row.last_active_at, lang) : '—'}</span>
+                </div>
+              ))
+            )}
           </div>
         </section>
       )}

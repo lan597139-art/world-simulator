@@ -1,0 +1,342 @@
+/* ============================================================================
+   移动端信息分层层（阶段二）
+   ----------------------------------------------------------------------------
+   注意：页面样式表由各页面的懒加载 chunk 注入，加载顺序晚于本文件，
+   因此本层的字号/行高/内边距声明带 !important，否则会被同优先级的页面规则覆盖。
+   只影响 ≤768px（平板竖屏与手机），桌面样式不受影响。
+
+   目的：断点不再只是「栅格塌陷」，而是按屏宽重新分配信息层级：
+   1) 标题区压缩 —— 首屏留给内容，不给 hero
+   2) 小字变大 —— 8–10px 的说明字在手机上不可读，统一抬到 ≥10.5px
+   3) 触控目标 —— 可点行 ≥40px，避免误触
+   4) 横向条带换行 —— 不让内容藏在横向滚动里
+   5) 流水/表格行卡片化 —— 金额独立成行，不再挤压截断
+
+   本文件只做「跨页面统一」的部分；页面专属布局仍在各自 css 内声明。
+   ========================================================================== */
+
+@media (max-width: 1024px) {
+  /* 触控目标下限（不含紧凑图标按钮） */
+  .cc-nav-item,
+  .ct-primary,
+  .ct-ghost,
+  .ec-enter,
+  .cm-tab,
+  .ecx-tab,
+  .jr-domain,
+  .jr-subtab,
+  .ca-btn,
+  .bc-btn {
+    min-height: 40px;
+  }
+}
+
+@media (max-width: 768px) {
+  /* ---- 1. 标题区压缩：eyebrow 保留，标题降两档，说明收一行 ---- */
+  .ct-hero,
+  .cc-hero,
+  .uc-hero,
+  .cm-hero,
+  .bc-hero,
+  .spirit-hero,
+  .ca-page-head {
+    padding: 14px 16px;
+    gap: 10px;
+    border-radius: 16px;
+  }
+
+  .ct-hero h1,
+  .cc-hero h1,
+  .uc-hero h1,
+  .cm-hero h1,
+  .bc-hero h1,
+  .spirit-hero h1,
+  .ca-page-title h1 {
+    font-size: 22px !important;
+    line-height: 1.25 !important;
+    letter-spacing: -0.2px;
+  }
+
+  .ct-hero p,
+  .cc-hero-subtitle,
+  .uc-hero p,
+  .cm-hero p,
+  .bc-hero p {
+    font-size: 12px !important;
+    line-height: 1.55 !important;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* hero 里的装饰性大数字/统计在手机上不占位 */
+  .cc-hero-meta,
+  .ct-hero-meta,
+  .uc-hero-meta {
+    display: none;
+  }
+
+  /* ---- 2. 小字抬升：说明类文字低于 10.5px 在手机上不可读 ---- */
+  .cc-scene-desc,
+  .ec-list,
+  .ec-card-desc,
+  .ec-list .is-pending span,
+  .cm-kicker,
+  .ct-kicker,
+  .uc-card-kicker,
+  .cc-kicker,
+  .cc-asset-line-hint,
+  .ecx-note,
+  .uc-commerce-copy small,
+  .cm-type,
+  .cm-empty p,
+  .ct-note {
+    font-size: 10.5px !important;
+    line-height: 1.6 !important;
+  }
+
+  .cc-recent-copy strong,
+  .cc-asset-chip,
+  .uc-group-head p,
+  .cm-section-head h2,
+  .cm-soon > p {
+    font-size: 12px !important;
+  }
+
+  /* ---- 3. 区块间距收紧，减少无意义留白 ---- */
+  .ct-content,
+  .cc-content,
+  .uc-content,
+  .cm-content,
+  .bc-page,
+  .spirit-page {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .cc-section,
+  .uc-group {
+    margin-top: 14px;
+  }
+
+  .ct-section,
+  .uc-card,
+  .cm-section,
+  .ec-card {
+    padding: 13px 14px;
+    border-radius: 15px;
+  }
+
+  /* ---- 4. 横向条带换行，内容不再藏在横滑里 ---- */
+  .cw-scene-strip,
+  .cm-tabs,
+  .ecx-tabs {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+
+  .cw-scene-pill {
+    min-width: 0;
+    flex: 1 1 calc(50% - 6px);
+  }
+}
+
+@media (max-width: 640px) {
+  /* ---- 5. 流水/表格行卡片化：金额独占一行，标题不截断 ---- */
+  .bc-ledger-row,
+  .spirit-ledger-row {
+    display: grid;
+    grid-template-columns: 30px minmax(0, 1fr);
+    grid-template-areas:
+      'icon main'
+      '. amount';
+    align-items: start;
+    gap: 4px 10px;
+    padding: 11px 12px;
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    margin-bottom: 8px;
+  }
+
+  .bc-ledger-row:last-child,
+  .spirit-ledger-row:last-child {
+    margin-bottom: 0;
+  }
+
+  .bc-ledger-icon,
+  .spirit-ledger-icon {
+    grid-area: icon;
+    width: 30px;
+    height: 30px;
+  }
+
+  .bc-ledger-row > div:not(.bc-ledger-icon):not(.bc-ledger-amount),
+  .spirit-ledger-main {
+    grid-area: main;
+    min-width: 0;
+  }
+
+  .bc-ledger-row > div strong,
+  .spirit-ledger-main strong {
+    font-size: 12.5px !important;
+    white-space: normal;
+    overflow: visible;
+  }
+
+  .bc-ledger-row > div span,
+  .spirit-ledger-main span {
+    font-size: 10.5px !important;
+  }
+
+  .bc-ledger-amount,
+  .bc-ledger-balance,
+  .spirit-ledger-amount {
+    grid-area: amount;
+    margin-left: 0;
+    text-align: left;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  .bc-ledger-amount {
+    font-size: 14px !important;
+  }
+
+  .bc-ledger-balance {
+    font-size: 10px !important;
+  }
+
+  .spirit-ledger-amount strong {
+    font-size: 15px !important;
+  }
+
+  /* 卡片内的多列统计在手机上两列排布 */
+  .ct-three-grid,
+  .ct-stat-grid,
+  .bc-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   6. 小字抬升（数据驱动）
+   ---------------------------------------------------------------------------
+   桌面端 6.5–9.5px 的 kicker / 状态 / 说明在手机上不可读。
+   下面按「页面类名前缀」成族抬升，只升不降：新增同族元素自动生效，
+   不再每加一个标签就补一条媒体查询。
+   --------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+  /* 创作中心 / 通用中心页 */
+  .ct-kicker,
+  .ct-eyebrow,
+  .ct-type,
+  .ct-inline-empty,
+  .ct-note,
+  .cc-kicker,
+  .cc-recent-badge,
+  .cc-asset-line-label,
+  .ec-note,
+  .ec-list .is-pending span {
+    font-size: 10.5px !important;
+    line-height: 1.6 !important;
+  }
+
+  /* 作品集 */
+  .cm-kicker,
+  .cm-eyebrow,
+  .cm-type,
+  .cm-feed-date,
+  .cm-world-lore,
+  .cm-side-picks-title,
+  .cm-inline-empty {
+    font-size: 10.5px !important;
+    line-height: 1.6 !important;
+  }
+
+  .cs-kicker,
+  .cm-feed-date {
+    font-size: 11px !important;
+  }
+
+  /* 个人中心 */
+  .uc-card-kicker,
+  .uc-eyebrow,
+  .uc-badge,
+  .uc-asset-note,
+  .uc-card-footnote,
+  .uc-inline-empty {
+    font-size: 10.5px !important;
+    line-height: 1.6 !important;
+  }
+
+  /* 创作者资产库 */
+  .ca-status,
+  .ca-folder-count,
+  .ca-panel-kicker,
+  .ca-eyebrow {
+    font-size: 10.5px !important;
+    line-height: 1.6 !important;
+  }
+
+  /* 商业与服务中心 */
+  .bc-kicker,
+  .bc-label,
+  .bc-status,
+  .bc-plan-quota,
+  .bc-plan-ribbon,
+  .bc-quota-note {
+    font-size: 10.5px !important;
+    line-height: 1.6 !important;
+  }
+
+  /* 内容商城 / 游戏体验 / AI 互动 / 我的作品 / 设置 */
+  .st-kind,
+  .st-unlisted,
+  .st-asset-meta,
+  .st-empty-title,
+  .st-empty-hint,
+  .st-preview-hint,
+  .st-directory-title,
+  .st-seller-hint,
+  .gx-status,
+  .gx-feature-world,
+  .gx-roleplay-desc,
+  .ai-char-role,
+  .ai-char-intro,
+  .ai-companion-avatar,
+  .ai-companion-hint,
+  .ai-total,
+  .cw-eyebrow,
+  .settings-kicker,
+  .muted {
+    font-size: 10.5px !important;
+    line-height: 1.6 !important;
+  }
+
+  .st-asset-meta,
+  .gx-roleplay-desc,
+  .ai-char-intro {
+    font-size: 11px !important;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   7. 作品集「全部」页签在手机上的二次分层
+   ---------------------------------------------------------------------------
+   「全部」在桌面是总览；手机上把「创作者」「筹备中」下沉到各自的页签，
+   留在「全部」里的只有作品/世界/OC/剧情四个真正的内容区。
+   --------------------------------------------------------------------------- */
+@media (max-width: 640px) {
+  .cm-discovery[data-tab='all'] .cm-creator-row,
+  .cm-discovery[data-tab='all'] .cm-soon {
+    display: none !important;
+  }
+
+  /* 手机上「全部」只留首屏可见的区域标题，避免每段都铺满 */
+  .cm-discovery[data-tab='all'] .cm-section-head {
+    margin-bottom: 8px;
+  }
+}

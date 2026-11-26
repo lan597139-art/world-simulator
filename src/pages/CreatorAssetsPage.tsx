@@ -5,6 +5,7 @@ import {
   BookOpen,
   Building2,
   CheckCircle2,
+  ArrowLeft,
   ChevronDown,
   ChevronRight,
   Copy,
@@ -36,6 +37,7 @@ import {
 } from 'lucide-react'
 import { API_ORIGIN } from '../api/config'
 import '../styles/creator-assets.css'
+import { useIsNarrow } from '../hooks/useMediaQuery'
 
 type ViewKey = 'active' | 'archive' | 'trash'
 type AssetType = 'world' | 'character' | 'location' | 'organization' | 'event' | 'story' | 'note' | 'image' | 'video' | 'audio'
@@ -200,6 +202,9 @@ type FolderDialogState = { mode: 'create' | 'edit'; parentId: string | null; fol
 type AssetDialogState = { mode: 'create' | 'edit'; assetType: AssetType; fileUrl?: string; mimeType?: string; fileSize?: number; asset?: Asset | AssetDetail }
 type PublishDialogState = { mode: 'publish' | 'unpublish'; asset: AssetDetail }
 
+/** 资产列表每批渲染条数（长列表分批，避免一次挂满 DOM）。 */
+const ASSET_PAGE_SIZE = 16
+
 export default function CreatorAssetsPage({ worldId = '' }: { worldId?: string }) {
   const [folders, setFolders] = useState<FolderRow[]>([])
   const [worlds, setWorlds] = useState<Array<{ id: string; name: string }>>([])
@@ -207,6 +212,12 @@ export default function CreatorAssetsPage({ worldId = '' }: { worldId?: string }
   const [assets, setAssets] = useState<Asset[]>([])
   const [view, setView] = useState<ViewKey>('active')
   const [selectedFolderId, setSelectedFolderId] = useState<string>('all')
+  // 窄屏：目录树默认收起，避免「树 + 清单 + 详情」三栏直接竖向堆叠成超长页面。
+  const [treeOpen, setTreeOpen] = useState(false)
+  // 长列表分批渲染：默认 24 条，避免一次挂 40+ 行（移动端尤其明显）
+  const [visibleCount, setVisibleCount] = useState(ASSET_PAGE_SIZE)
+  const isNarrow = useIsNarrow()
+  const closeDetail = useCallback(() => { setSelectedId(''); setDetail(null) }, [])
   const [selectedId, setSelectedId] = useState<string>('')
   const [detail, setDetail] = useState<AssetDetail | null>(null)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
@@ -385,6 +396,54 @@ export default function CreatorAssetsPage({ worldId = '' }: { worldId?: string }
     }
     return result
   }, [folders])
+
+  useEffect(() => {
+    setTreeOpen(false)
+  }, [selectedFolderId, view])
+
+  useEffect(() => {
+    setVisibleCount(ASSET_PAGE_SIZE)
+  }, [selectedFolderId, view, query])
+
+  /* 详情面板关闭机制：
+     - Esc 关闭（桌面/窄屏通用）
+     - 窄屏：打开时压一条历史记录，浏览器返回键/手势直接关闭预览，而不是离开整个资产库
+     - 窄屏：锁背景滚动，关闭后把焦点还给触发它的那行 */
+  const detailOpen = Boolean(detail)
+  useEffect(() => {
+    if (!detailOpen) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.stopPropagation()
+        closeDetail()
+      }
+    }
+    document.addEventListener('keydown', onKeyDown)
+
+    const previousOverflow = document.body.style.overflow
+    const previousFocus = document.activeElement as HTMLElement | null
+    if (isNarrow) document.body.style.overflow = 'hidden'
+
+    let pushed = false
+    const onPopState = () => {
+      pushed = false
+      closeDetail()
+    }
+    if (isNarrow) {
+      window.history.pushState({ caAssetDetail: true }, '')
+      pushed = true
+      window.addEventListener('popstate', onPopState)
+    }
+
+    return () => {
+      document.removeEventListener('keydown', onKeyDown)
+      window.removeEventListener('popstate', onPopState)
+      document.body.style.overflow = previousOverflow
+      // 通过界面关闭时，把压入的那条历史记录退掉，避免返回键“空退一步”
+      if (pushed) window.history.back()
+      previousFocus?.focus?.({ preventScroll: true })
+    }
+  }, [detailOpen, isNarrow, closeDetail])
 
   const listTitle = query.trim()
     ? '搜索结果'
@@ -772,7 +831,27 @@ export default function CreatorAssetsPage({ worldId = '' }: { worldId?: string }
       )}
 
       <div className={`ca-shell${detail ? ' has-detail' : ''}`}>
-        <aside className="ca-panel ca-tree">
+        <button
+          type="button"
+          className={`ca-tree-toggle${treeOpen ? ' is-open' : ''}`}
+          onClick={() => setTreeOpen((open) => !open)}
+          aria-expanded={treeOpen}
+          aria-controls="ca-tree-panel"
+        >
+          <FolderOpen size={15} aria-hidden="true" />
+          <span>{listTitle}</span>
+          <ChevronDown size={15} aria-hidden="true" />
+        </button>
+        <aside
+          id="ca-tree-panel"
+          className={`ca-panel ca-tree${treeOpen ? ' is-open' : ''}`}
+          onClickCapture={(event) => {
+            // 窄屏抽屉里选中文件夹/文件夹行后立即收起；展开箭头（ca-folder-chevron）不触发收起。
+            const target = event.target as HTMLElement
+            if (target.closest('.ca-folder-chevron')) return
+            if (target.closest('.ca-folder-row, .ca-tree-special')) setTreeOpen(false)
+          }}
+        >
           <div className="ca-tree-head">
             <div>
               <span className="ca-panel-kicker">MY SPACE</span>
@@ -890,7 +969,7 @@ export default function CreatorAssetsPage({ worldId = '' }: { worldId?: string }
                 <p>{view === 'active' ? '新建一条笔记，或进入一个世界把人物、地点、事件和故事整理进来。' : '在内容列表里执行归档或删除后，会出现在这里。'}</p>
                 {view === 'active' && <button type="button" className="ca-btn ca-btn-primary" onClick={openCreateNote}><Plus size={14} /> 新建第一条笔记</button>}
               </div>
-            ) : assets.map((asset) => {
+            ) : assets.slice(0, visibleCount).map((asset) => {
               const Icon = TYPE_ICONS[asset.asset_type] || FileText
               const isBusy = busy.endsWith(asset.id)
               return (
@@ -933,23 +1012,46 @@ export default function CreatorAssetsPage({ worldId = '' }: { worldId?: string }
                 </div>
               )
             })}
+            {assets.length > visibleCount && (
+              <button
+                type="button"
+                className="ca-load-more"
+                onClick={() => setVisibleCount((count) => count + ASSET_PAGE_SIZE)}
+              >
+                加载更多 · 还有 {assets.length - visibleCount} 项
+              </button>
+            )}
           </div>
 
           <div className="ca-list-footer">
-            <span>{assets.length} 项{view === 'active' ? ' · 文件夹计数不含归档与回收站' : ''}</span>
+            <span>
+              {assets.length} 项
+              {assets.length > visibleCount ? ` · 已显示 ${visibleCount}` : ''}
+              {view === 'active' ? ' · 文件夹计数不含归档与回收站' : ''}
+            </span>
             <span>拖动文件夹不改内容身份 · 发布与归档分离</span>
           </div>
         </section>
 
+        {detail && isNarrow && (
+          <button type="button" className="ca-detail-backdrop" onClick={closeDetail} aria-label="关闭详情预览" />
+        )}
+
         {detail && (
-          <aside className="ca-panel ca-detail">
+          <aside className="ca-panel ca-detail" role={isNarrow ? 'dialog' : undefined} aria-modal={isNarrow ? true : undefined} aria-label={detail.title}>
+            {isNarrow && (
+              <button type="button" className="ca-detail-back" onClick={closeDetail}>
+                <ArrowLeft size={14} aria-hidden="true" />
+                返回列表
+              </button>
+            )}
             <div className="ca-detail-head">
               <span className={`ca-type-icon ca-type-${detail.asset_type}`}><TypeIcon type={detail.asset_type} size={18} /></span>
               <div>
                 <span className="ca-panel-kicker">{TYPE_LABELS[detail.asset_type] || detail.asset_type_label}</span>
                 <h3>{detail.title}</h3>
               </div>
-              <button type="button" className="ca-icon-btn ca-detail-close" onClick={() => { setSelectedId(''); setDetail(null) }} aria-label="关闭详情"><X size={15} /></button>
+              <button type="button" className="ca-icon-btn ca-detail-close" onClick={closeDetail} aria-label="关闭详情"><X size={15} /></button>
             </div>
 
             <div className="ca-detail-chips">

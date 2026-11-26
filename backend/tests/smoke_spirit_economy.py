@@ -39,24 +39,35 @@ def run():
     summary = client.get("/api/spirit/summary")
     check("灵果账户可读", summary.status_code == 200, summary.text)
     data = summary.json()
-    check("初始灵果与目录", data["account"]["fruit_balance"] == 120 and len(data["plants"]) == 2, data)
+    price_by_key = {row["key"]: row["price_fruit"] for row in data["plants"]}
+    check(
+        "初始灵果与目录",
+        data["account"]["fruit_balance"] == 500
+        and price_by_key.get("world_seed") == 100
+        and price_by_key.get("oc_seed") == 30,
+        data,
+    )
     check("初始流水", any(row["kind"] == "reward" for row in data["transactions"]), data["transactions"])
+    world_stock = next(row for row in data["inventory"] if row["category"] == "world")["quantity"]
+    oc_stock = next((row for row in data["inventory"] if row["category"] == "oc"), {"quantity": 0})["quantity"]
+    check("新账户获赠 1 株世界灵植", world_stock == 1, data["inventory"])
+    check("新账户不获赠 OC 灵植", oc_stock == 0, data["inventory"])
 
     world_plant = next(row for row in data["plants"] if row["category"] == "world")
     exchanged = client.post("/api/spirit/exchange", json={"plant_type_id": world_plant["id"], "quantity": 1})
-    check("兑换灵植", exchanged.status_code == 200 and exchanged.json()["account"]["fruit_balance"] == 60, exchanged.text)
+    check("兑换灵植", exchanged.status_code == 200 and exchanged.json()["account"]["fruit_balance"] == 400, exchanged.text)
     check("库存增加", exchanged.json()["inventory"][0]["quantity"] == 2, exchanged.json())
     ledger = client.get("/api/spirit/transactions").json()
     exchange_row = next(row for row in ledger if row["kind"] == "exchange")
-    check("兑换保留历史单价", exchange_row["unit_price"] == 60 and exchange_row["fruit_amount"] == -60, exchange_row)
+    check("兑换保留历史单价", exchange_row["unit_price"] == 100 and exchange_row["fruit_amount"] == -100, exchange_row)
 
-    poor = client.post("/api/spirit/exchange", json={"plant_type_id": world_plant["id"], "quantity": 2})
+    poor = client.post("/api/spirit/exchange", json={"plant_type_id": world_plant["id"], "quantity": 5})
     check("余额不足拒绝兑换", poor.status_code == 409, poor.text)
     bad_qty = client.post("/api/spirit/exchange", json={"plant_type_id": world_plant["id"], "quantity": 0})
     check("非法数量拒绝", bad_qty.status_code == 422, bad_qty.text)
 
     gift = client.post("/api/spirit/gift", json={"to_user_id": target_id, "amount": 30, "note": "测试赠送"})
-    check("赠送灵果", gift.status_code == 200 and gift.json()["balance"] == 30, gift.text)
+    check("赠送灵果", gift.status_code == 200 and gift.json()["balance"] == 370, gift.text)
     tip = client.post("/api/spirit/gift", json={"to_user_id": target_id, "amount": 20, "kind": "tip", "ref_type": "work", "ref_id": "w1", "note": "作品打赏"})
     check("作品打赏", tip.status_code == 200 and tip.json()["kind"] == "tip", tip.text)
     self_gift = client.post("/api/spirit/gift", json={"to_user_id": "local", "amount": 1})

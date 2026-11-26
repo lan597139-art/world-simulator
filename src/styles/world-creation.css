@@ -1,0 +1,372 @@
+/* ==========================================================================
+   世界创作导航：背景 / 设定 / 地图 / 作品 / 插画集 / 共创 / 社区
+   所有条目共享的页头、卡片、表单与列表样式。
+   ========================================================================== */
+
+.wc-page {
+  padding: 20px 26px 48px;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.wc-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.wc-head-copy {
+  min-width: 0;
+}
+
+.wc-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0;
+  font-size: 20px;
+  font-weight: 650;
+  color: var(--text-main);
+  letter-spacing: 0.2px;
+}
+
+.wc-title-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: var(--ws-nav-item-bg-active, rgba(99, 102, 241, 0.14));
+  color: var(--primary-color, #6366f1);
+  font-size: 15px;
+}
+
+.wc-sub {
+  margin: 5px 0 0;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.wc-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--danger-color);
+  background: color-mix(in srgb, var(--danger-color) 12%, transparent);
+  color: var(--danger-color);
+  font-size: 12.5px;
+}
+
+.wc-card {
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  background: var(--ws-surface-bg, rgba(255, 255, 255, 0.03));
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.wc-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.wc-card-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.wc-card-body {
+  padding: 16px;
+}
+
+.wc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 14px;
+}
+
+.wc-field {
+  display: block;
+  margin-bottom: 13px;
+}
+
+.wc-field-label {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+}
+
+.wc-field-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--text-muted);
+  opacity: 0.85;
+}
+
+.wc-input,
+.wc-textarea,
+.wc-select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 11px;
+  border-radius: 9px;
+  border: 1px solid var(--card-border);
+  background: var(--ws-surface-bg, transparent);
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.wc-input:focus,
+.wc-textarea:focus,
+.wc-select:focus {
+  border-color: var(--primary-color, #6366f1);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color, #6366f1) 18%, transparent);
+}
+
+.wc-textarea {
+  resize: vertical;
+  line-height: 1.7;
+}
+
+.wc-select {
+  cursor: pointer;
+}
+
+.wc-btn {
+  padding: 7px 14px;
+  border-radius: 9px;
+  border: 1px solid var(--card-border);
+  background: transparent;
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.wc-btn:hover:not(:disabled) {
+  background: var(--ws-nav-item-bg-hover, rgba(128, 128, 128, 0.1));
+}
+
+.wc-btn.is-primary {
+  background: var(--primary-color, #6366f1);
+  border-color: var(--primary-color, #6366f1);
+  color: var(--primary-text, #fff);
+}
+
+.wc-btn.is-primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--primary-color, #6366f1) 86%, #000);
+}
+
+.wc-btn.is-danger {
+  color: var(--danger-color);
+  border-color: var(--danger-color);
+}
+
+.wc-btn.is-danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--danger-color) 12%, transparent);
+}
+
+.wc-empty {
+  padding: 30px 16px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 12.5px;
+}
+
+.wc-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--text-muted);
+  color: var(--text-muted);
+  font-size: 10.5px;
+  opacity: 0.92;
+}
+
+.wc-tag.is-accent {
+  border-color: var(--primary-color, #6366f1);
+  color: var(--primary-color, #6366f1);
+}
+
+.wc-tag.is-warn {
+  border-color: var(--danger-color);
+  color: var(--danger-color);
+}
+
+/* 地图 / 插画卡片 */
+.wc-media-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  background: var(--ws-surface-bg, transparent);
+}
+
+.wc-media {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  border-radius: 9px;
+  background: rgba(128, 128, 128, 0.12);
+  display: block;
+}
+
+.wc-media-placeholder {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border-radius: 9px;
+  background: rgba(128, 128, 128, 0.12);
+  display: grid;
+  place-items: center;
+  color: var(--text-muted);
+  font-size: 11.5px;
+}
+
+.wc-media-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wc-media-desc {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  line-height: 1.55;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.wc-media-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 6px;
+}
+
+.wc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.wc-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--card-border);
+  border-radius: 11px;
+  background: var(--ws-surface-bg, transparent);
+}
+
+.wc-row-copy {
+  min-width: 0;
+}
+
+.wc-row-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.wc-row-meta {
+  margin-top: 4px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.wc-row-actions {
+  display: flex;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.wc-section-title {
+  margin: 6px 0 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+}
+
+.wc-form-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.wc-form-row > .wc-field {
+  flex: 1 1 180px;
+  margin-bottom: 0;
+}
+
+@media (max-width: 767px) {
+  .wc-page {
+    padding: 16px 14px 40px;
+  }
+
+  .wc-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+  }
+
+  .wc-row {
+    flex-direction: column;
+  }
+
+  .wc-row-actions {
+    width: 100%;
+  }
+}
+
+.wc-row-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 9px;
+  border: 1px solid color-mix(in srgb, var(--primary-color, #6f8cff) 40%, var(--card-border));
+  background: color-mix(in srgb, var(--primary-color, #6f8cff) 12%, transparent);
+  color: var(--primary-color, #6f8cff);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.wc-row-select:hover {
+  background: color-mix(in srgb, var(--primary-color, #6f8cff) 22%, transparent);
+}

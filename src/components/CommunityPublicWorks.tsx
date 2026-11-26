@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react'
 import { publicFeed, type PublicWork } from '../api/community'
 
-export default function CommunityPublicWorks() {
+export default function CommunityPublicWorks({
+  onOpen,
+}: {
+  /** 打开统一作品详情页。 */
+  onOpen?: (work: PublicWork) => void
+}) {
   const [rows, setRows] = useState<PublicWork[]>([])
   const [error, setError] = useState('')
 
@@ -20,11 +25,24 @@ export default function CommunityPublicWorks() {
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 10 }}>
         {rows.slice(0, 6).map((row) => (
-          <article key={row.public_id} className="glass-card" style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <span style={{ fontSize: 9, color: 'var(--primary-color)', textTransform: 'uppercase' }}>{row.work_type}</span>
+          <article
+            key={row.public_id}
+            className="glass-card"
+            role="button"
+            tabIndex={0}
+            style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 6, cursor: 'pointer' }}
+            onClick={() => onOpen?.(row)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                onOpen?.(row)
+              }
+            }}
+          >
+            <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--primary-color)', textTransform: 'uppercase' }}>{row.work_type}</span>
             <strong style={{ fontSize: 13, color: 'var(--text-main)' }}>{row.title}</strong>
             <p style={{ margin: 0, fontSize: 11, color: 'var(--text-muted)', maxHeight: 54, overflow: 'hidden' }}>{row.summary || '公开作品'}</p>
-            <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{row.author_display} · 评论 {row.comment_count} · 收藏 {row.favorite_count}</span>
+            <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{row.author_display} · 阅读 {row.view_count} · 点击 {row.click_count} · 评论 {row.comment_count} · 收藏 {row.favorite_count}</span>
           </article>
         ))}
       </div>

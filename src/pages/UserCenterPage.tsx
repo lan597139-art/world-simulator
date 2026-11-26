@@ -1,22 +1,29 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
+  Activity,
   ArrowUpRight,
   BookOpen,
+  BarChart3,
   Boxes,
+  CalendarCheck,
   Crown,
+  FolderPlus,
+  Gift,
   Globe2,
   Heart,
+  History,
   LayoutTemplate,
+  Lock,
   LockKeyhole,
   LogOut,
+  Unlock,
   Pencil,
-  ReceiptText,
   Route,
   ShieldCheck,
   Sparkles,
+  Sprout,
+  ThumbsUp,
   UserRound,
-  Users,
-  Wallet,
 } from 'lucide-react'
 import type { AuthUser } from '../api/auth'
 import { API_ORIGIN } from '../api/config'
@@ -25,6 +32,26 @@ import { listStories as listStoryProjects } from '../api/storyline'
 import { listWorks, type CreativeWork } from '../api/creativeWorks'
 import { updateUserDisplayName } from '../api/users'
 import { getAllWorlds } from '../services/worldService'
+import {
+  createFavoriteFolder,
+  deleteFavoriteFolder,
+  doCheckin,
+  getCheckinStatus,
+  getRecommendations,
+  getSocialProfile,
+  listFavorites,
+  listHistory,
+  removeFavorite,
+  type CheckinStatus,
+  type FavoriteFolder,
+  type FavoriteItem,
+  type HistoryItem,
+  type RecommendationItem,
+  type SocialProfile,
+} from '../api/socialCore'
+import { getSpiritTransactions, type SpiritTransaction } from '../api/spiritEconomy'
+import { updateSettings } from '../api/settings'
+import { formatDate } from './centerShared'
 import './../styles/user-center.css'
 
 type Lang = 'zh' | 'en'
@@ -49,13 +76,13 @@ type Counts = {
 
 const CREATOR_IDENTITIES: CreatorIdentity[] = ['world', 'character', 'narrative', 'companion', 'chronicler']
 
+type TabKey = 'works' | 'activity' | 'favorites' | 'likes' | 'recommend' | 'reward' | 'history' | 'content' | 'assets'
+
 function copy(lang: Lang) {
   return lang === 'zh'
     ? {
-        eyebrow: 'USER & IDENTITY',
-        title: '用户与身份中心',
-        subtitle: '管理个人资料、创作者身份、数字资产与账户。',
-        edit: '编辑资料',
+        eyebrow: 'PERSONAL CENTER',
+        title: '个人中心',
         profile: '个人资料',
         memberSince: '加入时间',
         owner: '所有者',
@@ -70,7 +97,7 @@ function copy(lang: Lang) {
         creator: '创作者主页',
         creatorIdentity: '创作身份',
         editIdentity: '编辑身份',
-        worksShowcase: '作品展示',
+        tabWorks: '作品',
         achievements: '创作成就',
         allWorks: '查看全部作品',
         noWorks: '还没有作品，从创作中心创建第一部作品。',
@@ -97,6 +124,48 @@ function copy(lang: Lang) {
         favoriteWorlds: '世界',
         favoritesEmpty: '暂无收藏内容',
         favoritesNote: '收藏功能暂未开放，当前显示真实空状态。',
+        friends: '好友',
+        tabFavorites: '收藏',
+        tabLikes: '点赞',
+        tabRecommend: '推荐',
+        tabReward: '打赏',
+        tabHistory: '浏览历史',
+        tabAssets: '账户与资产',
+        createFolder: '新建收藏夹',
+        folderOpenNote: '收藏夹功能暂未开放，开放后可在此分类管理收藏。',
+        likes: '点赞',
+        likesEmpty: '暂无点赞记录',
+        recommend: '推荐',
+        recommendEmpty: '暂无推荐内容',
+        reward: '打赏',
+        rewardGiven: '主动打赏',
+        rewardReceived: '被打赏',
+        rewardGivenEmpty: '暂无主动打赏记录。打赏与灵果明细统一在灵果资源中心管理。',
+        rewardReceivedEmpty: '暂无被打赏记录。作品被打赏后，明细可在灵果资源中心查看。',
+        history: '浏览历史',
+        historyEmpty: '暂无浏览历史',
+        statsLocked: '数据隐私保护中',
+        statsLockedNote: '数据统计默认仅本人可见，开启后可对外展示。',
+        unlockStats: '开启对外展示',
+        statsUnlocked: '已开启，对外可见',
+        statsUnlockNote: '数据详情已开启对外展示，其他用户可查看你的统计。',
+        assetsAchievements: '创作成就与资产',
+        tabContent: '数据分析',
+        content: '数据分析',
+        creatorLevel: '创作等级',
+        followerLevel: '粉丝等级',
+        activityLevel: '活跃等级',
+        levelProgress: '解锁下一级',
+        analytics: '详情',
+        publishedWorks: '已发布作品',
+        drafts: '草稿',
+        totalReads: '总阅读量',
+        totalClicks: '总点击量',
+        totalComments: '评论',
+        latestActivity: '动态',
+        tabActivity: '动态',
+        noActivity: '暂无动态',
+        activityPreview: '动态内容摘要',
         account: '账户管理',
         security: '账号安全',
         securityValue: '本地密码保护',
@@ -150,14 +219,27 @@ function copy(lang: Lang) {
         },
         workDraft: '草稿',
         workPublished: '已发布',
+        tipLevelGiven: '打赏等级 · 主动',
+        tipLevelReceived: '打赏等级 · 被动',
+        checkin: '签到',
+        checkinToday: '今日已签到',
+        checkinStreak: '连续签到',
+        checkinCount: '累计签到',
+        checkinAction: '立即签到',
+        checkinDone: '签到成功',
+        statsPublic: '对外公开',
+        statsPrivate: '仅本人可见',
+        statsPublicNote: '已对外公开画像统计，其他用户可查看你的数据统计。',
+        statsPrivateNote: '数据统计仅本人可见，其他用户查看你的主页时不会展示用户画像分析。',
+        favoriteEmpty: '还没有收藏内容',
+        removeFolder: '删除收藏夹',
+        folderName: '收藏夹名称',
         loading: '读取中',
         notConnected: '尚未接入',
       }
     : {
-        eyebrow: 'USER & IDENTITY',
-        title: 'User & Identity Center',
-        subtitle: 'Manage your profile, creator identity, digital assets, and account.',
-        edit: 'Edit profile',
+        eyebrow: 'PERSONAL CENTER',
+        title: 'Personal Center',
         profile: 'Profile',
         memberSince: 'Joined',
         owner: 'Owner',
@@ -172,7 +254,7 @@ function copy(lang: Lang) {
         creator: 'Creator profile',
         creatorIdentity: 'Creator identity',
         editIdentity: 'Edit identity',
-        worksShowcase: 'Selected works',
+        tabWorks: 'Works',
         achievements: 'Achievements',
         allWorks: 'View all works',
         noWorks: 'No works yet. Create your first one in the creation center.',
@@ -199,6 +281,48 @@ function copy(lang: Lang) {
         favoriteWorlds: 'Worlds',
         favoritesEmpty: 'No favorites yet',
         favoritesNote: 'Favorites are not available yet. This is a real empty state.',
+        friends: 'Friends',
+        tabFavorites: 'Favorites',
+        tabLikes: 'Likes',
+        tabRecommend: 'Recommended',
+        tabReward: 'Rewards',
+        tabHistory: 'History',
+        tabAssets: 'Account & assets',
+        createFolder: 'New folder',
+        folderOpenNote: 'Collections are not available yet. Once open, you can manage favorites here.',
+        likes: 'Likes',
+        likesEmpty: 'No likes yet',
+        recommend: 'Recommended',
+        recommendEmpty: 'No recommendations yet',
+        reward: 'Rewards',
+        rewardGiven: 'Given',
+        rewardReceived: 'Received',
+        rewardGivenEmpty: 'No outgoing rewards yet. Rewards and spirit-fruit details are managed in Spirit Resources.',
+        rewardReceivedEmpty: 'No rewards received yet. Incoming work rewards appear in Spirit Resources.',
+        history: 'Browsing history',
+        historyEmpty: 'No browsing history yet',
+        statsLocked: 'Data privacy protected',
+        statsLockedNote: 'Stats are visible only to you by default. Turn on to show them.',
+        unlockStats: 'Show to others',
+        statsUnlocked: 'On, visible to others',
+        statsUnlockNote: 'Data details are shown publicly to other users.',
+        assetsAchievements: 'Achievements & assets',
+        tabContent: 'Data analytics',
+        content: 'Data analytics',
+        creatorLevel: 'Creator level',
+        followerLevel: 'Follower level',
+        activityLevel: 'Activity level',
+        levelProgress: 'Unlock next level',
+        analytics: 'Details',
+        publishedWorks: 'Published works',
+        drafts: 'Drafts',
+        totalReads: 'Total reads',
+        totalClicks: 'Total clicks',
+        totalComments: 'Comments',
+        latestActivity: 'Activity',
+        tabActivity: 'Activity',
+        noActivity: 'No activity yet',
+        activityPreview: 'Activity preview',
         account: 'Account',
         security: 'Security',
         securityValue: 'Local password protection',
@@ -252,12 +376,28 @@ function copy(lang: Lang) {
         },
         workDraft: 'Draft',
         workPublished: 'Published',
+        tipLevelGiven: 'Tip level · Outgoing',
+        tipLevelReceived: 'Tip level · Incoming',
+        checkin: 'Check-in',
+        checkinToday: 'Checked in today',
+        checkinStreak: 'Day streak',
+        checkinCount: 'Total check-ins',
+        checkinAction: 'Check in now',
+        checkinDone: 'Checked in',
+        statsPublic: 'Public',
+        statsPrivate: 'Only me',
+        statsPublicNote: 'Profile stats are public; other users can see your data.',
+        statsPrivateNote: 'Profile stats are private; your analytics stay hidden from others.',
+        favoriteEmpty: 'No favorites yet',
+        removeFolder: 'Delete folder',
+        folderName: 'Folder name',
         loading: 'Loading',
         notConnected: 'Not connected',
       }
 }
 
 const localProfileKey = (userId: string) => `ws.user.profile.v1.${userId}`
+const statsUnlockKey = (userId: string) => `ws.user.statsUnlock.v1.${userId}`
 
 function readLocalProfile(userId: string): LocalProfile {
   try {
@@ -273,8 +413,8 @@ function readLocalProfile(userId: string): LocalProfile {
   }
 }
 
-function formatCount(value: number | null) {
-  return value === null ? '—' : String(value)
+function formatCount(value: number | null | undefined) {
+  return value === null || value === undefined ? '—' : String(value)
 }
 
 export default function UserCenterPage({
@@ -285,7 +425,7 @@ export default function UserCenterPage({
   onOpenWorks,
   onLogout,
   onOpenSettings,
-  onOpenBusiness,
+  onOpenSpirit,
 }: {
   lang: Lang
   user: AuthUser | null
@@ -294,7 +434,7 @@ export default function UserCenterPage({
   onOpenWorks: () => void
   onLogout: () => void
   onOpenSettings: () => void
-  onOpenBusiness: () => void
+  onOpenSpirit: () => void
 }) {
   const text = copy(lang)
   const [counts, setCounts] = useState<Counts>({
@@ -309,6 +449,16 @@ export default function UserCenterPage({
   const [identityDraft, setIdentityDraft] = useState<CreatorIdentity>(profile.creatorIdentity)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
+  const [activeTab, setActiveTab] = useState<TabKey>('works')
+  const [socialProfile, setSocialProfile] = useState<SocialProfile | null>(null)
+  const [statsUnlocked, setStatsUnlocked] = useState(() => localStorage.getItem(statsUnlockKey(user?.id || 'local')) === '1')
+  const [spiritTx, setSpiritTx] = useState<SpiritTransaction[] | null>(null)
+  const [favorites, setFavorites] = useState<{ items: FavoriteItem[]; total: number; folders: FavoriteFolder[] } | null>(null)
+  const [historyRows, setHistoryRows] = useState<HistoryItem[] | null>(null)
+  const [recommendations, setRecommendations] = useState<RecommendationItem[] | null>(null)
+  const [checkin, setCheckin] = useState<CheckinStatus | null>(null)
+  const [checkinNote, setCheckinNote] = useState('')
+  const [newFolder, setNewFolder] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -350,6 +500,90 @@ export default function UserCenterPage({
 
     return () => { cancelled = true }
   }, [])
+
+  useEffect(() => {
+    if (!user?.id) return
+    let cancelled = false
+    void getSocialProfile(user.id)
+      .then((profile) => { if (!cancelled) setSocialProfile(profile) })
+      .catch(() => undefined)
+    return () => { cancelled = true }
+  }, [user?.id])
+
+  useEffect(() => {
+    let cancelled = false
+    void getSpiritTransactions(200)
+      .then((rows) => { if (!cancelled) setSpiritTx(Array.isArray(rows) ? rows : []) })
+      .catch(() => undefined)
+    return () => { cancelled = true }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    void Promise.all([
+      listFavorites(),
+      listHistory(),
+      getRecommendations(),
+      getCheckinStatus(),
+    ])
+      .then(([fav, hist, rec, cin]) => {
+        if (cancelled) return
+        setFavorites(fav)
+        setHistoryRows(hist.items)
+        setRecommendations(rec.items)
+        setCheckin(cin)
+      })
+      .catch(() => undefined)
+    return () => { cancelled = true }
+  }, [])
+
+  const toggleStatsUnlock = async () => {
+    const next = !statsUnlocked
+    setStatsUnlocked(next)
+    localStorage.setItem(statsUnlockKey(user?.id || 'local'), next ? '1' : '0')
+    if (user?.id) {
+      try {
+        await updateSettings({ privacy: { show_stats: next } })
+      } catch {
+        // 本地开关与设置中心同步失败时保留本地状态，不阻塞展示。
+      }
+    }
+  }
+
+  const doCheckinNow = async () => {
+    if (!checkin) return
+    setCheckinNote('')
+    try {
+      const next = await doCheckin(checkin.today)
+      setCheckin(next)
+      setCheckinNote(text.checkinDone)
+    } catch {
+      // 签到失败不阻塞个人中心其他能力。
+    }
+  }
+
+  const submitFolder = async () => {
+    const name = newFolder.trim()
+    if (!name) return
+    try {
+      await createFavoriteFolder(name)
+      const fav = await listFavorites()
+      setFavorites(fav)
+      setNewFolder('')
+    } catch {
+      // 创建失败时保持输入，用户可重试。
+    }
+  }
+
+  // 主动打赏：本人作为赠送方、金额为负的打赏/赠送流水；被打赏：本人作为接收方、金额为正的流水。
+  const rewardGiven = useMemo(
+    () => (spiritTx || []).filter((row) => (row.kind === 'tip' || row.kind === 'gift') && row.fruit_amount < 0).length,
+    [spiritTx],
+  )
+  const rewardReceived = useMemo(
+    () => (spiritTx || []).filter((row) => (row.kind === 'tip' || row.kind === 'gift') && row.fruit_amount > 0).length,
+    [spiritTx],
+  )
 
   useEffect(() => {
     if (!profileOpen) return
@@ -432,137 +666,478 @@ export default function UserCenterPage({
         <div>
           <div className="uc-eyebrow">{text.eyebrow}</div>
           <h1>{text.title}</h1>
-          <p>{text.subtitle}</p>
         </div>
-        <button type="button" className="uc-primary" onClick={openEditProfile}>
-          <Pencil aria-hidden="true" strokeWidth={1.7} />
-          {text.edit}
-        </button>
       </section>
 
-      <div className="uc-grid">
-        <section className="uc-card uc-profile-card">
-          <div className="uc-profile-cover">
-            <span>MEMBER SINCE</span>
-            <span>{joined}</span>
+      {/* 身份卡片：资料、创作身份与社交计数合并为一张卡片 */}
+      <section className="uc-identity-card">
+        <div className="uc-profile-body">
+          <div className={`uc-avatar-large${avatarUrl ? ' has-image' : ''}`}>{avatarUrl ? <img src={avatarUrl} alt="" /> : initial}</div>
+          <div className="uc-profile-heading">
+            <div className="uc-name-row">
+              <h2>{displayNameValue}</h2>
+              <span className="uc-badge">{user?.is_owner ? text.owner : text.localAccount}</span>
+            </div>
+            <p>@{user?.username || 'local'} · {text.memberSince} {joined}</p>
           </div>
-          <div className="uc-profile-body">
-            <div className={`uc-avatar-large${avatarUrl ? ' has-image' : ''}`}>{avatarUrl ? <img src={avatarUrl} alt="" /> : initial}</div>
-            <div className="uc-profile-heading">
-              <div className="uc-name-row">
-                <h2>{displayNameValue}</h2>
-                <span className="uc-badge">{user?.is_owner ? text.owner : text.localAccount}</span>
+        </div>
+        <div className="uc-profile-copy">
+          <div>
+            <span>{text.bio}</span>
+            <p className={profile.bio ? '' : 'muted'}>{profile.bio || text.emptyBio}</p>
+          </div>
+          <div>
+            <span>{text.background}</span>
+            <p className={profile.background ? '' : 'muted'}>{profile.background || text.emptyBackground}</p>
+          </div>
+        </div>
+        <div className="uc-identity-row">
+          <span className="uc-identity-icon"><Sparkles aria-hidden="true" strokeWidth={1.6} /></span>
+          <div>
+            <span>{text.creatorIdentity}</span>
+            <strong>{text.creatorTitles[profile.creatorIdentity]}</strong>
+          </div>
+          <button type="button" className="uc-ghost-button" onClick={openEditProfile}>
+            <Pencil aria-hidden="true" strokeWidth={1.7} />
+            {text.editIdentity}
+          </button>
+        </div>
+        <div className="uc-identity-stats">
+          <div><strong>{formatCount(counts.worlds)}</strong><span>{text.worlds}</span></div>
+          <div><strong>{formatCount(counts.characters)}</strong><span>{text.characters}</span></div>
+          <div><strong>{formatCount(counts.works)}</strong><span>{text.works}</span></div>
+          <div><strong>{formatCount(socialProfile?.stats?.following)}</strong><span>{text.following}</span></div>
+          <div><strong>{formatCount(socialProfile?.stats?.followers)}</strong><span>{text.followers}</span></div>
+          <div><strong>{formatCount(socialProfile?.stats?.friends)}</strong><span>{text.friends}</span></div>
+        </div>
+
+      </section>
+
+      {/* 操作按钮区：收藏 / 点赞 / 推荐 / 打赏 / 浏览历史 / 账户与资产 */}
+      <div className="uc-action-bar" role="tablist" aria-label={lang === 'zh' ? '个人中心操作' : 'Personal center actions'}>
+        {([
+          ['works', text.tabWorks, BookOpen],
+          ['activity', text.tabActivity, Activity],
+          ['favorites', text.tabFavorites, Heart],
+          ['likes', text.tabLikes, ThumbsUp],
+          ['recommend', text.tabRecommend, Sparkles],
+          ['reward', text.tabReward, Gift],
+          ['history', text.tabHistory, History],
+          ['content', text.tabContent, BarChart3],
+          ['assets', text.tabAssets, Boxes],
+        ] as const).map(([key, label, Icon]) => (
+          <button
+            key={key}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === key}
+            className={`uc-action-button${activeTab === key ? ' is-active' : ''}`}
+            onClick={() => setActiveTab(key)}
+          >
+            <Icon aria-hidden="true" strokeWidth={1.6} />
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'content' && (
+        <section className="uc-panel" role="tabpanel">
+          <div className="uc-panel-head">
+            <div>
+              <span className="uc-card-kicker">DATA</span>
+              <h2>{text.content}</h2>
+            </div>
+          </div>
+          <div className="uc-level-row">
+            <div className="uc-level-card">
+              <span className="uc-card-kicker">CREATOR</span>
+              <div className="uc-level-head">
+                <strong>{text.creatorLevel}</strong>
+                <span>Lv.{socialProfile?.stats?.creator_level.level} · {socialProfile?.stats?.creator_level.label}</span>
               </div>
-              <p>@{user?.username || 'local'} · {text.memberSince} {joined}</p>
+              <div className="uc-level-bar">
+                <span style={{ width: `${Math.round((socialProfile?.stats?.creator_level.progress || 0) * 100)}%` }} />
+              </div>
+              <p className="uc-card-footnote">{socialProfile?.stats?.creator_level.score} → {socialProfile?.stats?.creator_level.next_threshold} {text.levelProgress}</p>
+            </div>
+            <div className="uc-level-card">
+              <span className="uc-card-kicker">FOLLOWER</span>
+              <div className="uc-level-head">
+                <strong>{text.followerLevel}</strong>
+                <span>Lv.{socialProfile?.stats?.follower_level.level} · {socialProfile?.stats?.follower_level.label}</span>
+              </div>
+              <div className="uc-level-bar">
+                <span style={{ width: `${Math.round((socialProfile?.stats?.follower_level.progress || 0) * 100)}%` }} />
+              </div>
+              <p className="uc-card-footnote">{socialProfile?.stats?.follower_level.score} → {socialProfile?.stats?.follower_level.next_threshold} {text.levelProgress}</p>
+            </div>
+            <div className="uc-level-card">
+              <span className="uc-card-kicker">ACTIVITY</span>
+              <div className="uc-level-head">
+                <strong>{text.activityLevel}</strong>
+                <span>Lv.{socialProfile?.stats?.activity_level.level} · {socialProfile?.stats?.activity_level.label}</span>
+              </div>
+              <div className="uc-level-bar">
+                <span style={{ width: `${Math.round((socialProfile?.stats?.activity_level.progress || 0) * 100)}%` }} />
+              </div>
+              <p className="uc-card-footnote">{socialProfile?.stats?.activity_level.score} → {socialProfile?.stats?.activity_level.next_threshold} {text.levelProgress}</p>
+            </div>
+            <div className="uc-level-card">
+              <span className="uc-card-kicker">TIP · OUT</span>
+              <div className="uc-level-head">
+                <strong>{text.tipLevelGiven}</strong>
+                <span>Lv.{socialProfile?.stats?.tip_level_given?.level ?? 1} · {socialProfile?.stats?.tip_level_given?.label ?? text.tipLevelGiven}</span>
+              </div>
+              <div className="uc-level-bar">
+                <span style={{ width: `${Math.round((socialProfile?.stats?.tip_level_given?.progress ?? 0) * 100)}%` }} />
+              </div>
+              <p className="uc-card-footnote">{socialProfile?.stats?.tip_given ?? 0} {lang === 'zh' ? '灵果' : 'fruit'}</p>
+            </div>
+            <div className="uc-level-card">
+              <span className="uc-card-kicker">TIP · IN</span>
+              <div className="uc-level-head">
+                <strong>{text.tipLevelReceived}</strong>
+                <span>Lv.{socialProfile?.stats?.tip_level_received?.level ?? 1} · {socialProfile?.stats?.tip_level_received?.label ?? text.tipLevelReceived}</span>
+              </div>
+              <div className="uc-level-bar">
+                <span style={{ width: `${Math.round((socialProfile?.stats?.tip_level_received?.progress ?? 0) * 100)}%` }} />
+              </div>
+              <p className="uc-card-footnote">{socialProfile?.stats?.tip_received ?? 0} {lang === 'zh' ? '灵果' : 'fruit'}</p>
             </div>
           </div>
-          <div className="uc-profile-copy">
-            <div>
-              <span>{text.bio}</span>
-              <p className={profile.bio ? '' : 'muted'}>{profile.bio || text.emptyBio}</p>
-            </div>
-            <div>
-              <span>{text.background}</span>
-              <p className={profile.background ? '' : 'muted'}>{profile.background || text.emptyBackground}</p>
-            </div>
-          </div>
-          <div className="uc-profile-stats">
-            <div><strong>{formatCount(counts.worlds)}</strong><span>{text.worlds}</span></div>
-            <div><strong>{formatCount(counts.characters)}</strong><span>{text.characters}</span></div>
-            <div><strong>{formatCount(counts.works)}</strong><span>{text.works}</span></div>
-          </div>
-        </section>
-
-        <section className="uc-card uc-follows">
-          <div className="uc-card-head">
-            <div>
-              <span className="uc-card-kicker">RELATIONSHIPS</span>
-              <h2>{text.follows}</h2>
-            </div>
-            <Users aria-hidden="true" strokeWidth={1.5} />
-          </div>
-          <div className="uc-follow-counts">
-            <div><strong>0</strong><span>{text.following}</span></div>
-            <div><strong>0</strong><span>{text.followers}</span></div>
-          </div>
-          <div className="uc-follow-empty">
-            <span>{text.activity}</span>
-            <p>{text.followEmpty}</p>
-          </div>
-        </section>
-
-        <section className="uc-card uc-creator-card">
-          <div className="uc-card-head">
-            <div>
-              <span className="uc-card-kicker">CREATOR PROFILE</span>
-              <h2>{text.creator}</h2>
-            </div>
-            <button type="button" className="uc-ghost-button" onClick={openEditProfile}>
-              <Pencil aria-hidden="true" strokeWidth={1.7} />
-              {text.editIdentity}
+          <div className="uc-analytics-title">
+            <span>{text.analytics}</span>
+            <button
+              type="button"
+              className={`uc-privacy-toggle${statsUnlocked ? ' is-unlocked' : ''}`}
+              onClick={toggleStatsUnlock}
+            >
+              {statsUnlocked ? <Unlock aria-hidden="true" strokeWidth={1.6} /> : <Lock aria-hidden="true" strokeWidth={1.6} />}
+              {statsUnlocked ? text.statsPublic : text.statsPrivate}
             </button>
           </div>
-
-          <div className="uc-identity-row">
-            <span className="uc-identity-icon"><Sparkles aria-hidden="true" strokeWidth={1.6} /></span>
-            <div>
-              <span>{text.creatorIdentity}</span>
-              <strong>{text.creatorTitles[profile.creatorIdentity]}</strong>
+          {statsUnlocked ? (
+            <div className="uc-analytics-grid">
+              <div><strong>{formatCount(socialProfile?.stats?.works)}</strong><span>{text.publishedWorks}</span></div>
+              <div><strong>{formatCount(socialProfile?.stats?.drafts)}</strong><span>{text.drafts}</span></div>
+              <div><strong>{formatCount(socialProfile?.stats?.total_reads)}</strong><span>{text.totalReads}</span></div>
+              <div><strong>{formatCount(socialProfile?.stats?.total_clicks)}</strong><span>{text.totalClicks}</span></div>
+              <div><strong>{formatCount(socialProfile?.stats?.total_likes)}</strong><span>{text.likes}</span></div>
+              <div><strong>{formatCount(socialProfile?.stats?.total_favorites)}</strong><span>{text.favorites}</span></div>
+              <div><strong>{formatCount(socialProfile?.stats?.total_comments)}</strong><span>{text.totalComments}</span></div>
+              <div><strong>{formatCount(socialProfile?.stats?.followers)}</strong><span>{text.followers}</span></div>
+              <div><strong>{formatCount(socialProfile?.stats?.following)}</strong><span>{text.following}</span></div>
             </div>
-          </div>
-
-          <div className="uc-creator-split">
-            <div className="uc-works-block">
-              <div className="uc-subhead">
-                <h3>{text.worksShowcase}</h3>
-                <button type="button" className="uc-link-button" onClick={onOpenWorks}>
-                  {text.allWorks} <ArrowUpRight aria-hidden="true" strokeWidth={1.8} />
-                </button>
+          ) : (
+            <>
+              <div className="uc-inline-empty uc-inline-empty--lock">
+                <LockKeyhole aria-hidden="true" strokeWidth={1.5} />
+                <span>{text.statsLocked}</span>
               </div>
-              {works === null ? (
-                <div className="uc-inline-empty">{text.loading}…</div>
-              ) : works.length === 0 ? (
-                <div className="uc-inline-empty">{text.noWorks}</div>
-              ) : (
-                <div className="uc-work-list">
-                  {works.slice(0, 3).map((work) => (
-                    <button type="button" className="uc-work-row" key={work.id} onClick={onOpenWorks}>
-                      <span className={`uc-work-cover${work.cover_url ? '' : ' is-empty'}`}>
-                        {work.cover_url ? <img src={resolveMediaUrl(work.cover_url)} alt="" loading="lazy" /> : <BookOpen aria-hidden="true" strokeWidth={1.5} />}
-                      </span>
-                      <span className="uc-work-copy">
-                        <strong>{work.title}</strong>
-                        <span>{work.status === 'completed' ? (lang === 'zh' ? '已完成' : 'Completed') : work.status === 'in_progress' ? (lang === 'zh' ? '创作中' : 'In progress') : work.status === 'archived' ? (lang === 'zh' ? '已归档' : 'Archived') : text.workDraft}</span>
-                      </span>
-                      <ArrowUpRight className="uc-row-arrow" aria-hidden="true" strokeWidth={1.8} />
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="uc-achievements">
-              <h3>{text.achievements}</h3>
-              <div className="uc-achievement-grid">
-                {achievements.map(({ label, value, icon: Icon }) => (
-                  <div className="uc-achievement" key={label}>
-                    <Icon aria-hidden="true" strokeWidth={1.5} />
-                    <strong>{value}</strong>
-                    <span>{label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+              <p className="uc-card-footnote">{text.statsPrivateNote}</p>
+            </>
+          )}
         </section>
+      )}
 
-        <section className="uc-card uc-assets">
-          <div className="uc-card-head">
+      {activeTab === 'works' && (
+        <section className="uc-panel" role="tabpanel">
+          <div className="uc-panel-head">
             <div>
-              <span className="uc-card-kicker">DIGITAL ASSETS</span>
-              <h2>{text.assets}</h2>
+              <span className="uc-card-kicker">WORKS</span>
+              <h2>{text.tabWorks}</h2>
             </div>
-            <Boxes aria-hidden="true" strokeWidth={1.5} />
+            <button type="button" className="uc-ghost-button" onClick={onOpenWorks}>
+              {text.allWorks}
+              <ArrowUpRight aria-hidden="true" strokeWidth={1.7} />
+            </button>
+          </div>
+          {works === null ? (
+            <div className="uc-inline-empty">{text.loading}…</div>
+          ) : works.length === 0 ? (
+            <div className="uc-inline-empty">{text.noWorks}</div>
+          ) : (
+            <div className="uc-work-list">
+              {works.map((work) => (
+                <button type="button" className="uc-work-row" key={work.id} onClick={onOpenWorks}>
+                  <span className={`uc-work-cover${work.cover_url ? '' : ' is-empty'}`}>
+                    {work.cover_url ? <img src={resolveMediaUrl(work.cover_url)} alt="" loading="lazy" /> : <BookOpen aria-hidden="true" strokeWidth={1.5} />}
+                  </span>
+                  <span className="uc-work-copy">
+                    <strong>{work.title}</strong>
+                    <span>{work.status === 'completed' ? (lang === 'zh' ? '已完成' : 'Completed') : work.status === 'in_progress' ? (lang === 'zh' ? '创作中' : 'In progress') : work.status === 'archived' ? (lang === 'zh' ? '已归档' : 'Archived') : text.workDraft}</span>
+                  </span>
+                  <ArrowUpRight className="uc-row-arrow" aria-hidden="true" strokeWidth={1.8} />
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {activeTab === 'activity' && (
+        <section className="uc-panel" role="tabpanel">
+          <div className="uc-panel-head">
+            <div>
+              <span className="uc-card-kicker">ACTIVITY</span>
+              <h2>{text.tabActivity}</h2>
+            </div>
+          </div>
+          <div className="uc-action-stat">
+            <strong>{formatCount(socialProfile?.stats?.posts)}</strong>
+            <span>{text.tabActivity}</span>
+          </div>
+          <div className="uc-checkin-card">
+            <div className="uc-checkin-info">
+              <CalendarCheck aria-hidden="true" strokeWidth={1.6} />
+              <div>
+                <strong>{text.checkin}</strong>
+                <span>
+                  {checkin ? `${checkin.streak} ${text.checkinStreak} · ${checkin.checkin_count} ${text.checkinCount}` : text.loading}
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="uc-ghost-button"
+              disabled={!!checkin?.checked_in_today}
+              onClick={() => void doCheckinNow()}
+            >
+              {checkin?.checked_in_today ? text.checkinToday : text.checkinAction}
+            </button>
+          </div>
+          {checkinNote ? <p className="uc-card-footnote">{checkinNote}</p> : null}
+          {socialProfile && socialProfile.posts.length > 0 ? (
+            <div className="uc-activity-list">
+              {socialProfile.posts.map((post) => (
+                <div className="uc-activity-row" key={post.id}>
+                  <div className="uc-activity-main">
+                    {post.body && <span className="uc-activity-body">{post.body}</span>}
+                    {(post.media_urls?.length ?? 0) > 0 && (
+                      <div className={`uc-activity-media size-${Math.min(post.media_urls.length, 3)}`}>
+                        {post.media_urls.slice(0, 3).map((url) => (
+                          <img key={url} src={resolveMediaUrl(url)} alt="" loading="lazy" />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <span className="uc-activity-meta">
+                    <span>{formatCount(post.like_count)} {text.likes}</span>
+                    <span>{formatCount(post.comment_count)} {text.totalComments}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="uc-inline-empty">{text.noActivity}</div>
+          )}
+        </section>
+      )}
+
+      {activeTab === 'favorites' && (
+        <section className="uc-panel" role="tabpanel">
+          <div className="uc-panel-head">
+            <div>
+              <span className="uc-card-kicker">FAVORITES</span>
+              <h2>{text.favorites}</h2>
+            </div>
+            <div className="uc-folder-create">
+              <input
+                aria-label={text.folderName}
+                placeholder={text.folderName}
+                value={newFolder}
+                onChange={(event) => setNewFolder(event.target.value)}
+                onKeyDown={(event) => { if (event.key === 'Enter') void submitFolder() }}
+              />
+              <button type="button" className="uc-ghost-button" onClick={() => void submitFolder()}>
+                <FolderPlus aria-hidden="true" strokeWidth={1.6} />
+                {text.createFolder}
+              </button>
+            </div>
+          </div>
+          <div className="uc-action-stat">
+            <strong>{favorites ? favorites.total : 0}</strong>
+            <span>{text.favorites}</span>
+          </div>
+          {favorites && favorites.folders.length > 0 ? (
+            <div className="uc-folder-row">
+              {favorites.folders.map((folder) => (
+                <span className="uc-folder-chip" key={folder.id}>
+                  {folder.name}
+                  <button
+                    type="button"
+                    aria-label={text.removeFolder}
+                    onClick={async () => {
+                      await deleteFavoriteFolder(folder.id).catch(() => undefined)
+                      const fav = await listFavorites().catch(() => null)
+                      if (fav) setFavorites(fav)
+                    }}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          ) : null}
+          {favorites === null ? (
+            <div className="uc-inline-empty">{text.loading}…</div>
+          ) : favorites.items.length === 0 ? (
+            <div className="uc-inline-empty">{text.favoriteEmpty}</div>
+          ) : (
+            <div className="uc-fav-list">
+              {favorites.items.map((item) => (
+                <div className="uc-fav-row" key={item.id}>
+                  <span className={`uc-fav-type uc-fav-type--${item.target_type}`}>
+                    {item.target_type === 'work' ? (lang === 'zh' ? '作品' : 'Work') : item.target_type === 'character' ? (lang === 'zh' ? '角色' : 'Character') : item.target_type === 'world' ? (lang === 'zh' ? '世界' : 'World') : (lang === 'zh' ? '动态' : 'Post')}
+                  </span>
+                  <span className="uc-fav-title">{item.title}</span>
+                  <button
+                    type="button"
+                    className="uc-ghost-button uc-fav-remove"
+                    onClick={async () => {
+                      await removeFavorite(item.target_type, item.target_id).catch(() => undefined)
+                      const fav = await listFavorites().catch(() => null)
+                      if (fav) setFavorites(fav)
+                    }}
+                  >
+                    {lang === 'zh' ? '取消收藏' : 'Remove'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {activeTab === 'likes' && (
+        <section className="uc-panel" role="tabpanel">
+          <div className="uc-panel-head">
+            <div>
+              <span className="uc-card-kicker">LIKES</span>
+              <h2>{text.likes}</h2>
+            </div>
+          </div>
+          <div className="uc-action-stat">
+            <strong>{formatCount(socialProfile?.stats?.total_likes)}</strong>
+            <span>{text.likes}</span>
+          </div>
+          <div className="uc-inline-empty">{text.likesEmpty}</div>
+        </section>
+      )}
+
+      {activeTab === 'recommend' && (
+        <section className="uc-panel" role="tabpanel">
+          <div className="uc-panel-head">
+            <div>
+              <span className="uc-card-kicker">RECOMMEND</span>
+              <h2>{text.recommend}</h2>
+            </div>
+          </div>
+          {recommendations === null ? (
+            <div className="uc-inline-empty">{text.loading}…</div>
+          ) : recommendations.length === 0 ? (
+            <div className="uc-inline-empty">{text.recommendEmpty}</div>
+          ) : (
+            <div className="uc-fav-list">
+              {recommendations.map((item) => (
+                <div className="uc-fav-row" key={item.id}>
+                  <span className="uc-fav-type uc-fav-type--work">{lang === 'zh' ? '作品' : 'Work'}</span>
+                  <span className="uc-fav-title">{item.title}</span>
+                  <span className="uc-fav-meta">{item.like_count} {text.likes}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {activeTab === 'reward' && (
+        <section className="uc-panel" role="tabpanel">
+          <div className="uc-panel-head">
+            <div>
+              <span className="uc-card-kicker">REWARD</span>
+              <h2>{text.reward}</h2>
+            </div>
+          </div>
+          <div className="uc-reward-grid">
+            <div className="uc-reward-card">
+              <div className="uc-reward-head">
+                <span className="uc-card-kicker">OUTGOING</span>
+                <strong>{text.rewardGiven}</strong>
+              </div>
+              <div className="uc-action-stat">
+                <strong>{rewardGiven}</strong>
+                <span>{text.rewardGiven}</span>
+              </div>
+              <p className="uc-card-footnote">{text.rewardGivenEmpty}</p>
+            </div>
+            <div className="uc-reward-card">
+              <div className="uc-reward-head">
+                <span className="uc-card-kicker">INCOMING</span>
+                <strong>{text.rewardReceived}</strong>
+              </div>
+              <div className="uc-action-stat">
+                <strong>{rewardReceived}</strong>
+                <span>{text.rewardReceived}</span>
+              </div>
+              <p className="uc-card-footnote">{text.rewardReceivedEmpty}</p>
+            </div>
+          </div>
+          <button type="button" className="uc-ghost-button" onClick={onOpenSpirit}>
+            <Sprout aria-hidden="true" strokeWidth={1.6} />
+            {lang === 'zh' ? '打开灵果资源中心' : 'Open Spirit Resources'}
+          </button>
+        </section>
+      )}
+
+      {activeTab === 'history' && (
+        <section className="uc-panel" role="tabpanel">
+          <div className="uc-panel-head">
+            <div>
+              <span className="uc-card-kicker">HISTORY</span>
+              <h2>{text.history}</h2>
+            </div>
+          </div>
+          {historyRows === null ? (
+            <div className="uc-inline-empty">{text.loading}…</div>
+          ) : historyRows.length === 0 ? (
+            <div className="uc-inline-empty">{text.historyEmpty}</div>
+          ) : (
+            <div className="uc-fav-list">
+              {historyRows.map((item) => (
+                <div className="uc-fav-row" key={item.id}>
+                  <span className={`uc-fav-type uc-fav-type--${item.target_type}`}>
+                    {item.target_type === 'work' ? (lang === 'zh' ? '作品' : 'Work') : item.target_type === 'character' ? (lang === 'zh' ? '角色' : 'Character') : (lang === 'zh' ? '世界' : 'World')}
+                  </span>
+                  <span className="uc-fav-title">{item.title}</span>
+                  <span className="uc-fav-meta">{formatDate(item.created_at, lang)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {activeTab === 'assets' && (
+        <section className="uc-panel" role="tabpanel">
+          <div className="uc-panel-head">
+            <div>
+              <span className="uc-card-kicker">ACCOUNT</span>
+              <h2>{text.assetsAchievements}</h2>
+            </div>
+            <button type="button" className="uc-ghost-button" onClick={onOpenSettings} style={{ color: 'var(--text-main)' }}>
+              <ShieldCheck aria-hidden="true" strokeWidth={1.6} />
+              {lang === 'zh' ? '打开设置中心' : 'Open settings'}
+            </button>
+          </div>
+          <div className="uc-achievement-grid">
+            {achievements.map(({ label, value, icon: Icon }) => (
+              <div className="uc-achievement" key={label}>
+                <Icon aria-hidden="true" strokeWidth={1.5} />
+                <strong>{value}</strong>
+                <span>{label}</span>
+              </div>
+            ))}
           </div>
           <div className="uc-asset-list">
             {assetRows.map(({ key, label, icon: Icon, target, note }) => {
@@ -584,114 +1159,20 @@ export default function UserCenterPage({
               )
             })}
           </div>
-          <p className="uc-card-footnote">{text.assetsHint}</p>
-        </section>
-
-        <section className="uc-card uc-favorites">
-          <div className="uc-card-head">
-            <div>
-              <span className="uc-card-kicker">SAVED</span>
-              <h2>{text.favorites}</h2>
-            </div>
-            <Heart aria-hidden="true" strokeWidth={1.5} />
-          </div>
-          <div className="uc-favorite-counts">
-            <div><strong>0</strong><span>{text.favoriteWorks}</span></div>
-            <div><strong>0</strong><span>{text.favoriteCharacters}</span></div>
-            <div><strong>0</strong><span>{text.favoriteWorlds}</span></div>
-          </div>
-          <div className="uc-inline-empty">{text.favoritesEmpty}</div>
-          <p className="uc-card-footnote">{text.favoritesNote}</p>
-        </section>
-
-        <section className="uc-card uc-account">
-          <div className="uc-card-head">
-            <div>
-              <span className="uc-card-kicker">ACCOUNT</span>
-              <h2>{text.account}</h2>
-            </div>
-            <ShieldCheck aria-hidden="true" strokeWidth={1.5} />
-          </div>
           <div className="uc-info-list">
             <div><span><LockKeyhole aria-hidden="true" strokeWidth={1.5} />{text.security}</span><strong>{text.securityValue}</strong></div>
             <div><span><UserRound aria-hidden="true" strokeWidth={1.5} />{text.loginMethod}</span><strong>{text.loginValue}</strong></div>
             <div><span><ShieldCheck aria-hidden="true" strokeWidth={1.5} />{text.privacy}</span><strong>{text.privacyValue}</strong></div>
             <div><span><Crown aria-hidden="true" strokeWidth={1.5} />{text.accountRole}</span><strong>{user?.is_owner ? text.roleOwner : text.roleLocal}</strong></div>
           </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button type="button" className="uc-signout" onClick={onOpenSettings} style={{ color: 'var(--text-main)' }}>
-              <ShieldCheck aria-hidden="true" strokeWidth={1.6} />
-              {lang === 'zh' ? '打开设置中心' : 'Open settings'}
-            </button>
-            <button type="button" className="uc-signout" onClick={onLogout}>
-              <LogOut aria-hidden="true" strokeWidth={1.6} />
-              {text.signOut}
-            </button>
-          </div>
-        </section>
-
-        <section className="uc-card uc-membership">
-          <div className="uc-card-head">
-            <div>
-              <span className="uc-card-kicker">MEMBERSHIP</span>
-              <h2>{text.membership}</h2>
-            </div>
-            <Crown aria-hidden="true" strokeWidth={1.5} />
-          </div>
-          <div className="uc-membership-status">
-            <span className="uc-membership-dot" />
-            <strong>{text.normalUser}</strong>
-            <span>{text.notOpened}</span>
-          </div>
-          <div className="uc-info-list compact">
-            <div><span>{text.memberLevel}</span><strong>{text.normalUser}</strong></div>
-            <div><span>{text.memberBenefits}</span><strong>—</strong></div>
-            <div><span>{text.memberValidity}</span><strong>—</strong></div>
-          </div>
-          <p className="uc-card-footnote">{text.membershipNote}</p>
-          <button type="button" className="uc-signout" onClick={onOpenBusiness} style={{ color: 'var(--text-main)' }}>
-            <Crown aria-hidden="true" strokeWidth={1.6} />
-            {lang === 'zh' ? '进入商业与服务中心' : 'Open Business & Services'}
+          <button type="button" className="uc-signout" onClick={onLogout}>
+            <LogOut aria-hidden="true" strokeWidth={1.6} />
+            {text.signOut}
           </button>
         </section>
-
-        <section className="uc-card uc-orders">
-          <div className="uc-card-head">
-            <div>
-              <span className="uc-card-kicker">PURCHASES</span>
-              <h2>{text.orders}</h2>
-            </div>
-            <ReceiptText aria-hidden="true" strokeWidth={1.5} />
-          </div>
-          <div className="uc-order-metrics">
-            <div><strong>0</strong><span>{text.topups}</span></div>
-            <div><strong>0</strong><span>{text.purchases}</span></div>
-            <div><strong>0</strong><span>{text.orderItems}</span></div>
-          </div>
-          <div className="uc-inline-empty">{text.ordersEmpty}</div>
-        </section>
-
-        <section className="uc-card uc-earnings">
-          <div className="uc-card-head">
-            <div>
-              <span className="uc-card-kicker">CREATOR FINANCE</span>
-              <h2>{text.earnings}</h2>
-            </div>
-            <Wallet aria-hidden="true" strokeWidth={1.5} />
-          </div>
-          <div className="uc-earnings-body">
-            <div className="uc-balance">
-              <span>{text.balance}</span>
-              <strong>¥0.00</strong>
-            </div>
-            <div className="uc-ledger">
-              <div><strong>0</strong><span>{text.transactionCount}</span></div>
-              <div><strong>0</strong><span>{text.withdrawCount}</span></div>
-            </div>
-            <p>{text.earningsEmpty}</p>
-          </div>
-        </section>
-      </div>
+      )}
+      {/* 账户服务已统一在灵果资源中心，不再在本页重复展示现金商业入口。 */}
+      
 
       {profileOpen && (
         <div className="uc-modal-backdrop" onClick={() => { if (!saving) setProfileOpen(false) }}>

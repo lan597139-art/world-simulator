@@ -77,6 +77,56 @@ export default function SocialProfileSheet({
               <span><strong>{profile.following ? (lang === 'zh' ? '已关注' : 'Following') : '—'}</strong>{lang === 'zh' ? '关系' : 'Relation'}</span>
             </div>
 
+            <section className="sc-levels" aria-label={lang === 'zh' ? '创作与粉丝等级' : 'Creator & follower levels'}>
+              <div className="sc-level-card">
+                <div className="sc-level-head">
+                  <span>{lang === 'zh' ? '创作等级' : 'Creator level'}</span>
+                  <strong>Lv.{profile.stats.creator_level.level} · {profile.stats.creator_level.label}</strong>
+                </div>
+                <div className="sc-level-bar">
+                  <span style={{ width: `${Math.min(100, Math.round(profile.stats.creator_level.progress * 100))}%` }} />
+                </div>
+                <span className="sc-level-meta">
+                  {profile.stats.creator_level.next_threshold
+                    ? (lang === 'zh' ? `${profile.stats.creator_level.score} → ${profile.stats.creator_level.next_threshold} 解锁下一级` : `${profile.stats.creator_level.score} → ${profile.stats.creator_level.next_threshold} for next level`)
+                    : (lang === 'zh' ? '已达最高等级' : 'Max level reached')}
+                </span>
+              </div>
+              <div className="sc-level-card">
+                <div className="sc-level-head">
+                  <span>{lang === 'zh' ? '粉丝等级' : 'Follower level'}</span>
+                  <strong>Lv.{profile.stats.follower_level.level} · {profile.stats.follower_level.label}</strong>
+                </div>
+                <div className="sc-level-bar">
+                  <span style={{ width: `${Math.min(100, Math.round(profile.stats.follower_level.progress * 100))}%` }} />
+                </div>
+                <span className="sc-level-meta">
+                  {profile.stats.follower_level.next_threshold
+                    ? (lang === 'zh' ? `${profile.stats.follower_level.score} → ${profile.stats.follower_level.next_threshold} 解锁下一级` : `${profile.stats.follower_level.score} → ${profile.stats.follower_level.next_threshold} for next level`)
+                    : (lang === 'zh' ? '已达最高等级' : 'Max level reached')}
+                </span>
+              </div>
+            </section>
+
+            {!profile.stats.stats_hidden ? (
+              <section className="sc-profile-block sc-profile-analysis">
+                <div className="sc-profile-block-head"><h3>{lang === 'zh' ? '用户画像分析' : 'Profile analytics'}</h3></div>
+                <div className="sc-analytics-grid">
+                <div><strong>{profile.stats.works}</strong><span>{lang === 'zh' ? '已发布作品' : 'Published'}</span></div>
+                <div><strong>{profile.stats.drafts}</strong><span>{lang === 'zh' ? '草稿' : 'Drafts'}</span></div>
+                <div><strong>{profile.stats.total_reads}</strong><span>{lang === 'zh' ? '总阅读量' : 'Total reads'}</span></div>
+                <div><strong>{profile.stats.total_clicks}</strong><span>{lang === 'zh' ? '总点击量' : 'Total clicks'}</span></div>
+                <div><strong>{profile.stats.total_likes}</strong><span>{lang === 'zh' ? '点赞' : 'Likes'}</span></div>
+                <div><strong>{profile.stats.total_favorites}</strong><span>{lang === 'zh' ? '收藏' : 'Favorites'}</span></div>
+                <div><strong>{profile.stats.total_comments}</strong><span>{lang === 'zh' ? '评论' : 'Comments'}</span></div>
+                <div><strong>{profile.stats.followers}</strong><span>{lang === 'zh' ? '粉丝' : 'Followers'}</span></div>
+                <div><strong>{profile.stats.following}</strong><span>{lang === 'zh' ? '关注' : 'Following'}</span></div>
+              </div>
+              </section>
+            ) : (
+              <div className="sc-note">{lang === 'zh' ? '该用户的画像统计未公开。' : 'This user has not shared profile analytics.'}</div>
+            )}
+
             {profile.friend_status !== 'self' && (
               <div className="sc-profile-actions">
                 {profile.blocked_by_me ? (

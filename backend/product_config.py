@@ -45,17 +45,23 @@ PRODUCT_DESCRIPTIONS = {
 # 模块是底层能力的稳定标识；page 是前端现有页面键。
 MODULES = {
     "overview": {"label": "01 世界总览", "page": "overview", "description": "游戏创作工作台内的世界统计、工作区与最近事件"},
-    "world-management": {"label": "02 世界管理", "page": "world-management", "description": "进入或创建本产品世界"},
-    "world-building": {"label": "世界建设配置", "page": "world-building", "description": "世界初始配置；仅作为创建世界的子页面"},
+    "world-management": {"label": "世界库", "page": "world-management", "description": "进入或创建本产品世界"},
+    "world-building": {"label": "世界种子编辑", "page": "world-building", "description": "世界初始配置；仅作为创建世界的子页面"},
     "character-management": {"label": "03 人物管理", "page": "character-management", "description": "人物档案与云宝卡片；不同产品使用完整/轻量模式"},
     "chat": {"label": "AI 角色聊天", "page": "chat", "description": "NPC 或虚拟角色会话"},
     "world-structure": {"label": "世界结构", "page": "world-structure", "description": "地点、组织、资源等世界结构"},
     "world-data": {"label": "世界设定", "page": "world-data", "description": "世界规则、背景与设定"},
+    "world-background": {"label": "背景", "page": "world-background", "description": "世界的创建背景、起源与基调"},
+    "world-map": {"label": "地图", "page": "world-map", "description": "世界地图册，集中管理大大小小的地图"},
+    "world-works": {"label": "作品", "page": "world-works", "description": "该世界的主作品、副作品、同人文与人物传记"},
+    "world-illustration": {"label": "插画集", "page": "world-illustration", "description": "世界相关的插画与概念图"},
+    "world-cocreation": {"label": "共创", "page": "world-cocreation", "description": "邀请协作成员并配置共创开发选择"},
+    "world-community": {"label": "社区", "page": "world-community", "description": "该世界下的社区讨论区"},
     "relationships": {"label": "04 关系与组织", "page": "relationships", "description": "人物关系网络"},
     "events": {"label": "05 事件管理", "page": "events", "description": "世界事件、互动事件或人生经历"},
     "timeline": {"label": "06 时间线", "page": "timeline", "description": "世界、互动或人生时间线"},
     "simulation": {"label": "07 模拟运行", "page": "simulation", "description": "完整模拟、辅助推演或人格运行"},
-    "storyline": {"label": "故事线管理", "page": "storyline", "description": "真实树状故事结构"},
+    "storyline": {"label": "故事线", "page": "storyline", "description": "真实树状故事结构"},
     "writing": {"label": "08 写作辅助", "page": "writing", "description": "章节、传记与叙事写作"},
     "multipath": {"label": "多路径沙盒", "page": "multipath", "description": "事件分支沙盒子页面；复用同一引擎"},
     "time-machine": {"label": "时光机", "page": "time-machine", "description": "快照与回溯"},
@@ -148,13 +154,19 @@ def _nav(title: str, modules: list[str]) -> dict:
 
 NAV_GROUPS = {
     "game": [
-        _nav("世界构建", ["overview", "world-management", "character-management", "chat", "world-structure", "world-data", "relationships", "events"]),
-        _nav("模拟与推演", ["timeline", "simulation", "storyline"]),
+        _nav("世界库", ["world-management"]),
+        _nav("创作导航", ["world-background", "world-works", "world-community"]),
+        _nav("世界构建", ["world-building", "world-structure", "world-map"]),
+        _nav("人物创作", ["character-management", "world-illustration"]),
+        _nav("叙事推演", ["relationships", "events", "timeline", "storyline", "simulation"]),
         _nav("数据安全", ["time-machine", "archive", "trash"]),
     ],
     "literature": [
-        _nav("世界构建", ["world-management", "character-management", "chat", "world-structure", "world-data", "relationships", "events"]),
-        _nav("故事创作", ["timeline", "storyline", "simulation"]),
+        _nav("世界库", ["world-management"]),
+        _nav("创作导航", ["world-background", "world-works", "world-community"]),
+        _nav("世界构建", ["world-building", "world-structure", "world-map"]),
+        _nav("人物创作", ["character-management", "world-illustration"]),
+        _nav("叙事推演", ["relationships", "events", "timeline", "storyline", "simulation"]),
         _nav("数据安全", ["time-machine", "archive", "trash"]),
     ],
     "companion": [
@@ -177,8 +189,14 @@ NAV_GROUPS = {
 
 # 同一模块在不同产品导航中的业务化命名（底层能力不变）。
 NAV_LABEL_OVERRIDES = {
-    "game": {"chat": "AI 角色聊天（NPC）", "simulation": "模拟与写作"},
-    "literature": {"chat": "AI 角色聊天", "simulation": "模拟与写作", "writing": "08 写作工作台"},
+    "game": {
+        "simulation": "模拟与写作",
+        "writing": "写作",
+    },
+    "literature": {
+        "simulation": "模拟与写作",
+        "writing": "写作",
+    },
     "companion": {
         "character-management": "03 人物管理 · 轻量",
         "chat": "虚拟角色",
@@ -198,15 +216,15 @@ NAV_LABEL_OVERRIDES = {
         "personas": "云宝人格编辑器",
         "yunbao-seed": "人物种子编辑器",
         "yunbao": "云宝工作台",
-        "world-management": "世界管理",
+        "world-management": "世界库",
         "character-management": "人物管理",
     },
 }
 
 # 导航之外的合法子页面权限。
 EXTRA_ALLOWED = {
-    "game": {"world-building", "multipath", "writing"},
-    "literature": {"world-building", "multipath", "writing"},
+    "game": {"world-building", "multipath", "writing", "world-data", "chat"},
+    "literature": {"world-building", "multipath", "writing", "world-data", "chat"},
     "companion": {"personas", "memories", "companion-runtime"},
     "diary": set(),
     "yunbao": {"yunbao"},
@@ -227,7 +245,7 @@ WORKSPACE_NAME = {
 }
 
 HOME_PAGE = {
-    "game": "overview",
+    "game": "world-management",
     "literature": "world-management",
     "companion": "character-management",
     "diary": "diary",

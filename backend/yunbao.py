@@ -602,6 +602,66 @@ def _clean_profile(row: models.PersonalPersona, payload: dict) -> dict:
     return clean
 
 
+# 人格版本管理：身份与归属字段永远不随版本快照回写，防止越权改归属。
+_PROTECTED_KEYS = {"system_key", "owner_user_id", "product_key"}
+
+
+def _definition(db: Session, owner: models.AppUser) -> models.PersonaDefinition:
+    """获取云宝的全局人格定义（按 system_key 幂等）。"""
+    row = ensure_yunbao(db)
+    return pi.ensure_definition(
+        db, row,
+        owner_user_id=owner.id,
+        scope="global",
+        system_key=YUNBAO_SYSTEM_KEY,
+    )
+
+
+def _next_version_no(db: Session, definition_id: str) -> int:
+    latest = db.query(models.PersonaVersion).filter(
+        models.PersonaVersion.definition_id == definition_id,
+    ).order_by(models.PersonaVersion.version_no.desc()).first()
+    return (latest.version_no + 1) if latest else 1
+
+
+def _version_row(version: models.PersonaVersion) -> dict:
+    return {
+        "id": version.id,
+        "definition_id": version.definition_id,
+        "version_no": version.version_no,
+        "status": version.status or "published",
+        "created_by": version.created_by,
+        "created_at": version.created_at,
+        "payload": version.payload if isinstance(version.payload, dict) else {},
+    }
+
+
+def _version(db: Session, definition_id: str, version_id: str) -> models.PersonaVersion:
+    version = db.query(models.PersonaVersion).filter(
+        models.PersonaVersion.id == version_id,
+        models.PersonaVersion.definition_id == definition_id,
+    ).first()
+    if not version:
+        raise HTTPException(status_code=404, detail="人格版本不存在")
+    return version
+
+
+def _merged_payload(row: models.PersonalPersona, cleaned: dict) -> dict:
+    """在当前人格快照基础上合并待保存字段，形成完整草稿快照。"""
+    payload = pi.persona_payload(row)
+    payload.update(cleaned)
+    return payload
+
+
+def _apply_payload(row: models.PersonalPersona, payload: dict) -> None:
+    """把版本快照回写到生效人格；身份与归属字段受保护，不回写。"""
+    for key, value in (payload or {}).items():
+        if key in _PROTECTED_KEYS:
+            continue
+        if hasattr(row, key):
+            setattr(row, key, value)
+
+
 @router.patch("/api/yunbao")
 def update_yunbao(payload: dict, request: Request, db: Session = Depends(get_db)):
     user = _current(request, db)
@@ -611,6 +671,15 @@ def update_yunbao(payload: dict, request: Request, db: Session = Depends(get_db)
     for key, value in _clean_profile(row, payload).items():
         setattr(row, key, value)
     row.updated_at = datetime.utcnow()
+    definition = _definition(db, user)
+    # 保存即版本记录：每次生效保存都生成一份不可变已发布快照。
+    db.add(models.PersonaVersion(
+        definition_id=definition.id,
+        version_no=_next_version_no(db, definition.id),
+        payload=pi.persona_payload(row),
+        status="published",
+        created_by=user.id,
+    ))
     db.commit()
     db.refresh(row)
     return _row(row, user, ensure_yunbao_instance(db, user))
@@ -636,6 +705,91 @@ def switch_state(payload: dict, request: Request, db: Session = Depends(get_db))
         "can_edit": bool(user.is_owner),
         "persona_id": row.id,
         "instance_id": instance.id,
+    }
+
+
+@router.get("/api/yunbao/versions")
+def list_versions(request: Request, db: Session = Depends(get_db)):
+    """人格版本历史（普通用户只读可见，不可操作）。"""
+    user = _current(request, db)
+    definition = _definition(db, user)
+    rows = db.query(models.PersonaVersion).filter(
+        models.PersonaVersion.definition_id == definition.id,
+    ).order_by(models.PersonaVersion.version_no.desc()).all()
+    return [_version_row(item) for item in rows]
+
+
+@router.post("/api/yunbao/versions/draft")
+def create_draft_version(payload: dict, request: Request, db: Session = Depends(get_db)):
+    """保存为草稿：仅记录快照，不改变当前生效人格。"""
+    user = _current(request, db)
+    if not user.is_owner:
+        raise HTTPException(status_code=403, detail="只有系统所有者可以保存人格草稿")
+    row = ensure_yunbao(db)
+    definition = _definition(db, user)
+    cleaned = _clean_profile(row, payload)
+    version = models.PersonaVersion(
+        definition_id=definition.id,
+        version_no=_next_version_no(db, definition.id),
+        payload=_merged_payload(row, cleaned),
+        status="draft",
+        created_by=user.id,
+    )
+    db.add(version)
+    db.commit()
+    db.refresh(version)
+    return _version_row(version)
+
+
+@router.post("/api/yunbao/versions/{version_id}/publish")
+def publish_version(version_id: str, request: Request, db: Session = Depends(get_db)):
+    """发布草稿：将草稿快照写回生效人格并标记为已发布。"""
+    user = _current(request, db)
+    if not user.is_owner:
+        raise HTTPException(status_code=403, detail="只有系统所有者可以发布人格版本")
+    row = ensure_yunbao(db)
+    definition = _definition(db, user)
+    version = _version(db, definition.id, version_id)
+    if version.status != "draft":
+        raise HTTPException(status_code=422, detail="只有草稿版本可以发布")
+    _apply_payload(row, version.payload)
+    row.updated_at = datetime.utcnow()
+    version.status = "published"
+    version.created_by = user.id
+    db.commit()
+    db.refresh(row)
+    db.refresh(version)
+    return {
+        "persona": _row(row, user, ensure_yunbao_instance(db, user)),
+        "version": _version_row(version),
+    }
+
+
+@router.post("/api/yunbao/versions/{version_id}/rollback")
+def rollback_version(version_id: str, request: Request, db: Session = Depends(get_db)):
+    """回滚：将指定版本快照写回生效人格，并记录一次新的已发布版本。"""
+    user = _current(request, db)
+    if not user.is_owner:
+        raise HTTPException(status_code=403, detail="只有系统所有者可以回滚人格版本")
+    row = ensure_yunbao(db)
+    definition = _definition(db, user)
+    version = _version(db, definition.id, version_id)
+    _apply_payload(row, version.payload)
+    row.updated_at = datetime.utcnow()
+    snapshot = models.PersonaVersion(
+        definition_id=definition.id,
+        version_no=_next_version_no(db, definition.id),
+        payload=pi.persona_payload(row),
+        status="published",
+        created_by=user.id,
+    )
+    db.add(snapshot)
+    db.commit()
+    db.refresh(row)
+    db.refresh(snapshot)
+    return {
+        "persona": _row(row, user, ensure_yunbao_instance(db, user)),
+        "version": _version_row(snapshot),
     }
 
 

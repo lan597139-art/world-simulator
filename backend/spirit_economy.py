@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 import models
 from auth import current_user
 from database import get_db
+from user_analytics import user_activity_overview
 
 router = APIRouter(tags=["spirit-economy"])
 
@@ -26,7 +27,7 @@ DEFAULT_CATALOG = (
         "name": "建界灵植",
         "category": "world",
         "description": "用于创建与扩展世界的基础灵植。",
-        "price_fruit": 60,
+        "price_fruit": 100,
         "unit": "株",
         "sort_order": 10,
     },
@@ -35,19 +36,20 @@ DEFAULT_CATALOG = (
         "name": "塑人灵植",
         "category": "oc",
         "description": "用于创建 OC、人物与角色形象的基础灵植。",
-        "price_fruit": 60,
+        "price_fruit": 30,
         "unit": "株",
         "sort_order": 20,
     },
 )
 
-STARTER_FRUIT = 120
+# 新账户初始资源：500 灵果 + 1 株世界灵植。
+STARTER_FRUIT = 500
 MAX_GIFT = 100000
 
 REWARD_CATALOG = (
     {
         "key": "registration_bonus", "name": "注册奖励", "description": "新账号初始化时自动发放。",
-        "category": "registration", "fruit_amount": 120, "claim_mode": "once",
+        "category": "registration", "fruit_amount": 500, "claim_mode": "once",
         "condition": {"type": "registration"}, "daily_limit": 1, "total_limit": 1,
         "sort_order": 0,
     },
@@ -92,6 +94,20 @@ def _now() -> datetime:
 
 def _iso(value: datetime | None) -> str | None:
     return value.isoformat() if value else None
+
+
+def _parse_expiry(value) -> datetime | None:
+    """解析活动灵植截止时间；空值表示长期有效。"""
+    if value is None or str(value).strip() in {"", "null", "None"}:
+        return None
+    try:
+        parsed = datetime.fromisoformat(str(value).strip())
+    except ValueError:
+        raise HTTPException(status_code=422, detail="截止时间格式错误，应为 ISO 时间")
+    if parsed.tzinfo is not None:
+        # 统一存为 naive UTC，便于与 utcnow() 比较。
+        parsed = parsed.astimezone(timezone.utc).replace(tzinfo=None)
+    return parsed
 
 
 def _user(request: Request, db: Session) -> models.AppUser:
@@ -348,6 +364,72 @@ def consume_for_creation(
     return {"transaction_id": transaction.id, "plant_type_id": plant.id, "exempt": exempt, "key": key}
 
 
+def consume_for_experience(
+    db: Session, user: models.AppUser, *,
+    publication: models.CommunityPublication,
+    idempotency_key: str | None = None,
+) -> dict:
+    """用户确认后按作品配置扣除灵果并记录体验消耗；调用方负责最终 commit / rollback。
+
+    仅当作品已发布、开放灵果体验且已配置消耗数量时执行。消耗数量为空表示尚未定价，
+    不得默认收费。已授权用户重复请求幂等返回，不重复扣费。
+    """
+    ensure_spirit_catalog(db)
+    if publication.status != "published":
+        raise HTTPException(status_code=409, detail="作品未发布，无法体验")
+    if not publication.experience_enabled:
+        raise HTTPException(status_code=409, detail="该作品未开放灵果体验")
+    fruit_amount = publication.experience_fruit
+    if fruit_amount is None or int(fruit_amount) <= 0:
+        raise HTTPException(status_code=409, detail="灵果体验尚未配置消耗数量")
+    version = db.query(models.CommunityPublicationVersion).filter(
+        models.CommunityPublicationVersion.id == publication.current_version_id
+    ).first()
+    if not version or not version.experience_snapshot:
+        raise HTTPException(status_code=409, detail="该作品暂无灵果体验内容")
+    key = (idempotency_key or "").strip()[:160] or uuid.uuid4().hex
+    _ensure_not_duplicate_operation(db, user.id, "experience", key)
+    grant = db.query(models.CommunityExperienceGrant).filter(
+        models.CommunityExperienceGrant.publication_id == publication.id,
+        models.CommunityExperienceGrant.user_id == user.id,
+    ).first()
+    if grant:
+        return {"granted": True, "transaction_id": grant.transaction_id, "fruit_amount": 0, "balance_after": None, "exempt": True, "key": key}
+    account = _ensure_account(db, user, commit=False)
+    exempt = bool(user.is_owner or account.developer_exempt)
+    amount = 0 if exempt else int(fruit_amount)
+    if not exempt and account.fruit_balance < amount:
+        raise HTTPException(status_code=409, detail="灵果余额不足，无法体验")
+    if not exempt:
+        account.fruit_balance -= amount
+        account.updated_at = _now()
+    transaction = models.SpiritTransaction(
+        user_id=user.id, kind="experience", fruit_amount=-amount,
+        balance_after=account.fruit_balance, ref_type="publication",
+        ref_id=publication.id,
+        note=("开发者豁免：" if exempt else "") + f"灵果体验《{publication.title}》",
+        meta={"exempt": exempt, "operation_key": key, "fruit_amount": int(fruit_amount)},
+    )
+    db.add(transaction)
+    db.add(models.CommunityExperienceGrant(
+        publication_id=publication.id, user_id=user.id,
+        fruit_amount=amount, transaction_id=transaction.id,
+    ))
+    db.add(models.SpiritOperation(
+        user_id=user.id, operation="experience", idempotency_key=key,
+        result={"publication_id": publication.id, "exempt": exempt, "fruit_amount": amount},
+    ))
+    db.flush()
+    return {
+        "granted": True,
+        "transaction_id": transaction.id,
+        "fruit_amount": amount,
+        "balance_after": account.fruit_balance,
+        "exempt": exempt,
+        "key": key,
+    }
+
+
 def _ensure_account(db: Session, user: models.AppUser, starter: bool = True, commit: bool = True) -> models.SpiritAccount:
     account = db.query(models.SpiritAccount).filter(models.SpiritAccount.user_id == user.id).first()
     if account:
@@ -386,17 +468,15 @@ def _ensure_account(db: Session, user: models.AppUser, starter: bool = True, com
                     fruit_amount=account.fruit_balance,
                 ))
     if starter:
-        # 新手灵植：保证注册后可立即各创建一次世界与 OC；数量固定，不占灵果余额。
-        for plant_key in ("world_seed", "oc_seed"):
-            plant = db.query(models.SpiritPlantType).filter(models.SpiritPlantType.key == plant_key).first()
-            if not plant:
-                continue
-            db.add(models.SpiritInventory(user_id=user.id, plant_type_id=plant.id, quantity=1))
+        # 新账户赠送 1 株世界灵植，直接进入世界灵植库存；不扣除灵果。
+        world_plant = db.query(models.SpiritPlantType).filter(models.SpiritPlantType.key == "world_seed").first()
+        if world_plant:
+            db.add(models.SpiritInventory(user_id=user.id, plant_type_id=world_plant.id, quantity=1))
             db.add(models.SpiritTransaction(
                 user_id=user.id, kind="reward", fruit_amount=0,
-                plant_type_id=plant.id, plant_quantity=1,
+                plant_type_id=world_plant.id, plant_quantity=1,
                 balance_after=account.fruit_balance,
-                note="新手灵植", ref_type="account", ref_id="starter_plant",
+                note="新账户世界灵植", ref_type="account", ref_id="starter_plant",
             ))
     if commit:
         db.commit()
@@ -478,6 +558,8 @@ def _plant_json(row: models.SpiritPlantType) -> dict:
         "unit": row.unit or "株",
         "sort_order": row.sort_order,
         "is_active": bool(row.is_active),
+        "expires_at": _iso(row.expires_at),
+        "is_expired": bool(row.expires_at and row.expires_at <= _now()),
     }
 
 
@@ -629,6 +711,8 @@ def exchange_plant(payload: dict, request: Request, db: Session = Depends(get_db
     ).first()
     if not plant:
         raise HTTPException(status_code=404, detail="灵植类型不存在")
+    if plant.expires_at and plant.expires_at <= _now():
+        raise HTTPException(status_code=409, detail="该活动灵植已截止，无法兑换")
     quantity = _positive_int(payload.get("quantity"), "兑换数量", maximum=99)
     total = int(plant.price_fruit) * quantity
     if account.fruit_balance < total:
@@ -840,6 +924,13 @@ def spirit_admin_overview(q: str = "", request: Request = None, db: Session = De
     return {"accounts": accounts, "rules": rules, "plants": plants, "transactions": transactions}
 
 
+@router.get("/api/admin/user-activity")
+def admin_user_activity(q: str = "", request: Request = None, db: Session = Depends(get_db)):
+    """站长可见：所有用户的参与活跃概览（登录会话、动态、评论、作品、互动）。"""
+    _owner(request, db)
+    return {"items": user_activity_overview(db, q)}
+
+
 @router.post("/api/spirit/admin/rewards")
 def create_reward_rule(payload: dict, request: Request, db: Session = Depends(get_db)):
     _owner(request, db)
@@ -939,6 +1030,7 @@ def create_spirit_plant(payload: dict, request: Request, db: Session = Depends(g
         category=category, description=str(payload.get("description") or "")[:500],
         price_fruit=price, unit=str(payload.get("unit") or "株")[:20],
         sort_order=int(payload.get("sort_order") or 100), is_active=True,
+        expires_at=_parse_expiry(payload.get("expires_at")),
     )
     db.add(row)
     db.commit()
@@ -963,6 +1055,8 @@ def update_spirit_plant(plant_id: str, payload: dict, request: Request, db: Sess
         row.price_fruit = price
     if "is_active" in payload:
         row.is_active = bool(payload.get("is_active"))
+    if "expires_at" in payload:
+        row.expires_at = _parse_expiry(payload.get("expires_at"))
     row.updated_at = _now()
     db.commit()
     db.refresh(row)

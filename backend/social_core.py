@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 import models
 from auth import current_user
 from database import get_db
+from user_analytics import user_analytics
 
 router = APIRouter(tags=["social-core"])
 
@@ -424,19 +425,29 @@ def user_profile(user_id: str, request: Request, db: Session = Depends(get_db)):
         "allow_follow": bool(privacy.get("allow_follow", True)),
         "posts": posts,
         "works": works,
-        "stats": {
-            "posts": db.query(func.count(models.SocialPost.id)).filter(models.SocialPost.author_id == target.id).scalar() or 0,
-            "friends": db.query(func.count(models.CommunityFriendship.id)).filter(
-                or_(
-                    models.CommunityFriendship.user_a_id == target.id,
-                    models.CommunityFriendship.user_b_id == target.id,
-                )
-            ).scalar() or 0,
-            "works": db.query(func.count(models.CommunityPublication.id)).filter(
-                models.CommunityPublication.owner_user_id == target.id,
-                models.CommunityPublication.status == "published",
-            ).scalar() or 0,
-        },
+        "stats": _profile_stats(db, target.id, viewer.id),
+    }
+
+
+def _profile_stats(db: Session, user_id: str, viewer_id: str) -> dict:
+    """对外暴露的用户统计：本人始终可见完整数据，他人需用户开启 show_stats。
+
+    未开启时只保留公开口径（作品、动态、粉丝、关注、好友与等级），
+    隐藏「用户画像分析」数值，并标记 stats_hidden 供前端隐藏该区块。
+    """
+    stats = user_analytics(db, user_id)
+    if user_id == viewer_id or _privacy(db, user_id).get("show_stats", False):
+        return stats
+    return {
+        "works": stats["works"],
+        "posts": stats["posts"],
+        "followers": stats["followers"],
+        "following": stats["following"],
+        "friends": stats["friends"],
+        "creator_level": stats["creator_level"],
+        "follower_level": stats["follower_level"],
+        "activity_level": stats["activity_level"],
+        "stats_hidden": True,
     }
 
 
@@ -578,3 +589,421 @@ def send_message(user_id: str, payload: dict, request: Request, db: Session = De
         "body": row.body, "image_url": row.image_url or "", "read_at": _iso(row.read_at),
         "created_at": _iso(row.created_at), "is_mine": True,
     }
+
+
+# =====================================================================
+# 登录活跃 · 签到 · 收藏夹 · 推荐 · 浏览历史
+# =====================================================================
+FAVORITE_TYPE_LABELS = {"work": "作品", "character": "角色", "world": "世界", "post": "动态"}
+FAVORITE_TARGET_MODELS = {
+    "work": models.CommunityPublication,
+    "character": models.Character,
+    "world": models.World,
+    "post": models.SocialPost,
+}
+HISTORY_TARGET_MODELS = {
+    "work": models.CommunityPublication,
+    "character": models.Character,
+    "world": models.World,
+}
+
+
+def _lookup_target(db: Session, model, target_id: str):
+    """按 id 解析目标；作品支持 public_id 回退，避免前端传公开 id 时查不到。"""
+    target = db.query(model).filter(model.id == target_id).first()
+    if target is None and model is models.CommunityPublication:
+        target = db.query(model).filter(models.CommunityPublication.public_id == target_id).first()
+    return target
+
+
+def _favorite_item(db: Session, row: models.UserFavorite) -> dict | None:
+    model = FAVORITE_TARGET_MODELS.get(row.target_type)
+    if model is None:
+        return None
+    target = _lookup_target(db, model, row.target_id)
+    if not target:
+        return None
+    title = getattr(target, "title", "") or getattr(target, "name", "") or row.target_id
+    return {
+        "id": row.id,
+        "target_type": row.target_type,
+        "target_id": row.target_id,
+        "folder_id": row.folder_id or "",
+        "title": str(title),
+        "created_at": _iso(row.created_at),
+    }
+
+
+def _history_item(db: Session, row: models.ViewHistory) -> dict | None:
+    model = HISTORY_TARGET_MODELS.get(row.target_type)
+    if model is None:
+        return None
+    target = _lookup_target(db, model, row.target_id)
+    if not target:
+        return None
+    title = getattr(target, "title", "") or getattr(target, "name", "") or row.target_id
+    return {
+        "id": row.id,
+        "target_type": row.target_type,
+        "target_id": row.target_id,
+        "title": str(title),
+        "created_at": _iso(row.created_at),
+    }
+
+
+@router.post("/api/social/me/checkin")
+def checkin(payload: dict, request: Request, db: Session = Depends(get_db)):
+    """每日签到。以当天日期去重，返回连续签到天数与累计次数。"""
+    viewer = _me(request, db)
+    today = str(payload.get("date") or datetime.utcnow().date().isoformat())[:10]
+    existing = db.query(models.UserCheckin).filter(
+        models.UserCheckin.user_id == viewer.id,
+        models.UserCheckin.checkin_date == today,
+    ).first()
+    if existing:
+        return {
+            "date": today, "streak": existing.streak,
+            "checkin_count": db.query(func.count(models.UserCheckin.id)).filter(
+                models.UserCheckin.user_id == viewer.id
+            ).scalar() or 0,
+            "already": True,
+        }
+    # 连续签到：从昨天向前数连续天数，遇到断档即终止。
+    streak = 1
+    cursor = datetime.strptime(today, "%Y-%m-%d").date()
+    while True:
+        cursor = cursor.fromordinal(cursor.toordinal() - 1)
+        day = cursor.isoformat()
+        hit = db.query(models.UserCheckin.id).filter(
+            models.UserCheckin.user_id == viewer.id,
+            models.UserCheckin.checkin_date == day,
+        ).first()
+        if not hit:
+            break
+        streak += 1
+        if streak > 400:
+            break
+    row = models.UserCheckin(user_id=viewer.id, checkin_date=today, streak=streak)
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return {
+        "date": today, "streak": streak,
+        "checkin_count": db.query(func.count(models.UserCheckin.id)).filter(
+            models.UserCheckin.user_id == viewer.id
+        ).scalar() or 0,
+        "already": False,
+    }
+
+
+@router.get("/api/social/me/checkin")
+def checkin_status(request: Request, db: Session = Depends(get_db)):
+    viewer = _me(request, db)
+    rows = db.query(models.UserCheckin).filter(
+        models.UserCheckin.user_id == viewer.id
+    ).order_by(models.UserCheckin.checkin_date.desc()).all()
+    today = datetime.utcnow().date().isoformat()
+    last = rows[0].checkin_date if rows else ""
+    return {
+        "today": today,
+        "checked_in_today": bool(rows) and last == today,
+        "streak": rows[0].streak if rows and rows[0].checkin_date == today else 0,
+        "checkin_count": len(rows),
+        "dates": [row.checkin_date for row in rows[:30]],
+    }
+
+
+@router.get("/api/social/favorite-folders")
+def list_folders(request: Request, db: Session = Depends(get_db)):
+    viewer = _me(request, db)
+    rows = db.query(models.FavoriteFolder).filter(
+        models.FavoriteFolder.user_id == viewer.id
+    ).order_by(models.FavoriteFolder.sort_order, models.FavoriteFolder.created_at).all()
+    return [{
+        "id": row.id, "name": row.name,
+        "sort_order": row.sort_order, "created_at": _iso(row.created_at),
+    } for row in rows]
+
+
+@router.post("/api/social/favorite-folders")
+def create_folder(payload: dict, request: Request, db: Session = Depends(get_db)):
+    viewer = _me(request, db)
+    name = str(payload.get("name") or "").strip()[:40]
+    if not name:
+        raise HTTPException(status_code=422, detail="收藏夹名称不能为空")
+    row = models.FavoriteFolder(user_id=viewer.id, name=name)
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return {"id": row.id, "name": row.name, "sort_order": row.sort_order, "created_at": _iso(row.created_at)}
+
+
+@router.delete("/api/social/favorite-folders/{folder_id}")
+def delete_folder(folder_id: str, request: Request, db: Session = Depends(get_db)):
+    viewer = _me(request, db)
+    row = db.query(models.FavoriteFolder).filter(
+        models.FavoriteFolder.id == folder_id,
+        models.FavoriteFolder.user_id == viewer.id,
+    ).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="收藏夹不存在")
+    db.query(models.UserFavorite).filter(models.UserFavorite.folder_id == folder_id).update(
+        {"folder_id": None}, synchronize_session=False
+    )
+    db.delete(row)
+    db.commit()
+    return {"status": "ok"}
+
+
+@router.get("/api/social/favorites")
+def list_favorites(request: Request, db: Session = Depends(get_db)):
+    viewer = _me(request, db)
+    rows = db.query(models.UserFavorite).filter(
+        models.UserFavorite.user_id == viewer.id
+    ).order_by(models.UserFavorite.created_at.desc()).all()
+    items = [item for item in (_favorite_item(db, row) for row in rows) if item]
+    return {
+        "items": items,
+        "total": len(items),
+        "folders": [
+            {"id": row.id, "name": row.name, "sort_order": row.sort_order}
+            for row in db.query(models.FavoriteFolder).filter(
+                models.FavoriteFolder.user_id == viewer.id
+            ).order_by(models.FavoriteFolder.sort_order).all()
+        ],
+    }
+
+
+@router.post("/api/social/favorites")
+def add_favorite(payload: dict, request: Request, db: Session = Depends(get_db)):
+    viewer = _me(request, db)
+    target_type = str(payload.get("target_type") or "").strip()
+    target_id = str(payload.get("target_id") or "").strip()
+    if target_type not in FAVORITE_TARGET_MODELS or not target_id:
+        raise HTTPException(status_code=422, detail="收藏目标类型或 id 无效")
+    existing = db.query(models.UserFavorite).filter(
+        models.UserFavorite.user_id == viewer.id,
+        models.UserFavorite.target_type == target_type,
+        models.UserFavorite.target_id == target_id,
+    ).first()
+    if existing:
+        return {"status": "already", "id": existing.id}
+    folder_id = str(payload.get("folder_id") or "").strip() or None
+    if folder_id:
+        folder = db.query(models.FavoriteFolder).filter(
+            models.FavoriteFolder.id == folder_id,
+            models.FavoriteFolder.user_id == viewer.id,
+        ).first()
+        folder_id = folder.id if folder else None
+    row = models.UserFavorite(
+        user_id=viewer.id, target_type=target_type, target_id=target_id, folder_id=folder_id
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return {"status": "ok", "id": row.id}
+
+
+@router.delete("/api/social/favorites")
+def remove_favorite(payload: dict, request: Request, db: Session = Depends(get_db)):
+    viewer = _me(request, db)
+    target_type = str(payload.get("target_type") or "").strip()
+    target_id = str(payload.get("target_id") or "").strip()
+    if target_type not in FAVORITE_TARGET_MODELS or not target_id:
+        raise HTTPException(status_code=422, detail="收藏目标类型或 id 无效")
+    deleted = db.query(models.UserFavorite).filter(
+        models.UserFavorite.user_id == viewer.id,
+        models.UserFavorite.target_type == target_type,
+        models.UserFavorite.target_id == target_id,
+    ).delete(synchronize_session=False)
+    db.commit()
+    return {"status": "ok", "deleted": deleted}
+
+
+@router.post("/api/social/history")
+def record_history(payload: dict, request: Request, db: Session = Depends(get_db)):
+    """记录一次浏览。同一用户对同一目标重复查看时刷新时间。"""
+    viewer = _me(request, db)
+    target_type = str(payload.get("target_type") or "").strip()
+    target_id = str(payload.get("target_id") or "").strip()
+    if target_type not in HISTORY_TARGET_MODELS or not target_id:
+        raise HTTPException(status_code=422, detail="浏览目标类型或 id 无效")
+    existing = db.query(models.ViewHistory).filter(
+        models.ViewHistory.user_id == viewer.id,
+        models.ViewHistory.target_type == target_type,
+        models.ViewHistory.target_id == target_id,
+    ).first()
+    if existing:
+        db.delete(existing)
+    row = models.ViewHistory(user_id=viewer.id, target_type=target_type, target_id=target_id)
+    db.add(row)
+    # 仅保留最近 200 条，避免历史无限增长。
+    overflow = db.query(models.ViewHistory).filter(
+        models.ViewHistory.user_id == viewer.id
+    ).order_by(models.ViewHistory.created_at.desc()).offset(200).all()
+    for stale in overflow:
+        db.delete(stale)
+    db.commit()
+    return {"status": "ok"}
+
+
+@router.get("/api/social/history")
+def list_history(request: Request, db: Session = Depends(get_db)):
+    viewer = _me(request, db)
+    rows = db.query(models.ViewHistory).filter(
+        models.ViewHistory.user_id == viewer.id
+    ).order_by(models.ViewHistory.created_at.desc()).limit(100).all()
+    items = [item for item in (_history_item(db, row) for row in rows) if item]
+    return {"items": items, "total": len(items)}
+
+
+@router.get("/api/social/recommendations")
+def recommendations(request: Request, db: Session = Depends(get_db)):
+    """推荐：按公开作品的点赞热度取前若干，排除本人作品，使用真实数据。"""
+    viewer = _me(request, db)
+    likes = dict(db.query(
+        models.CommunityLike.publication_id, func.count(models.CommunityLike.id)
+    ).group_by(models.CommunityLike.publication_id).all())
+    works = db.query(models.CommunityPublication).filter(
+        models.CommunityPublication.status == "published",
+        models.CommunityPublication.public_visible.is_(True),
+        models.CommunityPublication.owner_user_id != viewer.id,
+    ).order_by(models.CommunityPublication.published_at.desc()).limit(40).all()
+    items = [{
+        "id": work.id, "public_id": work.public_id, "title": work.title,
+        "summary": work.summary or "", "cover_url": work.cover or "",
+        "work_type": work.work_type, "like_count": int(likes.get(work.id, 0)),
+        "view_count": work.view_count or 0,
+    } for work in works]
+    items.sort(key=lambda item: (item["like_count"], item["view_count"]), reverse=True)
+    return {"items": items[:20], "total": len(items[:20])}
+
+
+# =====================================================================
+# 一键四连：点赞 / 收藏 / 推荐 / 打赏（打赏不消耗灵果额度）
+# =====================================================================
+CHEER_KINDS = ("like", "favorite", "recommend", "tip")
+
+
+def _resolve_target(db: Session, target_type: str, target_id: str):
+    if target_type == "work":
+        row = db.query(models.CommunityPublication).filter(
+            models.CommunityPublication.id == target_id
+        ).first()
+        if row is None:
+            row = db.query(models.CommunityPublication).filter(
+                models.CommunityPublication.public_id == target_id
+            ).first()
+        return row
+    if target_type == "storyline":
+        # 兼容故事线（StoryProject）与写作章节（Story）两种真实记录。
+        row = db.query(models.StoryProject).filter(models.StoryProject.id == target_id).first()
+        if row is None:
+            row = db.query(models.Story).filter(models.Story.id == target_id).first()
+        return row
+    model = {
+        "character": models.Character,
+        "world": models.World,
+        "post": models.SocialPost,
+    }.get(target_type)
+    if model is None:
+        return None
+    return db.query(model).filter(model.id == target_id).first()
+
+
+@router.post("/api/social/cheers/quad")
+def quad_cheer(payload: dict, request: Request, db: Session = Depends(get_db)):
+    """一键四连：对目标执行点赞 / 收藏 / 推荐 / 打赏。
+
+    打赏为不消耗灵果额度的免费鼓励，不写入灵果流水；付费打赏仍走
+    /api/spirit/gift。操作按目标类型与已有记录幂等。
+    """
+    viewer = _me(request, db)
+    target_type = str(payload.get("target_type") or "").strip()
+    target_id = str(payload.get("target_id") or "").strip()
+    if target_type not in ("work", "character", "world", "post", "storyline") or not target_id:
+        raise HTTPException(status_code=422, detail="目标类型或 id 无效")
+    target = _resolve_target(db, target_type, target_id)
+    if not target:
+        raise HTTPException(status_code=404, detail="目标内容不存在")
+
+    result = {}
+    # 作品类目标：点赞与收藏写入社区既有表，与公开作品统计口径一致。
+    publication = target if target_type == "work" else None
+    if publication is not None:
+        like_exists = db.query(models.CommunityLike).filter(
+            models.CommunityLike.publication_id == publication.id,
+            models.CommunityLike.owner_user_id == viewer.id,
+        ).first()
+        if not like_exists:
+            db.add(models.CommunityLike(publication_id=publication.id, owner_user_id=viewer.id))
+        result["like"] = True
+        fav_exists = db.query(models.CommunityFavorite).filter(
+            models.CommunityFavorite.publication_id == publication.id,
+            models.CommunityFavorite.owner_user_id == viewer.id,
+        ).first()
+        if not fav_exists:
+            db.add(models.CommunityFavorite(publication_id=publication.id, owner_user_id=viewer.id))
+        # 同步写入个人收藏，使个人中心收藏面板能看到一键四连的收藏。
+        personal_fav = db.query(models.UserFavorite).filter(
+            models.UserFavorite.user_id == viewer.id,
+            models.UserFavorite.target_type == "work",
+            models.UserFavorite.target_id == target_id,
+        ).first()
+        if not personal_fav:
+            db.add(models.UserFavorite(user_id=viewer.id, target_type="work", target_id=target_id))
+        result["favorite"] = True
+
+    # 推荐与免费打赏：统一记录到 UserCheer，重复操作幂等。
+    for kind in ("recommend", "tip"):
+        exists = db.query(models.UserCheer).filter(
+            models.UserCheer.user_id == viewer.id,
+            models.UserCheer.target_type == target_type,
+            models.UserCheer.target_id == target_id,
+            models.UserCheer.kind == kind,
+        ).first()
+        if not exists:
+            db.add(models.UserCheer(
+                user_id=viewer.id, target_type=target_type, target_id=target_id, kind=kind,
+            ))
+        result[kind] = True
+    if publication is not None:
+        # 点赞 / 收藏同样登记到 UserCheer，便于个人中心统一展示。
+        for kind in ("like", "favorite"):
+            exists = db.query(models.UserCheer).filter(
+                models.UserCheer.user_id == viewer.id,
+                models.UserCheer.target_type == target_type,
+                models.UserCheer.target_id == target_id,
+                models.UserCheer.kind == kind,
+            ).first()
+            if not exists:
+                db.add(models.UserCheer(
+                    user_id=viewer.id, target_type=target_type, target_id=target_id, kind=kind,
+                ))
+    db.commit()
+    return {"status": "ok", "actions": result}
+
+
+@router.get("/api/social/cheers/status")
+def cheer_status(request: Request, db: Session = Depends(get_db), target_type: str = "", target_id: str = ""):
+    viewer = _me(request, db)
+    if target_type not in ("work", "character", "world", "post", "storyline") or not target_id:
+        return {"actions": {}}
+    rows = db.query(models.UserCheer).filter(
+        models.UserCheer.user_id == viewer.id,
+        models.UserCheer.target_type == target_type,
+        models.UserCheer.target_id == target_id,
+    ).all()
+    actions = {row.kind: True for row in rows}
+    if target_type == "work":
+        public = _resolve_target(db, target_type, target_id)
+        if public is not None:
+            actions["like"] = db.query(models.CommunityLike).filter(
+                models.CommunityLike.publication_id == public.id,
+                models.CommunityLike.owner_user_id == viewer.id,
+            ).first() is not None
+            actions["favorite"] = db.query(models.CommunityFavorite).filter(
+                models.CommunityFavorite.publication_id == public.id,
+                models.CommunityFavorite.owner_user_id == viewer.id,
+            ).first() is not None
+    return {"actions": actions}

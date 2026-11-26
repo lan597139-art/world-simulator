@@ -1,9 +1,14 @@
-import { API_ORIGIN } from './config'
+import { API_ORIGIN, LEGACY_API_ORIGIN } from './config'
 
 export function resolveMediaUrl(url: string | undefined | null): string {
   if (!url) return ''
   // 平台内置背景随前端发布，不能错误地拼到后端域名。
   if (url.startsWith('/backgrounds/') || url.startsWith('/official-photos/')) return url
+  // 兼容历史数据：早期上传把绝对地址写进了库，去掉本地开发域名后再按相对路径解析。
+  if (url.startsWith(LEGACY_API_ORIGIN)) {
+    const rest = url.slice(LEGACY_API_ORIGIN.length)
+    return rest.startsWith('/') ? `${API_ORIGIN}${rest}` : rest
+  }
   return url.startsWith('/') ? `${API_ORIGIN}${url}` : url
 }
 
@@ -30,7 +35,8 @@ export async function uploadMedia(file: File): Promise<UploadedMedia> {
     throw new Error(message)
   }
   const data = await response.json() as UploadedMedia
-  if (data.file_url.startsWith('/')) data.file_url = `${API_ORIGIN}${data.file_url}`
+  // 统一返回相对路径，落库后换域名/端口依然可用；需要立即展示时用 resolveMediaUrl 解析。
+  if (data.file_url.startsWith(API_ORIGIN)) data.file_url = data.file_url.slice(API_ORIGIN.length)
   return data
 }
 

@@ -17,6 +17,7 @@ from auth import current_user
 from database import get_db
 from settings import DEFAULT_PRIVACY, _settings
 from social_core import blocked_between
+from user_analytics import user_levels
 
 router = APIRouter(tags=["community-social"])
 
@@ -87,6 +88,7 @@ def _user_card(db: Session, row: models.AppUser, viewer: models.AppUser | None =
         ).first()
         if pending:
             request_status = "outgoing" if pending.requester_id == viewer.id else "incoming"
+    levels = user_levels(db, row.id)
     return {
         "id": row.id,
         "username": row.username,
@@ -103,6 +105,8 @@ def _user_card(db: Session, row: models.AppUser, viewer: models.AppUser | None =
         "following_count": db.query(models.CommunityFollow).filter(
             models.CommunityFollow.follower_id == row.id
         ).count(),
+        "creator_level": levels["creator_level"],
+        "follower_level": levels["follower_level"],
     }
 
 

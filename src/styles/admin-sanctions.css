@@ -6,14 +6,14 @@
 .admin-sanctions-error{padding:9px 12px;border-radius:8px;background:color-mix(in srgb,var(--danger-color) 12%,transparent);color:var(--danger-color);font-size:11px}
 .admin-sanctions-list{display:flex;flex-direction:column;gap:7px}
 .admin-sanction-row{display:flex;align-items:flex-start;gap:10px;justify-content:space-between;padding:10px 12px;border:1px solid var(--card-border);border-left:3px solid var(--text-muted);border-radius:9px;background:var(--workspace-glass-bg)}
-.admin-sanction-row.tone-warn{border-left-color:#e8a33d}.admin-sanction-row.tone-mute{border-left-color:#a978ff}.admin-sanction-row.tone-ban{border-left-color:var(--danger-color)}
+.admin-sanction-row.tone-warn{border-left-color:var(--ws-pal-amber-6)}.admin-sanction-row.tone-mute{border-left-color:var(--ws-pal-purple-3)}.admin-sanction-row.tone-ban{border-left-color:var(--danger-color)}
 .admin-sanction-main{min-width:0;flex:1}
 .admin-sanction-line{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:11px;color:var(--text-main)}
 .admin-sanction-line strong{font-size:11px}.admin-sanction-line span{color:var(--text-muted)}
-.admin-sanction-line em{font-style:normal;font-size:9px;padding:1px 6px;border-radius:999px;background:color-mix(in srgb,var(--danger-color) 14%,transparent);color:var(--danger-color)}
-.admin-sanction-done{font-size:9px;color:var(--text-muted)}.admin-sanction-appeal{font-size:9px;color:var(--primary-color)}
+.admin-sanction-line em{font-style:normal;font-size: var(--text-2xs);padding:1px 6px;border-radius:999px;background:color-mix(in srgb,var(--danger-color) 14%,transparent);color:var(--danger-color)}
+.admin-sanction-done{font-size: var(--text-2xs);color:var(--text-muted)}.admin-sanction-appeal{font-size: var(--text-2xs);color:var(--primary-color)}
 .admin-sanction-main p{margin:4px 0;font-size:11px;line-height:1.55;color:var(--text-main);word-break:break-word}
-.admin-sanction-main small{font-size:9px;color:var(--text-muted)}
+.admin-sanction-main small{font-size: var(--text-2xs);color:var(--text-muted)}
 .admin-sanction-main blockquote{margin:5px 0 0;padding:5px 8px;border-left:2px solid var(--primary-color);font-size:10px;color:var(--text-muted);background: var(--ws-surface-bg);border-radius:0 6px 6px 0}
 .admin-sanction-row>button{flex:none;display:inline-flex;align-items:center;gap:4px;border:1px solid var(--card-border);background:transparent;color:var(--text-muted);border-radius:7px;padding:5px 8px;font-size:10px;cursor:pointer}
 .admin-sanction-row>button:hover{color:var(--danger-color);border-color:var(--danger-color)}

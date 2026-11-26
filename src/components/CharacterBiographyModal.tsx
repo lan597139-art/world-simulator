@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { API_ORIGIN } from '../api/config'
 
 type TimelineItem = {
   kind: string
@@ -30,7 +31,7 @@ type Citation = {
   source_type?: string
 }
 
-const API = 'http://127.0.0.1:8000/api'
+const API = `${API_ORIGIN}/api`
 
 const kindLabel: Record<string, string> = {
   event: '世界事件',

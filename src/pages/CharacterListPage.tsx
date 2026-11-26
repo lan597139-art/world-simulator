@@ -88,20 +88,19 @@ export default function CharacterListPage({
     if (focusYunbao) setYunbaoOpen(true);
   }, [focusYunbao]);
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('确定把人物移入回收站吗？\n\n可在「全局回收站」随时恢复。')) return;
+  // 一键重置：清空人物运行态与成长记录，恢复种子初始默认值，不再提供删除。
+  const handleReset = async (id: string) => {
+    if (!window.confirm('确定重置这个人物吗？\n\n将清空运行态与成长记录，恢复种子初始默认值，人物本身保留。此操作不可撤销。')) return;
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/characters/${id}`, {
-        method: 'DELETE'
+      const res = await fetch(`http://127.0.0.1:8000/api/characters/${id}/reset`, {
+        method: 'POST'
       });
-      if (res.ok) {
-        loadCharacters();
-      } else {
-        alert('删除失败，请检查后端');
-      }
-    } catch (error) {
-      console.error("删除失败", error);
-      alert('网络请求失败');
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.detail || `HTTP ${res.status}`);
+      loadCharacters();
+    } catch (error: any) {
+      console.error("重置失败", error);
+      alert(`重置失败：${error.message || error}`);
     }
   };
 
@@ -137,7 +136,7 @@ export default function CharacterListPage({
           <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: 'var(--text-muted)' }}>云宝人格设计</span>
             <span style={{ flex: 1, height: 1, background: 'var(--card-border)' }} />
-            <span style={{ fontSize: 9.5, color: 'var(--text-muted)' }}>独立于世界人物与 NPC · {readOnly ? '当前只读' : '开发者可编辑'}</span>
+            <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>独立于世界人物与 NPC · {readOnly ? '当前只读' : '开发者可编辑'}</span>
           </div>
           <div style={{ marginBottom: 24 }}>
             <YunbaoCard
@@ -267,15 +266,15 @@ export default function CharacterListPage({
               </button>}
 
               {!readOnly && <button
-                onClick={(event) => { event.stopPropagation(); void handleDelete(char.id); }}
+                onClick={(event) => { event.stopPropagation(); void handleReset(char.id); }}
                 style={{
                   padding: '8px 16px',
-                  background: 'rgba(255, 69, 58, 0.1)', color: 'var(--danger-color)',
-                  border: '1px solid rgba(255, 69, 58, 0.2)', borderRadius: '8px', cursor: 'pointer',
+                  background: 'rgba(59, 130, 246, 0.1)', color: 'var(--primary-color)',
+                  border: '1px solid rgba(59, 130, 246, 0.25)', borderRadius: '8px', cursor: 'pointer',
                   transition: 'all 0.2s'
                 }}
               >
-                删除
+                重置
               </button>}
             </div>
           </div>

@@ -16,7 +16,7 @@ from feature_flags import require
 from sqlalchemy.orm import Session
 
 import models
-from auth import current_user
+from auth import _bearer, current_user, user_from_token
 from database import get_db
 
 router = APIRouter(tags=["community"], dependencies=[require("community_publications")])
@@ -76,6 +76,10 @@ def _author_row(db: Session, row: models.CommunityPublication) -> dict:
         "published_at": _iso(row.published_at),
         "withdrawn_at": _iso(row.withdrawn_at),
         "view_count": row.view_count or 0,
+        "click_count": row.click_count or 0,
+        "public_visible": bool(row.public_visible),
+        "experience_enabled": bool(row.experience_enabled),
+        "experience_fruit": row.experience_fruit,
         "created_at": _iso(row.created_at),
         "updated_at": _iso(row.updated_at),
     }
@@ -96,7 +100,16 @@ def _version_row(row: models.CommunityPublicationVersion) -> dict:
     }
 
 
-def _public_row(db: Session, row: models.CommunityPublication) -> dict:
+def _optional_viewer_id(request: Request, db: Session) -> str | None:
+    """公开读取场景（鉴权中间件被跳过）：自行解析 Bearer，已登录返回用户 id。
+
+    未登录或令牌失效返回 None，不抛错，保证公开浏览匿名可用。
+    """
+    user = user_from_token(db, _bearer(request))
+    return user.id if user else None
+
+
+def _public_row(db: Session, row: models.CommunityPublication, viewer_id: str | None = None) -> dict:
     current = _version(db, row)
     comments = db.query(models.CommunityComment).filter(
         models.CommunityComment.publication_id == row.id,
@@ -105,6 +118,15 @@ def _public_row(db: Session, row: models.CommunityPublication) -> dict:
     favorites = db.query(models.CommunityFavorite).filter(
         models.CommunityFavorite.publication_id == row.id
     ).count()
+    likes = db.query(models.CommunityLike).filter(
+        models.CommunityLike.publication_id == row.id
+    ).count()
+    granted = bool(viewer_id and db.query(models.CommunityExperienceGrant).filter(
+        models.CommunityExperienceGrant.publication_id == row.id,
+        models.CommunityExperienceGrant.user_id == viewer_id,
+    ).first())
+    # 普通体验只展示作者允许公开的内容；未公开时不下发快照。
+    public_snapshot = (current.content_snapshot if current and row.public_visible else {})
     return {
         "public_id": row.public_id,
         "work_type": row.work_type,
@@ -115,14 +137,35 @@ def _public_row(db: Session, row: models.CommunityPublication) -> dict:
         "cover": row.cover or "",
         "published_at": _iso(row.published_at),
         "view_count": row.view_count or 0,
+        "click_count": row.click_count or 0,
         "comment_count": comments,
         "favorite_count": favorites,
+        "like_count": likes,
+        "public_visible": bool(row.public_visible),
+        "experience": {
+            "enabled": bool(row.experience_enabled),
+            "fruit": row.experience_fruit,
+            "has_content": bool(current and current.experience_snapshot),
+            "granted": granted,
+            # 已授权时下发深度体验内容，未授权不下发，避免提前泄露付费内容。
+            "content": (current.experience_snapshot if current and granted else None),
+        },
         "content": {
             "version_id": current.id if current else None,
             "version_no": current.version_no if current else None,
-            "snapshot": (current.content_snapshot if current else {}),
+            "snapshot": public_snapshot,
             "content_hash": current.content_hash if current else "",
         },
+        # 仅对已登录视图者暴露作者用户 id，用于作品打赏定向；匿名浏览不下发。
+        "author_user_id": row.owner_user_id if viewer_id else None,
+        "liked_by_me": bool(viewer_id and db.query(models.CommunityLike).filter(
+            models.CommunityLike.publication_id == row.id,
+            models.CommunityLike.owner_user_id == viewer_id,
+        ).first()),
+        "favorited_by_me": bool(viewer_id and db.query(models.CommunityFavorite).filter(
+            models.CommunityFavorite.publication_id == row.id,
+            models.CommunityFavorite.owner_user_id == viewer_id,
+        ).first()),
     }
 
 
@@ -210,6 +253,7 @@ def _snapshot_from_source(db: Session, owner: str, payload: dict) -> tuple[dict,
 def _create_version(
     db: Session, row: models.CommunityPublication, *,
     title: str, summary: str, snapshot: dict, refs: list[dict], change_summary: str,
+    experience_snapshot: dict | None = None,
 ) -> models.CommunityPublicationVersion:
     last = db.query(models.CommunityPublicationVersion).filter(
         models.CommunityPublicationVersion.publication_id == row.id
@@ -221,6 +265,7 @@ def _create_version(
         title=title,
         summary=summary,
         content_snapshot=snapshot,
+        experience_snapshot=experience_snapshot,
         source_refs=refs,
         content_hash=_hash(snapshot),
         change_summary=change_summary[:500],
@@ -272,6 +317,9 @@ def create_publication(payload: dict, request: Request, db: Session = Depends(ge
         anonymous=anonymous,
         author_display="匿名用户" if anonymous else _author_name(user),
         cover=str(payload.get("cover") or "")[:500],
+        public_visible=bool(payload.get("public_visible", True)),
+        experience_enabled=bool(payload.get("experience_enabled")),
+        experience_fruit=_experience_fruit(payload),
         status="published",
         published_at=datetime.utcnow(),
     )
@@ -281,6 +329,7 @@ def create_publication(payload: dict, request: Request, db: Session = Depends(ge
         db, row, title=title, summary=row.summary,
         snapshot=snapshot, refs=refs,
         change_summary=str(payload.get("change_summary") or "首次发布"),
+        experience_snapshot=_experience_snapshot(payload),
     )
     db.commit()
     db.refresh(row)
@@ -309,6 +358,12 @@ def update_publication(publication_id: str, payload: dict, request: Request, db:
         row.author_display = "匿名用户" if row.anonymous else _author_name(user)
     if "cover" in payload:
         row.cover = str(payload.get("cover") or "")[:500]
+    if "public_visible" in payload:
+        row.public_visible = bool(payload.get("public_visible"))
+    if "experience_enabled" in payload:
+        row.experience_enabled = bool(payload.get("experience_enabled"))
+    if "experience_fruit" in payload:
+        row.experience_fruit = _experience_fruit(payload)
     row.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(row)
@@ -332,6 +387,7 @@ def publish_new_version(publication_id: str, payload: dict, request: Request, db
     _create_version(
         db, row, title=title, summary=summary, snapshot=snapshot, refs=refs,
         change_summary=str(payload.get("change_summary") or "发布新版本"),
+        experience_snapshot=_experience_snapshot(payload),
     )
     db.commit()
     db.refresh(row)
@@ -366,6 +422,7 @@ def delete_publication(publication_id: str, request: Request, db: Session = Depe
 # ---------------------------------------------------------------------
 @router.get("/api/community/public")
 def public_feed(
+    request: Request,
     work_type: str = "", limit: int = 30, offset: int = 0,
     db: Session = Depends(get_db),
 ):
@@ -378,11 +435,12 @@ def public_feed(
         models.CommunityPublication.published_at.desc(),
         models.CommunityPublication.created_at.desc(),
     ).offset(max(0, offset)).limit(max(1, min(limit, 100))).all()
-    return [_public_row(db, row) for row in rows]
+    viewer_id = _optional_viewer_id(request, db)
+    return [_public_row(db, row, viewer_id) for row in rows]
 
 
 @router.get("/api/community/public/{public_id}")
-def public_detail(public_id: str, db: Session = Depends(get_db)):
+def public_detail(public_id: str, request: Request, db: Session = Depends(get_db)):
     row = db.query(models.CommunityPublication).filter(
         models.CommunityPublication.public_id == public_id,
         models.CommunityPublication.status == "published",
@@ -391,7 +449,21 @@ def public_detail(public_id: str, db: Session = Depends(get_db)):
         _fail(404, "公开作品不存在或已撤回")
     row.view_count = (row.view_count or 0) + 1
     db.commit()
-    return _public_row(db, row)
+    return _public_row(db, row, _optional_viewer_id(request, db))
+
+
+@router.post("/api/community/public/{public_id}/click")
+def public_click(public_id: str, db: Session = Depends(get_db)):
+    """记录作品点击量（与阅读量口径分离，仅统计入口点击）。"""
+    row = db.query(models.CommunityPublication).filter(
+        models.CommunityPublication.public_id == public_id,
+        models.CommunityPublication.status == "published",
+    ).first()
+    if not row:
+        _fail(404, "公开作品不存在或已撤回")
+    row.click_count = (row.click_count or 0) + 1
+    db.commit()
+    return {"click_count": row.click_count or 0}
 
 
 @router.get("/api/community/public/{public_id}/comments")
@@ -487,3 +559,123 @@ def unfavorite(public_id: str, request: Request, db: Session = Depends(get_db)):
     ).delete(synchronize_session=False)
     db.commit()
     return {"favorited": False}
+
+
+# ---------------------------------------------------------------------
+# 作者内容权限与灵果体验
+# ---------------------------------------------------------------------
+def _experience_fruit(payload: dict) -> int | None:
+    """读取灵果体验消耗数量；未配置时返回 None，不虚构定价。"""
+    raw = payload.get("experience_fruit")
+    if raw is None or raw == "":
+        return None
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        _fail(422, "灵果体验消耗必须是整数")
+    if value <= 0:
+        _fail(422, "灵果体验消耗必须为正整数")
+    return value
+
+
+def _experience_snapshot(payload: dict) -> dict | None:
+    raw = payload.get("experience_snapshot")
+    if raw is None or raw == "":
+        return None
+    if not isinstance(raw, dict):
+        _fail(422, "灵果体验内容必须是对象")
+    return raw
+
+
+@router.post("/api/community/public/{public_id}/like")
+def like_publication(public_id: str, request: Request, db: Session = Depends(get_db)):
+    user = current_user(request, db)
+    row = db.query(models.CommunityPublication).filter(
+        models.CommunityPublication.public_id == public_id,
+        models.CommunityPublication.status == "published",
+    ).first()
+    if not row:
+        _fail(404, "公开作品不存在或已撤回")
+    exists = db.query(models.CommunityLike).filter(
+        models.CommunityLike.publication_id == row.id,
+        models.CommunityLike.owner_user_id == user.id,
+    ).first()
+    if not exists:
+        db.add(models.CommunityLike(publication_id=row.id, owner_user_id=user.id))
+        db.commit()
+    return {"liked": True}
+
+
+@router.delete("/api/community/public/{public_id}/like")
+def unlike_publication(public_id: str, request: Request, db: Session = Depends(get_db)):
+    user = current_user(request, db)
+    row = db.query(models.CommunityPublication).filter(
+        models.CommunityPublication.public_id == public_id,
+        models.CommunityPublication.status == "published",
+    ).first()
+    if not row:
+        _fail(404, "公开作品不存在或已撤回")
+    db.query(models.CommunityLike).filter(
+        models.CommunityLike.publication_id == row.id,
+        models.CommunityLike.owner_user_id == user.id,
+    ).delete(synchronize_session=False)
+    db.commit()
+    return {"liked": False}
+
+
+@router.get("/api/community/public/{public_id}/experience")
+def public_experience_info(public_id: str, request: Request, db: Session = Depends(get_db)):
+    row = db.query(models.CommunityPublication).filter(
+        models.CommunityPublication.public_id == public_id,
+        models.CommunityPublication.status == "published",
+    ).first()
+    if not row:
+        _fail(404, "公开作品不存在或已撤回")
+    viewer_id = _optional_viewer_id(request, db)
+    current = _version(db, row)
+    granted = bool(viewer_id and db.query(models.CommunityExperienceGrant).filter(
+        models.CommunityExperienceGrant.publication_id == row.id,
+        models.CommunityExperienceGrant.user_id == viewer_id,
+    ).first())
+    return {
+        "public_id": row.public_id,
+        "experience_enabled": bool(row.experience_enabled),
+        "experience_fruit": row.experience_fruit,
+        "has_experience_content": bool(current and current.experience_snapshot),
+        "granted": granted,
+    }
+
+
+@router.post("/api/community/public/{public_id}/experience")
+def grant_experience(public_id: str, payload: dict, request: Request, db: Session = Depends(get_db)):
+    user = current_user(request, db)
+    row = db.query(models.CommunityPublication).filter(
+        models.CommunityPublication.public_id == public_id,
+        models.CommunityPublication.status == "published",
+    ).first()
+    if not row:
+        _fail(404, "公开作品不存在或已撤回")
+    if payload.get("confirm") is not True:
+        _fail(422, "请确认后再扣除灵果")
+    from spirit_economy import consume_for_experience
+    result = consume_for_experience(
+        db, user, publication=row,
+        idempotency_key=(
+            str(payload.get("idempotency_key") or "")
+            or request.headers.get("idempotency-key")
+            or request.headers.get("x-idempotency-key")
+            or ""
+        ),
+    )
+    current = _version(db, row)
+    content = (current.experience_snapshot if current else {}) or {}
+    db.commit()
+    return {
+        "public_id": row.public_id,
+        "granted": result["granted"],
+        "transaction_id": result["transaction_id"],
+        "fruit_amount": result["fruit_amount"],
+        "balance_after": result.get("balance_after"),
+        "exempt": result.get("exempt"),
+        "experience": content,
+    }

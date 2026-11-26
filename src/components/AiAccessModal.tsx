@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { API_ORIGIN } from '../api/config'
 import {
   DEFAULT_AI_BASE_URL,
   DEFAULT_AI_MODEL,
@@ -101,7 +102,7 @@ export default function AiAccessModal({
     saveAiSettings({ apiKey, baseUrl, model, presetId })
     onSaved()
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/ai/status?probe=true')
+      const res = await fetch(`${API_ORIGIN}/api/ai/status?probe=true`)
       const data = await res.json()
       if (data.probe_ok) {
         setResult({ ok: true, text: `连接正常：${data.model}（${maskApiKey(apiKey)}）` })

@@ -17,9 +17,7 @@ import {
   Save,
   ShieldCheck,
   SlidersHorizontal,
-  Sparkles,
   Trash2,
-  UserRound,
 } from 'lucide-react'
 import type { AuthUser } from '../api/auth'
 import {
@@ -29,14 +27,13 @@ import {
   getSettingsAbout,
   listSettingsSessions,
   revokeSettingsSession,
-  updateProfile,
   updateSettings,
   type AuthSessionRow,
   type SettingsData,
   type SettingsNotifications,
   type SettingsPrivacy,
 } from '../api/settings'
-import { uploadMedia, resolveMediaUrl } from '../api/media'
+import { resolveMediaUrl } from '../api/media'
 import { listAdminReports, resolveReport, type ContentReport } from '../api/moderation'
 import { sanctionReport, type SanctionAction } from '../api/sanctions'
 import AdminMonitoringPanel from '../components/settings/AdminMonitoringPanel'
@@ -53,10 +50,9 @@ import { applyExperience } from '../utils/experience'
 import { tr } from '../i18n'
 
 type Lang = 'zh' | 'en'
-type Section = 'profile' | 'account' | 'privacy' | 'notifications' | 'experience' | 'data' | 'moderation' | 'monitoring' | 'about'
+type Section = 'account' | 'privacy' | 'notifications' | 'experience' | 'data' | 'moderation' | 'monitoring' | 'about'
 
 const SECTIONS: { key: Section; zh: string; en: string; descZh: string; descEn: string; icon: ReactNode }[] = [
-  { key: 'profile', zh: '个人资料与偏好', en: 'Profile & preferences', descZh: '昵称、简介与公开形象', descEn: 'Name, bio and public identity', icon: <UserRound size={17} strokeWidth={1.6} /> },
   { key: 'account', zh: '账户与安全', en: 'Account & security', descZh: '密码、登录会话与开发者身份', descEn: 'Password, sessions and owner status', icon: <LockKeyhole size={17} strokeWidth={1.6} /> },
   { key: 'privacy', zh: '隐私与权限', en: 'Privacy & permissions', descZh: '谁可以关注、加好友与查看动态', descEn: 'Who can follow, add and see posts', icon: <ShieldCheck size={17} strokeWidth={1.6} /> },
   { key: 'notifications', zh: '通知与提醒', en: 'Notifications', descZh: '社区回复、好友与系统提醒', descEn: 'Replies, friends and system alerts', icon: <Bell size={17} strokeWidth={1.6} /> },
@@ -76,7 +72,6 @@ const input: CSSProperties = {
   border: '1px solid var(--card-border)', background: 'var(--bg-color)',
   color: 'var(--text-main)', fontSize: 12, lineHeight: 1.6,
 }
-const textarea: CSSProperties = { ...input, minHeight: 92, resize: 'vertical' }
 const primary: CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 13px', borderRadius: 8,
   border: '1px solid var(--primary-color)', background: 'var(--primary-color)',
@@ -150,22 +145,18 @@ function formatBytes(bytes: number) {
 export default function SettingsPage({
   lang,
   user,
-  onUserUpdated,
   onOpenAiSettings,
   onLogout,
 }: {
   lang: Lang
   user: AuthUser | null
-  onUserUpdated: (user: AuthUser) => void
   onOpenAiSettings: () => void
   onLogout: () => void
 }) {
-  const [section, setSection] = useState<Section>('profile')
+  const [section, setSection] = useState<Section>('account')
   const [data, setData] = useState<SettingsData | null>(null)
   const [sessions, setSessions] = useState<AuthSessionRow[]>([])
   const [about, setAbout] = useState<Awaited<ReturnType<typeof getSettingsAbout>> | null>(null)
-  const [profileDraft, setProfileDraft] = useState({ display_name: '', bio: '', avatar: '', avatar_url: '' })
-  const [avatarUploading, setAvatarUploading] = useState(false)
   const [passwords, setPasswords] = useState({ current_password: '', new_password: '', confirm: '' })
   
   // 密码可见性状态
@@ -198,12 +189,6 @@ export default function SettingsPage({
       setData(next)
       setSessions(nextSessions)
       setAbout(nextAbout)
-      setProfileDraft({
-        display_name: next.profile.display_name || '',
-        bio: next.profile.bio || '',
-        avatar: next.profile.avatar || '',
-        avatar_url: next.profile.avatar_url || '',
-      })
       applyExperience(next.preferences)
     } catch (err: any) {
       setError(String(err?.message || err))
@@ -239,28 +224,6 @@ export default function SettingsPage({
       setFlash(tr(lang, '设置已保存', 'Settings saved'))
     } catch (err: any) { setError(String(err?.message || err)) }
     finally { setBusy('') }
-  }
-
-  const saveProfile = async () => {
-    setBusy('profile'); setError(''); setFlash('')
-    try {
-      const next = await updateProfile(profileDraft)
-      setData((current) => current ? { ...current, profile: next } : current)
-      onUserUpdated({ ...(user || { id: next.id, username: next.username }), ...next } as AuthUser)
-      setFlash(tr(lang, '个人资料已更新', 'Profile updated'))
-    } catch (err: any) { setError(String(err?.message || err)) }
-    finally { setBusy('') }
-  }
-
-  const uploadAvatar = async (file: File | null) => {
-    if (!file) return
-    setAvatarUploading(true); setError(''); setFlash('')
-    try {
-      const uploaded = await uploadMedia(file)
-      setProfileDraft((current) => ({ ...current, avatar_url: uploaded.file_url }))
-      setFlash(tr(lang, '头像已上传，点击“保存资料”后生效', 'Avatar uploaded. Save profile to apply.'))
-    } catch (err: any) { setError(String(err?.message || err)) }
-    finally { setAvatarUploading(false) }
   }
 
   const submitPassword = async () => {
@@ -381,42 +344,6 @@ export default function SettingsPage({
         </nav>
 
         <div className="settings-content">
-          {section === 'profile' && (
-            <Panel title={tr(lang, '个人资料与偏好', 'Profile & preferences')} subtitle={tr(lang, '这些信息会显示在用户与身份中心、社区讨论和好友列表中。', 'This information appears in your identity center, community discussions and friend lists.')} aside={<button type="button" style={primary} disabled={busy === 'profile'} onClick={() => void saveProfile()}><Save size={14} /> {busy === 'profile' ? tr(lang, '保存中…', 'Saving…') : tr(lang, '保存资料', 'Save profile')}</button>}>
-              <div className="settings-avatar-row">
-                <span className="settings-avatar-preview">
-                  {profileDraft.avatar_url
-                    ? <img src={resolveMediaUrl(profileDraft.avatar_url)} alt="" />
-                    : profileDraft.avatar || (profileDraft.display_name || data.profile.username).slice(0, 1)}
-                </span>
-                <div style={{ flex: 1 }}>
-                  <Field label={tr(lang, '头像符号', 'Avatar symbol')} hint={tr(lang, '可用一个 emoji 或字符；也可以上传图片作为头像。', 'Use an emoji or character, or upload an image.')}>
-                    <input style={input} maxLength={16} value={profileDraft.avatar} onChange={(e) => setProfileDraft((p) => ({ ...p, avatar: e.target.value }))} />
-                  </Field>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
-                    <label style={{ ...ghost, cursor: avatarUploading ? 'wait' : 'pointer' }}>
-                      {avatarUploading ? tr(lang, '上传中…', 'Uploading…') : tr(lang, '上传头像图片', 'Upload avatar')}
-                      <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden disabled={avatarUploading} onChange={(e) => void uploadAvatar(e.target.files?.[0] || null)} />
-                    </label>
-                    {profileDraft.avatar_url && <button type="button" style={dangerGhost} onClick={() => setProfileDraft((p) => ({ ...p, avatar_url: '' }))}>{tr(lang, '移除图片', 'Remove image')}</button>}
-                  </div>
-                </div>
-              </div>
-              <div className="settings-two-col">
-                <Field label={tr(lang, '显示名称', 'Display name')}>
-                  <input style={input} maxLength={80} value={profileDraft.display_name} onChange={(e) => setProfileDraft((p) => ({ ...p, display_name: e.target.value }))} />
-                </Field>
-                <Field label={tr(lang, '用户名（不可修改）', 'Username (read-only)')}>
-                  <input style={{ ...input, opacity: .65 }} value={data.profile.username} readOnly />
-                </Field>
-              </div>
-              <Field label={tr(lang, '个人简介', 'Bio')} hint={tr(lang, '最多 500 字符，会出现在你的公开用户卡片上。', 'Up to 500 characters, shown on your public card.')}>
-                <textarea style={textarea} maxLength={500} value={profileDraft.bio} onChange={(e) => setProfileDraft((p) => ({ ...p, bio: e.target.value }))} />
-              </Field>
-              <div className="settings-inline-note"><Sparkles size={14} /> {tr(lang, '开发者身份由系统所有者标记控制，不能通过此页自行切换。', 'Owner status is controlled by the system owner flag and cannot be changed here.')}</div>
-            </Panel>
-          )}
-
           {section === 'account' && (
             <>
               <AccountSanctionsPanel lang={lang} />
@@ -519,6 +446,7 @@ export default function SettingsPage({
               <div className="settings-toggle-list">
                 <Toggle checked={data.privacy.public_profile} onChange={(v) => privacy('public_profile', v)} title={tr(lang, '公开个人资料', 'Public profile')} desc={tr(lang, '允许其他用户在社区用户目录中看到昵称、头像与简介。', 'Let others see your name, avatar and bio in the community directory.')} />
                 <Toggle checked={data.privacy.show_activity} onChange={(v) => privacy('show_activity', v)} title={tr(lang, '展示社区动态', 'Show community activity')} desc={tr(lang, '允许你的讨论、组内帖子与公开作品出现在他人动态中。', 'Allow your discussions, group posts and public works to appear in feeds.')} />
+                <Toggle checked={data.privacy.show_stats} onChange={(v) => privacy('show_stats', v)} title={tr(lang, '展示用户画像统计', 'Show profile stats')} desc={tr(lang, '本人始终可见自己的统计；开启后，其他用户查看你的主页时也会看到已发布作品、阅读与互动等画像分析。', 'You always see your own stats. When on, others can also see your profile analytics such as published works, reads and interactions.')} />
                 <Toggle checked={data.privacy.allow_follow} onChange={(v) => privacy('allow_follow', v)} title={tr(lang, '允许被关注', 'Allow follows')} desc={tr(lang, '关闭后，其他用户不能关注你；已有粉丝关系不受影响。', 'When off, new users cannot follow you; existing follows remain.')} />
                 <Toggle checked={data.privacy.allow_friend_requests} onChange={(v) => privacy('allow_friend_requests', v)} title={tr(lang, '允许好友申请', 'Allow friend requests')} desc={tr(lang, '关闭后，新的好友申请会被后端拒绝。', 'When off, new friend requests are rejected by the server.')} />
                 <Toggle checked={data.privacy.allow_group_invites} onChange={(v) => privacy('allow_group_invites', v)} title={tr(lang, '允许小组邀请', 'Allow group invites')} desc={tr(lang, '为后续邀请入组功能保留的权限开关。', 'Permission reserved for group invitations.')} />
@@ -596,7 +524,7 @@ export default function SettingsPage({
                           </span>
                           {item.target_author && <span style={{ display: 'block', marginTop: 3, color: 'var(--text-muted)', fontSize: 10 }}>{tr(lang, '作者：', 'Author: ')}{item.target_author.name}</span>}
                           {item.detail && <p style={{ margin: '6px 0 0', color: 'var(--text-main)', fontSize: 11, lineHeight: 1.6 }}>{item.detail}</p>}
-                          <small style={{ display: 'block', marginTop: 5, color: 'var(--text-muted)', fontSize: 9 }}>
+                          <small style={{ display: 'block', marginTop: 5, color: 'var(--text-muted)', fontSize: 'var(--text-2xs)' }}>
                             {item.reporter?.name || '匿名'} · {item.created_at ? new Date(item.created_at).toLocaleString() : ''}
                           </small>
                         </div>

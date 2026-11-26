@@ -192,8 +192,8 @@ hr { border: 0; border-top: 1px solid var(--divider); }
 }
 
 /* 字体大小与信息密度设置应用到全局，而不只是设置页。 */
-html[data-font-size="small"] { --text-xs: 10px; --text-sm: 11.5px; --text-base: 13.5px; --text-lg: 16px; }
-html[data-font-size="large"] { --text-xs: 12px; --text-sm: 13.5px; --text-base: 16px; --text-lg: 18.5px; }
+html[data-font-size="small"] { --text-3xs: 6.5px; --text-2xs: 8px; --text-xs: 10px; --text-sm: 11.5px; --text-base: 13.5px; --text-lg: 16px; }
+html[data-font-size="large"] { --text-3xs: 8px; --text-2xs: 9.5px; --text-xs: 12px; --text-sm: 13.5px; --text-base: 16px; --text-lg: 18.5px; }
 html[data-density="compact"] { --leading-body: 1.58; }
 html[data-density="spacious"] { --leading-body: 1.82; }
 
@@ -696,26 +696,26 @@ html {
 /* 图谱可读性：之前 7.5–8.5px 的元信息在 72% 缩放下不可读。 */
 .slx-root-mark { font-size: 13px; }
 .slx-root strong { font-size: 14px; }
-.slx-root small { font-size: 9.5px; color: #d2dcea; }
+.slx-root small { font-size: var(--text-2xs); color: #d2dcea; }
 .slx-branch strong { font-size: 12.5px; }
 .slx-branch small,
-.slx-leaf small { font-size: 9.5px; }
+.slx-leaf small { font-size: var(--text-2xs); }
 .slx-leaf strong { font-size: 11.5px; }
 .slx-branch-del { opacity: .55; }
 
 .tlx-item-time { font-size: 13px; }
-.tlx-item-kind { font-size: 9.5px; }
+.tlx-item-kind { font-size: var(--text-2xs); }
 .tlx-item-title { font-size: 14px; }
 .tlx-item-desc { font-size: 11.5px; }
 .tlx-item-reason { font-size: 10.5px; }
-.tlx-item-open { font-size: 9.5px; }
-.tlx-date > span { font-size: 9.5px; }
-.tlx-date small { font-size: 9px; }
-.tlx-root-kicker { font-size: 8.5px; }
+.tlx-item-open { font-size: var(--text-2xs); }
+.tlx-date > span { font-size: var(--text-2xs); }
+.tlx-date small { font-size: var(--text-2xs); }
+.tlx-root-kicker { font-size: var(--text-2xs); }
 .tlx-root strong { font-size: 13.5px; }
-.tlx-root-count { font-size: 9.5px; }
+.tlx-root-count { font-size: var(--text-2xs); }
 .tlx-head-copy small { font-size: 11px; }
-.tlx-counts { font-size: 9.5px; }
+.tlx-counts { font-size: var(--text-2xs); }
 
 .ng-event text { font-size: 12.5px; }
 .ng-event .ng-event-sub { font-size: 10.5px; }
@@ -872,4 +872,310 @@ html {
   overflow-y: auto;
   padding: 2rem;
   background: transparent;
+}
+
+/* ===========================================================================
+   统一语义表面层（阶段三）
+   ---------------------------------------------------------------------------
+   页面 CSS 里长期散落着 rgba(255,255,255,.14~.32) 这类“内嵌面”写法：
+   浅色下是一层提亮，深色下完全失效，于是每个文件底部又手写一段深色覆盖。
+   这里按用途分三族，深浅两套自动成立，页面不再需要自备深色覆盖块。
+
+   1. --ws-inset-*   背景面：卡片中的卡片、计数格、内联按钮。
+                     用 color-mix 从当前主题的玻璃底色派生，编号按透明度升序。
+   2. --ws-rim-*     玻璃描边与高光：纯白光源线，深浅主题下都成立，
+                     颜色不随主题变化，因此不做派生。
+   3. --ws-dark-*    深色面上的文字：仅用于深底（侧栏等），
+                     深色主题下由玻璃底色保证对比，浅色主题下侧栏本来就是深色。
+   =========================================================================== */
+:root {
+  /* 内嵌面：编号按透明度升序，与主题玻璃底色联动 */
+  --ws-inset-1: color-mix(in srgb, var(--glass-frost-bg) 3%, transparent);
+  --ws-inset-2: color-mix(in srgb, var(--glass-frost-bg) 5%, transparent);
+  --ws-inset-3: color-mix(in srgb, var(--glass-frost-bg) 8%, transparent);
+  --ws-inset-4: color-mix(in srgb, var(--glass-frost-bg) 12%, transparent);
+  --ws-inset-5: color-mix(in srgb, var(--glass-frost-bg) 14%, transparent);
+  --ws-inset-6: color-mix(in srgb, var(--glass-frost-bg) 18%, transparent);
+  --ws-inset-7: color-mix(in srgb, var(--glass-frost-bg) 24%, transparent);
+  --ws-inset-8: color-mix(in srgb, var(--glass-frost-bg) 32%, transparent);
+  --ws-inset-9: color-mix(in srgb, var(--glass-frost-bg) 48%, transparent);
+  --ws-inset-10: color-mix(in srgb, var(--glass-frost-bg) 44%, transparent);
+
+  /* 悬停提亮：卡片/条目在浅色下是白，深色下自动变成深灰提亮 */
+  --ws-hover: color-mix(in srgb, var(--glass-frost-bg) 65%, transparent);
+
+  /* 卡片渐变：浅色是“白→更白”，深色自动变成“深灰→更深灰” */
+  --ws-card-grad-a: color-mix(in srgb, var(--glass-frost-bg) 72%, transparent);
+  --ws-card-grad-b: color-mix(in srgb, var(--glass-frost-bg) 36%, transparent);
+  /* 第二套更轻的卡片渐变（用于次级面板） */
+  --ws-card-grad-2-a: color-mix(in srgb, var(--glass-frost-bg) 56%, transparent);
+  --ws-card-grad-2-b: color-mix(in srgb, var(--glass-frost-bg) 26%, transparent);
+  /* 第三、第四套：页面里出现的其它卡片渐变端点，统一进令牌而不是各自写死 */
+  --ws-card-grad-3-a: color-mix(in srgb, var(--glass-frost-bg) 60%, transparent);
+  --ws-card-grad-3-b: color-mix(in srgb, var(--glass-frost-bg) 16%, transparent);
+  --ws-card-grad-4-a: color-mix(in srgb, var(--glass-frost-bg) 66%, transparent);
+  --ws-card-grad-4-b: color-mix(in srgb, var(--glass-frost-bg) 30%, transparent);
+
+  /* 深色面抬亮层：只用于 @media (prefers-color-scheme: dark) 里的覆盖块。
+     深色块里的 rgba(255,255,255,N) 是“把表面抬亮一点”，不是表面本色，
+     因此不能改用 --ws-inset-*（那在深色下会变成暗色，失去抬升）。 */
+  --ws-lift-1: rgba(255, 255, 255, 0.03);
+  --ws-lift-2: rgba(255, 255, 255, 0.04);
+  --ws-lift-3: rgba(255, 255, 255, 0.05);
+  --ws-lift-4: rgba(255, 255, 255, 0.085);
+  --ws-lift-5: rgba(255, 255, 255, 0.06);
+  --ws-lift-6: rgba(255, 255, 255, 0.015);
+  --ws-lift-7: rgba(255, 255, 255, 0.1);
+  --ws-lift-8: rgba(255, 255, 255, 0.09);
+  --ws-lift-9: rgba(255, 255, 255, 0.075);
+
+  /* 玻璃描边与高光：光源在上方，深浅主题都成立，不随主题派生 */
+  --ws-rim-soft: rgba(255, 255, 255, 0.08);
+  --ws-rim: rgba(255, 255, 255, 0.12);
+  --ws-rim-strong: rgba(255, 255, 255, 0.24);
+  --ws-rim-hi: rgba(255, 255, 255, 0.56);
+
+  /* 深色面上的文字（深底专用，不随主题反色） */
+  --ws-dark-fg: rgba(255, 255, 255, 0.9);
+  --ws-dark-muted: rgba(255, 255, 255, 0.58);
+  --ws-dark-faint: rgba(255, 255, 255, 0.48);
+
+  /* 遮罩与阴影：深色下阴影本身要更重，否则层级消失 */
+  --ws-scrim: rgba(0, 0, 0, 0.48);
+  --ws-shadow-sm: 0 7px 18px rgba(0, 0, 0, 0.12);
+  --ws-shadow-md: 0 10px 30px rgba(0, 0, 0, 0.04);
+  --ws-shadow-lg: 0 28px 80px rgba(0, 0, 0, 0.26);
+
+  /* 深色面板上的文字投影、遮罩参考色：面板自持深色，两种主题下都成立 */
+  --ws-text-shadow: 0 1px 4px rgba(0, 0, 0, 0.55);
+  --ws-mask: #000000;
+
+  /* 图片/媒体上的标签与底色：媒体内容在深浅主题下都偏暗，故不随主题派生 */
+  --ws-badge-dark: rgba(0, 0, 0, 0.62);
+  --ws-badge-light: rgba(255, 255, 255, 0.9);
+  --ws-media-bg: #000000;
+  --ws-cover-scrim: linear-gradient(180deg, rgba(0, 0, 0, 0.04) 20%, rgba(0, 0, 0, 0.58) 100%);
+
+  /* 光源原色：外观控制台的玻璃公式以白/黑作为光源、透明度由 --ws-g-* 实时计算。
+     这里只把“光源”抽成原语，公式语义与写死字面量逐字一致（不叠加额外透明度）。
+     --ws-light / --ws-dark 用于 color-mix 等需要完整颜色的场合；
+     -rgb 形式用于 rgba(var(--x), a) 这类需要三通道的场合。 */
+  --ws-light: #ffffff;
+  --ws-light-rgb: 255, 255, 255;
+  --ws-dark: #000000;
+  --ws-dark-rgb: 0, 0, 0;
+
+  /* 玻璃色散光晕：控制台为导航/卡片/弹窗/液态玻璃生成的一冷一暖两束色散，深浅主题一致 */
+  --ws-dispersion-a-rgb: 255, 86, 170;
+  --ws-dispersion-b-rgb: 90, 190, 255;
+
+  /* 外观工作台：面板自身的浅遮罩，仅轻微压暗背景，比 --ws-scrim 轻一个量级 */
+  --ws-scrim-soft: rgba(0, 0, 0, 0.05);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ws-scrim: rgba(0, 0, 0, 0.62);
+    --ws-shadow-sm: 0 7px 18px rgba(0, 0, 0, 0.36);
+    --ws-shadow-md: 0 10px 30px rgba(0, 0, 0, 0.28);
+    --ws-shadow-lg: 0 28px 80px rgba(0, 0, 0, 0.52);
+  }
+}
+
+html[data-theme="light"] {
+  --ws-scrim: rgba(0, 0, 0, 0.48);
+  --ws-shadow-sm: 0 7px 18px rgba(0, 0, 0, 0.12);
+  --ws-shadow-md: 0 10px 30px rgba(0, 0, 0, 0.04);
+  --ws-shadow-lg: 0 28px 80px rgba(0, 0, 0, 0.26);
+}
+
+html[data-theme="dark"] {
+  --ws-scrim: rgba(0, 0, 0, 0.62);
+  --ws-shadow-sm: 0 7px 18px rgba(0, 0, 0, 0.36);
+  --ws-shadow-md: 0 10px 30px rgba(0, 0, 0, 0.28);
+  --ws-shadow-lg: 0 28px 80px rgba(0, 0, 0, 0.52);
+}
+
+/* ==========================================================================
+   语义调色板（精确取值）
+   - 由全站样式文件中遗留的硬编码色值抽取而来，取值与改造前逐字一致，
+     因此视觉零变化；作用是把散落的字面量收敛为单一来源，便于后续统一调整。
+   - 后续若要做明暗主题适配或收窄色板，只改这里的取值即可全站生效。
+   ========================================================================== */
+:root {
+  /* green */
+  --ws-pal-green-1: #2f9e6f;
+  --ws-pal-green-2: #2f7d62;
+  --ws-pal-green-3: #4f8a6b;
+  --ws-pal-green-4: #0f9d72;
+  --ws-pal-green-5: #24644f;
+  --ws-pal-green-6: #2f8a63;
+  --ws-pal-green-7: #2f7a58;
+  --ws-pal-green-8: #10b981;
+  --ws-pal-green-9: rgba(16, 185, 129, 0.1);
+  --ws-pal-green-10: #1f6b4d;
+  --ws-pal-green-11: #4f8b6d;
+  --ws-pal-green-12: rgba(47, 138, 99, 0.35);
+  --ws-pal-green-13: rgba(47, 138, 99, 0.3);
+  --ws-pal-green-14: #2f7e5a;
+  --ws-pal-green-15: #7b9b74;
+  --ws-pal-green-16: rgba(16, 185, 129, 0.13);
+  --ws-pal-green-17: rgba(16, 185, 129, 0.12);
+  --ws-pal-green-18: #059669;
+  --ws-pal-green-19: #047857;
+  --ws-pal-green-20: rgba(16, 185, 129, 0.3);
+  --ws-pal-green-21: #5ba88b;
+  /* red */
+  --ws-pal-red-1: #d96868;
+  --ws-pal-red-2: #d9534f;
+  --ws-pal-red-3: #d4674f;
+  --ws-pal-red-4: #a84b4b;
+  --ws-pal-red-5: #b84a3a;
+  --ws-pal-red-6: #e2557a;
+  --ws-pal-red-7: rgba(255, 59, 48, 0.07);
+  --ws-pal-red-8: #9d3b2c;
+  --ws-pal-red-9: rgba(255, 59, 48, 0.22);
+  --ws-pal-red-10: rgba(255, 59, 48, 0.13);
+  --ws-pal-red-11: rgba(255, 59, 48, 0.26);
+  --ws-pal-red-12: rgba(255, 59, 48, 0.1);
+  /* amber */
+  --ws-pal-amber-1: #b9883e;
+  --ws-pal-amber-2: #a87838;
+  --ws-pal-amber-3: #b07a13;
+  --ws-pal-amber-4: #9a6b18;
+  --ws-pal-amber-5: #d08437;
+  --ws-pal-amber-6: #e8a33d;
+  --ws-pal-amber-7: #8a6429;
+  --ws-pal-amber-8: rgba(154, 107, 24, 0.35);
+  --ws-pal-amber-9: #f2ece0;
+  --ws-pal-amber-10: rgba(245, 158, 11, 0.14);
+  --ws-pal-amber-11: #d97706;
+  --ws-pal-amber-12: rgba(245, 158, 11, 0.12);
+  --ws-pal-amber-13: rgba(245, 158, 11, 0.26);
+  --ws-pal-amber-14: rgba(245, 158, 11, 0.07);
+  --ws-pal-amber-15: #c08a2e;
+  /* blue */
+  --ws-pal-blue-1: #5b6cff;
+  --ws-pal-blue-2: #5b7fa8;
+  --ws-pal-blue-3: #e6edf8;
+  --ws-pal-blue-4: #b9cdfb;
+  --ws-pal-blue-5: #081018;
+  --ws-pal-blue-6: #eef3fb;
+  --ws-pal-blue-7: #edf3fc;
+  --ws-pal-blue-8: #e5edf9;
+  --ws-pal-blue-9: #171e2a;
+  --ws-pal-blue-10: #263043;
+  --ws-pal-blue-11: #3b4b66;
+  --ws-pal-blue-12: #10141b;
+  --ws-pal-blue-13: rgba(120, 150, 255, 0.1);
+  --ws-pal-blue-14: rgba(79, 124, 255, 0.22);
+  --ws-pal-blue-15: rgba(59, 130, 246, 0.12);
+  --ws-pal-blue-16: #3b82f6;
+  --ws-pal-blue-17: rgba(99, 102, 241, 0.13);
+  --ws-pal-blue-18: #6366f1;
+  --ws-pal-blue-19: rgba(14, 165, 233, 0.13);
+  --ws-pal-blue-20: #0ea5e9;
+  --ws-pal-blue-21: rgba(59, 130, 246, 0.1);
+  --ws-pal-blue-22: #2563eb;
+  --ws-pal-blue-23: #526b9d;
+  --ws-pal-blue-24: #8290a5;
+  --ws-pal-blue-25: #252e3d;
+  --ws-pal-blue-26: #34435c;
+  --ws-pal-blue-27: #303948;
+  --ws-pal-blue-28: #4f7cff;
+  /* purple */
+  --ws-pal-purple-1: #8b5cf6;
+  --ws-pal-purple-2: #8c6bc8;
+  --ws-pal-purple-3: #a978ff;
+  --ws-pal-purple-4: rgba(139, 92, 246, 0.34);
+  --ws-pal-purple-5: rgba(168, 85, 247, 0.13);
+  --ws-pal-purple-6: #a855f7;
+  --ws-pal-purple-7: rgba(236, 72, 153, 0.12);
+  --ws-pal-purple-8: #ec4899;
+  --ws-pal-purple-9: rgba(139, 92, 246, 0.08);
+  /* gray */
+  --ws-pal-gray-1: rgba(128, 128, 128, 0.12);
+  --ws-pal-gray-2: rgba(128, 128, 128, 0.1);
+  --ws-pal-gray-3: rgba(128, 128, 128, 0.06);
+  --ws-pal-gray-4: #111111;
+  --ws-pal-gray-5: rgba(128, 128, 128, 0.07);
+  --ws-pal-gray-6: rgba(128, 128, 128, 0.08);
+  --ws-pal-gray-7: rgba(128, 128, 128, 0.09);
+  --ws-pal-gray-8: rgba(128, 128, 128, 0.16);
+  --ws-pal-gray-9: #171717;
+  --ws-pal-gray-10: #a0a3aa;
+  --ws-pal-gray-11: #393a41;
+  --ws-pal-gray-12: #d8dae0;
+  --ws-pal-gray-13: #41434a;
+  --ws-pal-gray-14: #8d9098;
+  --ws-pal-gray-15: rgba(128, 128, 128, 0.04);
+  --ws-pal-gray-16: rgba(128, 128, 128, 0.14);
+  --ws-pal-gray-17: rgba(128, 128, 128, 0.15);
+  --ws-pal-gray-18: rgba(128, 128, 128, 0.13);
+  --ws-pal-gray-19: #758197;
+  --ws-pal-gray-20: #c6c9d0;
+  --ws-pal-gray-21: #555860;
+  --ws-pal-gray-22: #33343a;
+  --ws-pal-gray-23: #f0f0f2;
+  --ws-pal-gray-24: #9b9ea7;
+  --ws-pal-gray-25: #3f4148;
+  --ws-pal-gray-26: #6d7a8e;
+  --ws-pal-gray-27: rgba(48, 48, 56, 0.86);
+  --ws-pal-gray-28: #8a8172;
+  --ws-pal-gray-29: #24221f;
+  --ws-pal-gray-30: #1e1e20;
+  --ws-pal-gray-31: #3b3b3e;
+  --ws-pal-gray-32: #8f8778;
+  --ws-pal-gray-33: #26231f;
+  --ws-pal-gray-34: #25221e;
+  --ws-pal-gray-35: #202022;
+  --ws-pal-gray-36: #3a3a3d;
+  --ws-pal-gray-37: rgba(128, 128, 128, 0.2);
+  --ws-pal-gray-38: rgba(128, 128, 128, 0.36);
+  --ws-pal-gray-39: rgba(128, 128, 128, 0.05);
+  --ws-pal-gray-40: rgba(128, 128, 128, 0.45);
+  --ws-pal-gray-41: rgba(128, 128, 128, 0.4);
+  --ws-pal-gray-42: rgba(255, 255, 255, 0.14);
+  --ws-pal-gray-43: rgba(255, 255, 255, 0.035);
+  --ws-pal-gray-44: rgba(255, 255, 255, 0.09);
+  --ws-pal-gray-45: rgba(255, 255, 255, 0.22);
+  --ws-pal-gray-46: #8792a5;
+  --ws-pal-gray-47: #8490a2;
+  --ws-pal-gray-48: #a0a7b2;
+  /* surface */
+  --ws-pal-surface-1: #b8c8e8;
+  --ws-pal-surface-2: #becce2;
+  --ws-pal-surface-3: #c6d2e5;
+  --ws-pal-surface-4: #dce5f2;
+  --ws-pal-surface-5: #d2dcea;
+  --ws-pal-surface-6: #ccd7e8;
+  --ws-pal-surface-7: #9fadc2;
+  --ws-pal-surface-8: #c8d5e8;
+  --ws-pal-surface-9: #f5f7fb;
+  --ws-pal-surface-10: #aeb8c8;
+  --ws-pal-surface-11: #b5becc;
+  --ws-pal-surface-12: #aab8d0;
+  --ws-pal-surface-13: #aeb8c7;
+  /* light */
+  --ws-pal-light-1: #f1f3f7;
+  --ws-pal-light-2: #e6dfd1;
+  --ws-pal-light-3: #f2f0ec;
+  --ws-pal-light-4: #f1ede5;
+  --ws-pal-light-5: #f3f0e9;
+  --ws-pal-light-6: #f1ede4;
+  /* scrim */
+  --ws-pal-scrim-1: rgba(10, 10, 14, 0.42);
+  --ws-pal-scrim-2: rgba(4, 8, 14, 0.58);
+  --ws-pal-scrim-3: rgba(18, 22, 30, 0.92);
+  --ws-pal-scrim-4: rgba(18, 22, 28, 0.38);
+  --ws-pal-scrim-5: rgba(9, 12, 17, 0.42);
+  --ws-pal-scrim-6: rgba(12, 15, 20, 0.55);
+  --ws-pal-scrim-7: rgba(7, 10, 14, 0.72);
+  --ws-pal-scrim-8: rgba(15, 18, 24, 0.45);
+  --ws-pal-scrim-9: rgba(23, 29, 41, 0.86);
+  --ws-pal-scrim-10: rgba(0, 0, 0, 0.14);
+  --ws-pal-scrim-11: rgba(0, 0, 0, 0.2);
+  --ws-pal-scrim-12: rgba(0, 0, 0, 0.05);
+  --ws-pal-scrim-13: rgba(0, 0, 0, 0.12);
+  --ws-pal-scrim-14: rgba(0, 0, 0, 0.28);
 }

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { getAllWorlds, deleteWorld } from '../services/worldService'
+import { getAllWorlds } from '../services/worldService'
 import { API_ORIGIN } from '../api/config'
 import type { World } from '../types/world'
 import WorldCollaborationDialog from '../components/collaboration/WorldCollaborationDialog'
@@ -12,13 +12,16 @@ export default function WorldsPage({
   dict,
   product = 'game',
   readOnly = false,
+  currentWorldId = '',
 }: {
-  onEnterWorld: (id: string) => void,
-  onOpenWorldBuilding: (id: string) => void,
-  lang: string,
-  dict: any,
+  onEnterWorld: (id: string) => void
+  onOpenWorldBuilding: (id: string) => void
+  lang: string
+  dict: any
   product?: string
   readOnly?: boolean
+  /** 当前已选中、正在工作/阅读的世界 id；用于在卡片上标识「进行中」。 */
+  currentWorldId?: string
 }) {
   const [worlds, setWorlds] = useState<World[]>([])
   const [loading, setLoading] = useState(true)
@@ -41,16 +44,22 @@ export default function WorldsPage({
     loadWorlds()
   }, [])
 
-  const handleDelete = async (id: string) => {
-    const msg = lang === 'zh' ? '确定把这个世界移入回收站吗？\n\n世界内所有数据会保留，可在「全局回收站」恢复。' : 'Move this world to the recycle bin? All data can be restored.';
+  // 一键重置：清空世界派生数据并恢复初始默认值，不再提供删除。
+  const handleReset = async (id: string) => {
+    const msg = lang === 'zh'
+      ? '确定重置这个世界吗？\n\n将清空该世界下的全部派生数据（人物、事件、地图、作品等），并恢复为初始默认值，世界本身保留。此操作不可撤销。'
+      : 'Reset this world?\n\nAll derived data under this world will be cleared and restored to defaults. The world itself is kept. This cannot be undone.';
     if (!window.confirm(msg)) return;
 
     try {
-      await deleteWorld(id)
+      const res = await fetch(`http://127.0.0.1:8000/api/worlds/${id}/reset`, { method: 'POST' })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.detail || `HTTP ${res.status}`)
+      alert(lang === 'zh' ? '世界已重置为初始默认值。' : 'World reset to defaults.')
       loadWorlds()
-    } catch (err) {
+    } catch (err: any) {
       console.error(err)
-      alert('❌ Delete failed')
+      alert(lang === 'zh' ? `重置失败：${err.message || err}` : `Reset failed: ${err.message || err}`)
     }
   }
 
@@ -230,7 +239,6 @@ export default function WorldsPage({
         {/* 👇 原本的世界列表 👇 */}
         {filteredWorlds.map(w => {
           const role = w.access_role || 'owner'
-          const canEdit = role === 'owner' || role === 'editor'
           const isOwner = role === 'owner'
           return (
           <div 
@@ -261,21 +269,22 @@ export default function WorldsPage({
             )}
 
             <div style={{ display: 'flex', gap: '8px', marginTop: 'auto', paddingTop: '16px', flexWrap: 'wrap' }}>
-              {!readOnly && canEdit && (
               <button
-                onClick={(e) => { e.stopPropagation(); onOpenWorldBuilding(w.id); }}
+                onClick={(e) => { e.stopPropagation(); onEnterWorld(w.id); }}
                 style={{
                   flex: 1, padding: '10px',
-                  background: 'transparent', color: 'var(--text-main)',
-                  border: '1px solid var(--card-border)', borderRadius: '8px', cursor: 'pointer',
+                  background: w.id === currentWorldId ? 'var(--primary-color)' : 'transparent',
+                  color: w.id === currentWorldId ? 'var(--primary-text)' : 'var(--text-main)',
+                  border: w.id === currentWorldId ? '1px solid var(--primary-color)' : '1px solid var(--card-border)',
+                  borderRadius: '8px', cursor: 'pointer',
+                  fontWeight: w.id === currentWorldId ? 600 : 400,
                   transition: 'all 0.2s'
                 }}
-                onMouseOver={(e) => e.currentTarget.style.borderColor = 'var(--primary-color)'}
-                onMouseOut={(e) => e.currentTarget.style.borderColor = 'var(--card-border)'}
+                onMouseOver={(e) => { if (w.id !== currentWorldId) e.currentTarget.style.borderColor = 'var(--primary-color)' }}
+                onMouseOut={(e) => { if (w.id !== currentWorldId) e.currentTarget.style.borderColor = 'var(--card-border)' }}
               >
-                {lang === 'zh' ? '编辑' : 'Edit'}
+                {w.id === currentWorldId ? (lang === 'zh' ? '进行中' : 'In progress') : (lang === 'zh' ? '选择' : 'Select')}
               </button>
-              )}
 
               {!readOnly && isOwner && !w.is_official && (
                 <button
@@ -340,14 +349,14 @@ export default function WorldsPage({
                 </button>
               ) : (
                 <button
-                  onClick={(e) => { e.stopPropagation(); handleDelete(w.id); }}
+                  onClick={(e) => { e.stopPropagation(); handleReset(w.id); }}
                   style={{
                     flex: 1, padding: '10px',
-                    background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger-color)',
-                    border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '8px', cursor: 'pointer'
+                    background: 'rgba(59, 130, 246, 0.1)', color: 'var(--primary-color)',
+                    border: '1px solid rgba(59, 130, 246, 0.25)', borderRadius: '8px', cursor: 'pointer'
                   }}
                 >
-                  {lang === 'zh' ? '删除' : 'Delete'}
+                  {lang === 'zh' ? '重置' : 'Reset'}
                 </button>
               ))}
             </div>
