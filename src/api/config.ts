@@ -11,7 +11,19 @@ import { loadLanguage } from '../i18n'
 
 export const LEGACY_API_ORIGIN = 'http://127.0.0.1:8000'
 
-const configured = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/+$/, '')
+/**
+ * 生产环境默认 API 域名。当 Vercel 未注入 VITE_API_BASE_URL 时，
+ * 生产构建仍能指向公网后端；本地开发（import.meta.env.PROD 为 false）
+ * 继续使用 LEGACY_API_ORIGIN。可通过 VITE_API_BASE_URL 覆盖。
+ */
+export const PRODUCTION_API_ORIGIN = 'https://api.psyengine.top'
+
+const configured = (
+  import.meta.env.VITE_API_BASE_URL ||
+  (import.meta.env.PROD ? PRODUCTION_API_ORIGIN : '')
+)
+  .trim()
+  .replace(/\/+$/, '')
 export const API_ORIGIN = configured || LEGACY_API_ORIGIN
 
 function needsAiKey(url: string) {
